@@ -1,8 +1,8 @@
 <h2 align="center"><b>Nira Browser (alpha)</b></h2>
 <p align="center">
-<img src="https://img.shields.io/github/issues-raw/prirai/nira" />
-<img src="https://img.shields.io/github/v/release/prirai/nira" />
-<img src="https://img.shields.io/github/stars/prirai/nira?style=social" />
+<img src="https://img.shields.io/github/issues-raw/prirai/nira-browser" />
+<img src="https://img.shields.io/github/v/release/prirai/nira-browser" />
+<img src="https://img.shields.io/github/stars/prirai/nira-browser?style=social" />
  </p>
 
 ---
