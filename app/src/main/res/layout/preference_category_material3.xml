@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Modern Material 3 Preference Category Layout -->
+<TextView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@android:id/title"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:paddingStart="20dp"
+    android:paddingEnd="20dp"
+    android:paddingTop="20dp"
+    android:paddingBottom="8dp"
+    android:textAppearance="@style/TextAppearance.Material3.TitleSmall"
+    android:textColor="@color/colorAccent"
+    android:ellipsize="end"
+    android:maxLines="1"
+/>

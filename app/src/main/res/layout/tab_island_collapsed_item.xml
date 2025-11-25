@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<androidx.cardview.widget.CardView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/collapsedIslandCard"
+    android:layout_width="wrap_content"
+    android:layout_height="match_parent"
+    android:layout_marginHorizontal="4dp"
+    android:clickable="true"
+    android:focusable="true"
+    android:foreground="?android:attr/selectableItemBackground"
+    app:cardCornerRadius="20dp"
+    app:cardElevation="6dp"
+>
+
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="match_parent"
+        android:orientation="horizontal"
+        android:gravity="center"
+        android:paddingStart="12dp"
+        android:paddingEnd="12dp"
+        android:minWidth="100dp"
+    >
+
+        <!-- Island icon -->
+        <ImageView
+            android:id="@+id/collapsedIslandIcon"
+            android:layout_width="16dp"
+            android:layout_height="16dp"
+            android:layout_marginEnd="6dp"
+            android:src="@drawable/ic_tab"
+            android:tint="@android:color/white"
+            android:contentDescription="Island icon"
+            android:scaleType="centerInside"
+        />
+
+        <!-- Island name -->
+        <TextView
+            android:id="@+id/collapsedIslandName"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="6dp"
+            android:text="Island"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:textColor="@android:color/white"
+            android:fontFamily="sans-serif-medium"
+            android:maxLength="15"
+            android:singleLine="true"
+            android:ellipsize="end"
+        />
+
+        <!-- Tab count badge -->
+        <TextView
+            android:id="@+id/collapsedIslandTabCount"
+            android:layout_width="20dp"
+            android:layout_height="20dp"
+            android:gravity="center"
+            android:background="@drawable/badge_background"
+            android:text="5"
+            android:textSize="11sp"
+            android:textStyle="bold"
+            android:textColor="@android:color/white"
+            android:fontFamily="sans-serif-medium"
+        />
+
+    </LinearLayout>
+
+</androidx.cardview.widget.CardView>

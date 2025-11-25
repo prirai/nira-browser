@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="56dp"
+    android:orientation="horizontal"
+    android:background="?attr/colorSurface"
+    android:elevation="8dp"
+    android:gravity="center_vertical"
+    android:paddingHorizontal="8dp">
+
+    <!-- Back Button -->
+    <ImageButton
+        android:id="@+id/back_button"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_weight="1"
+        android:background="?android:attr/selectableItemBackgroundBorderless"
+        android:src="@drawable/ic_ios_back"
+        android:contentDescription="@string/back"
+        android:scaleType="centerInside"
+        app:tint="?android:attr/textColorPrimary" />
+
+    <!-- Forward Button (hidden by default) -->
+    <ImageButton
+        android:id="@+id/forward_button"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_weight="1"
+        android:background="?android:attr/selectableItemBackgroundBorderless"
+        android:src="@drawable/ic_ios_forward"
+        android:contentDescription="@string/forward"
+        android:scaleType="centerInside"
+        android:visibility="gone"
+        app:tint="?android:attr/textColorPrimary" />
+
+    <!-- Share Button -->
+    <ImageButton
+        android:id="@+id/share_button"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_weight="1"
+        android:background="?android:attr/selectableItemBackgroundBorderless"
+        android:src="@drawable/ic_ios_share"
+        android:contentDescription="@string/share"
+        android:scaleType="centerInside"
+        app:tint="?android:attr/textColorPrimary" />
+
+    <!-- Search Button (for homepage) -->
+    <ImageButton
+        android:id="@+id/search_button"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_weight="1"
+        android:background="?android:attr/selectableItemBackgroundBorderless"
+        android:src="@drawable/ic_ios_search"
+        android:contentDescription="@string/search"
+        android:scaleType="centerInside"
+        android:visibility="gone"
+        app:tint="?android:attr/textColorPrimary" />
+
+    <!-- New Tab Button -->
+    <ImageButton
+        android:id="@+id/new_tab_button"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_weight="1"
+        android:background="?android:attr/selectableItemBackgroundBorderless"
+        android:src="@drawable/ic_ios_add"
+        android:contentDescription="@string/new_tab"
+        android:scaleType="centerInside"
+        android:visibility="gone"
+        app:tint="?android:attr/textColorPrimary" />
+
+    <!-- Tab Count Button -->
+    <FrameLayout
+        android:id="@+id/tab_count_button"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_weight="1"
+        android:background="?android:attr/selectableItemBackgroundBorderless"
+        android:contentDescription="@string/tabs">
+
+        <!-- Tab Count Background -->
+        <ImageView
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:layout_gravity="center"
+            android:src="@drawable/tab_number_background"
+            app:tint="?android:attr/textColorPrimary" />
+
+        <!-- Tab Count Text -->
+        <TextView
+            android:id="@+id/tab_count_text"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:layout_gravity="center"
+            android:gravity="center"
+            android:text="1"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            android:textColor="?android:attr/textColorPrimary"
+            android:maxLines="1"
+            android:ellipsize="none" />
+
+    </FrameLayout>
+
+    <!-- Menu Button (Three Dots) -->
+    <ImageButton
+        android:id="@+id/menu_button"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_weight="1"
+        android:background="?android:attr/selectableItemBackgroundBorderless"
+        android:src="@drawable/ic_ios_menu"
+        android:contentDescription="@string/menu"
+        android:scaleType="centerInside"
+        app:tint="?android:attr/textColorPrimary" />
+
+</LinearLayout>

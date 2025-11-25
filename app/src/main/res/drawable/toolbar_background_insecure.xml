@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<shape
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle"
+>
+
+    <!-- Dark red background for insecure connections -->
+    <solid android:color="#8B0000" />
+
+    <!-- Rounded corners matching the normal toolbar -->
+    <corners android:radius="12dp" />
+</shape>

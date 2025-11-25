@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<androidx.cardview.widget.CardView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/tabPillCard"
+    android:layout_width="wrap_content"
+    android:layout_height="match_parent"
+    android:layout_marginHorizontal="2dp"
+    android:clickable="true"
+    android:focusable="true"
+    android:foreground="?android:attr/selectableItemBackground"
+    app:cardCornerRadius="20dp"
+    app:cardElevation="4dp"
+>
+
+    <RelativeLayout
+        android:layout_width="wrap_content"
+        android:layout_height="match_parent"
+        android:minWidth="120dp"
+        android:paddingStart="6dp"
+        android:paddingTop="2dp"
+        android:paddingEnd="4dp"
+        android:paddingBottom="2dp"
+    >
+
+        <!-- Selection indicator - REMOVED -->
+        <View
+            android:id="@+id/selectionIndicator"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:visibility="gone"
+        />
+
+        <!-- Favicon -->
+        <ImageView
+            android:id="@+id/tabFavicon"
+            android:layout_width="14dp"
+            android:layout_height="14dp"
+            android:layout_centerVertical="true"
+            android:layout_toEndOf="@id/selectionIndicator"
+            android:layout_marginStart="6dp"
+            android:contentDescription="Tab favicon"
+            android:scaleType="centerCrop"
+        />
+
+        <!-- Title -->
+        <TextView
+            android:id="@+id/tabTitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_centerVertical="true"
+            android:layout_marginStart="6dp"
+            android:layout_marginEnd="4dp"
+            android:layout_toEndOf="@id/tabFavicon"
+            android:ellipsize="end"
+            android:fontFamily="sans-serif-medium"
+            android:maxLength="15"
+            android:maxLines="1"
+            android:text="Tab Title"
+            android:textColor="?android:attr/textColorPrimary"
+            android:textSize="12sp"
+            android:visibility="visible"
+        />
+
+        <!-- Close Button - REMOVED for now -->
+        <ImageView
+            android:id="@+id/tabCloseButton"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:visibility="gone"
+        />
+
+    </RelativeLayout>
+
+</androidx.cardview.widget.CardView>

@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.preference.PreferenceScreen
+    xmlns:android="http://schemas.android.com/apk/res/android">
+    <androidx.preference.Preference
+        android:fragment="com.prirai.android.nira.settings.fragment.GeneralSettingsFragment"
+        android:icon="@drawable/ic_settings_general_layers"
+        android:title="@string/settings_general"
+        android:singleLineTitle="false"
+        android:summary="@string/settings_general_explain"/>
+    <androidx.preference.Preference
+        android:fragment="com.prirai.android.nira.settings.fragment.PrivacyAndSecuritySettingsFragment"
+        android:icon="@drawable/ic_settings_privacy_and_security_layers"
+        android:title="@string/settings_privacy_and_security"
+        android:singleLineTitle="false"
+        android:summary="@string/settings_privacy_and_security_explain"/>
+    <androidx.preference.Preference
+        android:fragment="com.prirai.android.nira.settings.fragment.ImportExportSettingsFragment"
+        android:icon="@drawable/ic_settings_import_export_layers"
+        android:title="@string/settings_import_and_export"
+        android:singleLineTitle="false"
+        android:summary="@string/settings_import_and_export_explain"/>
+    <androidx.preference.Preference
+        android:fragment="com.prirai.android.nira.settings.fragment.CustomizationSettingsFragment"
+        android:icon="@drawable/ic_settings_customize_layers"
+        android:title="@string/settings_customization"
+        android:singleLineTitle="false"
+        android:summary="@string/settings_customization_explain"/>
+    <androidx.preference.Preference
+        android:fragment="com.prirai.android.nira.settings.fragment.AdvancedSettingsFragment"
+        android:icon="@drawable/ic_settings_advanced_layers"
+        android:title="@string/settings_advanced"
+        android:singleLineTitle="false"
+        android:summary="@string/settings_advanced_explain"/>
+    <androidx.preference.Preference
+        android:fragment="com.prirai.android.nira.addons.AddonsFragment"
+        android:icon="@drawable/ic_settings_addons_layers"
+        android:title="@string/settings_addons"
+        android:singleLineTitle="false"
+        android:summary="@string/settings_addons_explain"/>
+    <androidx.preference.Preference
+        android:fragment="com.prirai.android.nira.settings.fragment.AboutSettingsFragment"
+        android:icon="@drawable/ic_settings_about_layers"
+        android:title="@string/settings_about"
+        android:singleLineTitle="false"
+        android:summary="@string/settings_about_explain"/>
+</androidx.preference.PreferenceScreen>

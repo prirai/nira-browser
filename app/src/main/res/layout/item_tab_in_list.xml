@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!-- Individual Tab Item Layout for Tabs List with Group Support -->
+<androidx.cardview.widget.CardView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginHorizontal="8dp"
+    android:layout_marginVertical="4dp"
+    app:cardCornerRadius="12dp"
+    app:cardElevation="1dp"
+    app:cardBackgroundColor="?attr/colorSurface"
+>
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/selected_indicator"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="12dp"
+    >
+
+        <!-- Group Indicator -->
+        <View
+            android:id="@+id/group_indicator"
+            android:layout_width="12dp"
+            android:layout_height="12dp"
+            android:background="@drawable/circle_background"
+            android:visibility="gone"
+            app:layout_constraintTop_toTopOf="@id/tab_icon"
+            app:layout_constraintBottom_toBottomOf="@id/tab_icon"
+            app:layout_constraintStart_toStartOf="parent"
+            tools:visibility="visible"
+        />
+
+        <!-- Tab Icon/Thumbnail -->
+        <ImageView
+            android:id="@+id/tab_icon"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_marginStart="8dp"
+            android:scaleType="centerCrop"
+            android:background="?attr/colorSurfaceVariant"
+            android:contentDescription="@string/tab_thumbnail"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toEndOf="@id/group_indicator"
+            tools:src="@drawable/ic_tabs"
+        />
+
+        <!-- Tab Info -->
+        <LinearLayout
+            android:id="@+id/tab_info"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:layout_marginEnd="8dp"
+            android:orientation="vertical"
+            app:layout_constraintTop_toTopOf="@id/tab_icon"
+            app:layout_constraintBottom_toBottomOf="@id/tab_icon"
+            app:layout_constraintStart_toEndOf="@id/tab_icon"
+            app:layout_constraintEnd_toStartOf="@id/close_button"
+        >
+
+            <!-- Tab Title -->
+            <TextView
+                android:id="@+id/tab_title"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:textColor="?android:attr/textColorPrimary"
+                android:maxLines="1"
+                android:ellipsize="end"
+                tools:text="Example Tab Title"
+            />
+
+            <!-- Tab URL -->
+            <TextView
+                android:id="@+id/tab_url"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:textSize="12sp"
+                android:textColor="?android:attr/textColorSecondary"
+                android:maxLines="1"
+                android:ellipsize="middle"
+                tools:text="example.com"
+            />
+
+        </LinearLayout>
+
+        <!-- Close Button -->
+        <ImageButton
+            android:id="@+id/close_button"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:background="?android:attr/selectableItemBackgroundBorderless"
+            android:src="@drawable/ic_round_close"
+            android:contentDescription="@string/close_tab"
+            android:padding="4dp"
+            app:tint="?android:attr/textColorSecondary"
+            app:layout_constraintTop_toTopOf="@id/tab_icon"
+            app:layout_constraintBottom_toBottomOf="@id/tab_icon"
+            app:layout_constraintEnd_toEndOf="parent"
+        />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+</androidx.cardview.widget.CardView>

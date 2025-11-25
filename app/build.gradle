@@ -1,0 +1,236 @@
+import com.android.build.api.variant.FilterConfiguration
+
+plugins {
+    id 'com.android.application'
+    id 'kotlin-android'
+    id 'kotlin-parcelize'
+    id 'kotlin-kapt'
+    id 'com.google.devtools.ksp'
+    id 'androidx.navigation.safeargs.kotlin'
+    id 'org.jetbrains.kotlin.plugin.compose'
+}
+
+
+android {
+
+    compileSdkVersion 36
+    buildFeatures {
+        buildConfig true
+        viewBinding true
+        compose true
+    }
+
+    namespace 'com.prirai.android.nira'
+
+    defaultConfig {
+        applicationId "com.prirai.android.nira"
+        minSdkVersion 26
+        targetSdkVersion 36
+        // Increment by 4 with each update
+        versionCode 1
+        versionName "0.1"
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    kotlinOptions {
+        jvmTarget = "17"
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+
+    flavorDimensions "abi"
+
+    splits {
+        abi {
+            enable true
+            universalApk false
+        }
+    }
+
+    composeOptions {
+        kotlinCompilerExtensionVersion = '1.5.15'
+    }
+
+    androidResources {
+        noCompress += 'ja'
+    }
+
+    lint {
+        abortOnError false
+    }
+}
+
+def abiBaseMap = [
+        "arm64-v8a": 1,
+        "x86"      : 2,
+        "x86_64"   : 3
+]
+
+androidComponents {
+    onVariants(selector().all()) { variant ->
+        variant.outputs.each { output ->
+            def abi = output.getFilters()
+                    .find { it.filterType == FilterConfiguration.FilterType.ABI }
+                    ?.identifier
+
+            if (abi != null) {
+                def base = abiBaseMap[abi] ?: 0
+                def orig = output.versionCode.get()
+                output.versionCode.set(base * 1000 + orig)
+            }
+        }
+    }
+}
+
+
+dependencies {
+    implementation fileTree(dir: 'libs', include: ['*.jar'])
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:2.2.0"
+    implementation 'androidx.constraintlayout:constraintlayout:2.2.1'
+    implementation 'com.google.android.material:material:1.13.0'
+
+    // Support libraries
+    implementation "androidx.recyclerview:recyclerview:1.4.0"
+    implementation 'androidx.core:core-ktx:1.17.0'
+    implementation "androidx.constraintlayout:constraintlayout:2.2.1"
+    implementation "androidx.drawerlayout:drawerlayout:1.2.0"
+    implementation "androidx.preference:preference-ktx:1.2.1"
+    implementation "androidx.palette:palette-ktx:1.0.0"
+    implementation "androidx.annotation:annotation:1.9.1"
+    implementation "androidx.appcompat:appcompat:1.7.1"
+    implementation 'androidx.legacy:legacy-support-v4:1.0.0'
+    implementation 'androidx.navigation:navigation-fragment-ktx:2.9.6'
+    implementation 'androidx.navigation:navigation-ui-ktx:2.9.6'
+
+    // Room
+    implementation "androidx.room:room-runtime:2.8.4"
+    ksp "androidx.room:room-compiler:2.8.4"
+
+    final def daggerVersion = '2.57.2'
+    implementation "com.google.dagger:dagger:$daggerVersion"
+    implementation "com.google.dagger:dagger-android:$daggerVersion"
+    implementation "com.google.dagger:dagger-android-support:$daggerVersion"
+    kapt "com.google.dagger:dagger-compiler:$daggerVersion"
+    kapt "com.google.dagger:dagger-android-processor:$daggerVersion"
+    compileOnly 'javax.annotation:jsr250-api:1.0'
+
+    final def mozComponentsVersion = "145.0"
+
+    // Mozilla compose components
+    implementation "org.mozilla.components:compose-awesomebar:$mozComponentsVersion"
+
+    // Mozilla concept components
+    implementation "org.mozilla.components:concept-storage:$mozComponentsVersion"
+    implementation "org.mozilla.components:concept-engine:$mozComponentsVersion"
+    implementation "org.mozilla.components:concept-menu:$mozComponentsVersion"
+    implementation "org.mozilla.components:concept-toolbar:$mozComponentsVersion"
+    implementation "org.mozilla.components:concept-tabstray:$mozComponentsVersion"
+    implementation "org.mozilla.components:concept-base:$mozComponentsVersion"
+    implementation "org.mozilla.components:concept-fetch:$mozComponentsVersion"
+    implementation "org.mozilla.components:concept-awesomebar:$mozComponentsVersion"
+
+    // Mozilla browser components
+    implementation "org.mozilla.components:browser-engine-gecko:$mozComponentsVersion"
+    implementation "org.mozilla.components:browser-icons:$mozComponentsVersion"
+    implementation "org.mozilla.components:browser-domains:$mozComponentsVersion"
+    implementation "org.mozilla.components:browser-thumbnails:$mozComponentsVersion"
+    implementation "org.mozilla.components:browser-state:$mozComponentsVersion"
+
+    implementation "org.mozilla.components:browser-toolbar:$mozComponentsVersion"
+    implementation "org.mozilla.components:browser-state:$mozComponentsVersion"
+    implementation "org.mozilla.components:browser-engine-system:$mozComponentsVersion"
+    implementation "org.mozilla.components:browser-session-storage:$mozComponentsVersion"
+    implementation "org.mozilla.components:browser-tabstray:$mozComponentsVersion"
+    implementation "org.mozilla.components:browser-menu:$mozComponentsVersion"
+    implementation "org.mozilla.components:browser-storage-sync:$mozComponentsVersion"
+    implementation "org.mozilla.components:browser-errorpages:$mozComponentsVersion"
+
+    // Mozilla feature components
+    implementation "org.mozilla.components:feature-awesomebar:$mozComponentsVersion"
+    implementation "org.mozilla.components:feature-autofill:$mozComponentsVersion"
+    implementation "org.mozilla.components:feature-readerview:$mozComponentsVersion"
+    implementation "org.mozilla.components:feature-media:$mozComponentsVersion"
+    implementation "org.mozilla.components:feature-search:$mozComponentsVersion"
+
+    implementation "org.mozilla.components:feature-tabs:$mozComponentsVersion"
+    implementation "org.mozilla.components:feature-session:$mozComponentsVersion"
+    implementation "org.mozilla.components:feature-toolbar:$mozComponentsVersion"
+    implementation "org.mozilla.components:feature-intent:$mozComponentsVersion"
+    implementation "org.mozilla.components:feature-contextmenu:$mozComponentsVersion"
+    implementation "org.mozilla.components:feature-app-links:$mozComponentsVersion"
+    implementation "org.mozilla.components:feature-downloads:$mozComponentsVersion"
+    implementation "org.mozilla.components:feature-privatemode:$mozComponentsVersion"
+    implementation "org.mozilla.components:feature-customtabs:$mozComponentsVersion"
+    implementation "org.mozilla.components:feature-pwa:$mozComponentsVersion"
+    implementation "org.mozilla.components:feature-prompts:$mozComponentsVersion"
+    implementation "org.mozilla.components:feature-sitepermissions:$mozComponentsVersion"
+    implementation "org.mozilla.components:feature-webcompat:$mozComponentsVersion"
+    implementation "org.mozilla.components:feature-webnotifications:$mozComponentsVersion"
+    implementation "org.mozilla.components:feature-addons:$mozComponentsVersion"
+    implementation "org.mozilla.components:feature-findinpage:$mozComponentsVersion"
+    implementation "org.mozilla.components:feature-prompts:$mozComponentsVersion"
+
+    // Mozilla service components
+    implementation "org.mozilla.components:service-location:$mozComponentsVersion"
+    implementation "org.mozilla.components:service-digitalassetlinks:$mozComponentsVersion"
+
+    // Mozilla support components
+    implementation "org.mozilla.components:support-base:$mozComponentsVersion"
+    implementation "org.mozilla.components:support-utils:$mozComponentsVersion"
+    implementation "org.mozilla.components:support-webextensions:$mozComponentsVersion"
+    implementation "org.mozilla.components:support-ktx:$mozComponentsVersion"
+    implementation "org.mozilla.components:support-locale:$mozComponentsVersion"
+
+    // Mozilla UI components
+    implementation "org.mozilla.components:ui-autocomplete:$mozComponentsVersion"
+    implementation "org.mozilla.components:ui-tabcounter:$mozComponentsVersion"
+    implementation "org.mozilla.components:ui-icons:$mozComponentsVersion"
+    implementation "org.mozilla.components:ui-colors:$mozComponentsVersion"
+    implementation "org.mozilla.components:ui-widgets:$mozComponentsVersion"
+
+    // Mozilla lib components
+    implementation "org.mozilla.components:lib-state:$mozComponentsVersion"
+    implementation "org.mozilla.components:lib-publicsuffixlist:$mozComponentsVersion"
+    implementation "org.mozilla.components:lib-fetch-httpurlconnection:$mozComponentsVersion"
+
+    testImplementation 'junit:junit:4.13.2'
+    androidTestImplementation 'androidx.test.ext:junit:1.3.0'
+    androidTestImplementation 'androidx.test.espresso:espresso-core:3.7.0'
+
+    // JSON parsing
+    implementation "com.squareup.moshi:moshi:1.15.2"
+    implementation "com.squareup.moshi:moshi-kotlin:1.15.2"
+
+    // OkHTTP
+    implementation "com.squareup.okhttp3:okhttp:5.3.2"
+
+    implementation 'io.reactivex.rxjava2:rxandroid:2.1.1'
+    implementation 'io.reactivex.rxjava2:rxjava:2.2.21'
+    implementation 'io.reactivex.rxjava2:rxkotlin:2.4.0'
+
+    implementation "androidx.compose.ui:ui:1.9.5"
+    implementation "androidx.compose.foundation:foundation:1.9.5"
+    implementation "androidx.compose.material:material:1.9.5"
+
+    implementation 'org.jsoup:jsoup:1.21.2'
+}
+
+project.configurations.configureEach {
+    resolutionStrategy.capabilitiesResolution.withCapability("org.mozilla.telemetry:glean-native") {
+        def toBeSelected = candidates.find { it.id instanceof ModuleComponentIdentifier && it.id.module.contains('geckoview') }
+        if (toBeSelected != null) {
+            select(toBeSelected)
+        }
+        because 'use GeckoView Glean instead of standalone Glean'
+    }
+}

@@ -1,0 +1,598 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<resources>
+  <string name="app_name" translatable="false">Nira Browser</string>
+  <string
+        name="url_project"
+        translatable="false"
+    >https://github.com/prirai</string>
+
+  <!-- Behavior class names -->
+  <string
+        name="hide_bottom_view_on_scroll_behavior"
+        translatable="false"
+    >com.cookiejarapps.android.smartcookieweb.behavior.HideBottomViewOnScrollBehavior</string>
+
+  <string
+        name="key_javascript_enabled"
+        translatable="false"
+    >javascript_enabled</string>
+  <string name="key_app_theme_type" translatable="false">app_theme_type</string>
+  <string name="key_web_theme_type" translatable="false">web_theme_type</string>
+  <string name="key_search_engine" translatable="false">search_engine</string>
+  <string
+        name="key_show_addons_in_bar"
+        translatable="false"
+    >show_addons_in_bar</string>
+  <string
+        name="key_bar_addon_list"
+        translatable="false"
+    >bar_addons_list</string>
+  <string name="key_clear_tabs" translatable="false">clear_tabs</string>
+  <string name="key_clear_history" translatable="false">clear_history</string>
+  <string name="key_clear_cookies" translatable="false">clear_cookies</string>
+  <string name="key_clear_cache" translatable="false">clear_cache</string>
+  <string
+        name="key_clear_permissions"
+        translatable="false"
+    >clear_permissions</string>
+  <string name="key_homepage_type" translatable="false">homepage_type</string>
+  <string name="key_move_navbar" translatable="false">move_navbar</string>
+  <string
+        name="key_use_custom_collection"
+        translatable="false"
+    >use_custom_collection</string>
+  <string
+        name="key_collection_name"
+        translatable="false"
+    >collection_name</string>
+  <string
+        name="key_collection_user"
+        translatable="false"
+    >collection_user</string>
+  <string name="key_auto_font_size" translatable="false">auto_font_size</string>
+  <string
+        name="key_font_size_factor"
+        translatable="false"
+    >font_size_factor</string>
+  <string name="key_hide_url_bar" translatable="false">hide_url_bar</string>
+  <string name="key_swap_drawers" translatable="false">swap_drawers</string>
+  <string
+        name="key_stack_from_bottom"
+        translatable="false"
+    >stack_from_bottom</string>
+  <string
+        name="key_show_tabs_in_grid"
+        translatable="false"
+    >show_tabs_in_grid</string>
+  <string name="key_sideload_xpi" translatable="false">sideload_xpi</string>
+  <string name="key_swipe_refresh" translatable="false">swipe_refresh</string>
+  <string
+        name="key_remote_debugging"
+        translatable="false"
+    >remote_debugging</string>
+  <string
+        name="key_export_bookmarks"
+        translatable="false"
+    >export_bookmarks</string>
+  <string
+        name="key_import_bookmarks"
+        translatable="false"
+    >import_bookmarks</string>
+  <string
+        name="key_export_settings"
+        translatable="false"
+    >export_settings</string>
+  <string
+        name="key_import_settings"
+        translatable="false"
+    >import_settings</string>
+  <string name="key_clear_settings" translatable="false">clear_settings</string>
+  <string
+        name="key_prompt_external_downloader"
+        translatable="false"
+    >prompt_external_downloader</string>
+  <string
+        name="key_show_protocol"
+        translatable="false"
+    >show_url_protocol</string>
+  <string
+        name="key_search_suggestions_enabled"
+        translatable="false"
+    >search_suggestions_enabled</string>
+  <string name="key_safe_browsing" translatable="false">safe_browsing</string>
+  <string
+        name="key_shortcuts_visible"
+        translatable="false"
+    >shortcuts_visible</string>
+  <string name="key_news_visible" translatable="false">news_visible</string>
+  <string
+        name="key_tracking_protection"
+        translatable="false"
+    >tracking_protection</string>
+  <string
+        name="key_trust_third_party_certs"
+        translatable="false"
+    >trust_third_party_certs</string>
+  <string
+        name="key_homepage_background_image"
+        translatable="false"
+    >homepage_background_image</string>
+  <string
+        name="key_load_shortcut_icons"
+        translatable="false"
+    >load_shortcut_icons</string>
+  <string
+        name="key_clear_bookmarks"
+        translatable="false"
+    >clear_bookmarks</string>
+
+  <string name="more">More Info</string>
+  <string name="version">Application version</string>
+  <string name="licenses">Open Source Licenses</string>
+  <string name="mpl_license">Mozilla Public License 2.0</string>
+  <string name="apache">Apache License 2.0</string>
+  <string name="freeware">Freeware</string>
+  <string name="mozac">Mozilla Android Components</string>
+  <string
+        name="android_open_source_project"
+    >Android Open Source Project</string>
+  <string name="geckoview">GeckoView</string>
+  <string name="license_gnu">GNU Lesser General Public License</string>
+  <string name="license_gpl">GNU General Public License</string>
+
+  <string name="no_ads">No ads or trackers</string>
+
+  <string name="infinity">∞</string>
+
+  <string name="custom">Custom</string>
+
+  <string name="tabs">Tabs</string>
+  <string name="tabs_normal">Normal</string>
+  <string name="tabs_private">Private</string>
+  <string name="tabs_count_normal">%d Normal Tabs</string>
+  <string name="tabs_count_private">%d Private Tabs</string>
+  <string name="no_tabs_message">No tabs open</string>
+  <string name="no_tabs_description">Tap the + button to open a new tab</string>
+  <string name="close">Close</string>
+
+  <string name="tab_grid">Show tabs in grid</string>
+
+  <string name="action_print">Print</string>
+  <string name="action_add_to_homescreen">Add to home screen</string>
+  <string name="action_history">History</string>
+  <string name="action_bookmarks">Bookmarks</string>
+  <string name="action_downloads">Downloads</string>
+  <string name="action_add_bookmark">Add bookmark</string>
+  <string name="action_copy">Copy link</string>
+
+  <string name="forward">Forward</string>
+  <string name="reload">Reload</string>
+  <string name="settings">Settings</string>
+  <string name="new_tab">New tab</string>
+  <string name="duplicate_tab">Duplicate tab</string>
+  <string name="move_to_private">Move to private mode</string>
+  <string name="move_to_normal">Move to normal mode</string>
+  <string name="close_tab">Close tab</string>
+  <string name="desktop_mode">Desktop site</string>
+  <string name="wait">Wait</string>
+  <string name="stop">Stop</string>
+  <string name="install">Install</string>
+  <string name="cancel">Cancel</string>
+
+  <string name="export_bookmarks">Export bookmarks to backup</string>
+  <string name="import_backup">Import bookmarks from backup</string>
+  <string name="clear_bookmarks">Clear bookmarks</string>
+  <string
+        name="clear_bookmarks_confirm"
+    >Are you sure you want to clear all bookmarks?</string>
+  <string name="export_tabs">Export tabs to backup</string>
+  <string name="import_tabs">Import tabs from backup</string>
+
+  <string name="settings_general">General settings</string>
+  <string name="settings_general_explain">JavaScript…</string>
+
+  <string
+        name="settings_privacy_and_security"
+    >Privacy and security settings</string>
+  <string name="settings_privacy_and_security_explain">Clear history…</string>
+
+  <string name="settings_import_and_export">Import and export settings</string>
+  <string
+        name="settings_import_and_export_explain"
+    >Exporting and importing…</string>
+
+  <string name="settings_customization">Customization settings</string>
+  <string
+        name="settings_customization_explain"
+    >App theme, bottom navbar…</string>
+
+  <string name="settings_advanced">Advanced settings</string>
+  <string name="settings_advanced_explain">Add-on collection…</string>
+
+  <string name="settings_addons">Add-on settings</string>
+  <string
+        name="settings_addons_explain"
+    >Enable add-ons, remove add-ons…</string>
+
+  <string name="settings_about">About</string>
+  <string
+        name="settings_about_explain"
+    >App version, open source licenses…</string>
+
+  <string name="dark_mode">Web dark mode</string>
+  <string name="dark_mode_summary">Darkens supported websites</string>
+  <string name="follow_system">Follow system theme</string>
+  <string
+        name="follow_system_summary"
+    >Darkens browser UI when system dark mode is enabled</string>
+  <string name="javascript_enabled">Enable JavaScript</string>
+
+  <string name="clear_tabs">Clear open tabs</string>
+  <string name="clear_history">Clear browsing history and site data</string>
+  <string name="clear_cookies">Clear cookies</string>
+  <string name="clear_cache">Clear cache</string>
+  <string name="clear_permissions">Clear permissions</string>
+
+  <string name="sites">(%1$s) sites</string>
+
+  <string
+        name="app_restart"
+    >Please restart the app for the change to take effect.</string>
+
+  <string name="mozac_reader_view_description">Enable Reader View</string>
+  <string
+        name="mozac_reader_view_description_selected"
+    >Disable Reader View</string>
+
+  <string name="other_addons">Other add-ons</string>
+  <string name="all_extensions">All extensions</string>
+
+  <string name="tab_removed">Tab removed</string>
+  <string name="undo">Undo</string>
+
+  <string name="hide_url_bar">Hide URL bar while scrolling</string>
+
+  <string name="search">Search or enter address</string>
+  <string name="no_results">No results</string>
+
+  <string name="bookmark">Bookmark</string>
+  <string name="title">Title</string>
+  <string name="url">URL</string>
+  <string name="folder">Folder</string>
+  <string name="add_to_top">Add at top of list</string>
+
+  <string name="add_bookmark">Add bookmark</string>
+  <string name="edit_bookmark">Edit bookmark</string>
+  <string name="remove_history_item">Remove history item</string>
+  <string name="edit_folder">Edit folder</string>
+  <string name="add_folder">Add folder</string>
+  <string name="new_folder_name">New folder</string>
+  <string name="url_empty_mes">URL empty!</string>
+  <string name="title_empty_mes">Title empty!</string>
+  <string name="sort">Sort</string>
+  <string name="sort_rating">Rating</string>
+  <string name="sort_a_z">A-Z</string>
+  <string name="sort_z_a">Z-A</string>
+  <string name="select_this_item">Select this item</string>
+  <string name="move_bookmark">Move to folder</string>
+  <string name="open_all_new">Open all in new tabs</string>
+  <string name="open_all_bg">Open all in background tabs</string>
+  <string name="delete_bookmark">Delete bookmark</string>
+  <string name="delete_folder">Delete folder</string>
+  <string name="open">Open</string>
+  <string name="open_new">Open in new tab</string>
+  <string name="open_new_private">Open in new private tab</string>
+  <string name="open_bg">Open in background tab</string>
+  <string name="confirm">Are you sure you want to delete this item?</string>
+
+  <string name="start_sort">Sorting</string>
+  <string name="end_sort">Not sorting</string>
+
+  <string name="successful">Successful</string>
+  <string name="failed">Failed</string>
+
+  <string name="search_engine">Search engine</string>
+
+  <string name="fill_from_clipboard">Fill from clipboard</string>
+
+  <string name="copy">Copy</string>
+  <string name="paste">Paste</string>
+  <string name="paste_and_go">Paste and go</string>
+  <string name="copied">Copied to clipboard</string>
+
+  <string name="loading_addons">Loading add-ons…</string>
+  <string name="loading">Loading…</string>
+
+  <string name="tabs_cleared">Tabs cleared!</string>
+  <string name="history_cleared">History cleared!</string>
+  <string name="cookies_cleared">Cookies cleared!</string>
+  <string name="cache_cleared">Cache cleared!</string>
+  <string name="permissions_cleared">Permissions cleared!</string>
+
+  <string name="show_addons_in_bar">Show add-ons in navbar</string>
+  <string name="bar_addon_list">Navbar add-on list</string>
+
+  <string name="shortcuts">Shortcuts</string>
+  <string name="add_shortcut">Add shortcut</string>
+  <string name="edit_shortcut">Edit shortcut</string>
+  <string name="delete_shortcut">Delete shortcut</string>
+
+  <string name="homepage_type">Homepage type</string>
+  <string name="default_word">Default</string>
+  <string name="blank_page">Blank page</string>
+  <string name="custom_page">Custom page</string>
+
+  <string name="homepage_background_image">Homepage background image</string>
+  <string name="homepage_background_gallery">Choose from gallery</string>
+  <string name="homepage_background_url">Enter URL</string>
+
+  <string name="load_shortcut_icons">Load website icons for shortcuts</string>
+
+  <string-array name="homepage_background_image_types" translatable="false">
+    <item>@string/none</item>
+    <item>@string/homepage_background_gallery</item>
+    <item>@string/homepage_background_url</item>
+  </string-array>
+
+  <string name="move_navbar">Move address bar to top</string>
+
+  <string-array name="homepage_types" translatable="false">
+    <item>@string/default_word</item>
+    <item>@string/blank_page</item>
+    <item>@string/custom_page</item>
+  </string-array>
+
+  <string name="custom_collection">Custom add-on collection</string>
+  <string name="use_custom_collection">Use custom add-on collection</string>
+  <string
+        name="use_custom_collection_disclaimer"
+    >When using a custom add-on collection, the browser queries Mozilla\'s servers for add-ons. CookieJarApps cannot gurarantee that these add-ons are safe or will function correctly on your device.</string>
+  <string name="collection_user">Collection user</string>
+  <string name="collection_name">Collection name</string>
+
+  <string name="backup_bookmarks">Backup bookmarks</string>
+
+  <string name="theme">App theme</string>
+  <string name="theme_explain">The theme of the browser\'s UI elements.</string>
+  <string name="web_theme">Web theme</string>
+  <string
+        name="web_theme_explain"
+    >The theme that the browser asks extensions and website to use.</string>
+  <string name="light_theme">Light</string>
+  <string name="dark_theme">Dark</string>
+  <string name="auto">Follow system</string>
+
+  <string name="auto_font">Auto font size</string>
+  <string name="font_size">Font size</string>
+
+  <string-array name="theme_types" translatable="false">
+    <item>@string/light_theme</item>
+    <item>@string/dark_theme</item>
+    <item>@string/auto</item>
+  </string-array>
+
+  <string name="rate">Rate</string>
+  <string name="report">Report</string>
+
+  <string name="swap_bookmarks_and_tabs">Swap bookmark and tab drawers</string>
+  <string name="stack_items_reverse">Stack items from bottom of drawer</string>
+
+  <string name="browser_sync">Browser sync</string>
+  <string
+        name="browser_sync_disclaimer"
+    >When using syncing, the browser syncs your tabs with your Firefox account. This means that the browser will store your data in encrypted form on the Firefox Sync servers operated by Mozilla. This service is not affiliated with or endorsed by Mozilla and CookieJarApps is not required to provide support service, warranty, or updates.</string>
+
+  <string name="load_xpi_link">Sideload XPI link</string>
+  <string name="load_xpi_file">Upload XPI file</string>
+  <string
+        name="key_sideload_xpi_file"
+        translatable="false"
+    >sideload_xpi_file</string>
+  <string
+        name="load_xpi_description"
+    >Are you sure you want to install %1$s to this browser? This add-on has not been checked for security or stability by CookieJarApps.</string>
+
+  <string
+        name="addon_not_available"
+    >This add-on is not available from the add-on store. SmartCookieWeb cannot confirm the permissions it requests. Only proceed if you trust this extension.</string>
+
+  <string name="swipe_to_refresh">Swipe to refresh</string>
+
+  <string name="sideloaded_addons">Sideloaded add-ons</string>
+  <string
+        name="already_available"
+    >This add-on is already available in the official add-on store. Add-ons available in the official store cannot be sideloaded.</string>
+  <string name="installed">Installed successfully</string>
+  <string name="error">Error</string>
+
+  <string name="remote_debugging">Remote debugging</string>
+
+  <string name="export_settings">Export settings to backup</string>
+  <string name="import_settings">Import settings from backup</string>
+  <string name="clear_settings">Reset settings</string>
+  <string name="backup_settings">Settings backup</string>
+
+  <string
+        name="prompt_external_downloader"
+    >Ask which app to use to download files</string>
+
+  <string name="close_current_tab">Close current tab</string>
+  <string name="close_all_tabs">Close all tabs</string>
+  <string name="close_other_tabs">Close other tabs</string>
+  <string name="close_app">Close browser</string>
+  <string name="dialog_title_close_browser">Close tabs</string>
+
+  <string name="show_protocol_in_url">Show URL protocol in toolbar</string>
+
+  <string name="search_suggestions">Search suggestions</string>
+
+  <string name="safe_browsing">Safe browsing</string>
+  <string name="tracking_protection">Tracking protection</string>
+
+  <string name="show_newsfeed">Show newsfeed</string>
+  <string name="show_shortcuts">Show shortcuts</string>
+  <string name="disable_newsfeed">Disable newsfeed</string>
+  <string name="configure">Configure</string>
+  <string
+        name="newsfeed_privacy"
+    >CookieJarApps respects your privacy and doesn\'t collect or store any data related to you. That\'s why, to use the newsfeed feature, you\'ll need to fill out some general information about the news you want to receive.</string>
+
+  <string
+        name="trust_third_party_certs"
+    >Trust third party CA certificates</string>
+
+  <string name="custom_search_engine">Custom search engine</string>
+  <string
+        name="custom_search_engine_details"
+    >Enter URL with \'{searchTerms}\' in place of the query</string>
+  <string
+        name="custom_search_engine_error"
+    >Search URL does not contain \'{searchTerms}\'</string>
+
+  <string name="clear">Clear</string>
+  <string name="name">Name</string>
+  <string name="none">None</string>
+
+  <string name="show_site_icons">Show site icons?</string>
+  <string name="allow_shortcut_favicons">Load icons for shortcuts</string>
+  <string
+        name="allow_shortcut_favicons_prompt"
+    >SmartCookieWeb Preview can now show icons of the sites you have shortcuts for on the homepage. However, this feature requires the app to send the URLs of your shortcuts to an external service (par1.cookiejarapps.com/favicon/). No logs are kept about sites sent to the service. Would you like to enable this feature?</string>
+
+  <string name="flex_mode">Flex mode</string>
+
+  <string name="save_as_pdf">Save as PDF</string>
+
+  <!-- Add-on related strings for Mozilla Components 145.0 compatibility -->
+  <string
+        name="mozac_feature_addons_settings_allow_in_private_browsing"
+    >Allow in private browsing</string>
+  <string
+        name="mozac_feature_addons_successfully_enabled"
+    >Add-on enabled successfully</string>
+  <string
+        name="mozac_feature_addons_successfully_disabled"
+    >Add-on disabled successfully</string>
+  <string
+        name="mozac_feature_addons_successfully_uninstalled"
+    >Add-on uninstalled successfully</string>
+
+  <!-- Download related strings for Mozilla Components 145.0 compatibility -->
+  <string
+        name="mozac_feature_downloads_again_dialog_title_with_unknown_size"
+    >Download file again?</string>
+  <string
+        name="mozac_feature_downloads_again_dialog_title"
+    >Download file again? (%1$s)</string>
+  <string
+        name="mozac_feature_downloads_dialog_title_3"
+    >Download file? (%1$s)</string>
+  <string
+        name="mozac_feature_downloads_dialog_title_with_unknown_size"
+    >Download file?</string>
+  <string name="mozac_feature_downloads_dialog_download">Download</string>
+  <string
+        name="mozac_feature_downloads_dialog_download_again"
+    >Download again</string>
+  <string name="mozac_feature_downloads_dialog_cancel">Cancel</string>
+  <string
+        name="mozac_feature_downloads_already_exists_dialog_title"
+    >%1$s already exists.</string>
+  <string
+        name="mozac_feature_downloads_open_existing_file"
+    >Open existing file</string>
+
+  <!-- AwesomeBar related strings -->
+  <string name="switch_to_tab">Switch to tab</string>
+
+  <!-- Contextual Bottom Toolbar strings -->
+  <string name="back">Back</string>
+  <string name="share">Share</string>
+  <string name="menu">Menu</string>
+  <string name="tabs_count_description">%d tabs open</string>
+
+  <!-- Bookmarks Bottom Sheet strings -->
+  <string name="sort_by_name">Sort by Name</string>
+  <string name="sort_by_url">Sort by URL</string>
+  <string name="sort_by_date_added">Sort by Date Added</string>
+  <string name="no_bookmarks">No bookmarks</string>
+  <string
+        name="no_bookmarks_description"
+    >Your bookmarks will appear here</string>
+  <string name="create_folder">Create folder</string>
+  <string name="select_folder">Select Folder</string>
+  <string name="select">Select</string>
+  <string name="select_folder_confirm">Select \"%1$s\"</string>
+  <string name="delete_bookmark_confirm">Delete bookmark \"%1$s\"?</string>
+  <string
+        name="delete_folder_confirm"
+    >Delete folder \"%1$s\" and all its contents?</string>
+  <string
+        name="delete_confirm"
+    >Are you sure you want to delete this item?</string>
+  <string name="delete_confirm_title">Confirm Delete</string>
+
+  <!-- Tab Islands -->
+  <string name="tab_island_name">Tab Island</string>
+  <string name="tab_island_create">Create Tab Island</string>
+  <string name="tab_island_rename">Rename Island</string>
+  <string name="tab_island_delete">Delete Island</string>
+  <string name="tab_island_ungroup">Ungroup All Tabs</string>
+  <string name="tab_island_close_all">Close All Tabs</string>
+  <string name="tab_island_change_color">Change Color</string>
+  <string name="tab_island_choose_color">Choose Island Color</string>
+  <string name="tab_island_collapse">Collapse Island</string>
+  <string name="tab_island_expand">Expand Island</string>
+  <string name="tab_island_create_dialog_title">Create Tab Island?</string>
+  <string
+        name="tab_island_create_dialog_message"
+    >Group these tabs together?</string>
+  <string name="tab_island_rename_dialog_title">Rename Island</string>
+  <string name="tab_island_group_by_domain">Group Tabs by Domain</string>
+  <string name="tab_island_options">Island Options</string>
+  <string name="tab_island_created">Tab Island created</string>
+  <string name="tab_island_default_name_work">Work</string>
+  <string name="tab_island_default_name_personal">Personal</string>
+  <string name="tab_island_default_name_shopping">Shopping</string>
+  <string name="tab_island_default_name_research">Research</string>
+  <string name="tab_island_default_name_entertainment">Entertainment</string>
+  <string name="tab_island_default_name_social">Social</string>
+
+  <!-- Tab groups in tabs list -->
+  <string name="tab_group">Tab Group</string>
+  <string name="ungrouped_tabs">Ungrouped Tabs</string>
+  <string name="expand_collapse">Expand/Collapse</string>
+  <string name="tab_thumbnail">Tab thumbnail</string>
+  <string name="tab_island_collapsed">Collapsed</string>
+  <string name="tab_island_expanded">Expanded</string>
+
+  <!-- Accessibility descriptions -->
+  <string name="drag_handle_description">Drag to resize bottom sheet</string>
+  <string name="tabs_list_description">List of open tabs</string>
+  <string
+        name="collapsed_island_description"
+    >Collapsed island %1$s with %2$d tabs, tap to expand</string>
+  <string
+        name="expanded_island_description"
+    >Expanded island %1$s with %2$d tabs, tap to collapse</string>
+  <string name="collapse_island_button">Collapse island</string>
+  <string name="tab_in_island_description">in %1$s island</string>
+  <string name="selected_tab_description">Selected tab: %1$s, %2$s %3$s</string>
+  <string name="tab_description">Tab: %1$s, %2$s %3$s</string>
+  <string name="close_tab_button">Close %1$s</string>
+  <string
+        name="ungrouped_tabs_header_description"
+    >Ungrouped tabs section</string>
+
+  <!-- Drag and drop -->
+  <string name="drop_tab_to_island">Drop tab here to add to island</string>
+  <string
+        name="drop_tab_to_ungroup"
+    >Drop tab here to remove from island</string>
+
+  <!-- Delete confirmation -->
+  <string
+        name="delete_island_confirmation"
+    >Delete this island and ungroup %1$d tabs?</string>
+
+</resources>

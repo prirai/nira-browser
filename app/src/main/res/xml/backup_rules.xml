@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<full-backup-content>
+    <!-- SECURITY: Restrict backup to non-sensitive preferences only -->
+    <include domain="sharedpref" path="scw_preferences"/>
+    <!-- Exclude all other sensitive data -->
+    <exclude domain="database"/>
+    <exclude domain="file"/>
+    <exclude domain="sharedpref"/>
+</full-backup-content>

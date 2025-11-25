@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:layout_marginEnd="4dp"
+    android:clickable="true"
+    android:focusable="true"
+    android:foreground="?android:attr/selectableItemBackgroundBorderless">
+
+    <!-- Circular favicon container with clipping -->
+    <FrameLayout
+        android:id="@+id/faviconContainer"
+        android:layout_width="32dp"
+        android:layout_height="32dp"
+        android:background="@drawable/favicon_circle_background"
+        android:clipToOutline="true">
+
+        <ImageView
+            android:id="@+id/faviconImage"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_margin="2dp"
+            android:scaleType="centerCrop"
+            android:src="@drawable/ic_baseline_link"
+            android:clickable="false"
+            android:focusable="false" />
+
+    </FrameLayout>
+
+    <!-- Close button -->
+    <ImageView
+        android:id="@+id/closeButton"
+        android:layout_width="16dp"
+        android:layout_height="16dp"
+        android:layout_gravity="top|end"
+        android:layout_marginTop="-2dp"
+        android:layout_marginEnd="-2dp"
+        android:background="@drawable/close_button_background"
+        android:src="@drawable/ic_close_small"
+        android:scaleType="centerInside"
+        android:padding="2dp"
+        android:clickable="true"
+        android:focusable="true"
+        android:visibility="gone" />
+
+    <!-- Selection indicator -->
+    <View
+        android:id="@+id/selectionIndicator"
+        android:layout_width="36dp"
+        android:layout_height="36dp"
+        android:layout_gravity="center"
+        android:background="@drawable/favicon_selection_ring"
+        android:visibility="gone"
+        android:clickable="false"
+        android:focusable="false" />
+
+</FrameLayout>

@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<androidx.cardview.widget.CardView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/islandGroupCard"
+    android:layout_width="wrap_content"
+    android:layout_height="match_parent"
+    android:layout_marginHorizontal="4dp"
+    android:clickable="false"
+    android:focusable="false"
+    app:cardCornerRadius="20dp"
+    app:cardElevation="4dp"
+    app:cardBackgroundColor="?android:attr/colorBackground"
+>
+
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="match_parent"
+        android:orientation="horizontal"
+    >
+
+        <!-- Colored vertical pill indicator on the left edge -->
+        <View
+            android:id="@+id/islandColorIndicator"
+            android:layout_width="6dp"
+            android:layout_height="match_parent"
+            android:background="@android:color/holo_blue_light"
+        />
+
+        <!-- Island header section (name + collapse button) -->
+        <LinearLayout
+            android:id="@+id/islandHeaderSection"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:paddingStart="8dp"
+            android:paddingEnd="4dp"
+            android:clickable="true"
+            android:focusable="true"
+            android:background="?android:attr/selectableItemBackground"
+        >
+
+            <!-- Island name -->
+            <TextView
+                android:id="@+id/islandName"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="4dp"
+                android:text="Island"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                android:textColor="?android:attr/textColorPrimary"
+                android:fontFamily="sans-serif-medium"
+                android:maxLength="15"
+                android:singleLine="true"
+                android:ellipsize="end"
+            />
+
+            <!-- Collapse/Expand button -->
+            <ImageView
+                android:id="@+id/islandCollapseButton"
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:src="@drawable/ic_expand_less"
+                android:contentDescription="Collapse or expand island"
+                android:tint="?android:attr/textColorSecondary"
+                android:scaleType="centerInside"
+            />
+
+        </LinearLayout>
+
+        <!-- Container for tab pills (will be populated dynamically) -->
+        <LinearLayout
+            android:id="@+id/islandTabsContainer"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:orientation="horizontal"
+        />
+
+    </LinearLayout>
+
+</androidx.cardview.widget.CardView>

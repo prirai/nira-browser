@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    >
+
+    <SwitchPreferenceCompat
+            app:key="@string/key_tracking_protection"
+            app:title="@string/tracking_protection"
+            app:singleLineTitle="false"
+            app:defaultValue="true"/>
+
+    <SwitchPreferenceCompat
+            app:key="@string/key_safe_browsing"
+            app:title="@string/safe_browsing"
+            app:singleLineTitle="false"
+            app:defaultValue="true"/>
+
+    <SwitchPreferenceCompat
+        app:key="@string/key_javascript_enabled"
+        app:title="@string/javascript_enabled"
+        app:singleLineTitle="false"
+        app:defaultValue="true"/>
+
+    <Preference
+        app:key="@string/key_search_engine"
+        app:title="@string/search_engine"
+        app:singleLineTitle="false"
+        app:defaultValue="false"/>
+
+    <SwitchPreferenceCompat
+            app:key="@string/key_search_suggestions_enabled"
+            app:title="@string/search_suggestions"
+            app:singleLineTitle="false"
+            app:defaultValue="true"/>
+
+    <Preference
+        app:key="@string/key_homepage_type"
+        app:title="@string/homepage_type"
+        app:singleLineTitle="false"
+        app:defaultValue="false"/>
+
+</PreferenceScreen>

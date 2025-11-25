@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!-- Tab item inside an expanded island - part of the same block -->
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/tab_container"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginHorizontal="8dp"
+    android:orientation="vertical"
+    android:background="?attr/colorSurfaceVariant"
+    android:elevation="2dp"
+>
+
+    <!-- Divider -->
+    <View
+        android:id="@+id/divider"
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_marginHorizontal="16dp"
+        android:background="?android:attr/textColorSecondary"
+        android:alpha="0.2"
+    />
+
+    <!-- Tab Content -->
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/selected_indicator"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingHorizontal="16dp"
+        android:paddingVertical="16dp"
+    >
+
+        <!-- Tab Icon/Thumbnail -->
+        <ImageView
+            android:id="@+id/tab_icon"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:scaleType="centerCrop"
+            android:contentDescription="@string/tab_thumbnail"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            tools:src="@drawable/ic_tabs"
+        />
+
+        <!-- Tab Info -->
+        <LinearLayout
+            android:id="@+id/tab_info"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:layout_marginEnd="8dp"
+            android:orientation="vertical"
+            app:layout_constraintTop_toTopOf="@id/tab_icon"
+            app:layout_constraintBottom_toBottomOf="@id/tab_icon"
+            app:layout_constraintStart_toEndOf="@id/tab_icon"
+            app:layout_constraintEnd_toStartOf="@id/close_button"
+        >
+
+            <!-- Tab Title -->
+            <TextView
+                android:id="@+id/tab_title"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:textColor="?android:attr/textColorPrimary"
+                android:maxLines="1"
+                android:ellipsize="end"
+                tools:text="Example Tab Title"
+            />
+
+            <!-- Tab URL -->
+            <TextView
+                android:id="@+id/tab_url"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:textSize="12sp"
+                android:textColor="?android:attr/textColorSecondary"
+                android:maxLines="1"
+                android:ellipsize="middle"
+                tools:text="example.com"
+            />
+
+        </LinearLayout>
+
+        <!-- Close Button -->
+        <ImageButton
+            android:id="@+id/close_button"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:background="?android:attr/selectableItemBackgroundBorderless"
+            android:src="@drawable/ic_round_close"
+            android:contentDescription="@string/close_tab"
+            android:padding="4dp"
+            app:tint="?android:attr/textColorSecondary"
+            app:layout_constraintTop_toTopOf="@id/tab_icon"
+            app:layout_constraintBottom_toBottomOf="@id/tab_icon"
+            app:layout_constraintEnd_toEndOf="parent"
+        />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+</LinearLayout>

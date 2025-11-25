@@ -1,0 +1,152 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <!-- Handle indicator for bottom sheet -->
+    <View
+        android:id="@+id/dragHandle"
+        android:layout_width="32dp"
+        android:layout_height="4dp"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="24dp"
+        android:background="?android:attr/textColorSecondary" />
+
+    <!-- Bookmarks title and actions -->
+    <RelativeLayout
+        android:id="@+id/headerLayout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/dragHandle"
+        android:layout_marginTop="16dp"
+        android:layout_marginHorizontal="16dp">
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentStart="true"
+            android:layout_centerVertical="true"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <ImageButton
+                android:id="@+id/backButton"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:background="?android:attr/selectableItemBackgroundBorderless"
+                android:src="@drawable/ic_ios_back"
+                android:visibility="gone"
+                android:contentDescription="@string/back"
+                app:tint="?android:attr/textColorPrimary" />
+
+            <TextView
+                android:id="@+id/bookmarksTitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:text="@string/action_bookmarks"
+                android:textSize="20sp"
+                android:textStyle="bold"
+                android:textColor="?android:attr/textColorPrimary" />
+
+        </LinearLayout>
+
+        <ImageButton
+            android:id="@+id/addBookmarkButton"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_alignParentEnd="true"
+            android:layout_centerVertical="true"
+            android:background="?android:attr/selectableItemBackgroundBorderless"
+            android:src="@drawable/ic_baseline_bookmark_add"
+            android:contentDescription="@string/action_add_bookmark"
+            app:tint="?android:attr/textColorPrimary" />
+
+        <ImageButton
+            android:id="@+id/addFolderButton"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_toStartOf="@id/addBookmarkButton"
+            android:layout_centerVertical="true"
+            android:background="?android:attr/selectableItemBackgroundBorderless"
+            android:src="@drawable/ic_baseline_create_new_folder"
+            android:contentDescription="@string/create_folder"
+            app:tint="?android:attr/textColorPrimary" />
+
+        <ImageButton
+            android:id="@+id/sortBookmarksButton"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_toStartOf="@id/addFolderButton"
+            android:layout_centerVertical="true"
+            android:background="?android:attr/selectableItemBackgroundBorderless"
+            android:src="@drawable/ic_baseline_sort"
+            android:contentDescription="@string/sort"
+            app:tint="?android:attr/textColorPrimary" />
+
+    </RelativeLayout>
+
+    <!-- Path navigation (breadcrumbs) -->
+    <com.prirai.android.nira.browser.bookmark.ui.PathView
+        android:id="@+id/pathView"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/headerLayout"
+        android:layout_marginTop="8dp"
+        android:layout_marginHorizontal="8dp"
+        android:visibility="gone" />
+
+    <!-- Bookmarks RecyclerView -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/bookmarksRecyclerView"
+        android:layout_width="match_parent"
+        android:layout_height="400dp"
+        android:layout_below="@id/pathView"
+        android:layout_marginTop="8dp"
+        android:paddingHorizontal="8dp"
+        android:paddingBottom="16dp"
+        android:clipToPadding="false"
+        android:nestedScrollingEnabled="true" />
+
+    <!-- Empty state when no bookmarks -->
+    <LinearLayout
+        android:id="@+id/emptyStateLayout"
+        android:layout_width="wrap_content"
+        android:layout_height="400dp"
+        android:layout_below="@id/pathView"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="32dp"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:visibility="gone">
+
+        <ImageView
+            android:layout_width="64dp"
+            android:layout_height="64dp"
+            android:src="@drawable/ic_baseline_bookmark"
+            android:alpha="0.6"
+            android:layout_marginBottom="16dp"
+            android:contentDescription="@string/no_bookmarks"
+            app:tint="?android:attr/textColorSecondary" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/no_bookmarks"
+            android:textSize="16sp"
+            android:textColor="?android:attr/textColorSecondary"
+            android:layout_marginBottom="8dp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/no_bookmarks_description"
+            android:textSize="14sp"
+            android:textColor="?android:attr/textColorSecondary"
+            android:textAlignment="center"
+            android:layout_marginHorizontal="24dp" />
+
+    </LinearLayout>
+
+</RelativeLayout>

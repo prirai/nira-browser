@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="40dp"
+    android:height="40dp"
+    android:viewportWidth="40"
+    android:viewportHeight="40">
+
+    <!-- Diagonal stripe pattern - multiple repeating stripes -->
+    <path
+        android:fillColor="#30000000"
+        android:pathData="M0,35 L35,0 L40,5 L5,40 L0,40 Z" />
+
+    <path
+        android:fillColor="#30000000"
+        android:pathData="M0,15 L15,0 L20,0 L0,20 Z" />
+
+    <path
+        android:fillColor="#30000000"
+        android:pathData="M20,0 L40,20 L40,25 L25,40 L20,40 L40,20 Z" />
+
+    <path
+        android:fillColor="#30000000"
+        android:pathData="M5,40 L40,5 L40,10 L10,40 Z" />
+
+    <path
+        android:fillColor="#30000000"
+        android:pathData="M25,40 L40,25 L40,30 L30,40 Z" />
+</vector>

@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<PreferenceScreen xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <SwitchPreferenceCompat
+        app:key="@string/key_remote_debugging"
+        app:title="@string/remote_debugging"
+        app:singleLineTitle="false"
+        app:defaultValue="false"
+    />
+
+    <SwitchPreferenceCompat
+        app:key="@string/key_trust_third_party_certs"
+        app:title="@string/trust_third_party_certs"
+        app:singleLineTitle="false"
+        app:defaultValue="false"
+    />
+
+    <SwitchPreferenceCompat
+        app:key="@string/key_prompt_external_downloader"
+        app:title="@string/prompt_external_downloader"
+        app:singleLineTitle="false"
+        app:defaultValue="false"
+    />
+
+    <Preference
+        app:key="@string/key_sideload_xpi"
+        app:title="@string/load_xpi_link"
+        app:singleLineTitle="false"
+        app:enabled="true"
+    />
+
+    <Preference
+        app:key="@string/key_sideload_xpi_file"
+        app:title="@string/load_xpi_file"
+        app:singleLineTitle="false"
+        app:enabled="true"
+    />
+
+    <SwitchPreferenceCompat
+        app:key="@string/key_use_custom_collection"
+        app:title="@string/use_custom_collection"
+        app:singleLineTitle="false"
+        app:defaultValue="false"
+    />
+
+    <Preference
+        app:key="@string/key_collection_user"
+        app:title="@string/collection_user"
+        app:singleLineTitle="false"
+        app:enabled="false"
+    />
+
+    <Preference
+        app:key="@string/key_collection_name"
+        app:title="@string/collection_name"
+        app:singleLineTitle="false"
+        app:enabled="false"
+    />
+
+</PreferenceScreen>

@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <!-- Handle indicator for bottom sheet -->
+    <View
+        android:id="@+id/dragHandle"
+        android:layout_width="32dp"
+        android:layout_height="4dp"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="24dp"
+        android:background="?android:attr/textColorSecondary" />
+
+    <!-- Tab mode toggle (Normal/Private) -->
+    <com.google.android.material.tabs.TabLayout
+        android:id="@+id/tabModeToggle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/dragHandle"
+        android:layout_marginTop="32dp"
+        android:layout_marginHorizontal="16dp"
+        app:tabGravity="fill"
+        app:tabMode="fixed"
+        app:tabIndicatorColor="?attr/colorPrimary"
+        app:tabSelectedTextColor="?attr/colorPrimary"
+        app:tabTextColor="?android:attr/textColorSecondary"
+        app:tabIconTint="?attr/colorPrimary">
+
+        <com.google.android.material.tabs.TabItem
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:icon="@drawable/ic_tabs"
+            android:text="@string/tabs_normal" />
+
+        <com.google.android.material.tabs.TabItem
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:icon="@drawable/ic_incognito"
+            android:text="@string/tabs_private" />
+
+    </com.google.android.material.tabs.TabLayout>
+
+    <!-- New Tab Button -->
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/newTabButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/tabModeToggle"
+        android:layout_marginTop="16dp"
+        android:layout_marginHorizontal="16dp"
+        android:text="@string/new_tab"
+        android:drawableStart="@drawable/ic_round_add"
+        android:drawablePadding="8dp"
+        style="@style/Widget.Material3.Button.TonalButton" />
+
+    <!-- Tabs RecyclerView -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/tabsRecyclerView"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_below="@id/newTabButton"
+        android:layout_marginTop="16dp"
+        android:layout_marginBottom="32dp"
+        android:paddingBottom="64dp"
+        android:paddingLeft="12dp"
+        android:paddingRight="12dp"
+        android:clipToPadding="false"
+        android:nestedScrollingEnabled="false"
+        android:overScrollMode="never" />
+
+    <!-- Empty state when no tabs -->
+    <LinearLayout
+        android:id="@+id/emptyStateLayout"
+        android:layout_width="wrap_content"
+        android:layout_height="match_parent"
+        android:layout_below="@id/newTabButton"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="32dp"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:visibility="gone">
+
+        <ImageView
+            android:layout_width="64dp"
+            android:layout_height="64dp"
+            android:src="@drawable/ic_tabs"
+            android:alpha="0.6"
+            android:layout_marginBottom="16dp"
+            android:contentDescription="@string/no_tabs_message"
+            app:tint="?android:attr/textColorSecondary" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/no_tabs_message"
+            android:textSize="16sp"
+            android:textColor="?android:attr/textColorSecondary"
+            android:layout_marginBottom="8dp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/no_tabs_description"
+            android:textSize="14sp"
+            android:textColor="?android:attr/textColorSecondary"
+            android:textAlignment="center"
+            android:layout_marginHorizontal="24dp" />
+
+    </LinearLayout>
+
+</RelativeLayout>

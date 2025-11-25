@@ -1,0 +1,162 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/addon_details"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginTop="6dp"
+    android:layout_marginBottom="6dp">
+
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingStart="?android:attr/listPreferredItemPaddingStart"
+        android:paddingEnd="?android:attr/listPreferredItemPaddingEnd">
+
+        <ImageView
+            android:id="@+id/addon_icon"
+            android:layout_width="54dp"
+            android:layout_height="54dp"
+            android:layout_marginBottom="8dp"
+            tools:srcCompat="@drawable/ic_settings_addons_layers" />
+
+        <TextView
+            android:id="@+id/addon_title"
+            android:layout_width="wrap_content"
+            android:layout_height="54dp"
+            android:layout_alignParentTop="true"
+            android:layout_marginStart="8dp"
+            android:layout_toEndOf="@id/addon_icon"
+            android:gravity="center_vertical"
+            android:maxLines="2"
+            android:textColor="?android:attr/textColorPrimary"
+            android:textSize="24sp"
+            app:autoSizeMaxTextSize="24sp"
+            app:autoSizeStepGranularity="2sp"
+            app:autoSizeTextType="uniform"
+            tools:text="Add-on" />
+
+        <RatingBar
+            android:id="@+id/rating_view"
+            style="@style/Widget.AppCompat.RatingBar.Small"
+            android:layout_width="wrap_content"
+            android:layout_height="20dp"
+            android:layout_below="@+id/author_text"
+            android:layout_marginTop="2dp"
+            android:isIndicator="true"
+            android:numStars="5" />
+
+        <TextView
+            android:id="@+id/users_count"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_below="@id/author_text"
+            android:layout_alignParentEnd="false"
+            android:layout_marginStart="6dp"
+            android:layout_toEndOf="@id/rating_view"
+            android:textColor="?android:attr/textColorPrimary"
+            tools:text="1,234" />
+
+        <TextView
+            android:id="@+id/details"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_below="@+id/rating_view"
+            android:layout_marginTop="16dp"
+            android:layout_marginBottom="20dp"
+            tools:text="@tools:sample/lorem" />
+
+        <TextView
+            android:id="@+id/author_text"
+            android:layout_width="wrap_content"
+            android:layout_height="20dp"
+            android:layout_below="@id/addon_icon"
+            android:layout_alignParentEnd="false"
+            android:layout_marginTop="4dp"
+            android:textColor="?android:attr/textColorPrimary"
+            tools:text="@tools:sample/full_names" />
+
+        <View
+            android:id="@+id/author_divider"
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_below="@+id/details"
+            android:layout_marginTop="10dp"
+            android:layout_marginBottom="10dp"
+            android:background="@color/photonGrey40"
+            android:importantForAccessibility="no" />
+
+        <TextView
+            android:id="@+id/version_label"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_below="@+id/author_divider"
+            android:text="@string/mozac_feature_addons_version"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/version_text"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_below="@+id/author_divider"
+            android:layout_alignParentEnd="true"
+            tools:text="1.2.3" />
+
+        <View
+            android:id="@+id/version_divider"
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_below="@+id/version_label"
+            android:layout_marginTop="10dp"
+            android:layout_marginBottom="10dp"
+            android:background="@color/photonGrey40"
+            android:importantForAccessibility="no" />
+
+        <TextView
+            android:id="@+id/last_updated_label"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_below="@+id/version_divider"
+            android:text="@string/mozac_feature_addons_last_updated"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/last_updated_text"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_below="@+id/version_divider"
+            android:layout_alignParentEnd="true"
+            tools:text="January 2, 2003" />
+
+        <View
+            android:id="@+id/last_updated_divider"
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_below="@+id/last_updated_label"
+            android:layout_marginTop="10dp"
+            android:layout_marginBottom="10dp"
+            android:background="@color/photonGrey40"
+            android:importantForAccessibility="no" />
+
+        <TextView
+            android:id="@+id/home_page_label"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_below="@+id/last_updated_divider"
+            android:text="@string/mozac_feature_addons_home_page"
+            android:textStyle="bold" />
+
+        <androidx.appcompat.widget.AppCompatImageView
+            android:id="@+id/home_page_text"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_below="@+id/last_updated_divider"
+            android:layout_alignParentEnd="true"
+            android:contentDescription="@string/mozac_feature_addons_home_page"
+            app:srcCompat="@drawable/ic_baseline_link"
+            app:tint="?android:attr/textColorPrimary" />
+
+    </RelativeLayout>
+</ScrollView>

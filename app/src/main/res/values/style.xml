@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<resources>
+
+    <style
+        name="AppThemeNotActionBar"
+        parent="Theme.Material3.DayNight.NoActionBar"
+    >
+        <item name="colorAccent">@color/colorAccent</item>
+        <item
+            name="bottomSheetDialogTheme"
+        >@style/AppBottomSheetDialogTheme</item>
+        <item name="android:statusBarColor">@color/statusbar_background</item>
+    </style>
+
+    <!-- Splash Screen Theme -->
+    <style name="SplashTheme" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="android:windowBackground">@drawable/splash_background</item>
+        <item name="android:statusBarColor">@color/statusbar_background</item>
+        <item
+            name="android:navigationBarColor"
+        >@color/statusbar_background</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowFullscreen">false</item>
+        <item name="android:windowDrawsSystemBarBackgrounds">true</item>
+    </style>
+
+    <style name="AppThemeAddons" parent="Theme.Material3.DayNight">
+        <item name="colorAccent">@color/colorAccent</item>
+        <item name="actionBarTheme">@style/LightActionBar</item>
+        <item name="android:statusBarColor">@color/statusbar_background</item>
+
+        <item
+            name="mozac_primary_text_color"
+        >?android:attr/textColorPrimary</item>
+    </style>
+
+    <style name="SearchDialogStyle">
+        <item name="android:windowAnimationStyle">@null</item>
+        <item
+            name="android:textAppearance"
+        >@style/TextAppearance.AppCompat</item>
+        <item name="android:colorControlNormal">@color/colorAccent</item>
+        <item name="android:colorControlActivated">@color/colorAccent</item>
+        <item name="android:colorControlHighlight">@color/colorAccent</item>
+        <item name="android:windowBackground">?attr/colorSurface</item>
+        <item name="windowNoTitle">true</item>
+        <item name="android:windowIsFloating">false</item>
+        <item name="android:windowSoftInputMode">adjustResize</item>
+        <item name="windowActionBar">false</item>
+        <item name="android:windowFullscreen">false</item>
+        <item name="android:windowContentOverlay">@null</item>
+        <item
+            name="android:navigationBarColor"
+        >@android:color/transparent</item>
+        <item name="android:windowTranslucentNavigation">true</item>
+    </style>
+
+    <style name="AppThemeSettings" parent="AppThemeAddons">
+        <item
+            name="preferenceTheme"
+        >@style/PreferenceThemeOverlay.Material3</item>
+        <item name="android:listDivider">@null</item>
+    </style>
+
+    <!-- Modern Preference Styles -->
+    <style
+        name="PreferenceThemeOverlay.Material3"
+        parent="PreferenceThemeOverlay.v14.Material"
+    >
+        <item
+            name="preferenceCategoryStyle"
+        >@style/Preference.Category.Material3</item>
+        <item name="preferenceStyle">@style/Preference.Material3</item>
+        <item
+            name="switchPreferenceCompatStyle"
+        >@style/Preference.SwitchPreferenceCompat.Material3</item>
+    </style>
+
+    <style name="Preference.Category.Material3" parent="Preference.Category">
+        <item name="android:layout">@layout/preference_category_material3</item>
+        <item name="allowDividerAbove">false</item>
+        <item name="allowDividerBelow">true</item>
+    </style>
+
+    <style name="Preference.Material3" parent="Preference">
+        <item name="android:layout">@layout/preference_material3</item>
+    </style>
+
+    <style
+        name="Preference.SwitchPreferenceCompat.Material3"
+        parent="Preference.SwitchPreferenceCompat"
+    >
+        <item name="android:layout">@layout/preference_material3</item>
+    </style>
+
+    <style
+        name="LightActionBar"
+        parent="@style/ThemeOverlay.MaterialComponents.ActionBar"
+    >
+        <item name="android:background">?attr/colorSurface</item>
+    </style>
+
+    <style
+        name="ExtensionPopupTabletStyle"
+        parent="@android:style/Animation.Activity"
+    >
+        <item
+            name="android:windowEnterAnimation"
+        >@anim/extension_popup_tablet_in</item>
+        <item
+            name="android:windowExitAnimation"
+        >@anim/extension_popup_tablet_out</item>
+    </style>
+
+    <style name="ToolBarStyle" parent="Theme.AppCompat">
+        <item name="android:textColorPrimary">?attr/colorSurface</item>
+        <item name="android:textColorSecondary">?attr/colorSurface</item>
+        <item name="actionMenuTextColor">?attr/colorSurface</item>
+    </style>
+
+    <style
+        name="AppBottomSheetDialogTheme"
+        parent="Theme.Material3.DayNight.BottomSheetDialog"
+    >
+        <item name="bottomSheetStyle">@style/AppModalStyle</item>
+    </style>
+
+    <style name="AppModalStyle" parent="Widget.Design.BottomSheet.Modal">
+        <item name="android:background">@drawable/rounded_bottom_sheet</item>
+    </style>
+</resources>

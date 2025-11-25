@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Group colors for tab groups -->
+    <color name="group_color_1">#FF6B6B</color>
+    <color name="group_color_2">#4ECDC4</color>
+    <color name="group_color_3">#45B7D1</color>
+    <color name="group_color_4">#FFA07A</color>
+    <color name="group_color_5">#98D8C8</color>
+    <color name="group_color_6">#F7DC6F</color>
+    
+    <!-- Surface colors -->
+    <color name="surface_elevated">#FFFFFF</color>
+    <color name="surface_elevated_dark">#2C2C2C</color>
+    
+    <!-- Toolbar colors -->
+    <color name="accent_color">#6200EE</color>
+    <color name="surface_color">?attr/colorSurface</color>
+    <color name="on_accent_color">#FFFFFF</color>
+    <color name="on_surface_color">?android:attr/textColorPrimary</color>
+    <color name="divider_color">#E0E0E0</color>
+</resources>
