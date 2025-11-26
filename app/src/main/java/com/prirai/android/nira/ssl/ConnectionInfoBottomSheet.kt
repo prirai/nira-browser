@@ -6,10 +6,14 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
+import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import com.google.android.material.button.MaterialButton
+import com.google.android.material.switchmaterial.SwitchMaterial
 import com.prirai.android.nira.R
 import com.prirai.android.nira.ext.components
+import com.prirai.android.nira.preferences.UserPreferences
 import mozilla.components.browser.state.selector.selectedTab
 import mozilla.components.support.ktx.kotlin.tryGetHostFromUrl
 
@@ -43,6 +47,9 @@ class ConnectionInfoBottomSheet : BottomSheetDialogFragment() {
         val websiteUrl = view.findViewById<TextView>(R.id.website_url)
         val certificateIssuer = view.findViewById<TextView>(R.id.certificate_issuer)
         val certificateHolder = view.findViewById<TextView>(R.id.certificate_holder)
+        val trackingProtectionSwitch = view.findViewById<SwitchMaterial>(R.id.tracking_protection_switch)
+        val trackingProtectionSubtitle = view.findViewById<TextView>(R.id.tracking_protection_subtitle)
+        val clearCookiesButton = view.findViewById<MaterialButton>(R.id.clear_cookies_button)
         val closeButton = view.findViewById<MaterialButton>(R.id.close_button)
 
         // Set security status
@@ -64,8 +71,80 @@ class ConnectionInfoBottomSheet : BottomSheetDialogFragment() {
         certificateIssuer.text = securityInfo?.issuer ?: "Unknown"
         certificateHolder.text = securityInfo?.host ?: host
 
+        // Setup tracking protection toggle
+        val userPrefs = UserPreferences(context)
+        trackingProtectionSwitch.isChecked = userPrefs.trackingProtection
+        
+        trackingProtectionSwitch.setOnCheckedChangeListener { _, isChecked ->
+            userPrefs.trackingProtection = isChecked
+            trackingProtectionSubtitle.text = if (isChecked) {
+                "Blocking trackers"
+            } else {
+                "Not blocking trackers"
+            }
+            
+            // Reload the page to apply changes
+            context.components.sessionUseCases.reload()
+            
+            Toast.makeText(
+                context,
+                if (isChecked) "Tracking protection enabled" else "Tracking protection disabled",
+                Toast.LENGTH_SHORT
+            ).show()
+        }
+        
+        trackingProtectionSubtitle.text = if (trackingProtectionSwitch.isChecked) {
+            "Blocking trackers"
+        } else {
+            "Not blocking trackers"
+        }
+
+        // Clear cookies button
+        clearCookiesButton.setOnClickListener {
+            showClearCookiesConfirmation()
+        }
+
         // Close button
         closeButton.setOnClickListener {
+            dismiss()
+        }
+    }
+
+    private fun showClearCookiesConfirmation() {
+        AlertDialog.Builder(requireContext())
+            .setTitle("Clear cookies and site data?")
+            .setMessage("This will clear all cookies and site data for this website. You may need to sign in again.")
+            .setPositiveButton("Clear") { _, _ ->
+                clearCookiesForCurrentSite()
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun clearCookiesForCurrentSite() {
+        val context = requireContext()
+        val selectedTab = context.components.store.state.selectedTab
+        val url = selectedTab?.content?.url ?: ""
+        
+        if (url.isNotEmpty()) {
+            // Clear cookies for the current site
+            context.components.engine.clearData(
+                mozilla.components.concept.engine.Engine.BrowsingData.select(
+                    mozilla.components.concept.engine.Engine.BrowsingData.COOKIES,
+                    mozilla.components.concept.engine.Engine.BrowsingData.DOM_STORAGES
+                ),
+                host = url.tryGetHostFromUrl()
+            )
+            
+            Toast.makeText(
+                context,
+                "Cookies and site data cleared",
+                Toast.LENGTH_SHORT
+            ).show()
+            
+            // Reload the page
+            context.components.sessionUseCases.reload()
+            
             dismiss()
         }
     }
