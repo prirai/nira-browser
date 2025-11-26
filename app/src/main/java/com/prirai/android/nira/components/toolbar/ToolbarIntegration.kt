@@ -6,6 +6,7 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.LifecycleOwner
 import com.prirai.android.nira.R
 import com.prirai.android.nira.ext.components
+import com.prirai.android.nira.ssl.showSslDialog
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.cancel
@@ -60,6 +61,11 @@ abstract class ToolbarIntegration(
         // Always hide menu button from address bar (it's shown in the contextual toolbar instead)
         toolbar.display.menuBuilder = null
         toolbar.private = isPrivate
+        
+        // Set security icon click listener
+        toolbar.display.setOnSiteInfoClickedListener {
+            context.showSslDialog()
+        }
     }
 
     override fun start() {
@@ -89,23 +95,16 @@ abstract class ToolbarIntegration(
     }
 
     private fun updateSecurityBackground(isSecure: Boolean) {
-        val background = if (isSecure) {
-            AppCompatResources.getDrawable(context, R.drawable.toolbar_background)
-        } else {
-            AppCompatResources.getDrawable(context, R.drawable.toolbar_background_insecure)
-        }
+        // Always use the normal toolbar background, don't change based on security
+        val background = AppCompatResources.getDrawable(context, R.drawable.toolbar_background)
         toolbar.display.setUrlBackground(background)
 
-        // Update text color for visibility on dark red background
-        val textColor = if (isSecure) {
-            context.getColorFromAttr(android.R.attr.textColorPrimary)
-        } else {
-            0xFFFFFFFF.toInt() // White text for dark red background
-        }
+        // Keep consistent text color
+        val textColor = context.getColorFromAttr(android.R.attr.textColorPrimary)
 
         toolbar.display.colors = toolbar.display.colors.copy(
             text = textColor,
-            hint = if (isSecure) 0x1E15141a else 0x80FFFFFF.toInt()
+            hint = 0x1E15141a
         )
     }
 
@@ -141,7 +140,7 @@ class DefaultToolbarIntegration(
 
         toolbar.display.indicators =
             listOf(
-                DisplayToolbar.Indicators.EMPTY,
+                DisplayToolbar.Indicators.SECURITY,
                 DisplayToolbar.Indicators.HIGHLIGHT
             )
 

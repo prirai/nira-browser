@@ -12,6 +12,7 @@ import androidx.lifecycle.LifecycleOwner
 import com.prirai.android.nira.R
 import com.prirai.android.nira.ext.components
 import com.prirai.android.nira.preferences.UserPreferences
+import com.prirai.android.nira.ssl.showSslDialog
 import com.prirai.android.nira.utils.ToolbarPopupWindow
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import mozilla.components.browser.state.selector.selectedTab

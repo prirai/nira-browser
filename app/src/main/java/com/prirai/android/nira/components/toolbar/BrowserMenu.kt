@@ -127,7 +127,6 @@ class BrowserMenu(
     private val menuItems by lazy {
         val menuItems = listOfNotNull(
             settings,
-            securityItem,
             findInPage,
             BrowserMenuDivider(),
             historyItem,
