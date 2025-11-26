@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="24dp">
+
+    <!-- Security Icon and Status -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginBottom="16dp">
+
+        <ImageView
+            android:id="@+id/security_icon"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:src="@drawable/ic_baseline_lock"
+            app:tint="?android:attr/textColorPrimary" />
+
+        <TextView
+            android:id="@+id/security_status"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="12dp"
+            android:text="Connection is secure"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:textColor="?android:attr/textColorPrimary" />
+
+    </LinearLayout>
+
+    <!-- Website Title -->
+    <TextView
+        android:id="@+id/website_title"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Website Title"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        android:textColor="?android:attr/textColorPrimary"
+        android:layout_marginBottom="4dp"
+        android:maxLines="2"
+        android:ellipsize="end" />
+
+    <!-- Website URL -->
+    <TextView
+        android:id="@+id/website_url"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="https://example.com"
+        android:textSize="14sp"
+        android:textColor="?android:attr/textColorSecondary"
+        android:layout_marginBottom="20dp"
+        android:maxLines="1"
+        android:ellipsize="middle" />
+
+    <!-- Divider -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="?android:attr/listDivider"
+        android:layout_marginBottom="20dp" />
+
+    <!-- Certificate Info Section -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Certificate Information"
+        android:textSize="14sp"
+        android:textStyle="bold"
+        android:textColor="?android:attr/textColorPrimary"
+        android:layout_marginBottom="12dp" />
+
+    <!-- Issuer -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:layout_marginBottom="12dp">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Issued by"
+            android:textSize="12sp"
+            android:textColor="?android:attr/textColorSecondary"
+            android:layout_marginBottom="4dp" />
+
+        <TextView
+            android:id="@+id/certificate_issuer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Certificate Authority"
+            android:textSize="14sp"
+            android:textColor="?android:attr/textColorPrimary" />
+
+    </LinearLayout>
+
+    <!-- Certificate Holder -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:layout_marginBottom="20dp">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Issued to"
+            android:textSize="12sp"
+            android:textColor="?android:attr/textColorSecondary"
+            android:layout_marginBottom="4dp" />
+
+        <TextView
+            android:id="@+id/certificate_holder"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="example.com"
+            android:textSize="14sp"
+            android:textColor="?android:attr/textColorPrimary" />
+
+    </LinearLayout>
+
+    <!-- Close Button -->
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/close_button"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Close"
+        style="@style/Widget.Material3.Button.TextButton" />
+
+</LinearLayout>
