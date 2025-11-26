@@ -20,7 +20,7 @@
         android:src="@drawable/ic_ios_back"
         android:contentDescription="@string/back"
         android:scaleType="fitCenter"
-        android:padding="4dp"
+        android:padding="10dp"
         app:tint="?android:attr/textColorPrimary" />
 
     <!-- Forward Button (hidden by default) -->
@@ -33,7 +33,7 @@
         android:src="@drawable/ic_ios_forward"
         android:contentDescription="@string/forward"
         android:scaleType="fitCenter"
-        android:padding="4dp"
+        android:padding="10dp"
         android:visibility="gone"
         app:tint="?android:attr/textColorPrimary" />
 
@@ -47,7 +47,7 @@
         android:src="@drawable/ic_ios_share"
         android:contentDescription="@string/share"
         android:scaleType="fitCenter"
-        android:padding="4dp"
+        android:padding="10dp"
         app:tint="?android:attr/textColorPrimary" />
 
     <!-- Search Button (for homepage) -->
@@ -60,7 +60,7 @@
         android:src="@drawable/ic_ios_search"
         android:contentDescription="@string/search"
         android:scaleType="fitCenter"
-        android:padding="4dp"
+        android:padding="10dp"
         android:visibility="gone"
         app:tint="?android:attr/textColorPrimary" />
 
@@ -74,7 +74,7 @@
         android:src="@drawable/ic_ios_add"
         android:contentDescription="@string/new_tab"
         android:scaleType="fitCenter"
-        android:padding="4dp"
+        android:padding="10dp"
         android:visibility="gone"
         app:tint="?android:attr/textColorPrimary" />
 
@@ -90,8 +90,8 @@
 
         <!-- Tab Count Background (Square) -->
         <ImageView
-            android:layout_width="36dp"
-            android:layout_height="36dp"
+            android:layout_width="28dp"
+            android:layout_height="28dp"
             android:layout_gravity="center"
             android:src="@drawable/tab_number_background"
             android:scaleType="fitXY"
@@ -100,12 +100,12 @@
         <!-- Tab Count Text -->
         <TextView
             android:id="@+id/tab_count_text"
-            android:layout_width="36dp"
-            android:layout_height="36dp"
+            android:layout_width="28dp"
+            android:layout_height="28dp"
             android:layout_gravity="center"
             android:gravity="center"
             android:text="1"
-            android:textSize="14sp"
+            android:textSize="13sp"
             android:textStyle="bold"
             android:textColor="?android:attr/textColorPrimary"
             android:maxLines="1"
@@ -123,7 +123,7 @@
         android:src="@drawable/ic_ios_menu"
         android:contentDescription="@string/menu"
         android:scaleType="fitCenter"
-        android:padding="4dp"
+        android:padding="10dp"
         app:tint="?android:attr/textColorPrimary" />
 
 </LinearLayout>
