@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<selector xmlns:android="http://schemas.android.com/apk/res/android" xmlns:app="http://schemas.android.com/apk/res-auto">
+    <!-- Internal page state - show shield lock icon -->
+    <item
+        android:drawable="@drawable/shield_lock_24"
+        app:state_internal_page="true" />
+    <!-- Secure state - show security shield icon -->
+    <item
+        android:drawable="@drawable/security_24"
+        app:state_site_secure="true" />
+    <!-- Local PDF state - show shield lock icon -->
+    <item
+        android:drawable="@drawable/shield_lock_24"
+        app:state_local_pdf="true" />
+    <!-- Insecure state - show encrypted off icon -->
+    <item android:drawable="@drawable/encrypted_off_24" />
+</selector>

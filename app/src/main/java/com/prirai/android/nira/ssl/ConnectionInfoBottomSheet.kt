@@ -45,20 +45,29 @@ class ConnectionInfoBottomSheet : BottomSheetDialogFragment() {
         val securityStatus = view.findViewById<TextView>(R.id.security_status)
         val websiteTitle = view.findViewById<TextView>(R.id.website_title)
         val websiteUrl = view.findViewById<TextView>(R.id.website_url)
+        val certificateSection = view.findViewById<View>(R.id.certificate_section)
         val certificateIssuer = view.findViewById<TextView>(R.id.certificate_issuer)
         val certificateHolder = view.findViewById<TextView>(R.id.certificate_holder)
+        val privacySection = view.findViewById<View>(R.id.privacy_section)
         val trackingProtectionSwitch = view.findViewById<SwitchMaterial>(R.id.tracking_protection_switch)
         val trackingProtectionSubtitle = view.findViewById<TextView>(R.id.tracking_protection_subtitle)
         val clearCookiesButton = view.findViewById<MaterialButton>(R.id.clear_cookies_button)
         val closeButton = view.findViewById<MaterialButton>(R.id.close_button)
 
+        // Check if this is an internal page
+        val isInternalPage = isInternalUrl(url)
+
         // Set security status
-        if (securityInfo?.secure == true) {
-            securityIcon.setImageResource(R.drawable.ic_baseline_lock)
+        if (isInternalPage) {
+            securityIcon.setImageResource(R.drawable.shield_lock_24)
+            securityStatus.text = "Internal page"
+            securityStatus.setTextColor(context.getColor(android.R.color.holo_blue_dark))
+        } else if (securityInfo?.secure == true) {
+            securityIcon.setImageResource(R.drawable.security_24)
             securityStatus.text = "Connection is secure"
             securityStatus.setTextColor(0xFF5cb85c.toInt())
         } else {
-            securityIcon.setImageResource(R.drawable.ic_baseline_lock_open)
+            securityIcon.setImageResource(R.drawable.encrypted_off_24)
             securityStatus.text = "Connection is not secure"
             securityStatus.setTextColor(0xFFd9534f.toInt())
         }
@@ -67,47 +76,63 @@ class ConnectionInfoBottomSheet : BottomSheetDialogFragment() {
         websiteTitle.text = title
         websiteUrl.text = url
 
-        // Set certificate info
-        certificateIssuer.text = securityInfo?.issuer ?: "Unknown"
-        certificateHolder.text = securityInfo?.host ?: host
+        // Show/hide certificate and privacy sections for internal pages
+        if (isInternalPage) {
+            certificateSection.visibility = View.GONE
+            privacySection.visibility = View.GONE
+        } else {
+            certificateSection.visibility = View.VISIBLE
+            privacySection.visibility = View.VISIBLE
+            
+            // Set certificate info
+            certificateIssuer.text = securityInfo?.issuer ?: "Unknown"
+            certificateHolder.text = securityInfo?.host ?: host
 
-        // Setup tracking protection toggle
-        val userPrefs = UserPreferences(context)
-        trackingProtectionSwitch.isChecked = userPrefs.trackingProtection
-        
-        trackingProtectionSwitch.setOnCheckedChangeListener { _, isChecked ->
-            userPrefs.trackingProtection = isChecked
-            trackingProtectionSubtitle.text = if (isChecked) {
+            // Setup tracking protection toggle
+            val userPrefs = UserPreferences(context)
+            trackingProtectionSwitch.isChecked = userPrefs.trackingProtection
+            
+            trackingProtectionSwitch.setOnCheckedChangeListener { _, isChecked ->
+                userPrefs.trackingProtection = isChecked
+                trackingProtectionSubtitle.text = if (isChecked) {
+                    "Blocking trackers"
+                } else {
+                    "Not blocking trackers"
+                }
+                
+                // Reload the page to apply changes
+                context.components.sessionUseCases.reload()
+                
+                Toast.makeText(
+                    context,
+                    if (isChecked) "Tracking protection enabled" else "Tracking protection disabled",
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+            
+            trackingProtectionSubtitle.text = if (trackingProtectionSwitch.isChecked) {
                 "Blocking trackers"
             } else {
                 "Not blocking trackers"
             }
-            
-            // Reload the page to apply changes
-            context.components.sessionUseCases.reload()
-            
-            Toast.makeText(
-                context,
-                if (isChecked) "Tracking protection enabled" else "Tracking protection disabled",
-                Toast.LENGTH_SHORT
-            ).show()
-        }
-        
-        trackingProtectionSubtitle.text = if (trackingProtectionSwitch.isChecked) {
-            "Blocking trackers"
-        } else {
-            "Not blocking trackers"
-        }
 
-        // Clear cookies button
-        clearCookiesButton.setOnClickListener {
-            showClearCookiesConfirmation()
+            // Clear cookies button
+            clearCookiesButton.setOnClickListener {
+                showClearCookiesConfirmation()
+            }
         }
 
         // Close button
         closeButton.setOnClickListener {
             dismiss()
         }
+    }
+
+    private fun isInternalUrl(url: String): Boolean {
+        return url.startsWith("about:") || 
+               url.startsWith("moz-extension://") ||
+               url.startsWith("resource://") ||
+               url.startsWith("chrome://")
     }
 
     private fun showClearCookiesConfirmation() {

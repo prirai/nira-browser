@@ -86,10 +86,11 @@ abstract class ToolbarIntegration(
         securityBackgroundScope = store.flowScoped { flow ->
             flow.mapNotNull { state -> state.selectedTab }
                 .ifAnyChanged { tab ->
-                    arrayOf(tab.content.securityInfo)
+                    arrayOf(tab.content.securityInfo, tab.content.url)
                 }
                 .collect { tab ->
                     updateSecurityBackground(tab.content.securityInfo?.secure ?: false)
+                    updateSecurityIconColor(tab.content.url, tab.content.securityInfo?.secure ?: false)
                 }
         }
     }
@@ -106,6 +107,35 @@ abstract class ToolbarIntegration(
             text = textColor,
             hint = 0x1E15141a
         )
+    }
+
+    private fun updateSecurityIconColor(url: String, isSecure: Boolean) {
+        val isInternalPage = isInternalUrl(url)
+        
+        // Update icon colors based on page type
+        val (secureColor, insecureColor) = when {
+            isInternalPage -> {
+                // Internal page - use blue color for both states
+                val blueColor = context.getColor(android.R.color.holo_blue_dark)
+                Pair(blueColor, blueColor)
+            }
+            else -> {
+                // Regular page - use green/red colors
+                Pair(0xFF5cb85c.toInt(), 0xFFd9534f.toInt())
+            }
+        }
+        
+        toolbar.display.colors = toolbar.display.colors.copy(
+            siteInfoIconSecure = secureColor,
+            siteInfoIconInsecure = insecureColor
+        )
+    }
+
+    private fun isInternalUrl(url: String): Boolean {
+        return url.startsWith("about:") || 
+               url.startsWith("moz-extension://") ||
+               url.startsWith("resource://") ||
+               url.startsWith("chrome://")
     }
 
     fun invalidateMenu() {
