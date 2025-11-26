@@ -58,7 +58,7 @@ class ContextualBottomToolbar @JvmOverloads constructor(
         shareButton = findViewById(R.id.share_button)
         searchButton = findViewById(R.id.search_button)
         newTabButton = findViewById(R.id.new_tab_button)
-        tabCountButton = findViewById<FrameLayout>(R.id.tab_count_button)
+        tabCountButton = findViewById(R.id.tab_count_button)
         tabCountText = findViewById(R.id.tab_count_text)
         menuButton = findViewById(R.id.menu_button)
 

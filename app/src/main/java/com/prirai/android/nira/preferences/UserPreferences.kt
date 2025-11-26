@@ -71,6 +71,14 @@ class UserPreferences(appContext: Context) : mozilla.components.support.ktx.andr
     // var trustThirdPartyCerts by booleanPreference(TRUST_THIRD_PARTY_CERTS, false)
     var barAddonsList by stringPreference(BAR_ADDONS_LIST, "")
     var bookmarkSortType by intPreference(BOOKMARK_SORT_TYPE, BookmarkSortType.MANUAL.ordinal)
+    
+    // Status bar blur - enabled by default on Android 12+, disabled on older versions
+    var statusBarBlurEnabled: Boolean
+        get() = preferences.getBoolean(
+            STATUS_BAR_BLUR,
+            android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S
+        )
+        set(value) = preferences.edit().putBoolean(STATUS_BAR_BLUR, value).apply()
 
     var shouldUseBottomToolbar: Boolean
         get() {
@@ -122,5 +130,6 @@ class UserPreferences(appContext: Context) : mozilla.components.support.ktx.andr
         const val LOAD_SHORTCUT_ICONS = "load_shortcut_icons"
         const val BAR_ADDONS_LIST = "bar_addons_list"
         const val BOOKMARK_SORT_TYPE = "bookmark_sort_type"
+        const val STATUS_BAR_BLUR = "status_bar_blur"
     }
 }

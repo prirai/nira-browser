@@ -55,6 +55,7 @@
         translatable="false"
     >font_size_factor</string>
   <string name="key_hide_url_bar" translatable="false">hide_url_bar</string>
+  <string name="key_status_bar_blur" translatable="false">status_bar_blur</string>
   <string name="key_swap_drawers" translatable="false">swap_drawers</string>
   <string
         name="key_stack_from_bottom"
@@ -251,6 +252,8 @@
   <string name="undo">Undo</string>
 
   <string name="hide_url_bar">Hide URL bar while scrolling</string>
+  <string name="status_bar_blur">Enable status bar blur effect</string>
+  <string name="status_bar_blur_explain">Blur content behind status bar (Android 12+)</string>
 
   <string name="search">Search or enter address</string>
   <string name="no_results">No results</string>

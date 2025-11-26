@@ -39,6 +39,11 @@ class AppRequestInterceptor(val context: Context) : RequestInterceptor {
         isSubframeRequest: Boolean
     ): InterceptionResponse? {
         
+        // Handle custom nira:// scheme for homepage interactions
+        if (uri.startsWith("nira://")) {
+            handleCustomScheme(uri)
+            return InterceptionResponse.Deny
+        }
         
         interceptXpiUrl(uri, hasUserGesture)?.let { response ->
             return response
@@ -58,6 +63,28 @@ class AppRequestInterceptor(val context: Context) : RequestInterceptor {
 
         return response
     }
+    
+    private fun handleCustomScheme(uri: String) {
+        when {
+            uri.startsWith("nira://search?q=") -> {
+                val query = uri.substringAfter("q=")
+                val decodedQuery = java.net.URLDecoder.decode(query, "UTF-8")
+                // Trigger search via components
+                context.components.tabsUseCases.addTab(decodedQuery, selectTab = true)
+            }
+            uri == "nira://focus-search" -> {
+                // Navigation to search dialog will be handled by navController
+                navController?.get()?.let { nav ->
+                    try {
+                        // Import necessary navigation directions if available
+                        // This would need to be adjusted based on your navigation setup
+                    } catch (e: Exception) {
+                        // Fallback: do nothing
+                    }
+                }
+            }
+        }
+    }
 
     override fun onErrorRequest(
         session: EngineSession,
@@ -67,17 +94,9 @@ class AppRequestInterceptor(val context: Context) : RequestInterceptor {
         val riskLevel = getErrorCategory(errorType)
 
         if (uri == "about:homepage") {
-            /* This needs to be in onErrorRequest because onLoadRequest doesn't load on about pages due to a GeckoView bug
-            * We don't need to (and can't) check whether the URL was loaded by a link, whether the user entered the URL, or whether the browser opened it
-            * This doesn't matter though - GeckoView blocks web pages from loading about URLs already
-            * TODO: Option to focus on address bar when new tab is created
+            /* Load HTML-based homepage instead of navigating to HomeFragment
+            * This provides consistent toolbar behavior across all pages
             */
-            navController?.get()?.navigate(
-                HomeFragmentDirections.actionGlobalHome(
-                    focusOnAddressBar = false
-                )
-            )
-
             return RequestInterceptor.ErrorResponse("resource://android/assets/homepage.html")
         }
 

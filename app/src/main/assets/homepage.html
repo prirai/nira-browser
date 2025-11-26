@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>New Tab</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: #ffffff;
+            color: #000000;
+            overflow-x: hidden;
+            padding: 16px 16px 80px 16px;
+        }
+
+        .logo-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 32px 0 24px 0;
+            gap: 16px;
+        }
+
+        #appLogo {
+            width: 80px;
+            height: 80px;
+            border-radius: 20px;
+        }
+
+        .app-name {
+            font-size: 32px;
+            font-weight: bold;
+            color: #15141a;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            .app-name {
+                color: #fbfbfe;
+            }
+        }
+
+        @media (prefers-color-scheme: dark) {
+            body {
+                background-color: #1c1b22;
+                color: #fbfbfe;
+            }
+        }
+
+        .search-container {
+            margin: 24px 0 32px 0;
+        }
+
+        .search-box {
+            width: 100%;
+            padding: 14px 16px;
+            font-size: 16px;
+            border: 1px solid #d7d7db;
+            border-radius: 8px;
+            background: #ffffff;
+            color: #000000;
+            outline: none;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            .search-box {
+                background: #2b2a33;
+                color: #fbfbfe;
+                border-color: #4a4a4f;
+            }
+        }
+
+        .search-box:focus {
+            border-color: #0060df;
+        }
+
+        .shortcuts-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+            gap: 16px;
+            margin-bottom: 32px;
+        }
+
+        .shortcut-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-decoration: none;
+            padding: 12px 8px;
+            border-radius: 8px;
+            transition: background-color 0.2s;
+        }
+
+        .shortcut-item:active {
+            background-color: rgba(0, 0, 0, 0.05);
+        }
+
+        @media (prefers-color-scheme: dark) {
+            .shortcut-item:active {
+                background-color: rgba(255, 255, 255, 0.1);
+            }
+        }
+
+        .shortcut-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            background: #f0f0f4;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 8px;
+            font-size: 24px;
+            overflow: hidden;
+        }
+        
+        .shortcut-icon img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            .shortcut-icon {
+                background: #42414d;
+            }
+        }
+
+        .shortcut-title {
+            font-size: 12px;
+            color: #15141a;
+            text-align: center;
+            max-width: 80px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            .shortcut-title {
+                color: #fbfbfe;
+            }
+        }
+
+        .section-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #5b5b66;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            .section-title {
+                color: #8f8f9d;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="logo-container">
+        <img src="app-icon.png" alt="App Logo" id="appLogo">
+        <div class="app-name">Nira</div>
+    </div>
+
+    <div class="search-container">
+        <input type="text" class="search-box" placeholder="Search or enter address" id="searchInput">
+    </div>
+
+    <div class="section-title">Shortcuts</div>
+    <div class="shortcuts-container" id="shortcutsContainer">
+        <!-- Shortcuts will be dynamically loaded here -->
+    </div>
+
+    <script>
+        // Handle search input
+        const searchInput = document.getElementById('searchInput');
+        searchInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                const query = searchInput.value.trim();
+                if (query) {
+                    // Send search query to Android
+                    window.location.href = 'nira://search?q=' + encodeURIComponent(query);
+                }
+            }
+        });
+
+        // Focus on search when clicking anywhere
+        searchInput.addEventListener('click', function() {
+            window.location.href = 'nira://focus-search';
+        });
+
+        // Load shortcuts from Android
+        function loadShortcuts() {
+            // Request shortcuts from Android via JavaScript interface
+            if (window.NiraShortcuts) {
+                const shortcuts = window.NiraShortcuts.getShortcuts();
+                displayShortcuts(JSON.parse(shortcuts));
+            } else {
+                // Fallback: show default shortcuts
+                displayShortcuts([]);
+            }
+        }
+
+        function displayShortcuts(shortcuts) {
+            const container = document.getElementById('shortcutsContainer');
+            
+            if (shortcuts.length === 0) {
+                container.innerHTML = '<div style="grid-column: 1 / -1; text-align: center; color: #8f8f9d; padding: 20px;">Add shortcuts by bookmarking sites</div>';
+                return;
+            }
+
+            container.innerHTML = shortcuts.map(shortcut => `
+                <a href="${escapeHtml(shortcut.url)}" class="shortcut-item">
+                    <div class="shortcut-icon">${getIconHtml(shortcut.url, shortcut.icon)}</div>
+                    <div class="shortcut-title">${escapeHtml(shortcut.title)}</div>
+                </a>
+            `).join('');
+        }
+        
+        function getIconHtml(url, iconData) {
+            if (iconData) {
+                // If we have icon data from the app, use it
+                return `<img src="${iconData}" alt="">`;
+            }
+            
+            try {
+                const urlObj = new URL(url);
+                const domain = urlObj.hostname;
+                // Use Google's favicon service as fallback
+                const faviconUrl = `https://www.google.com/s2/favicons?domain=${domain}&sz=128`;
+                return `<img src="${faviconUrl}" onerror="this.parentElement.innerHTML='${getIconForUrl(url)}'" alt="">`;
+            } catch {
+                return getIconForUrl(url);
+            }
+        }
+
+        function escapeHtml(unsafe) {
+            return unsafe
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        function getIconForUrl(url) {
+            try {
+                const domain = new URL(url).hostname;
+                const initial = domain.charAt(0).toUpperCase();
+                return initial;
+            } catch {
+                return '🌐';
+            }
+        }
+
+        // Load shortcuts on page load
+        loadShortcuts();
+
+        // Reload shortcuts when page becomes visible
+        document.addEventListener('visibilitychange', function() {
+            if (!document.hidden) {
+                loadShortcuts();
+            }
+        });
+    </script>
+</body>
+</html>

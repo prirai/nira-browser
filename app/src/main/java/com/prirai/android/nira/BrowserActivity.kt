@@ -167,23 +167,35 @@ open class BrowserActivity : LocaleAwareAppCompatActivity(), ComponentCallbacks2
         }
 
         applyAppTheme(this)
+        
+        // Make navigation bar transparent globally to prevent black bar with gesture navigation
+        window.navigationBarColor = android.graphics.Color.TRANSPARENT
+        
+        // Remove navigation bar contrast enforcement (removes the white pill/scrim on Android 10+)
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+            window.isNavigationBarContrastEnforced = false
+        }
+        
+        // Hide the navigation bar completely and make content appear behind it
+        window.decorView.systemUiVisibility = (
+            View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+            or View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+        )
 
         ViewCompat.setOnApplyWindowInsetsListener(view) { v, insets ->
             val bars = insets.getInsets(
                 WindowInsetsCompat.Type.systemBars()
                         or WindowInsetsCompat.Type.displayCutout()
             )
-            // Force zero top padding when using bottom toolbar
-            val isBottomToolbar = UserPreferences(this).shouldUseBottomToolbar
-            val topPadding = if (isBottomToolbar) {
-                0 // No top padding for bottom toolbar to enable immersive content
-            } else {
-                bars.top // Normal status bar padding for top toolbar
-            }
+            val userPrefs = UserPreferences(this)
+            val isBottomToolbar = userPrefs.shouldUseBottomToolbar
+            
+            // Always respect status bar padding to prevent content overlap
+            val topPadding = bars.top
 
             // Dynamic status bar based on toolbar position
             if (isBottomToolbar) {
-                enableDynamicStatusBar()
+                setupStatusBarForBottomToolbar(userPrefs)
                 // CRITICAL: Hide navigation toolbar stub to prevent any space
                 hideNavigationToolbarForBottomMode()
             } else {
@@ -195,11 +207,10 @@ open class BrowserActivity : LocaleAwareAppCompatActivity(), ComponentCallbacks2
                 left = bars.left,
                 top = topPadding,
                 right = bars.right,
-                bottom = bars.bottom,
+                bottom = 0, // Don't add bottom padding - let content flow behind navigation bar
             )
             val insetsController = WindowCompat.getInsetsController(window, v)
             insetsController.isAppearanceLightStatusBars = !isAppInDarkTheme()
-            WindowInsetsCompat.CONSUMED
             WindowInsetsCompat.CONSUMED
         }
 
@@ -503,22 +514,61 @@ open class BrowserActivity : LocaleAwareAppCompatActivity(), ComponentCallbacks2
     }
 
     /**
-     * Simple transparent status bar - let content extend behind it
+     * Setup status bar for bottom toolbar mode with optional blur effect
      */
-    private fun enableDynamicStatusBar() {
-        // Simple approach: transparent status bar, content behind it
-        window.statusBarColor = android.graphics.Color.TRANSPARENT
+    private fun setupStatusBarForBottomToolbar(userPrefs: UserPreferences) {
+        // Check if we should enable blur (enabled by default on Android 12+, or if user explicitly enabled it)
+        val shouldBlur = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+            userPrefs.statusBarBlurEnabled // Default is true on Android 12+
+        } else {
+            userPrefs.statusBarBlurEnabled // Default is false on Android 11 and below
+        }
+        
+        // Apply blur effect if enabled
+        if (shouldBlur) {
+            // Use system blur effect on Android 12+ (API 31+)
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                window.attributes = window.attributes.apply {
+                    blurBehindRadius = 80 // Blur radius in pixels
+                }
+                window.setBackgroundBlurRadius(80)
+            }
+            // Set semi-transparent background for blur effect
+            window.statusBarColor = if (isAppInDarkTheme()) {
+                android.graphics.Color.argb(180, 0, 0, 0) // Semi-transparent black
+            } else {
+                android.graphics.Color.argb(180, 255, 255, 255) // Semi-transparent white
+            }
+        } else {
+            // Use default theme-based background
+            window.statusBarColor = if (isAppInDarkTheme()) {
+                getColor(R.color.statusbar_background) // Dark theme color
+            } else {
+                getColor(R.color.statusbar_background) // Light theme color
+            }
+        }
 
         // Enable content to draw behind status bar
-        window.decorView.systemUiVisibility = (
-                android.view.View.SYSTEM_UI_FLAG_LAYOUT_STABLE or
-                        android.view.View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-                )
+        WindowCompat.setDecorFitsSystemWindows(window, false)
 
-        // Make status bar icons visible
+        // Set status bar icons color
         androidx.core.view.WindowInsetsControllerCompat(window, window.decorView).apply {
-            isAppearanceLightStatusBars = true // Dark icons for better visibility
+            isAppearanceLightStatusBars = !isAppInDarkTheme()
         }
+        
+        // Make navigation bar transparent and content flows behind it
+        window.navigationBarColor = android.graphics.Color.TRANSPARENT
+        
+        // Remove navigation bar contrast enforcement (removes the white pill/scrim on Android 10+)
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+            window.isNavigationBarContrastEnforced = false
+        }
+        
+        // Hide the navigation bar completely and make content appear behind it
+        window.decorView.systemUiVisibility = (
+            View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+            or View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+        )
     }
 
 
