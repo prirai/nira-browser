@@ -82,7 +82,7 @@
 
         .shortcuts-container {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
             gap: 16px;
             margin-bottom: 32px;
         }
@@ -93,8 +93,9 @@
             align-items: center;
             text-decoration: none;
             padding: 12px 8px;
-            border-radius: 8px;
+            border-radius: 12px;
             transition: background-color 0.2s;
+            position: relative;
         }
 
         .shortcut-item:active {
@@ -108,16 +109,19 @@
         }
 
         .shortcut-icon {
-            width: 48px;
-            height: 48px;
+            width: 60px;
+            height: 60px;
             border-radius: 12px;
-            background: #f0f0f4;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             display: flex;
             align-items: center;
             justify-content: center;
             margin-bottom: 8px;
-            font-size: 24px;
+            font-size: 28px;
+            font-weight: bold;
+            color: white;
             overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
         }
         
         .shortcut-icon img {
@@ -133,13 +137,37 @@
         }
 
         .shortcut-title {
-            font-size: 12px;
+            font-size: 11px;
             color: #15141a;
             text-align: center;
-            max-width: 80px;
+            max-width: 90px;
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
+        }
+
+        .delete-shortcut-btn {
+            position: absolute;
+            top: 6px;
+            right: 6px;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: #ff4444;
+            color: white;
+            border: none;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            display: none;
+            z-index: 10;
+            line-height: 24px;
+            padding: 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .shortcut-item:hover .delete-shortcut-btn {
+            display: block;
         }
 
         @media (prefers-color-scheme: dark) {
@@ -314,7 +342,7 @@
     </div>
 
     <div class="section-header">
-        <div class="section-title">Add your favorite shortcuts here</div>
+        <div class="section-title">Favorites</div>
         <button class="add-shortcut-button" id="addShortcutBtn" title="Add Shortcut">+</button>
     </div>
     <div class="shortcuts-container" id="shortcutsContainer">
@@ -361,12 +389,39 @@
                 return;
             }
 
-            container.innerHTML = shortcuts.map(shortcut => `
-                <a href="${escapeHtml(shortcut.url)}" class="shortcut-item">
-                    <div class="shortcut-icon">${getIconHtml(shortcut.url, shortcut.icon)}</div>
-                    <div class="shortcut-title">${escapeHtml(shortcut.title)}</div>
-                </a>
-            `).join('');
+            container.innerHTML = '';
+            shortcuts.forEach(shortcut => {
+                const item = document.createElement('a');
+                item.href = shortcut.url;
+                item.className = 'shortcut-item';
+                
+                // Create delete button
+                const deleteBtn = document.createElement('button');
+                deleteBtn.innerHTML = '✕';
+                deleteBtn.className = 'delete-shortcut-btn';
+                deleteBtn.onclick = function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (confirm('Delete this shortcut?')) {
+                        window.location.href = 'nira://delete-shortcut?id=' + shortcut.uid;
+                    }
+                };
+                
+                // Create icon
+                const icon = document.createElement('div');
+                icon.className = 'shortcut-icon';
+                icon.innerHTML = getIconHtml(shortcut.url, shortcut.icon);
+                
+                // Create title
+                const title = document.createElement('div');
+                title.className = 'shortcut-title';
+                title.textContent = shortcut.title;
+                
+                item.appendChild(deleteBtn);
+                item.appendChild(icon);
+                item.appendChild(title);
+                container.appendChild(item);
+            });
         }
         
         function getIconHtml(url, iconData) {

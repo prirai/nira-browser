@@ -295,7 +295,9 @@ class AppRequestInterceptor(val context: Context) : RequestInterceptor {
     }
 
 
-    private fun generateHomepageHtml(): String {
+    // REMOVED: generateHomepageHtml() - Replaced by homepage.html in assets
+    // This function is no longer used - about:homepage now loads from assets/homepage.html
+    private fun generateHomepageHtml_DEPRECATED(): String {
         // Load shortcuts from database
         val shortcutsJson = try {
             val interface_ = com.prirai.android.nira.browser.home.HomepageJavaScriptInterface(context)
@@ -417,15 +419,16 @@ class AppRequestInterceptor(val context: Context) : RequestInterceptor {
                     }
                     
                     .shortcut-item {
-                        width: 64px;
-                        height: 64px;
+                        width: 80px;
+                        height: 90px;
                         display: flex;
                         flex-direction: column;
                         align-items: center;
                         justify-content: center;
                         cursor: pointer;
-                        border-radius: 8px;
+                        border-radius: 12px;
                         transition: background 0.2s;
+                        position: relative;
                     }
                     
                     .shortcut-item:hover {
@@ -509,7 +512,7 @@ class AppRequestInterceptor(val context: Context) : RequestInterceptor {
                             <div class="shortcuts-header">
                                 <div class="shortcuts-title">
                                     <div class="shortcuts-icon">📍</div>
-                                    Shortcuts
+                                    Favorites
                                     <div class="chevron-icon">⬇</div>
                                 </div>
                                 <button class="add-shortcut-btn" onclick="addShortcut()">
@@ -518,9 +521,10 @@ class AppRequestInterceptor(val context: Context) : RequestInterceptor {
                             </div>
                             
                             <div class="shortcuts-grid">
+                                <!-- Placeholder - will be replaced by loadShortcuts() JavaScript -->
                                 <div class="shortcut-item" onclick="addShortcut()">
-                                    <div style="width: 48px; height: 48px; background: #ddd; border: 2px dashed #999; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 20px;">+</div>
-                                    <div style="font-size: 10px; text-align: center; margin-top: 4px; color: #666;">Add</div>
+                                    <div style="width: 60px; height: 60px; background: #f5f5f5; border: 2px dashed #999; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 28px; color: #999;">+</div>
+                                    <div style="font-size: 11px; text-align: center; margin-top: 6px; color: #666;">Add</div>
                                 </div>
                             </div>
                         </div>
@@ -587,7 +591,7 @@ class AppRequestInterceptor(val context: Context) : RequestInterceptor {
                                 const deleteBtn = document.createElement('button');
                                 deleteBtn.innerHTML = '✕';
                                 deleteBtn.className = 'delete-shortcut-btn';
-                                deleteBtn.style.cssText = 'position: absolute; top: -5px; right: -5px; width: 20px; height: 20px; border-radius: 50%; background: #ff4444; color: white; border: none; font-size: 12px; cursor: pointer; display: none; z-index: 10;';
+                                deleteBtn.style.cssText = 'position: absolute; top: 2px; right: 2px; width: 24px; height: 24px; border-radius: 50%; background: #ff4444; color: white; border: none; font-size: 16px; font-weight: bold; cursor: pointer; display: none; z-index: 10; line-height: 24px; padding: 0; box-shadow: 0 2px 4px rgba(0,0,0,0.2);';
                                 deleteBtn.onclick = function(e) {
                                     e.stopPropagation();
                                     deleteShortcut(shortcut.uid);
@@ -603,12 +607,12 @@ class AppRequestInterceptor(val context: Context) : RequestInterceptor {
                                 
                                 // Create icon
                                 const icon = document.createElement('div');
-                                icon.style.cssText = 'width: 48px; height: 48px; background: #eee; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 20px;';
+                                icon.style.cssText = 'width: 60px; height: 60px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 28px; color: white; font-weight: bold; box-shadow: 0 2px 8px rgba(0,0,0,0.1);';
                                 icon.textContent = (shortcut.title || shortcut.url || '?').charAt(0).toUpperCase();
                                 
                                 // Create title
                                 const title = document.createElement('div');
-                                title.style.cssText = 'font-size: 10px; text-align: center; margin-top: 4px; color: #333;';
+                                title.style.cssText = 'font-size: 11px; text-align: center; margin-top: 6px; color: #333; max-width: 80px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;';
                                 title.textContent = shortcut.title || shortcut.url || 'Shortcut';
                                 
                                 // Click handler for navigation
@@ -626,7 +630,7 @@ class AppRequestInterceptor(val context: Context) : RequestInterceptor {
                             const addItem = document.createElement('div');
                             addItem.className = 'shortcut-item';
                             addItem.onclick = addShortcut;
-                            addItem.innerHTML = '<div style="width: 48px; height: 48px; background: #ddd; border: 2px dashed #999; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 20px;">+</div><div style="font-size: 10px; text-align: center; margin-top: 4px; color: #666;">Add</div>';
+                            addItem.innerHTML = '<div style="width: 60px; height: 60px; background: #f5f5f5; border: 2px dashed #999; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 28px; color: #999;">+</div><div style="font-size: 11px; text-align: center; margin-top: 6px; color: #666;">Add</div>';
                             grid.appendChild(addItem);
                             
                         } catch (e) {
