@@ -61,7 +61,12 @@ import com.prirai.android.nira.share.SaveToPDFMiddleware
 import com.prirai.android.nira.utils.ClipboardHandler
 import com.prirai.android.nira.utils.FaviconCache
 import com.prirai.android.nira.middleware.FaviconMiddleware
+import com.prirai.android.nira.middleware.EnhancedStateCaptureMiddleware
 import mozilla.components.browser.engine.gecko.ext.toContentBlockingSetting
+import mozilla.components.browser.state.engine.middleware.SessionPrioritizationMiddleware
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import mozilla.components.browser.engine.gecko.permission.GeckoSitePermissionsStorage
 import mozilla.components.concept.engine.EngineSession
 import mozilla.components.feature.addons.amo.AMOAddonsProvider
@@ -192,7 +197,15 @@ open class Components(private val applicationContext: Context) {
                         PromptMiddleware(),
                         LastAccessMiddleware(),
                         SaveToPDFMiddleware(applicationContext),
-                        com.prirai.android.nira.browser.tabgroups.TabGroupMiddleware(tabGroupManager)
+                        com.prirai.android.nira.browser.tabgroups.TabGroupMiddleware(tabGroupManager),
+                        // NEW: Session prioritization - captures state and manages engine session priorities
+                        SessionPrioritizationMiddleware(),
+                        // NEW: Enhanced state capture middleware - Phase 3 optimization
+                        // Captures state for selected + top 2 recently accessed tabs
+                        EnhancedStateCaptureMiddleware(
+                            scope = CoroutineScope(SupervisorJob() + Dispatchers.Main),
+                            maxTabsToCapture = 3
+                        )
                 ) + EngineMiddleware.create(
                     engine,
                     trimMemoryAutomatically = false,

@@ -1,5 +1,9 @@
 package com.prirai.android.nira
 
+import androidx.lifecycle.DefaultLifecycleObserver
+import androidx.lifecycle.LifecycleOwner
+import mozilla.components.browser.state.action.AppLifecycleAction
+
 import android.content.ComponentCallbacks2
 import android.content.Context
 import android.content.Intent
@@ -133,6 +137,19 @@ open class BrowserActivity : LocaleAwareAppCompatActivity(), ComponentCallbacks2
         }
 
         applyAppTheme(this)
+        
+        // Register lifecycle observer to capture state on background
+        lifecycle.addObserver(object : DefaultLifecycleObserver {
+            override fun onPause(owner: LifecycleOwner) {
+                // App going to background - trigger state capture
+                components.store.dispatch(AppLifecycleAction.PauseAction)
+            }
+            
+            override fun onResume(owner: LifecycleOwner) {
+                // App coming to foreground
+                components.store.dispatch(AppLifecycleAction.ResumeAction)
+            }
+        })
         
         // Make navigation bar transparent globally to prevent black bar with gesture navigation
         window.navigationBarColor = android.graphics.Color.TRANSPARENT

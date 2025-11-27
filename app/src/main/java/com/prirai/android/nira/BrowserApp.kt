@@ -7,6 +7,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import mozilla.components.browser.state.action.SystemAction
 import mozilla.components.browser.state.selector.selectedTab
 import mozilla.components.feature.addons.update.GlobalAddonDependencyProvider
@@ -49,21 +50,18 @@ class BrowserApp : LocaleAwareApplication() {
 
         logger.info("App onCreate completed in ${System.currentTimeMillis() - appStartTime}ms")
 
-        // OPTIMIZATION: Defer all heavy initialization to after first frame is drawn
-        // This allows the UI to show immediately, then we initialize in background
+        // CRITICAL: Restore browser state as early as possible but async
+        // This ensures tabs are available quickly without blocking
+        restoreBrowserState()
+
+        // OPTIMIZATION: Defer heavy initialization to after first frame is drawn
         applicationScope.launch(Dispatchers.Main) {
-            // Use postDelayed to ensure this runs AFTER the first frame is rendered
-            android.os.Handler(android.os.Looper.getMainLooper()).post {
-                initializeAfterFirstFrame()
-            }
+            initializeAfterFirstFrame()
         }
     }
 
     private fun initializeAfterFirstFrame() {
         logger.info("Starting deferred initialization (${System.currentTimeMillis() - appStartTime}ms after app start)")
-        
-        // Restore browser state in background
-        restoreBrowserState()
         
         // Initialize web extensions - MUST run on Main thread due to GeckoView Handler requirements
         applicationScope.launch(Dispatchers.Main) {
@@ -137,13 +135,15 @@ class BrowserApp : LocaleAwareApplication() {
         }
     }
 
-    private fun restoreBrowserState() = applicationScope.launch(Dispatchers.Main) {
-        components.tabsUseCases.restore(components.sessionStorage)
+    private fun restoreBrowserState() {
+        applicationScope.launch(Dispatchers.Main) {
+            components.tabsUseCases.restore(components.sessionStorage)
 
-        components.sessionStorage.autoSave(components.store)
-            .periodicallyInForeground(interval = 30, unit = TimeUnit.SECONDS)
-            .whenGoingToBackground()
-            .whenSessionsChange()
+            components.sessionStorage.autoSave(components.store)
+                .periodicallyInForeground(interval = 30, unit = TimeUnit.SECONDS)
+                .whenGoingToBackground()
+                .whenSessionsChange()
+        }
     }
 
     override fun onTrimMemory(level: Int) {
