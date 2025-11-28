@@ -72,13 +72,15 @@ class UserPreferences(appContext: Context) : mozilla.components.support.ktx.andr
     var barAddonsList by stringPreference(BAR_ADDONS_LIST, "")
     var bookmarkSortType by intPreference(BOOKMARK_SORT_TYPE, BookmarkSortType.MANUAL.ordinal)
     
-    // Status bar blur - enabled by default on Android 12+, disabled on older versions
-    var statusBarBlurEnabled: Boolean
-        get() = preferences.getBoolean(
-            STATUS_BAR_BLUR,
-            android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S
-        )
-        set(value) = preferences.edit().putBoolean(STATUS_BAR_BLUR, value).apply()
+    // Icon size preference (0.8 to 1.5 scale)
+    var toolbarIconSize by floatPreference(TOOLBAR_ICON_SIZE, 1.0f)
+    
+    // Interface font scale (0.8 to 1.3 scale)
+    var interfaceFontScale by floatPreference(INTERFACE_FONT_SCALE, 1.0f)
+    
+    // Status bar blur - forced enabled on Android 12+, disabled on older versions
+    val statusBarBlurEnabled: Boolean
+        get() = android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S
 
     var shouldUseBottomToolbar: Boolean
         get() {
@@ -131,5 +133,7 @@ class UserPreferences(appContext: Context) : mozilla.components.support.ktx.andr
         const val BAR_ADDONS_LIST = "bar_addons_list"
         const val BOOKMARK_SORT_TYPE = "bookmark_sort_type"
         const val STATUS_BAR_BLUR = "status_bar_blur"
+        const val TOOLBAR_ICON_SIZE = "toolbar_icon_size"
+        const val INTERFACE_FONT_SCALE = "interface_font_scale"
     }
 }

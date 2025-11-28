@@ -116,10 +116,25 @@ open class Components(private val applicationContext: Context) {
             applicationContext.getSharedPreferences(BROWSER_PREFERENCES, Context.MODE_PRIVATE)
 
 
-    fun darkEnabled(): PreferredColorScheme {
+    fun darkEnabled(url: String? = null): PreferredColorScheme {
         val darkOn =
                 (applicationContext.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) ==
                         Configuration.UI_MODE_NIGHT_YES
+        
+        // Check per-site override first
+        if (url != null) {
+            val siteDarkMode = applicationContext.getSharedPreferences("site_dark_mode_override", android.content.Context.MODE_PRIVATE)
+            if (siteDarkMode.contains(url)) {
+                val override = siteDarkMode.getString(url, "")
+                return when (override) {
+                    "dark" -> PreferredColorScheme.Dark
+                    "light" -> PreferredColorScheme.Light
+                    else -> PreferredColorScheme.Dark // Fallback
+                }
+            }
+        }
+        
+        // Use global web theme
         return when {
             UserPreferences(applicationContext).webThemeChoice == ThemeChoice.DARK.ordinal -> PreferredColorScheme.Dark
             UserPreferences(applicationContext).webThemeChoice == ThemeChoice.LIGHT.ordinal -> PreferredColorScheme.Light
@@ -133,8 +148,8 @@ open class Components(private val applicationContext: Context) {
     }
 
     // Engine Settings
-    private val engineSettings by lazy {
-        DefaultSettings().apply {
+    private val engineSettings: DefaultSettings
+        get() = DefaultSettings().apply {
             historyTrackingDelegate = HistoryDelegate(lazyHistoryStorage)
             requestInterceptor = appRequestInterceptor
             remoteDebuggingEnabled = false // SECURITY: Remote debugging disabled
@@ -147,7 +162,6 @@ open class Components(private val applicationContext: Context) {
             preferredColorScheme = darkEnabled()
             javascriptEnabled = UserPreferences(applicationContext).javaScriptEnabled
         }
-    }
 
     private val notificationManagerCompat = NotificationManagerCompat.from(applicationContext)
 

@@ -55,6 +55,12 @@
       </intent-filter>
     </activity>
 
+    <!-- Onboarding Activity -->
+    <activity
+        android:name=".onboarding.OnboardingActivity"
+        android:theme="@style/AppThemeNotActionBar"
+        android:exported="false" />
+
     <!-- Custom Tabs Activity for external apps -->
     <activity
         android:name=".customtabs.ExternalAppBrowserActivity"

@@ -5,7 +5,6 @@
     android:layout_height="68dp"
     android:orientation="horizontal"
     android:background="?attr/colorSurface"
-    android:elevation="8dp"
     android:gravity="center_vertical"
     android:paddingHorizontal="8dp"
     android:paddingBottom="12dp">
@@ -38,13 +37,13 @@
         app:tint="?android:attr/textColorPrimary" />
 
     <!-- Share Button -->
-    <ImageButton
+    <ImageView
         android:id="@+id/share_button"
         android:layout_width="0dp"
         android:layout_height="56dp"
         android:layout_weight="1"
         android:background="?android:attr/selectableItemBackgroundBorderless"
-        android:src="@drawable/ic_ios_share"
+        android:src="@drawable/ios_share_24"
         android:contentDescription="@string/share"
         android:scaleType="fitCenter"
         android:padding="10dp"

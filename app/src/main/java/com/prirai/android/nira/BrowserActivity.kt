@@ -103,6 +103,15 @@ open class BrowserActivity : LocaleAwareAppCompatActivity(), ComponentCallbacks2
 
         super.onCreate(savedInstanceState)
 
+        // Check for first launch and show onboarding
+        if (UserPreferences(this).firstLaunch) {
+            val intent = Intent(this, com.prirai.android.nira.onboarding.OnboardingActivity::class.java)
+            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            startActivity(intent)
+            finish()
+            return
+        }
+
         // OPTIMIZATION: Don't access components.publicSuffixList here - defer it
         // This was triggering lazy initialization chain
 
@@ -115,10 +124,6 @@ open class BrowserActivity : LocaleAwareAppCompatActivity(), ComponentCallbacks2
         val view = binding.root
 
         setContentView(view)
-
-        if (UserPreferences(this).firstLaunch) {
-            UserPreferences(this).firstLaunch = false
-        }
 
         lastToolbarPosition = UserPreferences(this).toolbarPosition
 
@@ -518,18 +523,18 @@ open class BrowserActivity : LocaleAwareAppCompatActivity(), ComponentCallbacks2
                 }
             }
         } else {
-            if (SearchEngineList().getEngines()[UserPreferences(this).searchEngineChoice].type == SearchEngine.Type.BUNDLED) {
+            if (SearchEngineList(this).getEngines()[UserPreferences(this).searchEngineChoice].type == SearchEngine.Type.BUNDLED) {
                 components.searchUseCases.selectSearchEngine(
-                    SearchEngineList().getEngines()[UserPreferences(this).searchEngineChoice]
+                    SearchEngineList(this).getEngines()[UserPreferences(this).searchEngineChoice]
                 )
             } else {
                 components.searchUseCases.addSearchEngine(
-                    SearchEngineList().getEngines()[UserPreferences(
+                    SearchEngineList(this).getEngines()[UserPreferences(
                         this
                     ).searchEngineChoice]
                 )
                 components.searchUseCases.selectSearchEngine(
-                    SearchEngineList().getEngines()[UserPreferences(this).searchEngineChoice]
+                    SearchEngineList(this).getEngines()[UserPreferences(this).searchEngineChoice]
                 )
             }
         }

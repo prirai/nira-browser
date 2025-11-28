@@ -6,6 +6,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.widget.FrameLayout
 import android.widget.ImageButton
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import com.prirai.android.nira.R
@@ -33,7 +34,7 @@ class ContextualBottomToolbar @JvmOverloads constructor(
 
     private lateinit var backButton: ImageButton
     private lateinit var forwardButton: ImageButton
-    private lateinit var shareButton: ImageButton
+    private lateinit var shareButton: ImageView
     private lateinit var searchButton: ImageButton
     private lateinit var newTabButton: ImageButton
     private lateinit var tabCountButton: FrameLayout
@@ -62,7 +63,22 @@ class ContextualBottomToolbar @JvmOverloads constructor(
         tabCountText = findViewById(R.id.tab_count_text)
         menuButton = findViewById(R.id.menu_button)
 
+        // Apply icon size scale
+        applyIconScale()
+        
         setupClickListeners()
+    }
+    
+    private fun applyIconScale() {
+        val userPrefs = context.getSharedPreferences("scw_preferences", Context.MODE_PRIVATE)
+        val iconScale = userPrefs.getFloat("toolbar_icon_size", 1.0f)
+        
+        val buttons = listOf(backButton, forwardButton, shareButton, searchButton, newTabButton, menuButton)
+        buttons.forEach { button ->
+            val basePadding = (10 * context.resources.displayMetrics.density).toInt()
+            val scaledPadding = (basePadding / iconScale).toInt()
+            button.setPadding(scaledPadding, scaledPadding, scaledPadding, scaledPadding)
+        }
     }
 
     private fun setupClickListeners() {

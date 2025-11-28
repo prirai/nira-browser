@@ -622,4 +622,77 @@
     }]
   </string>
 
+  <!-- Onboarding strings -->
+  <string name="skip">Skip</string>
+  <string name="next">Next</string>
+  <string name="get_started">Get Started</string>
+  <string name="welcome_to_nira">Welcome to Nira Browser</string>
+  <string name="welcome_subtitle">A fast, private, and customizable browser designed for you</string>
+  <string name="privacy">Privacy</string>
+  <string name="privacy_first">Privacy First</string>
+  <string name="ad_blocking">Ad Blocking</string>
+  <string name="built_in_ad_blocking">Built-in ad blocking and tracking protection</string>
+  <string name="extensions">Extensions</string>
+  <string name="extension_support">Full extension support</string>
+  <string name="highly_customizable">Highly customizable interface</string>
+  
+  <string name="choose_your_theme">Choose Your Theme</string>
+  <string name="theme_description">Select your preferred color scheme</string>
+  <string name="onboarding_light_theme">Light Theme</string>
+  <string name="light_theme_desc">Bright and clean interface</string>
+  <string name="onboarding_dark_theme">Dark Theme</string>
+  <string name="dark_theme_desc">Easy on the eyes</string>
+  <string name="system_theme">System Default</string>
+  <string name="system_theme_desc">Match your device settings</string>
+  
+  <string name="choose_search_engine">Choose Search Engine</string>
+  <string name="search_engine_description">Select your default search provider</string>
+  
+  <string name="privacy_security">Privacy &amp; Security</string>
+  <string name="privacy_description">Configure your privacy settings</string>
+  <string name="tracking_protection_desc">Block trackers and ads</string>
+  <string name="safe_browsing_desc">Protection from dangerous sites</string>
+  <string name="search_suggestions_desc">Get suggestions as you type</string>
+  
+  <string name="customization">Customization</string>
+  <string name="customization_description">Make the browser yours</string>
+  <string name="toolbar_position">Toolbar Position</string>
+  <string name="top">Top</string>
+  <string name="bottom">Bottom</string>
+  <string name="icon_size">Icon Size</string>
+  <string name="small">Small</string>
+  <string name="large">Large</string>
+  <string name="icon_size_desc">Adjust toolbar icon size</string>
+  
+  <!-- Per-site dark mode -->
+  <string name="force_dark_mode">Force Dark Mode</string>
+  <string name="force_dark_mode_desc">Apply dark mode to this website</string>
+  
+  <!-- Lite Apps (PWA) -->
+  <string name="install_app">Install App</string>
+  <string name="install_web_app">Install Web App</string>
+  <string name="install_app_description">Install this website as a lite app</string>
+  <string name="app_installed">App installed successfully</string>
+  <string name="app_install_failed">Failed to install app</string>
+
+  <!-- Web Theme -->
+  <string name="web_theme_title">Website Theme</string>
+  <string name="web_theme_description">Choose how websites should appear</string>
+  <string name="website_theme">Website Theme</string>
+  <string name="website_theme_desc">Only available when app is in dark mode</string>
+  <string name="web_light_theme">Light Websites</string>
+  <string name="web_light_theme_desc">Request light mode from websites</string>
+  <string name="web_dark_theme">Dark Websites</string>
+  <string name="web_dark_theme_desc">Request dark mode from websites</string>
+  <string name="web_system_theme">Follow System</string>
+  <string name="web_system_theme_desc">Match your device\'s theme</string>
+
+  <!-- Settings -->
+  <string name="toolbar_icon_size">Toolbar Icon Size</string>
+  <string name="toolbar_icon_size_desc">Adjust the size of toolbar icons</string>
+  <string name="interface_font_scale">Interface Font Size</string>
+  <string name="interface_font_scale_desc">Adjust the size of interface text</string>
+  <string name="interface_font_scale_preview">Preview Text Size</string>
+  <string name="preview">Preview</string>
+
 </resources>

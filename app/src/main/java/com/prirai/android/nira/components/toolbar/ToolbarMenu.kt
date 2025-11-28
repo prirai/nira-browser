@@ -7,6 +7,7 @@ interface ToolbarMenu {
     sealed class Item {
         data object Settings : Item()
         data class RequestDesktop(val isChecked: Boolean) : Item()
+        data class ForceDarkMode(val isChecked: Boolean) : Item()
         data object FindInPage : Item()
         data object Share : Item()
         data class Back(val viewHistory: Boolean) : Item()
@@ -14,6 +15,7 @@ interface ToolbarMenu {
         data class Reload(val bypassCache: Boolean) : Item()
         data object Stop : Item()
         data object AddToHomeScreen : Item()
+        data object InstallWebApp : Item()
         data object NewTab : Item()
         data object NewPrivateTab : Item()
         data object OpenInApp : Item()

@@ -181,6 +181,16 @@ class CustomizationSettingsFragment : BaseSettingsFragment() {
             }
         )
 
+        clickablePreference(
+            preference = "toolbar_icon_size",
+            onClick = { showIconSizeDialog() }
+        )
+
+        clickablePreference(
+            preference = "interface_font_scale",
+            onClick = { showFontScaleDialog() }
+        )
+
     }
 
     private fun pickBarAddonList() {
@@ -318,6 +328,89 @@ class CustomizationSettingsFragment : BaseSettingsFragment() {
                 applyAppTheme(which)
             }
             .show()
+    }
+
+    private fun showIconSizeDialog() {
+        val userPreferences = UserPreferences(requireContext())
+        val dialogView = layoutInflater.inflate(R.layout.dialog_size_picker, null)
+        val slider = dialogView.findViewById<com.google.android.material.slider.Slider>(R.id.sizeSlider)
+        val previewIcon = dialogView.findViewById<android.widget.ImageView>(R.id.previewIcon)
+        val previewText = dialogView.findViewById<android.widget.TextView>(R.id.previewText)
+        
+        slider.value = userPreferences.toolbarIconSize
+        slider.valueFrom = 0.8f
+        slider.valueTo = 1.5f
+        slider.stepSize = 0.1f
+        
+        previewText.text = getString(R.string.toolbar_icon_size)
+        updateIconPreview(previewIcon, userPreferences.toolbarIconSize)
+        
+        slider.addOnChangeListener { _, value, _ ->
+            updateIconPreview(previewIcon, value)
+        }
+        
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle(R.string.toolbar_icon_size)
+            .setView(dialogView)
+            .setPositiveButton(R.string.mozac_feature_prompts_ok) { _, _ ->
+                userPreferences.toolbarIconSize = slider.value
+                Toast.makeText(
+                    context,
+                    requireContext().resources.getText(R.string.app_restart),
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
+    }
+    
+    private fun showFontScaleDialog() {
+        val userPreferences = UserPreferences(requireContext())
+        val dialogView = layoutInflater.inflate(R.layout.dialog_size_picker, null)
+        val slider = dialogView.findViewById<com.google.android.material.slider.Slider>(R.id.sizeSlider)
+        val previewIcon = dialogView.findViewById<android.widget.ImageView>(R.id.previewIcon)
+        val previewText = dialogView.findViewById<android.widget.TextView>(R.id.previewText)
+        
+        slider.value = userPreferences.interfaceFontScale
+        slider.valueFrom = 0.8f
+        slider.valueTo = 1.3f
+        slider.stepSize = 0.1f
+        
+        previewIcon.visibility = android.view.View.GONE
+        previewText.text = getString(R.string.interface_font_scale_preview)
+        updateFontPreview(previewText, userPreferences.interfaceFontScale)
+        
+        slider.addOnChangeListener { _, value, _ ->
+            updateFontPreview(previewText, value)
+        }
+        
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle(R.string.interface_font_scale)
+            .setView(dialogView)
+            .setPositiveButton(R.string.mozac_feature_prompts_ok) { _, _ ->
+                userPreferences.interfaceFontScale = slider.value
+                Toast.makeText(
+                    context,
+                    requireContext().resources.getText(R.string.app_restart),
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
+    }
+    
+    private fun updateIconPreview(icon: android.widget.ImageView, scale: Float) {
+        val baseSize = (48 * resources.displayMetrics.density).toInt()
+        val scaledSize = (baseSize * scale).toInt()
+        val layoutParams = icon.layoutParams
+        layoutParams.width = scaledSize
+        layoutParams.height = scaledSize
+        icon.layoutParams = layoutParams
+    }
+    
+    private fun updateFontPreview(textView: android.widget.TextView, scale: Float) {
+        val baseSize = 16f
+        textView.textSize = baseSize * scale
     }
 
     private fun pickWebTheme() {

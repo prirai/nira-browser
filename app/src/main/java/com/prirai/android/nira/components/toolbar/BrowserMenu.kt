@@ -134,9 +134,11 @@ class BrowserMenu(
             BrowserMenuDivider(),
             printItem,
             saveAsPdfItem,
+            installWebApp,
             addToHomescreen.apply { visible = ::canAddToHomescreen },
             externalAppItem,
             desktopMode,
+            forceDarkMode,
             BrowserMenuDivider(),
             newPrivateTabItem,
             newTabItem,
@@ -167,6 +169,40 @@ class BrowserMenu(
         }
     ) { checked ->
         onItemTapped.invoke(ToolbarMenu.Item.RequestDesktop(checked))
+    }
+
+    private val forceDarkMode = BrowserMenuImageSwitch(
+        imageResource = R.drawable.ic_dark_mode,
+        label = context.getString(R.string.force_dark_mode),
+        initialState = {
+            val userPrefs = context.getSharedPreferences("scw_preferences", android.content.Context.MODE_PRIVATE)
+            val siteDarkMode = context.getSharedPreferences("site_dark_mode_override", android.content.Context.MODE_PRIVATE)
+            val currentUrl = selectedSession?.content?.url ?: ""
+            
+            // Check if site has explicit override
+            if (siteDarkMode.contains(currentUrl)) {
+                val sitePreference = siteDarkMode.getString(currentUrl, "")
+                sitePreference == "dark"
+            } else {
+                // Use global web theme
+                val globalWebTheme = userPrefs.getInt("web_theme_choice", com.prirai.android.nira.settings.ThemeChoice.SYSTEM.ordinal)
+                globalWebTheme == com.prirai.android.nira.settings.ThemeChoice.DARK.ordinal
+            }
+        }
+    ) { checked ->
+        onItemTapped.invoke(ToolbarMenu.Item.ForceDarkMode(checked))
+    }
+
+    private val installWebApp = BrowserMenuImageText(
+        label = context.getString(R.string.install_web_app),
+        imageResource = R.drawable.ic_round_smartphone,
+        iconTintColorResource = primaryTextColor()
+    ) {
+        onItemTapped.invoke(ToolbarMenu.Item.InstallWebApp)
+    }.apply {
+        visible = {
+            context.components.webAppUseCases.isInstallable()
+        }
     }
 
     private val addToHomescreen = BrowserMenuImageText(
