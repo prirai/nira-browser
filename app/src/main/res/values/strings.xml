@@ -607,6 +607,11 @@
         name="delete_island_confirmation"
     >Delete this island and ungroup %1$d tabs?</string>
 
+  <!-- Custom Tabs -->
+  <string name="browser_menu_open_in_nira">Open in Nira Browser</string>
+  <string name="browser_menu_find_in_page">Find in page</string>
+  <string name="powered_by_nira">Powered by Nira</string>
+
   <!-- WebAuthn/FIDO2 Digital Asset Links -->
   <string name="asset_statements" translatable="false">
     [{

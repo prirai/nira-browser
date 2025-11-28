@@ -51,6 +51,7 @@ import mozilla.components.feature.session.middleware.undo.UndoMiddleware
 import mozilla.components.feature.tabs.TabsUseCases
 import mozilla.components.feature.webcompat.WebCompatFeature
 import mozilla.components.feature.webnotifications.WebNotificationFeature
+import mozilla.components.feature.customtabs.store.CustomTabsServiceStore
 import mozilla.components.lib.publicsuffixlist.PublicSuffixList
 import mozilla.components.service.location.LocationService
 import org.mozilla.geckoview.GeckoRuntime
@@ -352,4 +353,7 @@ open class Components(private val applicationContext: Context) {
     val tabsUseCases: TabsUseCases by lazy { TabsUseCases(store) }
     val downloadsUseCases: DownloadsUseCases by lazy { DownloadsUseCases(store) }
     val contextMenuUseCases: ContextMenuUseCases by lazy { ContextMenuUseCases(store) }
+    
+    // Custom Tabs
+    val customTabsStore by lazy { CustomTabsServiceStore() }
 }

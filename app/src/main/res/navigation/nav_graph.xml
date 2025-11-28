@@ -60,4 +60,15 @@
             app:argType="string"
             app:nullable="true" />
     </fragment>
+
+    <!-- External App Browser (Custom Tabs) Fragment -->
+    <fragment
+        android:id="@+id/externalAppBrowserFragment"
+        android:name="com.prirai.android.nira.customtabs.ExternalAppBrowserFragment"
+        tools:layout="@layout/fragment_browser">
+        <argument
+            android:name="activeSessionId"
+            app:argType="string"
+            app:nullable="true" />
+    </fragment>
 </navigation>

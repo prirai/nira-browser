@@ -55,6 +55,19 @@
       </intent-filter>
     </activity>
 
+    <!-- Custom Tabs Activity for external apps -->
+    <activity
+        android:name=".customtabs.ExternalAppBrowserActivity"
+        android:autoRemoveFromRecents="false"
+        android:configChanges="keyboard|keyboardHidden|mcc|mnc|orientation|screenSize|layoutDirection|smallestScreenSize|screenLayout"
+        android:exported="false"
+        android:persistableMode="persistNever"
+        android:taskAffinity=""
+        android:theme="@style/SplashTheme"
+        android:resizeableActivity="true"
+        android:supportsPictureInPicture="true"
+        android:windowSoftInputMode="adjustResize|stateAlwaysHidden" />
+
     <activity
         android:name=".addons.AddonsActivity"
         android:label="@string/mozac_feature_addons_addons"
@@ -177,6 +190,16 @@
         android:name=".downloads.DownloadService"
         android:foregroundServiceType="dataSync"
         android:exported="false" />
+
+    <!-- Custom Tabs Service -->
+    <service
+        android:name=".customtabs.CustomTabsService"
+        android:exported="true"
+        tools:ignore="ExportedService">
+      <intent-filter>
+        <action android:name="android.support.customtabs.action.CustomTabsService" />
+      </intent-filter>
+    </service>
 
   </application>
 
