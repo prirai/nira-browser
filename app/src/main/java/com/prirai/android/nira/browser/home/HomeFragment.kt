@@ -33,6 +33,7 @@ import androidx.room.Room
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.prirai.android.nira.BrowserActivity
+import com.prirai.android.nira.NavGraphDirections
 import com.prirai.android.nira.R
 import com.prirai.android.nira.addons.AddonsActivity
 import com.prirai.android.nira.browser.BrowsingMode
@@ -74,8 +75,8 @@ import mozilla.components.ui.widgets.behavior.ViewPosition as OldToolbarPosition
 class HomeFragment : Fragment() {
     private var database: ShortcutDatabase? = null
 
-    private val args by navArgs<HomeFragmentArgs>()
-    private lateinit var bundleArgs: Bundle
+    // private val args by navArgs<HomeFragmentArgs>() // Removed - HomeFragment no longer used
+    // private lateinit var bundleArgs: Bundle // Removed - HomeFragment no longer used
 
     private val browsingModeManager get() = (activity as BrowserActivity).browsingModeManager
 
@@ -93,7 +94,7 @@ class HomeFragment : Fragment() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        bundleArgs = args.toBundle()
+        // bundleArgs = args.toBundle() // Removed - HomeFragment no longer used
     }
 
     @Suppress("LongMethod")
@@ -110,21 +111,26 @@ class HomeFragment : Fragment() {
 
         updateLayout(view)
 
-        if(!UserPreferences(requireContext()).showShortcuts){
+        if (!UserPreferences(requireContext()).showShortcuts) {
             binding.shortcutName.visibility = View.GONE
             binding.shortcutGrid.visibility = View.GONE
         }
 
-        if(!UserPreferences(requireContext()).shortcutDrawerOpen){
-            binding.shortcutName.setCompoundDrawablesRelativeWithIntrinsicBounds(R.drawable.ic_baseline_shortcuts, 0, R.drawable.ic_baseline_chevron_up, 0)
+        if (!UserPreferences(requireContext()).shortcutDrawerOpen) {
+            binding.shortcutName.setCompoundDrawablesRelativeWithIntrinsicBounds(
+                R.drawable.ic_baseline_shortcuts,
+                0,
+                R.drawable.ic_baseline_chevron_up,
+                0
+            )
             binding.shortcutGrid.visibility = View.GONE
         }
 
-        when(UserPreferences(requireContext()).homepageBackgroundChoice) {
+        when (UserPreferences(requireContext()).homepageBackgroundChoice) {
             HomepageBackgroundChoice.URL.ordinal -> {
                 val url = UserPreferences(requireContext()).homepageBackgroundUrl
-                if(url != ""){
-                    val fullUrl = if(url.startsWith("http")) url else "https://$url"
+                if (url != "") {
+                    val fullUrl = if (url.startsWith("http")) url else "https://$url"
                     val request = Request(fullUrl)
                     val client = HttpURLConnectionClient()
 
@@ -133,7 +139,7 @@ class HomeFragment : Fragment() {
                         response.use {
                             val bitmap = it.body.useStream { stream -> BitmapFactory.decodeStream(stream) }
                             ThreadUtils.runOnUiThread {
-                                if(activity != null) {
+                                if (activity != null) {
                                     val customBackground = object : BitmapDrawable(resources, bitmap) {
                                         override fun draw(canvas: Canvas) {
                                             val width = bounds.width()
@@ -168,10 +174,11 @@ class HomeFragment : Fragment() {
                     }
                 }
             }
+
             HomepageBackgroundChoice.GALLERY.ordinal -> {
                 val uri = UserPreferences(requireContext()).homepageBackgroundUrl
-                if(uri != ""){
-                    if(activity != null) {
+                if (uri != "") {
+                    if (activity != null) {
                         val contentResolver = requireContext().contentResolver
                         val bitmap = try {
                             MediaStore.Images.Media.getBitmap(contentResolver, Uri.parse(uri))
@@ -179,7 +186,7 @@ class HomeFragment : Fragment() {
                             null
                         }
 
-                        val customBackground = if(bitmap != null) {
+                        val customBackground = if (bitmap != null) {
                             object : BitmapDrawable(resources, bitmap) {
                                 override fun draw(canvas: Canvas) {
                                     val width = bounds.width()
@@ -216,14 +223,23 @@ class HomeFragment : Fragment() {
         }
 
         binding.shortcutName.setOnClickListener {
-            if(UserPreferences(requireContext()).shortcutDrawerOpen){
+            if (UserPreferences(requireContext()).shortcutDrawerOpen) {
                 UserPreferences(requireContext()).shortcutDrawerOpen = false
-                binding.shortcutName.setCompoundDrawablesRelativeWithIntrinsicBounds(R.drawable.ic_baseline_shortcuts, 0, R.drawable.ic_baseline_chevron_up, 0)
+                binding.shortcutName.setCompoundDrawablesRelativeWithIntrinsicBounds(
+                    R.drawable.ic_baseline_shortcuts,
+                    0,
+                    R.drawable.ic_baseline_chevron_up,
+                    0
+                )
                 binding.shortcutGrid.visibility = View.GONE
-            }
-            else{
+            } else {
                 UserPreferences(requireContext()).shortcutDrawerOpen = true
-                binding.shortcutName.setCompoundDrawablesRelativeWithIntrinsicBounds(R.drawable.ic_baseline_shortcuts, 0, R.drawable.ic_baseline_chevron_down, 0)
+                binding.shortcutName.setCompoundDrawablesRelativeWithIntrinsicBounds(
+                    R.drawable.ic_baseline_shortcuts,
+                    0,
+                    R.drawable.ic_baseline_chevron_down,
+                    0
+                )
                 binding.shortcutGrid.visibility = View.VISIBLE
             }
         }
@@ -267,22 +283,27 @@ class HomeFragment : Fragment() {
 
         binding.shortcutGrid.setOnItemClickListener { _, _, position, _ ->
             findNavController().navigate(
-                    R.id.browserFragment
-                )
+                R.id.browserFragment
+            )
 
-                components.sessionUseCases.loadUrl(
-                    (binding.shortcutGrid.adapter.getItem(position) as ShortcutEntity).url!!)
+            components.sessionUseCases.loadUrl(
+                (binding.shortcutGrid.adapter.getItem(position) as ShortcutEntity).url!!
+            )
         }
 
         binding.shortcutGrid.setOnItemLongClickListener { _, _, position, _ ->
-            val items = arrayOf(resources.getString(R.string.edit_shortcut), resources.getString(R.string.delete_shortcut))
+            val items =
+                arrayOf(resources.getString(R.string.edit_shortcut), resources.getString(R.string.delete_shortcut))
 
             AlertDialog.Builder(requireContext())
                 .setTitle(resources.getString(R.string.edit_shortcut))
                 .setItems(items) { _, which ->
-                    when(which){
+                    when (which) {
                         0 -> showEditShortcutDialog(position, binding.shortcutGrid.adapter as ShortcutGridAdapter)
-                        1 -> deleteShortcut(binding.shortcutGrid.adapter.getItem(position) as ShortcutEntity, binding.shortcutGrid.adapter as ShortcutGridAdapter)
+                        1 -> deleteShortcut(
+                            binding.shortcutGrid.adapter.getItem(position) as ShortcutEntity,
+                            binding.shortcutGrid.adapter as ShortcutGridAdapter
+                        )
                     }
                 }
                 .show()
@@ -295,7 +316,7 @@ class HomeFragment : Fragment() {
         }
 
         // Apply private browsing theme
-        if(browsingModeManager.mode == BrowsingMode.Private) {
+        if (browsingModeManager.mode == BrowsingMode.Private) {
             setupPrivateBrowsingTheme()
         } else {
             setupNormalBrowsingTheme()
@@ -312,10 +333,11 @@ class HomeFragment : Fragment() {
         getMenuButton()?.dismissMenu()
     }
 
-    private fun showEditShortcutDialog(position: Int, adapter: ShortcutGridAdapter){
+    private fun showEditShortcutDialog(position: Int, adapter: ShortcutGridAdapter) {
         val builder: AlertDialog.Builder = AlertDialog.Builder(requireContext())
         builder.setTitle(resources.getString(R.string.edit_shortcut))
-        val viewInflated: View = LayoutInflater.from(context).inflate(R.layout.add_shortcut_dialog, view as ViewGroup?, false)
+        val viewInflated: View =
+            LayoutInflater.from(context).inflate(R.layout.add_shortcut_dialog, view as ViewGroup?, false)
         val url = viewInflated.findViewById<View>(R.id.urlEditText) as EditText
         url.setText(adapter.list[position].url)
         val name = viewInflated.findViewById<View>(R.id.nameEditText) as EditText
@@ -337,10 +359,11 @@ class HomeFragment : Fragment() {
         builder.show()
     }
 
-    private fun showCreateShortcutDialog(adapter: ShortcutGridAdapter){
+    private fun showCreateShortcutDialog(adapter: ShortcutGridAdapter) {
         val builder: AlertDialog.Builder = AlertDialog.Builder(requireContext())
         builder.setTitle(resources.getString(R.string.add_shortcut))
-        val viewInflated: View = LayoutInflater.from(context).inflate(R.layout.add_shortcut_dialog, view as ViewGroup?, false)
+        val viewInflated: View =
+            LayoutInflater.from(context).inflate(R.layout.add_shortcut_dialog, view as ViewGroup?, false)
         val url = viewInflated.findViewById<View>(R.id.urlEditText) as EditText
         val name = viewInflated.findViewById<View>(R.id.nameEditText) as EditText
         builder.setView(viewInflated)
@@ -353,7 +376,8 @@ class HomeFragment : Fragment() {
             adapter.notifyDataSetChanged()
 
             GlobalScope.launch {
-                database?.shortcutDao()?.insertAll(ShortcutEntity(url = url.text.toString(), title = name.text.toString()))
+                database?.shortcutDao()
+                    ?.insertAll(ShortcutEntity(url = url.text.toString(), title = name.text.toString()))
             }
         }
         builder.setNegativeButton(android.R.string.cancel) { dialog, _ -> dialog.cancel() }
@@ -397,7 +421,8 @@ class HomeFragment : Fragment() {
                         resources.getDimensionPixelSize(R.dimen.home_fragment_top_toolbar_header_margin)
                 }
             }
-            OldToolbarPosition.BOTTOM.ordinal -> { }
+
+            OldToolbarPosition.BOTTOM.ordinal -> {}
         }
     }
 
@@ -407,7 +432,7 @@ class HomeFragment : Fragment() {
 
         observeSearchEngineChanges()
         createHomeMenu(requireContext(), WeakReference(binding.menuButton))
-        
+
         // Setup contextual bottom toolbar
         setupContextualBottomToolbar()
 
@@ -449,9 +474,10 @@ class HomeFragment : Fragment() {
 
         updateTabCounter(components.store.state)
 
-        if (bundleArgs.getBoolean(FOCUS_ON_ADDRESS_BAR)) {
-            navigateToSearch()
-        }
+        // HomeFragment no longer used - commenting out bundleArgs
+        // if (bundleArgs.getBoolean(FOCUS_ON_ADDRESS_BAR)) {
+        //     navigateToSearch()
+        // }
     }
 
     private fun observeSearchEngineChanges() {
@@ -477,17 +503,17 @@ class HomeFragment : Fragment() {
         super.onDestroyView()
 
         appBarLayout = null
-        bundleArgs.clear()
+        // bundleArgs.clear() // HomeFragment no longer used
         requireActivity().window.clearFlags(FLAG_SECURE)
     }
 
     private fun navigateToSearch() {
-        val directions =
-            HomeFragmentDirections.actionGlobalSearchDialog(
-                sessionId = null
-            )
-
-        nav(R.id.homeFragment, directions, null)
+        // HomeFragment no longer used - using about:homepage instead
+        // Navigation now handled through BrowserFragment
+        val directions = NavGraphDirections.actionGlobalSearchDialog(
+            sessionId = null
+        )
+        nav(R.id.browserFragment, directions, null)
     }
 
     @SuppressWarnings("ComplexMethod", "LongMethod")
@@ -499,19 +525,21 @@ class HomeFragment : Fragment() {
                 when (it) {
                     HomeMenu.Item.NewTab -> {
                         browsingModeManager.mode = BrowsingMode.Normal
-                        when(UserPreferences(requireContext()).homepageType){
+                        when (UserPreferences(requireContext()).homepageType) {
                             HomepageChoice.VIEW.ordinal -> {
                                 components.tabsUseCases.addTab.invoke(
                                     "about:homepage",
                                     selectTab = true
                                 )
                             }
+
                             HomepageChoice.BLANK_PAGE.ordinal -> {
                                 components.tabsUseCases.addTab.invoke(
                                     "about:blank",
                                     selectTab = true
                                 )
                             }
+
                             HomepageChoice.CUSTOM_PAGE.ordinal -> {
                                 components.tabsUseCases.addTab.invoke(
                                     UserPreferences(requireContext()).customHomepageUrl,
@@ -520,9 +548,10 @@ class HomeFragment : Fragment() {
                             }
                         }
                     }
+
                     HomeMenu.Item.NewPrivateTab -> {
                         browsingModeManager.mode = BrowsingMode.Private
-                        when(UserPreferences(requireContext()).homepageType){
+                        when (UserPreferences(requireContext()).homepageType) {
                             HomepageChoice.VIEW.ordinal -> {
                                 components.tabsUseCases.addTab.invoke(
                                     "about:homepage",
@@ -530,6 +559,7 @@ class HomeFragment : Fragment() {
                                     private = true
                                 )
                             }
+
                             HomepageChoice.BLANK_PAGE.ordinal -> {
                                 components.tabsUseCases.addTab.invoke(
                                     "about:blank",
@@ -537,6 +567,7 @@ class HomeFragment : Fragment() {
                                     private = true
                                 )
                             }
+
                             HomepageChoice.CUSTOM_PAGE.ordinal -> {
                                 components.tabsUseCases.addTab.invoke(
                                     UserPreferences(requireContext()).customHomepageUrl,
@@ -546,25 +577,31 @@ class HomeFragment : Fragment() {
                             }
                         }
                     }
+
                     HomeMenu.Item.Settings -> {
                         val settings = Intent(activity, SettingsActivity::class.java)
                         settings.flags = Intent.FLAG_ACTIVITY_NEW_TASK
                         requireActivity().startActivity(settings)
                     }
+
                     HomeMenu.Item.Bookmarks -> {
-                        val bookmarksBottomSheet = com.prirai.android.nira.browser.bookmark.ui.BookmarksBottomSheetFragment.newInstance()
+                        val bookmarksBottomSheet =
+                            com.prirai.android.nira.browser.bookmark.ui.BookmarksBottomSheetFragment.newInstance()
                         bookmarksBottomSheet.show(parentFragmentManager, "BookmarksBottomSheet")
                     }
+
                     HomeMenu.Item.History -> {
                         val settings = Intent(activity, HistoryActivity::class.java)
                         settings.flags = Intent.FLAG_ACTIVITY_NEW_TASK
                         activity?.startActivity(settings)
                     }
+
                     HomeMenu.Item.AddonsManager -> {
                         val settings = Intent(activity, AddonsActivity::class.java)
                         settings.flags = Intent.FLAG_ACTIVITY_NEW_TASK
                         activity?.startActivity(settings)
                     }
+
                     else -> {}
                 }
             },
@@ -586,14 +623,14 @@ class HomeFragment : Fragment() {
         }
 
         binding.tabButton.setCountWithAnimation(tabCount)
-        
+
         // Also update the contextual bottom toolbar if it's visible
         updateContextualToolbarForHomepage()
     }
 
     private fun setupContextualBottomToolbar() {
         val toolbar = binding.contextualBottomToolbar
-        
+
         // Force bottom toolbar to show for testing iOS icons
         val showBottomToolbar = true // UserPreferences(requireContext()).shouldUseBottomToolbar
         if (showBottomToolbar) {
@@ -609,7 +646,7 @@ class HomeFragment : Fragment() {
             binding.tabButton.visibility = View.VISIBLE
             binding.menuButton.visibility = View.VISIBLE
         }
-        
+
         if (showBottomToolbar) {
             // Set up bottom toolbar listener only when bottom toolbar is enabled
             toolbar.listener = object : ContextualBottomToolbar.ContextualToolbarListener {
@@ -632,20 +669,23 @@ class HomeFragment : Fragment() {
 
                 override fun onBookmarksClicked() {
                     // Open bookmarks modal bottom sheet
-                    val bookmarksBottomSheet = com.prirai.android.nira.browser.bookmark.ui.BookmarksBottomSheetFragment.newInstance()
+                    val bookmarksBottomSheet =
+                        com.prirai.android.nira.browser.bookmark.ui.BookmarksBottomSheetFragment.newInstance()
                     bookmarksBottomSheet.show(parentFragmentManager, "BookmarksBottomSheet")
                 }
 
                 override fun onNewTabClicked() {
                     // Add new tab
                     browsingModeManager.mode = BrowsingMode.Normal
-                    when(UserPreferences(requireContext()).homepageType){
+                    when (UserPreferences(requireContext()).homepageType) {
                         HomepageChoice.VIEW.ordinal -> {
                             components.tabsUseCases.addTab.invoke("about:homepage", selectTab = true)
                         }
+
                         HomepageChoice.BLANK_PAGE.ordinal -> {
                             components.tabsUseCases.addTab.invoke("about:blank", selectTab = true)
                         }
+
                         HomepageChoice.CUSTOM_PAGE.ordinal -> {
                             components.tabsUseCases.addTab.invoke(
                                 UserPreferences(requireContext()).customHomepageUrl,
@@ -664,7 +704,7 @@ class HomeFragment : Fragment() {
                     // Create and show the home menu anchored to the bottom toolbar button
                     val context = requireContext()
                     val bottomMenuButton = binding.contextualBottomToolbar.findViewById<View>(R.id.menu_button)
-                    
+
                     // Create home menu directly and show it
                     val homeMenu = HomeMenu(
                         lifecycleOwner = viewLifecycleOwner,
@@ -673,13 +713,15 @@ class HomeFragment : Fragment() {
                             when (item) {
                                 HomeMenu.Item.NewTab -> {
                                     browsingModeManager.mode = BrowsingMode.Normal
-                                    when(UserPreferences(requireContext()).homepageType){
+                                    when (UserPreferences(requireContext()).homepageType) {
                                         HomepageChoice.VIEW.ordinal -> {
                                             components.tabsUseCases.addTab.invoke("about:homepage", selectTab = true)
                                         }
+
                                         HomepageChoice.BLANK_PAGE.ordinal -> {
                                             components.tabsUseCases.addTab.invoke("about:blank", selectTab = true)
                                         }
+
                                         HomepageChoice.CUSTOM_PAGE.ordinal -> {
                                             components.tabsUseCases.addTab.invoke(
                                                 UserPreferences(requireContext()).customHomepageUrl,
@@ -688,15 +730,26 @@ class HomeFragment : Fragment() {
                                         }
                                     }
                                 }
+
                                 HomeMenu.Item.NewPrivateTab -> {
                                     browsingModeManager.mode = BrowsingMode.Private
-                                    when(UserPreferences(requireContext()).homepageType){
+                                    when (UserPreferences(requireContext()).homepageType) {
                                         HomepageChoice.VIEW.ordinal -> {
-                                            components.tabsUseCases.addTab.invoke("about:homepage", selectTab = true, private = true)
+                                            components.tabsUseCases.addTab.invoke(
+                                                "about:homepage",
+                                                selectTab = true,
+                                                private = true
+                                            )
                                         }
+
                                         HomepageChoice.BLANK_PAGE.ordinal -> {
-                                            components.tabsUseCases.addTab.invoke("about:blank", selectTab = true, private = true)
+                                            components.tabsUseCases.addTab.invoke(
+                                                "about:blank",
+                                                selectTab = true,
+                                                private = true
+                                            )
                                         }
+
                                         HomepageChoice.CUSTOM_PAGE.ordinal -> {
                                             components.tabsUseCases.addTab.invoke(
                                                 UserPreferences(requireContext()).customHomepageUrl,
@@ -705,46 +758,52 @@ class HomeFragment : Fragment() {
                                         }
                                     }
                                 }
+
                                 HomeMenu.Item.Settings -> {
                                     val settings = Intent(activity, SettingsActivity::class.java)
                                     settings.flags = Intent.FLAG_ACTIVITY_NEW_TASK
                                     requireActivity().startActivity(settings)
                                 }
+
                                 HomeMenu.Item.Bookmarks -> {
-                                    val bookmarksBottomSheet = com.prirai.android.nira.browser.bookmark.ui.BookmarksBottomSheetFragment.newInstance()
+                                    val bookmarksBottomSheet =
+                                        com.prirai.android.nira.browser.bookmark.ui.BookmarksBottomSheetFragment.newInstance()
                                     bookmarksBottomSheet.show(parentFragmentManager, "BookmarksBottomSheet")
                                 }
+
                                 HomeMenu.Item.History -> {
                                     val settings = Intent(activity, HistoryActivity::class.java)
                                     settings.flags = Intent.FLAG_ACTIVITY_NEW_TASK
                                     activity?.startActivity(settings)
                                 }
+
                                 HomeMenu.Item.AddonsManager -> {
                                     val settings = Intent(activity, AddonsActivity::class.java)
                                     settings.flags = Intent.FLAG_ACTIVITY_NEW_TASK
                                     activity?.startActivity(settings)
                                 }
+
                                 else -> {}
                             }
                         },
                         onMenuBuilderChanged = { menuBuilder ->
                             val menu = menuBuilder.build(context)
-                            
+
                             // Create a temporary view above the button for better positioning
                             val tempView = android.view.View(context)
                             tempView.layoutParams = android.view.ViewGroup.LayoutParams(1, 1)
-                            
+
                             // Add the temp view to the parent layout
                             val parent = binding.contextualBottomToolbar
                             parent.addView(tempView)
-                            
+
                             // Position the temp view above the menu button
                             tempView.x = bottomMenuButton.x
                             tempView.y = bottomMenuButton.y - 60 // 60px above the button
-                            
+
                             // Show menu anchored to temp view
                             menu.show(anchor = tempView)
-                            
+
                             // Clean up temp view after menu interaction
                             tempView.postDelayed({
                                 try {
@@ -752,12 +811,12 @@ class HomeFragment : Fragment() {
                                 } catch (e: Exception) {
                                     // Ignore if view was already removed
                                 }
-                            }, 3000) // 3 seconds cleanup delay
+                            }, 12000) // 12 seconds cleanup delay
                         }
                     )
                 }
             }
-            
+
             // Update toolbar context for homepage
             updateContextualToolbarForHomepage()
         }
@@ -772,7 +831,7 @@ class HomeFragment : Fragment() {
             } else {
                 store.normalTabs.size
             }
-            
+
             toolbar.updateForContext(
                 tab = null, // No specific tab on homepage
                 canGoBack = false, // Can't go back from homepage
@@ -785,43 +844,43 @@ class HomeFragment : Fragment() {
 
     private fun setupPrivateBrowsingTheme() {
         // Purple/dark theme for private browsing (like Firefox)
-        binding.toolbarWrapper.background = context?.let { 
-            ContextCompat.getDrawable(it, R.drawable.toolbar_background_private) 
+        binding.toolbarWrapper.background = context?.let {
+            ContextCompat.getDrawable(it, R.drawable.toolbar_background_private)
         }
-        
+
         // Change background to darker shade
         binding.homeLayout.setBackgroundColor(ContextCompat.getColor(requireContext(), R.color.photonViolet80))
-        
-        // Update app bar with private browsing colors  
+
+        // Update app bar with private browsing colors
         binding.homeAppBar.setBackgroundColor(ContextCompat.getColor(requireContext(), R.color.photonViolet80))
-        
+
         // Change app icon tint for private mode
         binding.appIcon.setColorFilter(ContextCompat.getColor(requireContext(), R.color.photonWhite))
-        
+
         // Update app name color
         binding.appName.setTextColor(ContextCompat.getColor(requireContext(), R.color.photonWhite))
-        
+
         // Update shortcuts header color
         binding.shortcutName.setTextColor(ContextCompat.getColor(requireContext(), R.color.photonWhite))
-        
+
     }
-    
+
     private fun setupNormalBrowsingTheme() {
         // Don't override background colors - let XML handle theme-aware colors
-        binding.toolbarWrapper.background = context?.let { 
-            ContextCompat.getDrawable(it, R.drawable.toolbar_background) 
+        binding.toolbarWrapper.background = context?.let {
+            ContextCompat.getDrawable(it, R.drawable.toolbar_background)
         }
-        
+
         // Remove background color overrides to respect XML theme attributes
         // binding.homeLayout already uses ?attr/colorSurface in XML
         // binding.homeAppBar already uses ?attr/colorSurface in XML
-        
+
         // Reset app icon tint to allow original colors
         binding.appIcon.clearColorFilter()
-        
+
         // Remove text color overrides to respect XML/theme defaults
         // Let the XML handle theme-aware text colors
-        
+
     }
 
     companion object {

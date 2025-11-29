@@ -69,7 +69,7 @@ class HistoryActivity : AppCompatActivity(), SearchView.OnQueryTextListener {
                 recyclerView,
                 object : HistoryRecyclerViewItemTouchListener.OnItemClickListener {
                     override fun onItemClick(view: View?, position: Int) {
-                        onBackPressed()
+                        onBackPressedDispatcher.onBackPressed()
                         GlobalScope.launch {
                             components.sessionUseCases.loadUrl(
                                 (recyclerView.adapter as HistoryItemRecyclerViewAdapter).getItem(
@@ -93,7 +93,7 @@ class HistoryActivity : AppCompatActivity(), SearchView.OnQueryTextListener {
                             .setItems(items) { dialog, which ->
                                 when (which) {
                                     0 -> {
-                                        onBackPressed()
+                                        onBackPressedDispatcher.onBackPressed()
                                         components.tabsUseCases.addTab.invoke(
                                             (recyclerView.adapter as HistoryItemRecyclerViewAdapter).getItem(
                                                 position
@@ -102,7 +102,7 @@ class HistoryActivity : AppCompatActivity(), SearchView.OnQueryTextListener {
                                         )
                                     }
                                     1 -> {
-                                        onBackPressed()
+                                        onBackPressedDispatcher.onBackPressed()
                                         components.tabsUseCases.addTab.invoke(
                                             (recyclerView.adapter as HistoryItemRecyclerViewAdapter).getItem(
                                                 position
@@ -197,7 +197,7 @@ class HistoryActivity : AppCompatActivity(), SearchView.OnQueryTextListener {
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         when (item.itemId) {
             android.R.id.home -> {
-                onBackPressed()
+                onBackPressedDispatcher.onBackPressed()
                 return true
             }
         }

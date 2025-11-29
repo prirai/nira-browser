@@ -7,13 +7,18 @@
     android:layout_height="wrap_content"
     android:paddingTop="16dp">
 
-    <androidx.constraintlayout.widget.ConstraintLayout
+    <com.google.android.material.card.MaterialCardView
         android:id="@+id/transparent_container"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="@drawable/toolbar"
         android:layout_margin="8dp"
-        android:elevation="4dp">
+        app:cardCornerRadius="16dp"
+        app:cardElevation="8dp"
+        app:cardBackgroundColor="?attr/colorSurface">
+
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
 
         <LinearLayout
             android:id="@+id/topBar"
@@ -96,5 +101,7 @@
 
         </LinearLayout>
 
-    </androidx.constraintlayout.widget.ConstraintLayout>
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
+    </com.google.android.material.card.MaterialCardView>
 </RelativeLayout>

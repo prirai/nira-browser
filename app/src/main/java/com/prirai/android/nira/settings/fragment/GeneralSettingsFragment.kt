@@ -110,7 +110,7 @@ class GeneralSettingsFragment : BaseSettingsFragment() {
         val startingChoice = UserPreferences(requireContext()).searchEngineChoice
         val singleItems = emptyList<String>().toMutableList()
 
-        for(i in SearchEngineList().getEngines()){
+        for(i in SearchEngineList(requireContext()).getEngines()){
             singleItems.add(i.name)
         }
 

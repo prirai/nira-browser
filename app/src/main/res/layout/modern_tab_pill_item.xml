@@ -16,11 +16,12 @@
     <RelativeLayout
         android:layout_width="wrap_content"
         android:layout_height="match_parent"
+        android:minHeight="36dp"
         android:minWidth="120dp"
-        android:paddingStart="6dp"
-        android:paddingTop="2dp"
-        android:paddingEnd="4dp"
-        android:paddingBottom="2dp"
+        android:paddingStart="8dp"
+        android:paddingTop="4dp"
+        android:paddingEnd="6dp"
+        android:paddingBottom="4dp"
     >
 
         <!-- Selection indicator - REMOVED -->
@@ -34,8 +35,8 @@
         <!-- Favicon -->
         <ImageView
             android:id="@+id/tabFavicon"
-            android:layout_width="14dp"
-            android:layout_height="14dp"
+            android:layout_width="16dp"
+            android:layout_height="16dp"
             android:layout_centerVertical="true"
             android:layout_toEndOf="@id/selectionIndicator"
             android:layout_marginStart="6dp"
@@ -58,7 +59,7 @@
             android:maxLines="1"
             android:text="Tab Title"
             android:textColor="?android:attr/textColorPrimary"
-            android:textSize="12sp"
+            android:textSize="13sp"
             android:visibility="visible"
         />
 

@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    
+    <!-- Header -->
+    <item
+        android:id="@+id/menu_header"
+        android:title="@string/powered_by_nira"
+        android:enabled="false" />
+    
+    <!-- Menu Items -->
+    <item
+        android:id="@+id/menu_find_in_page"
+        android:title="@string/browser_menu_find_in_page"
+        android:icon="@drawable/ic_baseline_find_in_page" />
+    
+    <item
+        android:id="@+id/menu_share"
+        android:title="@string/share"
+        android:icon="@drawable/ic_share" />
+    
+    <item
+        android:id="@+id/menu_open_in_browser"
+        android:title="@string/browser_menu_open_in_nira" />
+    
+</menu>

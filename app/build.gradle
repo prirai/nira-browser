@@ -27,8 +27,8 @@ android {
         minSdkVersion 26
         targetSdkVersion 36
         // Increment by 4 with each update
-        versionCode 1
-        versionName "0.1"
+        versionCode 2
+        versionName "0.2"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -44,6 +44,7 @@ android {
     buildTypes {
         release {
             minifyEnabled true
+            shrinkResources true  // Added: Remove unused resources to reduce APK size
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
@@ -53,6 +54,9 @@ android {
     splits {
         abi {
             enable true
+            reset()
+            include 'arm64-v8a', 'armeabi-v7a'
+            // STAGE 1: Only keep ARM architectures (99.9% of devices)
             universalApk false
         }
     }
@@ -70,10 +74,8 @@ android {
     }
 }
 
-def abiBaseMap = [
-        "arm64-v8a": 1,
-        "x86"      : 2,
-        "x86_64"   : 3
+def abiBaseMap = ["arm64-v8a"  : 1,
+                  "armeabi-v7a": 2
 ]
 
 androidComponents {
@@ -116,14 +118,6 @@ dependencies {
     implementation "androidx.room:room-runtime:2.8.4"
     ksp "androidx.room:room-compiler:2.8.4"
 
-    final def daggerVersion = '2.57.2'
-    implementation "com.google.dagger:dagger:$daggerVersion"
-    implementation "com.google.dagger:dagger-android:$daggerVersion"
-    implementation "com.google.dagger:dagger-android-support:$daggerVersion"
-    kapt "com.google.dagger:dagger-compiler:$daggerVersion"
-    kapt "com.google.dagger:dagger-android-processor:$daggerVersion"
-    compileOnly 'javax.annotation:jsr250-api:1.0'
-
     final def mozComponentsVersion = "145.0"
 
     // Mozilla compose components
@@ -133,8 +127,8 @@ dependencies {
     implementation "org.mozilla.components:concept-storage:$mozComponentsVersion"
     implementation "org.mozilla.components:concept-engine:$mozComponentsVersion"
     implementation "org.mozilla.components:concept-menu:$mozComponentsVersion"
+    // Kept: required by browser-menu
     implementation "org.mozilla.components:concept-toolbar:$mozComponentsVersion"
-    implementation "org.mozilla.components:concept-tabstray:$mozComponentsVersion"
     implementation "org.mozilla.components:concept-base:$mozComponentsVersion"
     implementation "org.mozilla.components:concept-fetch:$mozComponentsVersion"
     implementation "org.mozilla.components:concept-awesomebar:$mozComponentsVersion"
@@ -142,13 +136,9 @@ dependencies {
     // Mozilla browser components
     implementation "org.mozilla.components:browser-engine-gecko:$mozComponentsVersion"
     implementation "org.mozilla.components:browser-icons:$mozComponentsVersion"
-    implementation "org.mozilla.components:browser-domains:$mozComponentsVersion"
     implementation "org.mozilla.components:browser-thumbnails:$mozComponentsVersion"
     implementation "org.mozilla.components:browser-state:$mozComponentsVersion"
-
     implementation "org.mozilla.components:browser-toolbar:$mozComponentsVersion"
-    implementation "org.mozilla.components:browser-state:$mozComponentsVersion"
-    implementation "org.mozilla.components:browser-engine-system:$mozComponentsVersion"
     implementation "org.mozilla.components:browser-session-storage:$mozComponentsVersion"
     implementation "org.mozilla.components:browser-tabstray:$mozComponentsVersion"
     implementation "org.mozilla.components:browser-menu:$mozComponentsVersion"
@@ -157,7 +147,6 @@ dependencies {
 
     // Mozilla feature components
     implementation "org.mozilla.components:feature-awesomebar:$mozComponentsVersion"
-    implementation "org.mozilla.components:feature-autofill:$mozComponentsVersion"
     implementation "org.mozilla.components:feature-readerview:$mozComponentsVersion"
     implementation "org.mozilla.components:feature-media:$mozComponentsVersion"
     implementation "org.mozilla.components:feature-search:$mozComponentsVersion"
@@ -170,15 +159,18 @@ dependencies {
     implementation "org.mozilla.components:feature-app-links:$mozComponentsVersion"
     implementation "org.mozilla.components:feature-downloads:$mozComponentsVersion"
     implementation "org.mozilla.components:feature-privatemode:$mozComponentsVersion"
+    // Kept: adds screenshot protection & privacy features
     implementation "org.mozilla.components:feature-customtabs:$mozComponentsVersion"
     implementation "org.mozilla.components:feature-pwa:$mozComponentsVersion"
     implementation "org.mozilla.components:feature-prompts:$mozComponentsVersion"
     implementation "org.mozilla.components:feature-sitepermissions:$mozComponentsVersion"
+    implementation "org.mozilla.components:feature-webauthn:$mozComponentsVersion"
     implementation "org.mozilla.components:feature-webcompat:$mozComponentsVersion"
     implementation "org.mozilla.components:feature-webnotifications:$mozComponentsVersion"
     implementation "org.mozilla.components:feature-addons:$mozComponentsVersion"
     implementation "org.mozilla.components:feature-findinpage:$mozComponentsVersion"
-    implementation "org.mozilla.components:feature-prompts:$mozComponentsVersion"
+    implementation "org.mozilla.components:feature-accounts:$mozComponentsVersion"
+    // Added: for Firefox Account sync (bookmarks/history/tabs)
 
     // Mozilla service components
     implementation "org.mozilla.components:service-location:$mozComponentsVersion"
@@ -203,6 +195,9 @@ dependencies {
     implementation "org.mozilla.components:lib-publicsuffixlist:$mozComponentsVersion"
     implementation "org.mozilla.components:lib-fetch-httpurlconnection:$mozComponentsVersion"
 
+    // Google Play Services for WebAuthn/Passkeys support
+    implementation 'com.google.android.gms:play-services-fido:21.2.0'
+
     testImplementation 'junit:junit:4.13.2'
     androidTestImplementation 'androidx.test.ext:junit:1.3.0'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.7.0'
@@ -213,10 +208,6 @@ dependencies {
 
     // OkHTTP
     implementation "com.squareup.okhttp3:okhttp:5.3.2"
-
-    implementation 'io.reactivex.rxjava2:rxandroid:2.1.1'
-    implementation 'io.reactivex.rxjava2:rxjava:2.2.21'
-    implementation 'io.reactivex.rxjava2:rxkotlin:2.4.0'
 
     implementation "androidx.compose.ui:ui:1.9.5"
     implementation "androidx.compose.foundation:foundation:1.9.5"

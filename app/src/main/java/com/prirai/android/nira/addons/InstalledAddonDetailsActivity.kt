@@ -14,6 +14,7 @@ import com.prirai.android.nira.BrowserActivity
 import com.prirai.android.nira.R
 import com.prirai.android.nira.ext.components
 import com.prirai.android.nira.ext.isAppInDarkTheme
+import com.prirai.android.nira.ext.getParcelableExtraCompat
 import com.prirai.android.nira.theme.applyAppTheme
 import com.google.android.material.switchmaterial.SwitchMaterial
 import kotlinx.coroutines.CoroutineScope
@@ -33,7 +34,7 @@ class InstalledAddonDetailsActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_installed_add_on_details)
-        val addon = requireNotNull(intent.getParcelableExtra<Addon>("add_on"))
+        val addon = requireNotNull(intent.getParcelableExtraCompat<Addon>("add_on"))
 
         applyAppTheme(this)
 

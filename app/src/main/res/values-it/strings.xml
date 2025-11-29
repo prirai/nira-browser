@@ -147,7 +147,6 @@
     <string name="stack_items_reverse">Impila elementi dal fondo del cassetto</string>
     <string name="browser_sync">Sincronizzazione browser</string>
     <string name="browser_sync_disclaimer">Quando si utilizza la sincronizzazione, il navigatore sincronizza le schede con il tuo account Firefox. Ciò significa che il navigatore memorizzerà i tuoi dati in forma cifrata sui server Firefox Sync gestiti da Mozilla. Questo servizio non è affiliato o approvato da Mozilla e CookieJarApps non è tenuto a fornire servizio di supporto, garanzia o aggiornamenti.</string>
-    <string name="load_xpi">XPI caricati lateralmente</string>
     <string name="load_xpi_description">Sicuri di voler installare %1$s su questo navigatore? Il componente aggiuntivo non è stato controllato per la sicurezza o stabilità da CookieJarApps.</string>
     <string name="addon_not_available">Questo componente aggiuntivo non è disponibile dal negozio. È possibile caricare lateralmente componenti aggiuntivi personalizzati nelle impostazioni avanzate.</string>
     <string name="swipe_to_refresh">Scorri per aggiornare</string>

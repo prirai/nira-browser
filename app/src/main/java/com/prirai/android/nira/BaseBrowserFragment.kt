@@ -26,7 +26,7 @@ import com.prirai.android.nira.addons.WebExtensionPromptFeature
 import com.prirai.android.nira.browser.BrowsingMode
 import com.prirai.android.nira.settings.HomepageChoice
 import com.prirai.android.nira.browser.SwipeGestureLayout
-import com.prirai.android.nira.browser.home.HomeFragmentDirections
+// import com.prirai.android.nira.browser.home.HomeFragmentDirections // Removed - using BrowserFragment for homepage
 import com.prirai.android.nira.components.StoreProvider
 import com.prirai.android.nira.components.toolbar.BrowserFragmentStore
 import com.prirai.android.nira.components.toolbar.BrowserFragmentState
@@ -40,8 +40,8 @@ import com.prirai.android.nira.components.toolbar.ToolbarPosition
 import com.prirai.android.nira.databinding.FragmentBrowserBinding
 import com.prirai.android.nira.downloads.DownloadService
 import com.prirai.android.nira.ext.components
+import com.prirai.android.nira.components.FindInPageComponent
 import com.prirai.android.nira.integration.ContextMenuIntegration
-import com.prirai.android.nira.integration.FindInPageIntegration
 import com.prirai.android.nira.integration.ReaderModeIntegration
 import com.prirai.android.nira.integration.ReloadStopButtonIntegration
 import com.prirai.android.nira.preferences.UserPreferences
@@ -79,6 +79,7 @@ import mozilla.components.feature.session.PictureInPictureFeature
 import mozilla.components.feature.session.SessionFeature
 import mozilla.components.feature.session.SwipeRefreshFeature
 import mozilla.components.feature.sitepermissions.SitePermissionsFeature
+import mozilla.components.feature.webauthn.WebAuthnFeature
 import mozilla.components.lib.state.ext.consumeFlow
 import mozilla.components.support.base.feature.ActivityResultHandler
 import mozilla.components.support.base.feature.PermissionsFeature
@@ -128,7 +129,7 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
     private val downloadsFeature = ViewBoundFeatureWrapper<DownloadsFeature>()
     private val appLinksFeature = ViewBoundFeatureWrapper<AppLinksFeature>()
     private val promptsFeature = ViewBoundFeatureWrapper<PromptFeature>()
-    private val findInPageIntegration = ViewBoundFeatureWrapper<FindInPageIntegration>()
+    private var findInPageComponent: FindInPageComponent? = null
     private val toolbarIntegration = ViewBoundFeatureWrapper<ToolbarIntegration>()
     private val sitePermissionsFeature = ViewBoundFeatureWrapper<SitePermissionsFeature>()
     private val fullScreenFeature = ViewBoundFeatureWrapper<FullScreenFeature>()
@@ -137,6 +138,7 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
     private var fullScreenMediaSessionFeature =
         ViewBoundFeatureWrapper<MediaSessionFullscreenFeature>()
     private val searchFeature = ViewBoundFeatureWrapper<SearchFeature>()
+    private val webAuthnFeature = ViewBoundFeatureWrapper<WebAuthnFeature>()
     private var pipFeature: PictureInPictureFeature? = null
     val readerViewFeature = ViewBoundFeatureWrapper<ReaderModeIntegration>()
     private val reloadStopButtonFeature = ViewBoundFeatureWrapper<ReloadStopButtonIntegration>()
@@ -244,7 +246,7 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
         val browserToolbarMenuController = DefaultBrowserToolbarMenuController(
             activity = activity,
             navController = findNavController(),
-            findInPageLauncher = { findInPageIntegration.withFeature { it.launch() }; },
+            findInPageLauncher = { findInPageComponent?.show() },
             browserAnimator = browserAnimator,
             customTabSessionId = customTabSessionId,
             store = store,
@@ -271,48 +273,8 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
             view = view
         )
 
-        findInPageIntegration.set(
-            feature = FindInPageIntegration(
-                store = store,
-                sessionId = customTabSessionId,
-                stub = binding.stubFindInPage,
-                engineView = binding.engineView,
-                toolbarInfo = FindInPageIntegration.ToolbarInfo(
-                    browserToolbarView.view,
-                    UserPreferences(context).hideBarWhileScrolling,
-                    !UserPreferences(context).shouldUseBottomToolbar
-                ),
-                prepareLayout = {
-                    browserToolbarView.view.translationY = -browserToolbarView.view.height.toFloat()
-                    browserToolbarView.view.isVisible = false
-                    val browserEngine = binding.swipeRefresh.layoutParams as CoordinatorLayout.LayoutParams
-                    browserEngine.behavior = null
-                    browserEngine.bottomMargin = toolbarHeight
-                    browserEngine.topMargin = 0
-                    binding.swipeRefresh.layoutParams = browserEngine
-                    binding.swipeRefresh.apply {
-                        translationY = 0f
-                        requestLayout()
-                    }
-
-                    binding.engineView.apply {
-                        setDynamicToolbarMaxHeight(0)
-                        setVerticalClipping(0)
-                    }
-                },
-                restorePreviousLayout = {
-                    val browserEngine = binding.swipeRefresh.layoutParams as CoordinatorLayout.LayoutParams
-                    browserEngine.bottomMargin = 0
-                    browserToolbarView.view.translationY = 0f
-                    browserToolbarView.view.isVisible = webAppToolbarShouldBeVisible
-                    initializeEngineView(
-                        toolbarHeight = toolbarHeight
-                    )
-                }
-            ),
-            owner = this,
-            view = view
-        )
+        // Set up custom Find in Page component
+        setupFindInPage(view)
 
         contextMenuIntegration.set(
             feature = ContextMenuIntegration(
@@ -443,6 +405,18 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
             view = view
         )
 
+        webAuthnFeature.set(
+            feature = WebAuthnFeature(
+                engine = requireContext().components.engine,
+                activity = requireActivity(),
+                exitFullScreen = {
+                    requireContext().components.sessionUseCases.exitFullscreen.invoke()
+                }
+            ) { store.state.selectedTabId },
+            owner = this,
+            view = view
+        )
+
         val accentHighContrastColor = R.color.secondary_icon
 
         sitePermissionsFeature.set(
@@ -543,6 +517,27 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
         )
 
         initializeEngineView(toolbarHeight)
+        
+        // Defer heavy feature initialization to visual completeness queue
+        context.components.visualCompletenessQueue.runIfReadyOrQueue {
+            // Future: Additional feature initialization can go here
+        }
+    }
+    
+    private fun setupFindInPage(view: View) {
+        val sessionId = customTabSessionId
+        val tabId = sessionId ?: requireContext().components.store.state.selectedTabId ?: return
+        val rootLayout = view.findViewById<ViewGroup>(R.id.gestureLayout) ?: return
+        
+        // Create and attach the Find in Page component
+        findInPageComponent = FindInPageComponent(
+            context = requireContext(),
+            store = requireContext().components.store,
+            sessionId = tabId,
+            lifecycleOwner = viewLifecycleOwner,
+            isCustomTab = sessionId != null
+        )
+        findInPageComponent?.attach(rootLayout)
     }
 
     private suspend fun provideAddons(): List<Addon> {
@@ -562,7 +557,7 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
                     arrayOf(tab.content.url, tab.content.loadRequest)
                 }
                 .collect {
-                    findInPageIntegration.onBackPressed()
+                    findInPageComponent?.onBackPressed()
                     browserToolbarView.expand()
                 }
         }
@@ -661,15 +656,12 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
                         if (tabs.isEmpty() || store.state.selectedTabId == null) {
                             when (UserPreferences(requireContext()).homepageType) {
                                 HomepageChoice.VIEW.ordinal -> {
+                                    // Load about:homepage in BrowserFragment (HTML homepage)
                                     components.tabsUseCases.addTab.invoke(
                                         "about:homepage",
                                         selectTab = true
                                     )
-                                    navController.navigate(
-                                        HomeFragmentDirections.actionGlobalHome(
-                                            focusOnAddressBar = false
-                                        )
-                                    )
+                                    // Navigation not needed - tab already created and selected
                                 }
 
                                 HomepageChoice.BLANK_PAGE.ordinal -> {
@@ -765,7 +757,7 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
     @CallSuper
     override fun onBackPressed(): Boolean {
         return readerViewFeature.onBackPressed() ||
-                findInPageIntegration.onBackPressed() ||
+                (findInPageComponent?.onBackPressed() ?: false) ||
                 fullScreenFeature.onBackPressed() ||
                 promptsFeature.onBackPressed() ||
                 sessionFeature.onBackPressed() ||
@@ -893,7 +885,7 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
     internal fun fullScreenChanged(inFullScreen: Boolean) {
         if (inFullScreen) {
             // Close find in page bar if opened
-            findInPageIntegration.onBackPressed()
+            findInPageComponent?.onBackPressed()
 
             requireActivity().enterImmersiveMode(
                 setOnApplyWindowInsetsListener = { key: String, listener: OnApplyWindowInsetsListener ->
@@ -936,6 +928,8 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
     override fun onDestroyView() {
         super.onDestroyView()
 
+        findInPageComponent?.destroy()
+        findInPageComponent = null
         binding.engineView.setActivityContext(null)
         _browserToolbarView = null
         _browserInteractor = null

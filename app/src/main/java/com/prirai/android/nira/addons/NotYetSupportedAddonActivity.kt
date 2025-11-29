@@ -14,6 +14,8 @@ import mozilla.components.feature.addons.Addon
 import mozilla.components.feature.addons.ui.UnsupportedAddonsAdapter
 import mozilla.components.feature.addons.ui.UnsupportedAddonsAdapterDelegate
 import com.prirai.android.nira.ext.components
+import com.prirai.android.nira.ext.getParcelableArrayListExtraCompat
+import com.prirai.android.nira.ext.getParcelableArrayListCompat
 import com.prirai.android.nira.theme.applyAppTheme
 
 // Activity for managing unsupported add-ons, or add-ons that were installed but are no longer available.
@@ -23,7 +25,7 @@ class NotYetSupportedAddonActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_base)
 
-        val addons = requireNotNull(intent.getParcelableArrayListExtra<Addon>("add_ons"))
+        val addons = requireNotNull(intent.getParcelableArrayListExtraCompat<Addon>("add_ons"))
 
         applyAppTheme(this)
 
@@ -43,7 +45,7 @@ class NotYetSupportedAddonActivity : AppCompatActivity() {
             container: ViewGroup?,
             savedInstanceState: Bundle?
         ): View? {
-            addons = requireNotNull(arguments?.getParcelableArrayList("add_ons"))
+            addons = requireNotNull(arguments?.getParcelableArrayListCompat("add_ons"))
             return inflater.inflate(R.layout.fragment_other_addons, container, false)
         }
 
@@ -70,7 +72,7 @@ class NotYetSupportedAddonActivity : AppCompatActivity() {
             Toast.makeText(context, "Successfully removed add-on", Toast.LENGTH_SHORT)
                 .show()
             if (adapter?.itemCount == 0) {
-                activity?.onBackPressed()
+                activity?.onBackPressedDispatcher?.onBackPressed()
             }
         }
 

@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/findInPageBar"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_gravity="bottom"
+    android:visibility="gone"
+    app:cardElevation="8dp"
+    app:cardCornerRadius="12dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingStart="8dp"
+        android:paddingEnd="8dp"
+        android:background="?attr/colorSurface">
+
+        <!-- Search EditText -->
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/findQueryText"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:hint="Find in page"
+            android:imeOptions="actionSearch"
+            android:inputType="text"
+            android:singleLine="true"
+            android:background="@android:color/transparent"
+            android:textSize="16sp" />
+
+        <!-- Result count text -->
+        <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/findResultText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:textSize="14sp"
+            android:textColor="?android:attr/textColorSecondary" />
+
+        <!-- Previous button -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/findPrevButton"
+            style="@style/Widget.Material3.Button.IconButton"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:contentDescription="Previous"
+            app:icon="@drawable/ic_baseline_chevron_up"
+            app:iconGravity="textStart"
+            app:iconPadding="0dp" />
+
+        <!-- Next button -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/findNextButton"
+            style="@style/Widget.Material3.Button.IconButton"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:contentDescription="Next"
+            app:icon="@drawable/ic_baseline_chevron_down"
+            app:iconGravity="textStart"
+            app:iconPadding="0dp" />
+
+        <!-- Close button -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/findCloseButton"
+            style="@style/Widget.Material3.Button.IconButton"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:contentDescription="Close"
+            app:icon="@drawable/ic_round_close"
+            app:iconGravity="textStart"
+            app:iconPadding="0dp" />
+
+    </LinearLayout>
+
+</com.google.android.material.card.MaterialCardView>

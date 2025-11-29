@@ -16,6 +16,8 @@ import mozilla.components.concept.engine.EngineView
 import mozilla.components.feature.addons.Addon
 import mozilla.components.feature.addons.ui.translateName
 import com.prirai.android.nira.ext.components
+import com.prirai.android.nira.ext.getParcelableExtraCompat
+import com.prirai.android.nira.ext.getParcelableCompat
 import com.prirai.android.nira.theme.applyAppTheme
 
 // An activity to show the settings of an add-on.
@@ -34,7 +36,7 @@ class AddonSettingsActivity : AppCompatActivity() {
 
         applyAppTheme(this)
 
-        val addon = requireNotNull(intent.getParcelableExtra<Addon>("add_on"))
+        val addon = requireNotNull(intent.getParcelableExtraCompat<Addon>("add_on"))
         title = addon.translateName(this)
 
         supportFragmentManager
@@ -58,7 +60,7 @@ class AddonSettingsActivity : AppCompatActivity() {
         protected val binding get() = _binding!!
 
         override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
-            addon = requireNotNull(arguments?.getParcelable("add_on"))
+            addon = requireNotNull(arguments?.getParcelableCompat("add_on"))
             engineSession = components.engine.createSession()
 
             _binding = FragmentAddOnSettingsBinding.inflate(inflater, container, false)

@@ -158,7 +158,6 @@
     <string name="stack_items_reverse">把抽屉底部项目堆叠起来</string>
     <string name="browser_sync">浏览器同步</string>
     <string name="browser_sync_disclaimer">使用同步时，浏览器会将你的标签和你的Firefox帐户进行同步。这意味着浏览器将以加密的形式将您的数据存储在由Mozilla运营的Firefox同步服务器上。本服务不隶属于Mozilla或得到Mozilla的认可，CookieJarApps因而不需要提供支持服务、保修或更新。</string>
-    <string name="load_xpi">侧加载 XPI 文件</string>
     <string name="load_xpi_description">你确定想把 %1$s 安装到这个浏览器吗？此附加组件没有经过CookieJarApp的安全性或稳定性检查。</string>
     <string name="addon_not_available">这个附加组件无法从附加组件商店中获取。你可以在高级设置中侧加载定义附加组件。</string>
     <string name="swipe_to_refresh">滑动刷新</string>

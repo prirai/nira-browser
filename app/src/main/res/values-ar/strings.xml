@@ -149,7 +149,6 @@
     <string name="stack_items_reverse">تكدس العناصر من أسفل القائمة</string>
     <string name="browser_sync">مزامنة المتصفح</string>
     <string name="browser_sync_disclaimer">عند استخدام المزامنة، يزامن المتصفح علامات التبويب الخاصة بك مع حساب Firefox الخاص بك. هذا يعني أن المتصفح سيقوم بتخزين بياناتك في شكل مشفر على خوادم مزامنة Firefox التي تشغلها موزيلا. هذه الخدمة غير مرتبطة بموزيلا أو معتمدة من قبل CookieJarApps غير مطلوب لتقديم خدمة الدعم أو الضمان أو التحديثات.</string>
-    <string name="load_xpi">خيارات Slideload</string>
     <string name="load_xpi_description">هل أنت متأكد من أنك تريد تثبيت %1$s إلى هذا المتصفح؟ هذه الإضافة لم يتم التحقق من الأمان أو الاستقرار من قبل CookieJarApps.</string>
     <string name="addon_not_available">هذه الإضافة غير متوفرة من متجر الإضافات. هل ترغب في تحميلها؟</string>
     <string name="swipe_to_refresh">اسحب للتحديث</string>

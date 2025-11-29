@@ -4,6 +4,8 @@ import android.content.Context
 import android.util.AttributeSet
 import android.widget.LinearLayout
 import androidx.coordinatorlayout.widget.CoordinatorLayout
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import mozilla.components.concept.toolbar.ScrollableToolbar
 import mozilla.components.ui.widgets.behavior.EngineViewScrollingBehavior
 
@@ -18,6 +20,23 @@ class BottomToolbarContainerView @JvmOverloads constructor(
     attrs: AttributeSet? = null,
     defStyleAttr: Int = 0,
 ) : LinearLayout(context, attrs, defStyleAttr), ScrollableToolbar {
+    
+    init {
+        // Handle window insets for navigation bar
+        ViewCompat.setOnApplyWindowInsetsListener(this) { view, insets ->
+            val navigationBars = insets.getInsets(WindowInsetsCompat.Type.navigationBars())
+            
+            // Add bottom padding for navigation bar
+            view.setPadding(
+                paddingLeft,
+                paddingTop,
+                paddingRight,
+                navigationBars.bottom
+            )
+            
+            insets
+        }
+    }
     
     override fun enableScrolling() {
         (layoutParams as? CoordinatorLayout.LayoutParams)?.apply {

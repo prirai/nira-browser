@@ -21,15 +21,9 @@ typealias ViewHolderProvider = (ViewGroup) -> TabViewHolder
 open class TabListAdapter(
     thumbnailLoader: ImageLoader? = null,
     private val viewHolderProvider: ViewHolderProvider = { parent ->
-        if(UserPreferences(parent.context).showTabsInGrid)
-            TabGridViewHolder(
-                LayoutInflater.from(parent.context).inflate(R.layout.tab_grid_item, parent, false),
-                thumbnailLoader
-            )
-        else
-            TabListViewHolder(
-                LayoutInflater.from(parent.context).inflate(R.layout.tab_list_item, parent, false)
-            )
+        TabListViewHolder(
+            LayoutInflater.from(parent.context).inflate(R.layout.tab_list_item, parent, false)
+        )
     },
     private val styling: TabsTrayStyling = TabsTrayStyling(),
     private val delegate: TabsTray.Delegate,

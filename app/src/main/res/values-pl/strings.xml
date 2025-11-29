@@ -147,7 +147,6 @@
     <string name="stack_items_reverse">Stosuj przedmioty od dołu szuflady</string>
     <string name="browser_sync">Synchronizacja przeglądarki</string>
     <string name="browser_sync_disclaimer">Podczas synchronizacji przeglądarka synchronizuje Twoje karty z kontem Firefoks. Oznacza to, że przeglądarka przechowuje Twoje dane w formie zaszyfrowanej na serwerach Firefox Sync obsługiwanych przez Mozillę. Ta usługa nie jest powiązana lub zatwierdzona przez Mozilla i CookieJarApps nie jest wymagana do świadczenia usług wsparcia, gwarancji lub aktualizacji.</string>
-    <string name="load_xpi">Sideload XPI</string>
     <string name="load_xpi_description">Czy na pewno chcesz zainstalować %1$s w tej przeglądarce? Ten dodatek nie został sprawdzony pod kątem bezpieczeństwa lub stabilności przez CookieJarApps.</string>
     <string name="addon_not_available">Ten dodatek nie jest dostępny w sklepie dodatków. Możesz załadować niestandardowe dodatki w ustawieniach zaawansowanych.</string>
     <string name="swipe_to_refresh">Przeciągnij, aby odświeżyć</string>

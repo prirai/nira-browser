@@ -14,6 +14,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.prirai.android.nira.R
 import com.prirai.android.nira.ext.isAppInDarkTheme
+import com.prirai.android.nira.ext.getParcelableExtraCompat
 import com.prirai.android.nira.theme.applyAppTheme
 import mozilla.components.feature.addons.Addon
 import mozilla.components.feature.addons.ui.AddonPermissionsAdapter
@@ -28,7 +29,7 @@ class PermissionsDetailsActivity : AppCompatActivity(), View.OnClickListener {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_add_on_permissions)
-        val addon = requireNotNull(intent.getParcelableExtra<Addon>("add_on"))
+        val addon = requireNotNull(intent.getParcelableExtraCompat<Addon>("add_on"))
         title = addon.translateName(this)
 
         applyAppTheme(this)
@@ -71,7 +72,7 @@ class PermissionsDetailsActivity : AppCompatActivity(), View.OnClickListener {
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         when (item.itemId) {
             android.R.id.home -> {
-                super.onBackPressed()
+                onBackPressedDispatcher.onBackPressed()
                 return true
             }
         }

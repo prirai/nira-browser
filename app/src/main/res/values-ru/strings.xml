@@ -147,7 +147,6 @@
     <string name="stack_items_reverse">Стек элементов снизу выдвижной панели</string>
     <string name="browser_sync">Синхронизация браузера</string>
     <string name="browser_sync_disclaimer">При использовании синхронизации браузер синхронизирует ваши вкладки с вашей учетной записью Firefox. Это означает, что браузер будет хранить ваши данные в зашифрованном виде на серверах Firefox Sync, управляемых Mozilla. Эта услуга не связана с Mozilla и не поддерживается ею, и CookieJarApps не обязан предоставлять услуги поддержки, гарантии или обновления.</string>
-    <string name="load_xpi">Загрузить XPI</string>
     <string name="load_xpi_description">Вы уверены, что хотите установить %1$s в этот браузер? Это дополнение не было проверено CookieJarApps на безопасность или стабильность.</string>
     <string name="addon_not_available">Это дополнение недоступно в магазине дополнений. Вы можете загружать пользовательские дополнения в расширенных настройках.</string>
     <string name="swipe_to_refresh">Проведите для обновления</string>

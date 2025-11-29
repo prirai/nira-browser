@@ -48,6 +48,13 @@
         app:defaultValue="true" />
 
     <SwitchPreferenceCompat
+        app:key="@string/key_show_contextual_toolbar"
+        app:title="@string/show_contextual_toolbar"
+        app:summary="@string/show_contextual_toolbar_desc"
+        app:singleLineTitle="false"
+        app:defaultValue="true" />
+
+    <SwitchPreferenceCompat
         app:key="@string/key_show_tabs_in_grid"
         app:title="@string/tab_grid"
         app:singleLineTitle="false"
@@ -96,5 +103,17 @@
         app:showSeekBarValue="true"
         app:singleLineTitle="false"
         app:defaultValue="100" />
+
+    <Preference
+        app:key="toolbar_icon_size"
+        app:title="@string/toolbar_icon_size"
+        app:summary="@string/toolbar_icon_size_desc"
+        app:singleLineTitle="false" />
+
+    <Preference
+        app:key="interface_font_scale"
+        app:title="@string/interface_font_scale"
+        app:summary="@string/interface_font_scale_desc"
+        app:singleLineTitle="false" />
 
 </PreferenceScreen>

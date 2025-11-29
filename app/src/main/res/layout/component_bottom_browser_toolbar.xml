@@ -24,7 +24,7 @@
         android:layout_height="@dimen/browser_toolbar_height"
         android:paddingStart="12dp"
         android:paddingEnd="12dp"
-        android:background="?attr/colorSurface"
+        android:background="@drawable/address_bar_background"
         android:clickable="true"
         android:focusable="true"
         android:focusableInTouchMode="true"
@@ -41,7 +41,7 @@
         android:id="@+id/contextualBottomToolbarIntegrated"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:visibility="visible"
+        android:visibility="gone"
     />
 
 </com.prirai.android.nira.components.toolbar.BottomToolbarContainerView>

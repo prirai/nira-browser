@@ -16,6 +16,7 @@ import android.widget.ImageView
 import android.widget.TextView
 import androidx.cardview.widget.CardView
 import androidx.core.content.ContextCompat
+import androidx.core.graphics.ColorUtils
 import androidx.recyclerview.widget.RecyclerView
 import com.prirai.android.nira.R
 import mozilla.components.browser.state.state.SessionState
@@ -32,7 +33,9 @@ class ModernTabPillAdapter(
     private var onTabClick: (String) -> Unit,
     private var onTabClose: (String) -> Unit,
     private var onIslandHeaderClick: (String) -> Unit = {},
-    private var onIslandLongPress: (String) -> Unit = {}
+    private var onIslandLongPress: (String) -> Unit = {},
+    private var onIslandPlusClick: (String) -> Unit = {},
+    private var onTabUngroupFromIsland: ((String, String) -> Unit)? = null
 ) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
     private var displayItems = mutableListOf<TabPillItem>()
@@ -254,12 +257,16 @@ class ModernTabPillAdapter(
         onTabClick: (String) -> Unit,
         onTabClose: (String) -> Unit,
         onIslandHeaderClick: (String) -> Unit = {},
-        onIslandLongPress: (String) -> Unit = {}
+        onIslandLongPress: (String) -> Unit = {},
+        onIslandPlusClick: (String) -> Unit = {},
+        onTabUngroupFromIsland: ((String, String) -> Unit)? = null
     ) {
         this.onTabClick = onTabClick
         this.onTabClose = onTabClose
         this.onIslandHeaderClick = onIslandHeaderClick
         this.onIslandLongPress = onIslandLongPress
+        this.onIslandPlusClick = onIslandPlusClick
+        this.onTabUngroupFromIsland = onTabUngroupFromIsland
     }
 
     // ViewHolder for regular tabs
@@ -301,11 +308,161 @@ class ModernTabPillAdapter(
                 vibrateHaptic()
             }
 
+            // Add swipe-up gesture for delete
+            setupStandaloneTabSwipeGesture(tab.id)
+
+            // Add long-press for context menu
+            cardView.setOnLongClickListener {
+                vibrateHaptic()
+                showStandaloneTabContextMenu(cardView, tab.id)
+                true
+            }
+
             closeButton.setOnClickListener {
                 onTabClose(tab.id)
                 animateClose()
                 vibrateHaptic()
             }
+        }
+
+        private fun setupStandaloneTabSwipeGesture(tabId: String) {
+            var startY = 0f
+            var isDragging = false
+
+            cardView.setOnTouchListener { v, event ->
+                when (event.action) {
+                    android.view.MotionEvent.ACTION_DOWN -> {
+                        startY = event.rawY
+                        isDragging = false
+                        false
+                    }
+
+                    android.view.MotionEvent.ACTION_MOVE -> {
+                        val deltaY = startY - event.rawY
+
+                        if (deltaY > 20 && !isDragging) {
+                            isDragging = true
+                            v.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS)
+                        }
+
+                        if (isDragging) {
+                            // Visual feedback during drag
+                            val progress = (deltaY / 100f).coerceIn(0f, 1f)
+                            cardView.scaleX = 1f - (progress * 0.2f)
+                            cardView.scaleY = 1f - (progress * 0.2f)
+                            cardView.rotation = -progress * 10f
+                            cardView.alpha = 1f - (progress * 0.3f)
+                            true
+                        } else {
+                            false
+                        }
+                    }
+
+                    android.view.MotionEvent.ACTION_UP, android.view.MotionEvent.ACTION_CANCEL -> {
+                        if (isDragging) {
+                            val deltaY = startY - event.rawY
+                            if (deltaY > 100) {
+                                // Trigger delete animation
+                                animateStandaloneTabDelete()
+                            } else {
+                                // Spring back
+                                cardView.animate()
+                                    .scaleX(1f)
+                                    .scaleY(1f)
+                                    .rotation(0f)
+                                    .alpha(1f)
+                                    .setDuration(200)
+                                    .start()
+                            }
+                            isDragging = false
+                            true
+                        } else {
+                            v.performClick()
+                            false
+                        }
+                    }
+
+                    else -> false
+                }
+            }
+        }
+
+        private fun showStandaloneTabContextMenu(anchorView: View, tabId: String) {
+            val wrapper = android.view.ContextThemeWrapper(itemView.context, R.style.RoundedPopupMenu)
+            val popupMenu = android.widget.PopupMenu(wrapper, anchorView, android.view.Gravity.NO_GRAVITY, 
+                0, R.style.RoundedPopupMenu)
+            
+            // Add menu items for standalone tabs with icons
+            val duplicateItem = popupMenu.menu.add(0, 1, 0, "Duplicate Tab")
+            duplicateItem.setIcon(android.R.drawable.ic_menu_add)
+            
+            val closeItem = popupMenu.menu.add(0, 2, 1, "Close Tab")
+            closeItem.setIcon(android.R.drawable.ic_menu_close_clear_cancel)
+            
+            // Force icons to show
+            try {
+                val popup = android.widget.PopupMenu::class.java.getDeclaredField("mPopup")
+                popup.isAccessible = true
+                val menu = popup.get(popupMenu)
+                menu.javaClass.getDeclaredMethod("setForceShowIcon", Boolean::class.java)
+                    .invoke(menu, true)
+            } catch (e: Exception) {
+                // Ignore if reflection fails
+            }
+            
+            popupMenu.setOnMenuItemClickListener { menuItem ->
+                when (menuItem.itemId) {
+                    1 -> {
+                        // Duplicate tab
+                        itemView.performHapticFeedback(android.view.HapticFeedbackConstants.VIRTUAL_KEY)
+                        // TODO: Implement duplicate tab functionality via callback
+                        true
+                    }
+                    2 -> {
+                        // Close tab with animation
+                        itemView.performHapticFeedback(android.view.HapticFeedbackConstants.VIRTUAL_KEY)
+                        animateStandaloneTabDelete()
+                        true
+                    }
+                    else -> false
+                }
+            }
+            
+            // Show menu above the anchor view
+            popupMenu.gravity = android.view.Gravity.TOP
+            popupMenu.show()
+        }
+
+        private fun animateStandaloneTabDelete() {
+            // Multi-stage breaking apart animation for standalone tabs
+            // Stage 1: Shake and lift
+            cardView.animate()
+                .translationY(-20f)
+                .rotationBy(5f)
+                .setDuration(100)
+                .withEndAction {
+                    // Stage 2: Shake the other way
+                    cardView.animate()
+                        .rotationBy(-10f)
+                        .setDuration(100)
+                        .withEndAction {
+                            // Stage 3: Break apart - fly up with rotation
+                            cardView.animate()
+                                .translationY(-500f)
+                                .rotation(-30f)
+                                .scaleX(0.4f)
+                                .scaleY(0.4f)
+                                .alpha(0f)
+                                .setDuration(300)
+                                .setInterpolator(android.view.animation.AccelerateInterpolator())
+                                .withEndAction {
+                                    currentTabId?.let { onTabClose(it) }
+                                }
+                                .start()
+                        }
+                        .start()
+                }
+                .start()
         }
 
         private fun loadFavicon(tab: SessionState) {
@@ -342,43 +499,53 @@ class ModernTabPillAdapter(
 
         private fun applyPillStyling(isSelected: Boolean, item: TabPillItem.Tab) {
             val islandColor = item.islandColor
+            
+            // Get default background color
+            val backgroundColor = if (isDarkMode()) {
+                ContextCompat.getColor(itemView.context, android.R.color.background_dark)
+            } else {
+                ContextCompat.getColor(itemView.context, android.R.color.background_light)
+            }
 
             if (isSelected) {
-                // Selected: Vibrant pill with island color or default
-                val color = islandColor ?: 0xFF6200EE.toInt()
+                // Selected: Show prominent border with island color or default
+                val borderColor = islandColor ?: 0xFF6200EE.toInt()
                 val gradient = GradientDrawable().apply {
-                    cornerRadius = 18f
-                    setColor(color)
-                    alpha = 230
+                    cornerRadius = 20f
+                    setColor(backgroundColor)
+                    // Prominent border for selected state (3dp)
+                    val strokeWidth = (3 * itemView.resources.displayMetrics.density).toInt()
+                    setStroke(strokeWidth, borderColor)
                 }
                 cardView.background = gradient
-                cardView.elevation = 12f
-                cardView.scaleX = 1.02f
-                cardView.scaleY = 1.02f
+                cardView.elevation = 8f
+                cardView.scaleX = 1.0f
+                cardView.scaleY = 1.0f
 
-                titleView.setTextColor(Color.WHITE)
-                selectionIndicator.visibility = View.VISIBLE
-                selectionIndicator.setBackgroundColor(Color.WHITE)
+                val textColor = if (isDarkMode()) {
+                    ContextCompat.getColor(itemView.context, android.R.color.primary_text_dark_nodisable)
+                } else {
+                    ContextCompat.getColor(itemView.context, android.R.color.primary_text_light_nodisable)
+                }
+                titleView.setTextColor(textColor)
+                selectionIndicator.visibility = View.GONE
 
                 cardView.outlineProvider = android.view.ViewOutlineProvider.BACKGROUND
-                cardView.clipToOutline = false
+                cardView.clipToOutline = true
 
             } else {
-                // Unselected: Subtle pill with island color hint
-                val backgroundColor = if (isDarkMode()) {
-                    ContextCompat.getColor(itemView.context, android.R.color.background_dark)
-                } else {
-                    ContextCompat.getColor(itemView.context, android.R.color.background_light)
-                }
-
+                // Unselected: Subtle pill with island color hint or subtle border
                 val gradient = GradientDrawable().apply {
                     cornerRadius = 20f
                     setColor(backgroundColor)
                     if (islandColor != null) {
-                        // Show colored left border for island tabs
-                        setStroke(4, islandColor)
+                        // Show subtle colored border for island tabs (2dp)
+                        val strokeWidth = (2 * itemView.resources.displayMetrics.density).toInt()
+                        setStroke(strokeWidth, islandColor)
                     } else {
-                        setStroke(2, 0x40FFFFFF)
+                        // Very subtle border for unselected regular tabs (1dp)
+                        val strokeWidth = (1 * itemView.resources.displayMetrics.density).toInt()
+                        setStroke(strokeWidth, 0x30FFFFFF)
                     }
                 }
                 cardView.background = gradient
@@ -540,6 +707,7 @@ class ModernTabPillAdapter(
         private val nameText: TextView = itemView.findViewById(R.id.islandName)
         private val colorIndicator: View = itemView.findViewById(R.id.islandColorIndicator)
         private val collapseButton: ImageView = itemView.findViewById(R.id.islandCollapseButton)
+        private val plusButton: ImageView = itemView.findViewById(R.id.islandPlusButton)
         private val headerSection: ViewGroup = itemView.findViewById(R.id.islandHeaderSection)
         private val tabsContainer: ViewGroup = itemView.findViewById(R.id.islandTabsContainer)
         private val groupCard: CardView = itemView.findViewById(R.id.islandGroupCard)
@@ -565,12 +733,20 @@ class ModernTabPillAdapter(
                 true
             }
 
+            // Setup plus button to add new tab to island
+            plusButton.setOnClickListener {
+                onIslandPlusClick(island.id)
+                animatePlusButtonClick()
+                itemView.performHapticFeedback(android.view.HapticFeedbackConstants.VIRTUAL_KEY)
+            }
+
             // Clear previous tabs
             tabsContainer.removeAllViews()
 
             // Add each tab to the container
             tabs.forEachIndexed { index, tab ->
-                val tabView = createTabPillView(tab, island, index)
+                val isLastTab = index == tabs.size - 1
+                val tabView = createTabPillView(tab, island, index, isLastTab)
                 // Store tab ID as tag for later updates
                 tabView.tag = tab.id
                 tabsContainer.addView(tabView)
@@ -579,7 +755,8 @@ class ModernTabPillAdapter(
 
         fun updateTabSelection(tabId: String, island: TabIsland) {
             // Update selection state for tabs in this group
-            for (i in 0 until tabsContainer.childCount) {
+            val tabCount = tabsContainer.childCount
+            for (i in 0 until tabCount) {
                 val tabView = tabsContainer.getChildAt(i)
                 val storedTabId = tabView.tag as? String
                 if (storedTabId != null) {
@@ -588,31 +765,65 @@ class ModernTabPillAdapter(
                     val faviconView: ImageView = tabView.findViewById(R.id.tabFavicon)
 
                     val isSelected = storedTabId == tabId
+                    val isLastTab = i == tabCount - 1
+                    
                     if (isSelected) {
-                        // Selected tab: highlight with island color
+                        // Selected tab: show border with rounded corners on last tab
                         val gradient = GradientDrawable().apply {
-                            cornerRadius = 0f
-                            setColor(island.color)
+                            setColor(Color.TRANSPARENT)
+                            // Prominent border for selected state (3dp stroke width)
+                            val strokeWidth = (3 * itemView.resources.displayMetrics.density).toInt()
+                            setStroke(strokeWidth, island.color)
+                            // Only round top-right and bottom-right corners for last tab
+                            if (isLastTab) {
+                                val radius = 12f * itemView.resources.displayMetrics.density
+                                cornerRadii = floatArrayOf(
+                                    0f, 0f,              // top-left
+                                    radius, radius,      // top-right (rounded)
+                                    radius, radius,      // bottom-right (rounded)
+                                    0f, 0f               // bottom-left
+                                )
+                            }
                         }
                         tabContent.background = gradient
-                        titleView.setTextColor(Color.WHITE)
-                        faviconView.alpha = 1.0f
-                    } else {
-                        // Unselected tab: transparent background
-                        tabContent.setBackgroundColor(Color.TRANSPARENT)
                         val textColor = if (isDarkMode()) {
                             ContextCompat.getColor(itemView.context, android.R.color.primary_text_dark_nodisable)
                         } else {
                             ContextCompat.getColor(itemView.context, android.R.color.primary_text_light_nodisable)
                         }
                         titleView.setTextColor(textColor)
+                        titleView.setTypeface(null, android.graphics.Typeface.BOLD)
+                        faviconView.alpha = 1.0f
+                    } else {
+                        // Unselected tab: transparent background
+                        val gradient = GradientDrawable().apply {
+                            setColor(Color.TRANSPARENT)
+                            // Only round top-right and bottom-right corners for last tab
+                            if (isLastTab) {
+                                val radius = 12f * itemView.resources.displayMetrics.density
+                                cornerRadii = floatArrayOf(
+                                    0f, 0f,              // top-left
+                                    radius, radius,      // top-right (rounded)
+                                    radius, radius,      // bottom-right (rounded)
+                                    0f, 0f               // bottom-left
+                                )
+                            }
+                        }
+                        tabContent.background = gradient
+                        val textColor = if (isDarkMode()) {
+                            ContextCompat.getColor(itemView.context, android.R.color.primary_text_dark_nodisable)
+                        } else {
+                            ContextCompat.getColor(itemView.context, android.R.color.primary_text_light_nodisable)
+                        }
+                        titleView.setTextColor(textColor)
+                        titleView.setTypeface(null, android.graphics.Typeface.NORMAL)
                         faviconView.alpha = 0.8f
                     }
                 }
             }
         }
 
-        private fun createTabPillView(tab: SessionState, island: TabIsland, index: Int): View {
+        private fun createTabPillView(tab: SessionState, island: TabIsland, index: Int, isLastTab: Boolean): View {
             val tabView = LayoutInflater.from(itemView.context)
                 .inflate(R.layout.tab_pill_in_group, tabsContainer, false)
 
@@ -640,25 +851,40 @@ class ModernTabPillAdapter(
             loadFaviconForGroupTab(tab, faviconView)
 
             // Apply styling based on selection
+            // NOTE: Last tab is NO LONGER rounded because plus button is at the end
             val isSelected = tab.id == selectedTabId
             if (isSelected) {
-                // Selected tab: highlight with island color using gradient drawable
+                // Selected tab: show border but DON'T round last tab anymore
                 val gradient = GradientDrawable().apply {
-                    cornerRadius = 0f
-                    setColor(island.color)
+                    setColor(Color.TRANSPARENT)
+                    // Prominent border for selected state (3dp stroke width)
+                    val strokeWidth = (3 * itemView.resources.displayMetrics.density).toInt()
+                    setStroke(strokeWidth, island.color)
+                    // No rounding needed - plus button is now at the end
                 }
                 tabContent.background = gradient
-                titleView.setTextColor(Color.WHITE)
-                faviconView.alpha = 1.0f
-            } else {
-                // Unselected tab: transparent background
-                tabContent.setBackgroundColor(Color.TRANSPARENT)
                 val textColor = if (isDarkMode()) {
                     ContextCompat.getColor(itemView.context, android.R.color.primary_text_dark_nodisable)
                 } else {
                     ContextCompat.getColor(itemView.context, android.R.color.primary_text_light_nodisable)
                 }
                 titleView.setTextColor(textColor)
+                titleView.setTypeface(null, android.graphics.Typeface.BOLD)
+                faviconView.alpha = 1.0f
+            } else {
+                // Unselected tab: transparent background
+                val gradient = GradientDrawable().apply {
+                    setColor(Color.TRANSPARENT)
+                    // No rounding needed - plus button is now at the end
+                }
+                tabContent.background = gradient
+                val textColor = if (isDarkMode()) {
+                    ContextCompat.getColor(itemView.context, android.R.color.primary_text_dark_nodisable)
+                } else {
+                    ContextCompat.getColor(itemView.context, android.R.color.primary_text_light_nodisable)
+                }
+                titleView.setTextColor(textColor)
+                titleView.setTypeface(null, android.graphics.Typeface.NORMAL)
                 faviconView.alpha = 0.8f
             }
 
@@ -672,8 +898,8 @@ class ModernTabPillAdapter(
                 itemView.performHapticFeedback(android.view.HapticFeedbackConstants.VIRTUAL_KEY)
             }
 
-            // Add swipe-up gesture for delete
-            setupSwipeToDelete(tabView, tabContent, tab.id)
+            // Add swipe-up gesture for delete OR long-press drag to ungroup
+            setupTabGestures(tabView, tabContent, tab.id, island.id)
 
             return tabView
         }
@@ -710,10 +936,11 @@ class ModernTabPillAdapter(
             }
         }
 
-        private fun setupSwipeToDelete(tabView: View, tabContent: ViewGroup, tabId: String) {
+        private fun setupTabGestures(tabView: View, tabContent: ViewGroup, tabId: String, islandId: String) {
             var startY = 0f
             var startX = 0f
             var isDragging = false
+            var longPressTimer: android.os.Handler? = null
 
             tabContent.setOnTouchListener { v, event ->
                 when (event.action) {
@@ -721,6 +948,16 @@ class ModernTabPillAdapter(
                         startY = event.rawY
                         startX = event.rawX
                         isDragging = false
+                        
+                        // Start long press timer for context menu
+                        longPressTimer = android.os.Handler(android.os.Looper.getMainLooper())
+                        longPressTimer?.postDelayed({
+                            if (!isDragging) {
+                                // Show context menu
+                                v.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS)
+                                showTabContextMenu(tabView, tabId, islandId)
+                            }
+                        }, 1000)  // Increased to 1000ms to avoid conflict with swipe
                         false
                     }
 
@@ -728,44 +965,44 @@ class ModernTabPillAdapter(
                         val deltaY = startY - event.rawY
                         val deltaX = Math.abs(event.rawX - startX)
 
-                        // Only start drag if moving upward and not too much horizontal movement
+                        // Check if user is trying to swipe up for delete
                         if (deltaY > 20 && deltaX < 50 && !isDragging) {
                             isDragging = true
+                            longPressTimer?.removeCallbacksAndMessages(null)
                             v.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS)
                         }
 
                         if (isDragging) {
-                            // Visual feedback - move the tab up
-                            tabView.translationY = -deltaY
-                            tabView.alpha = 1f - (deltaY / 200f).coerceIn(0f, 0.5f)
+                            // Visual feedback during drag - shake and scale
+                            val progress = (deltaY / 100f).coerceIn(0f, 1f)
+                            tabView.scaleX = 1f - (progress * 0.2f)
+                            tabView.scaleY = 1f - (progress * 0.2f)
+                            tabView.rotation = -progress * 10f
+                            tabView.alpha = 1f - (progress * 0.3f)
                             true
                         } else {
+                            // Cancel long press if moved too much
+                            if (deltaX > 20 || Math.abs(deltaY) > 20) {
+                                longPressTimer?.removeCallbacksAndMessages(null)
+                            }
                             false
                         }
                     }
 
                     android.view.MotionEvent.ACTION_UP, android.view.MotionEvent.ACTION_CANCEL -> {
+                        longPressTimer?.removeCallbacksAndMessages(null)
+                        
                         if (isDragging) {
                             val deltaY = startY - event.rawY
-
                             if (deltaY > 100) {
-                                // Threshold met - delete the tab
-                                tabView.animate()
-                                    .translationY(-300f)
-                                    .alpha(0f)
-                                    .setDuration(200)
-                                    .withEndAction {
-                                        onTabClose(tabId)
-                                    }
-                                    .start()
+                                // Delete with animation
+                                animateTabDelete(tabView, tabId)
                             } else {
-                                // Threshold not met - spring back
                                 resetTabVisualState(tabView)
                             }
                             isDragging = false
                             true
                         } else {
-                            // Not dragging, let click handler work
                             v.performClick()
                             false
                         }
@@ -774,6 +1011,101 @@ class ModernTabPillAdapter(
                     else -> false
                 }
             }
+        }
+
+        private fun showTabContextMenu(anchorView: View, tabId: String, islandId: String) {
+            val wrapper = android.view.ContextThemeWrapper(itemView.context, R.style.RoundedPopupMenu)
+            val popupMenu = android.widget.PopupMenu(wrapper, anchorView, android.view.Gravity.NO_GRAVITY,
+                0, R.style.RoundedPopupMenu)
+            
+            // Add menu items with icons
+            val duplicateItem = popupMenu.menu.add(0, 1, 0, "Duplicate Tab")
+            duplicateItem.setIcon(android.R.drawable.ic_menu_add)
+            
+            val removeItem = popupMenu.menu.add(0, 2, 1, "Remove from Group")
+            removeItem.setIcon(android.R.drawable.ic_menu_revert)
+            
+            val closeItem = popupMenu.menu.add(0, 3, 2, "Close Tab")
+            closeItem.setIcon(android.R.drawable.ic_menu_close_clear_cancel)
+            
+            // Force icons to show
+            try {
+                val popup = android.widget.PopupMenu::class.java.getDeclaredField("mPopup")
+                popup.isAccessible = true
+                val menu = popup.get(popupMenu)
+                menu.javaClass.getDeclaredMethod("setForceShowIcon", Boolean::class.java)
+                    .invoke(menu, true)
+            } catch (e: Exception) {
+                // Ignore if reflection fails
+            }
+            
+            popupMenu.setOnMenuItemClickListener { menuItem ->
+                when (menuItem.itemId) {
+                    1 -> {
+                        // Duplicate tab
+                        itemView.performHapticFeedback(android.view.HapticFeedbackConstants.VIRTUAL_KEY)
+                        // TODO: Implement duplicate tab functionality via callback
+                        true
+                    }
+                    2 -> {
+                        // Remove from group
+                        itemView.performHapticFeedback(android.view.HapticFeedbackConstants.VIRTUAL_KEY)
+                        onTabUngroupFromIsland?.invoke(tabId, islandId)
+                        true
+                    }
+                    3 -> {
+                        // Close tab
+                        itemView.performHapticFeedback(android.view.HapticFeedbackConstants.VIRTUAL_KEY)
+                        onTabClose(tabId)
+                        true
+                    }
+                    else -> false
+                }
+            }
+            
+            // Show menu above the anchor view
+            popupMenu.gravity = android.view.Gravity.TOP
+            popupMenu.show()
+        }
+
+        private fun animateTabDelete(tabView: View, tabId: String) {
+            // Multi-stage "breaking apart" animation optimized for visibility
+            // Even if clipped by EngineView, the shake and scale are visible
+            
+            // Stage 1: Shake left with scale
+            tabView.animate()
+                .translationX(-15f)
+                .scaleX(0.95f)
+                .scaleY(0.95f)
+                .rotation(-8f)
+                .setDuration(80)
+                .withEndAction {
+                    // Stage 2: Shake right harder
+                    tabView.animate()
+                        .translationX(15f)
+                        .rotation(8f)
+                        .scaleX(0.9f)
+                        .scaleY(0.9f)
+                        .setDuration(80)
+                        .withEndAction {
+                            // Stage 3: Break apart - dramatic scale down with rotation
+                            tabView.animate()
+                                .translationY(-400f)
+                                .translationX(0f)
+                                .rotation(-45f)
+                                .scaleX(0.2f)
+                                .scaleY(0.2f)
+                                .alpha(0f)
+                                .setDuration(250)
+                                .setInterpolator(android.view.animation.AccelerateInterpolator())
+                                .withEndAction {
+                                    onTabClose(tabId)
+                                }
+                                .start()
+                        }
+                        .start()
+                }
+                .start()
         }
 
         private fun resetTabVisualState(tabView: View) {
@@ -786,11 +1118,10 @@ class ModernTabPillAdapter(
                 .scaleY(1f)
                 .rotation(0f)
                 .setDuration(200)
+                .setInterpolator(android.view.animation.OvershootInterpolator())
                 .withEndAction {
-                    // Ensure elevation is reset
-                    if (tabView is androidx.cardview.widget.CardView) {
-                        tabView.elevation = 4f * tabView.resources.displayMetrics.density
-                    }
+                    // Reset elevation to default
+                    tabView.elevation = 4f * tabView.resources.displayMetrics.density
                 }
                 .start()
         }
@@ -802,6 +1133,21 @@ class ModernTabPillAdapter(
                 .setDuration(100)
                 .withEndAction {
                     headerSection.animate()
+                        .scaleX(1f)
+                        .scaleY(1f)
+                        .setDuration(100)
+                        .start()
+                }
+                .start()
+        }
+
+        private fun animatePlusButtonClick() {
+            plusButton.animate()
+                .scaleX(1.3f)
+                .scaleY(1.3f)
+                .setDuration(100)
+                .withEndAction {
+                    plusButton.animate()
                         .scaleX(1f)
                         .scaleY(1f)
                         .setDuration(100)

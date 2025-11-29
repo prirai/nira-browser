@@ -55,6 +55,8 @@
         translatable="false"
     >font_size_factor</string>
   <string name="key_hide_url_bar" translatable="false">hide_url_bar</string>
+  <string name="key_show_contextual_toolbar" translatable="false">show_contextual_toolbar</string>
+  <string name="key_status_bar_blur" translatable="false">status_bar_blur</string>
   <string name="key_swap_drawers" translatable="false">swap_drawers</string>
   <string
         name="key_stack_from_bottom"
@@ -251,6 +253,10 @@
   <string name="undo">Undo</string>
 
   <string name="hide_url_bar">Hide URL bar while scrolling</string>
+  <string name="show_contextual_toolbar">Show contextual toolbar</string>
+  <string name="show_contextual_toolbar_desc">Display bottom toolbar with navigation buttons</string>
+  <string name="status_bar_blur">Enable status bar blur effect</string>
+  <string name="status_bar_blur_explain">Blur content behind status bar (Android 12+)</string>
 
   <string name="search">Search or enter address</string>
   <string name="no_results">No results</string>
@@ -469,13 +475,22 @@
     >Allow in private browsing</string>
   <string
         name="mozac_feature_addons_successfully_enabled"
-    >Add-on enabled successfully</string>
+    >%s enabled successfully</string>
   <string
         name="mozac_feature_addons_successfully_disabled"
-    >Add-on disabled successfully</string>
+    >%s disabled successfully</string>
+  <string
+        name="mozac_feature_addons_failed_to_enable"
+    >Failed to enable %s</string>
+  <string
+        name="mozac_feature_addons_failed_to_disable"
+    >Failed to disable %s</string>
   <string
         name="mozac_feature_addons_successfully_uninstalled"
-    >Add-on uninstalled successfully</string>
+    >%s uninstalled successfully</string>
+  <string
+        name="mozac_feature_addons_failed_to_uninstall"
+    >Failed to uninstall %s</string>
 
   <!-- Download related strings for Mozilla Components 145.0 compatibility -->
   <string
@@ -594,5 +609,93 @@
   <string
         name="delete_island_confirmation"
     >Delete this island and ungroup %1$d tabs?</string>
+
+  <!-- Custom Tabs -->
+  <string name="browser_menu_open_in_nira">Open in Nira Browser</string>
+  <string name="browser_menu_find_in_page">Find in page</string>
+  <string name="powered_by_nira">Powered by Nira</string>
+
+  <!-- WebAuthn/FIDO2 Digital Asset Links -->
+  <string name="asset_statements" translatable="false">
+    [{
+      \"relation\": [\"delegate_permission/common.handle_all_urls\", \"delegate_permission/common.get_login_creds\"],
+      \"target\": {
+        \"namespace\": \"web\"
+      }
+    }]
+  </string>
+
+  <!-- Onboarding strings -->
+  <string name="skip">Skip</string>
+  <string name="next">Next</string>
+  <string name="get_started">Get Started</string>
+  <string name="welcome_to_nira">Welcome to Nira Browser</string>
+  <string name="welcome_subtitle">A fast, private, and customizable browser designed for you</string>
+  <string name="privacy">Privacy</string>
+  <string name="privacy_first">Privacy First</string>
+  <string name="ad_blocking">Ad Blocking</string>
+  <string name="built_in_ad_blocking">Built-in ad blocking and tracking protection</string>
+  <string name="extensions">Extensions</string>
+  <string name="extension_support">Full extension support</string>
+  <string name="highly_customizable">Highly customizable interface</string>
+  
+  <string name="choose_your_theme">Choose Your Theme</string>
+  <string name="theme_description">Select your preferred color scheme</string>
+  <string name="onboarding_light_theme">Light Theme</string>
+  <string name="light_theme_desc">Bright and clean interface</string>
+  <string name="onboarding_dark_theme">Dark Theme</string>
+  <string name="dark_theme_desc">Easy on the eyes</string>
+  <string name="system_theme">System Default</string>
+  <string name="system_theme_desc">Match your device settings</string>
+  
+  <string name="choose_search_engine">Choose Search Engine</string>
+  <string name="search_engine_description">Select your default search provider</string>
+  
+  <string name="privacy_security">Privacy &amp; Security</string>
+  <string name="privacy_description">Configure your privacy settings</string>
+  <string name="tracking_protection_desc">Block trackers and ads</string>
+  <string name="safe_browsing_desc">Protection from dangerous sites</string>
+  <string name="search_suggestions_desc">Get suggestions as you type</string>
+  
+  <string name="customization">Customization</string>
+  <string name="customization_description">Make the browser yours</string>
+  <string name="toolbar_position">Toolbar Position</string>
+  <string name="top">Top</string>
+  <string name="bottom">Bottom</string>
+  <string name="icon_size">Icon Size</string>
+  <string name="small">Small</string>
+  <string name="large">Large</string>
+  <string name="icon_size_desc">Adjust toolbar icon size</string>
+  
+  <!-- Per-site dark mode -->
+  <string name="force_dark_mode">Force Dark Mode</string>
+  <string name="force_dark_mode_desc">Apply dark mode to this website</string>
+  
+  <!-- Lite Apps (PWA) -->
+  <string name="install_app">Install App</string>
+  <string name="install_web_app">Install Web App</string>
+  <string name="install_app_description">Install this website as a lite app</string>
+  <string name="app_installed">App installed successfully</string>
+  <string name="app_install_failed">Failed to install app</string>
+
+  <!-- Web Theme -->
+  <string name="web_theme_title">Website Theme</string>
+  <string name="web_theme_description">Choose how websites should appear</string>
+  <string name="website_theme">Website Theme</string>
+  <string name="website_theme_desc">Only available when app is in dark mode</string>
+  <string name="web_light_theme">Light Websites</string>
+  <string name="web_light_theme_desc">Request light mode from websites</string>
+  <string name="web_dark_theme">Dark Websites</string>
+  <string name="web_dark_theme_desc">Request dark mode from websites</string>
+  <string name="web_system_theme">Follow System</string>
+  <string name="web_system_theme_desc">Match your device\'s theme</string>
+
+  <!-- Settings -->
+  <string name="toolbar_icon_size">Toolbar Icon Size</string>
+  <string name="toolbar_icon_size_desc">Adjust the size of toolbar icons</string>
+  <string name="interface_font_scale">Interface Font Size</string>
+  <string name="interface_font_scale_desc">Adjust the size of interface text</string>
+  <string name="interface_font_scale_preview">Preview Text Size</string>
+  <string name="preview">Preview</string>
 
 </resources>

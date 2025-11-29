@@ -329,17 +329,8 @@ class TabsTrayFragment : Fragment() {
         )
 
         binding.tabsTray.adapter = adapter
-        val layoutManager = if (UserPreferences(requireContext()).showTabsInGrid) GridLayoutManager(
-            context,
-            2
-        ) else LinearLayoutManager(context)
-        if (UserPreferences(requireContext()).showTabsInGrid) layoutManager.reverseLayout =
-            UserPreferences(
-                requireContext()
-            ).stackFromBottom
-        else layoutManager.stackFromEnd = UserPreferences(
-            requireContext()
-        ).stackFromBottom
+        val layoutManager = LinearLayoutManager(context)
+        layoutManager.stackFromEnd = UserPreferences(requireContext()).stackFromBottom
         binding.tabsTray.layoutManager = layoutManager
 
         return adapter

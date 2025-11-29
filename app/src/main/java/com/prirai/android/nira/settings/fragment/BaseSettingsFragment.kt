@@ -1,11 +1,18 @@
 package com.prirai.android.nira.settings.fragment
 
+import android.os.Bundle
 import androidx.preference.Preference
 import androidx.preference.Preference.OnPreferenceChangeListener
 import androidx.preference.Preference.OnPreferenceClickListener
 import androidx.preference.PreferenceFragmentCompat
 
 abstract class BaseSettingsFragment : PreferenceFragmentCompat() {
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        // Set the correct SharedPreferences file name to match UserPreferences
+        preferenceManager.sharedPreferencesName = "scw_preferences"
+    }
 
     protected fun switchPreference(
         preference: String,

@@ -6,6 +6,7 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.LifecycleOwner
 import com.prirai.android.nira.R
 import com.prirai.android.nira.ext.components
+import com.prirai.android.nira.ssl.showSslDialog
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.cancel
@@ -60,6 +61,11 @@ abstract class ToolbarIntegration(
         // Always hide menu button from address bar (it's shown in the contextual toolbar instead)
         toolbar.display.menuBuilder = null
         toolbar.private = isPrivate
+        
+        // Set security icon click listener
+        toolbar.display.setOnSiteInfoClickedListener {
+            context.showSslDialog()
+        }
     }
 
     override fun start() {
@@ -80,33 +86,56 @@ abstract class ToolbarIntegration(
         securityBackgroundScope = store.flowScoped { flow ->
             flow.mapNotNull { state -> state.selectedTab }
                 .ifAnyChanged { tab ->
-                    arrayOf(tab.content.securityInfo)
+                    arrayOf(tab.content.securityInfo, tab.content.url)
                 }
                 .collect { tab ->
                     updateSecurityBackground(tab.content.securityInfo?.secure ?: false)
+                    updateSecurityIconColor(tab.content.url, tab.content.securityInfo?.secure ?: false)
                 }
         }
     }
 
     private fun updateSecurityBackground(isSecure: Boolean) {
-        val background = if (isSecure) {
-            AppCompatResources.getDrawable(context, R.drawable.toolbar_background)
-        } else {
-            AppCompatResources.getDrawable(context, R.drawable.toolbar_background_insecure)
-        }
+        // Always use the normal toolbar background, don't change based on security
+        val background = AppCompatResources.getDrawable(context, R.drawable.toolbar_background)
         toolbar.display.setUrlBackground(background)
 
-        // Update text color for visibility on dark red background
-        val textColor = if (isSecure) {
-            context.getColorFromAttr(android.R.attr.textColorPrimary)
-        } else {
-            0xFFFFFFFF.toInt() // White text for dark red background
-        }
+        // Keep consistent text color
+        val textColor = context.getColorFromAttr(android.R.attr.textColorPrimary)
 
         toolbar.display.colors = toolbar.display.colors.copy(
             text = textColor,
-            hint = if (isSecure) 0x1E15141a else 0x80FFFFFF.toInt()
+            hint = 0x1E15141a
         )
+    }
+
+    private fun updateSecurityIconColor(url: String, isSecure: Boolean) {
+        val isInternalPage = isInternalUrl(url)
+        
+        // Update icon colors based on page type
+        val (secureColor, insecureColor) = when {
+            isInternalPage -> {
+                // Internal page - use blue color for both states
+                val blueColor = context.getColor(android.R.color.holo_blue_dark)
+                Pair(blueColor, blueColor)
+            }
+            else -> {
+                // Regular page - use green/red colors
+                Pair(0xFF5cb85c.toInt(), 0xFFd9534f.toInt())
+            }
+        }
+        
+        toolbar.display.colors = toolbar.display.colors.copy(
+            siteInfoIconSecure = secureColor,
+            siteInfoIconInsecure = insecureColor
+        )
+    }
+
+    private fun isInternalUrl(url: String): Boolean {
+        return url.startsWith("about:") || 
+               url.startsWith("moz-extension://") ||
+               url.startsWith("resource://") ||
+               url.startsWith("chrome://")
     }
 
     fun invalidateMenu() {
@@ -141,7 +170,7 @@ class DefaultToolbarIntegration(
 
         toolbar.display.indicators =
             listOf(
-                DisplayToolbar.Indicators.EMPTY,
+                DisplayToolbar.Indicators.SECURITY,
                 DisplayToolbar.Indicators.HIGHLIGHT
             )
 

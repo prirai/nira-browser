@@ -15,6 +15,7 @@ import com.prirai.android.nira.ext.components
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+import mozilla.components.browser.state.selector.selectedTab
 import mozilla.components.lib.state.ext.flowScoped
 
 /**
@@ -61,17 +62,23 @@ class TabGroupBar @JvmOverloads constructor(
             }
         }
 
-        // Observe only selected tab changes to reduce excessive updates
+        // Observe selected tab changes AND its privacy mode
         context.components.store.flowScoped(lifecycleOwner) { flow ->
-            flow.map { state -> state.selectedTabId }
-                .distinctUntilChanged()
-                .collect { selectedTabId: String? ->
-                    // Only update if the selected tab actually changed
-                    val currentGroup = tabGroupManager?.currentGroup?.value
-                    if (currentGroup != null && currentGroup.tabCount > 1 && isVisible) {
-                        adapter?.updateCurrentGroup(currentGroup, selectedTabId)
-                    }
+            flow.map { state -> 
+                val selectedTab = state.selectedTab
+                Pair(selectedTab?.id, selectedTab?.content?.private)
+            }
+            .distinctUntilChanged()
+            .collect { (selectedTabId, isPrivate) ->
+                // When selected tab or its privacy mode changes, refresh the group display
+                val currentGroup = tabGroupManager?.currentGroup?.value
+                if (currentGroup != null && currentGroup.tabCount > 1) {
+                    updateCurrentGroup(currentGroup)
+                } else if (isVisible && currentGroup != null) {
+                    // Still update to reflect current selection even if not showing
+                    adapter?.updateCurrentGroup(currentGroup, selectedTabId)
                 }
+            }
         }
     }
 
@@ -117,13 +124,38 @@ class TabGroupBar @JvmOverloads constructor(
     }
 
     private fun updateCurrentGroup(currentGroup: TabGroupWithTabs?) {
-        // Only show if current group has multiple tabs
-        val shouldShow = currentGroup != null && currentGroup.tabCount > 1
+        // Filter tabs to only show those matching current browsing mode
+        val filteredGroup = if (currentGroup != null) {
+            val browserState = context.components.store.state
+            
+            // Get browsing mode from BrowserActivity
+            val activity = context as? com.prirai.android.nira.BrowserActivity
+            val isPrivateMode = activity?.browsingModeManager?.mode?.isPrivate ?: false
+            
+            // Filter tab IDs to only include those from current browsing mode
+            val filteredTabIds = currentGroup.tabIds.filter { tabId ->
+                val tab = browserState.tabs.find { it.id == tabId }
+                val tabIsPrivate = tab?.content?.private ?: false
+                tabIsPrivate == isPrivateMode
+            }
+            
+            // Only show group if it has multiple tabs after filtering
+            if (filteredTabIds.size > 1) {
+                TabGroupWithTabs(currentGroup.group, filteredTabIds)
+            } else {
+                null
+            }
+        } else {
+            null
+        }
+        
+        // Only show if filtered group has multiple tabs
+        val shouldShow = filteredGroup != null && filteredGroup.tabCount > 1
 
         if (shouldShow) {
             // Get selected tab ID from the browser store
             val selectedTabId = context.components.store.state.selectedTabId
-            adapter?.updateCurrentGroup(currentGroup, selectedTabId)
+            adapter?.updateCurrentGroup(filteredGroup, selectedTabId)
             isVisible = true
 
             // Setup scroll behavior when tab group bar becomes visible (if not already done)
@@ -155,10 +187,8 @@ class TabGroupBar @JvmOverloads constructor(
      */
     fun refreshSelection() {
         val currentGroup = tabGroupManager?.currentGroup?.value
-        if (currentGroup != null && currentGroup.tabCount > 1) {
-            val selectedTabId = context.components.store.state.selectedTabId
-            adapter?.updateCurrentGroup(currentGroup, selectedTabId)
-        }
+        // Use updateCurrentGroup to ensure filtering is applied
+        updateCurrentGroup(currentGroup)
     }
 
     /**

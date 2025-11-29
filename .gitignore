@@ -6,6 +6,8 @@
 /build
 app/release
 working.md
+.prompts/
+prompts/
 # Crowdin
 crowdin.properties
 

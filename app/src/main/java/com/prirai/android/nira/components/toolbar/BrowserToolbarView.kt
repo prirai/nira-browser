@@ -12,14 +12,19 @@ import androidx.lifecycle.LifecycleOwner
 import com.prirai.android.nira.R
 import com.prirai.android.nira.ext.components
 import com.prirai.android.nira.preferences.UserPreferences
+import com.prirai.android.nira.ssl.showSslDialog
 import com.prirai.android.nira.utils.ToolbarPopupWindow
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.mapNotNull
 import mozilla.components.browser.state.selector.selectedTab
 import mozilla.components.browser.state.state.CustomTabSessionState
 import mozilla.components.browser.toolbar.BrowserToolbar
 import mozilla.components.browser.toolbar.display.DisplayToolbar
+import mozilla.components.lib.state.ext.flowScoped
 import mozilla.components.support.ktx.util.URLStringUtils.toDisplayUrl
 import mozilla.components.ui.widgets.behavior.EngineViewScrollingBehavior
+import mozilla.components.support.ktx.android.content.res.resolveAttribute
 import java.lang.ref.WeakReference
 import mozilla.components.ui.widgets.behavior.ViewPosition as MozacToolbarPosition
 
@@ -81,7 +86,14 @@ class BrowserToolbarView(
     } else null
     
     internal val integratedContextualToolbar: View? = if (toolbarLayout == R.layout.component_bottom_browser_toolbar) {
-        layout.findViewById(R.id.contextualBottomToolbarIntegrated)
+        layout.findViewById<View>(R.id.contextualBottomToolbarIntegrated)?.also { toolbar ->
+            val showContextualToolbar = settings.showContextualToolbar
+            toolbar.visibility = if (showContextualToolbar) View.VISIBLE else View.GONE
+            
+            if (!showContextualToolbar) {
+                addTabCountAndMenuToToolbar()
+            }
+        }
     } else null
     
     // Get the actual container for bottom toolbar
@@ -192,6 +204,106 @@ class BrowserToolbarView(
                     interactor = interactor,
                     engine = components.engine
                 )
+        }
+    }
+    
+    private fun addTabCountAndMenuToToolbar() {
+        val context = container.context
+        
+        val tabCountAction = object : mozilla.components.concept.toolbar.Toolbar.Action {
+            private var countText: android.widget.TextView? = null
+            
+            override fun createView(parent: ViewGroup): View {
+                val frameLayout = android.widget.FrameLayout(parent.context)
+                frameLayout.layoutParams = ViewGroup.LayoutParams(
+                    (56 * parent.context.resources.displayMetrics.density).toInt(),
+                    (56 * parent.context.resources.displayMetrics.density).toInt()
+                )
+                frameLayout.setPadding(
+                    (4 * parent.context.resources.displayMetrics.density).toInt(),
+                    (4 * parent.context.resources.displayMetrics.density).toInt(),
+                    (4 * parent.context.resources.displayMetrics.density).toInt(),
+                    (4 * parent.context.resources.displayMetrics.density).toInt()
+                )
+                
+                val backgroundView = android.widget.ImageView(parent.context)
+                backgroundView.setImageDrawable(ContextCompat.getDrawable(parent.context, R.drawable.tab_number_background))
+                backgroundView.scaleType = android.widget.ImageView.ScaleType.FIT_XY
+                backgroundView.setColorFilter(
+                    ContextCompat.getColor(parent.context, R.color.primary_icon),
+                    android.graphics.PorterDuff.Mode.SRC_IN
+                )
+                val size = (28 * parent.context.resources.displayMetrics.density).toInt()
+                
+                countText = android.widget.TextView(parent.context).apply {
+                    layoutParams = android.widget.FrameLayout.LayoutParams(size, size).apply {
+                        gravity = android.view.Gravity.CENTER
+                    }
+                    gravity = android.view.Gravity.CENTER
+                    textSize = 13f
+                    setTextColor(ContextCompat.getColor(parent.context, R.color.primary_icon))
+                    typeface = android.graphics.Typeface.DEFAULT_BOLD
+                    maxLines = 1
+                }
+                
+                frameLayout.addView(backgroundView, android.widget.FrameLayout.LayoutParams(size, size).apply {
+                    gravity = android.view.Gravity.CENTER
+                })
+                frameLayout.addView(countText)
+                
+                frameLayout.setOnClickListener {
+                    interactor.onTabCounterClicked()
+                }
+                
+                val backgroundResource = parent.context.theme.resolveAttribute(android.R.attr.selectableItemBackgroundBorderless)
+                frameLayout.setBackgroundResource(backgroundResource)
+                
+                return frameLayout
+            }
+            
+            override fun bind(view: View) {
+                val tabCount = context.components.store.state.tabs.size
+                countText?.text = if (tabCount > 99) "99+" else tabCount.toString()
+            }
+        }
+        
+        val menuAction = object : mozilla.components.concept.toolbar.Toolbar.Action {
+            override fun createView(parent: ViewGroup): View {
+                val imageView = android.widget.ImageView(parent.context)
+                imageView.setImageDrawable(ContextCompat.getDrawable(parent.context, R.drawable.ic_ios_menu))
+                val padding = (16 * parent.context.resources.displayMetrics.density).toInt()
+                imageView.setPadding(padding, padding, padding, padding)
+                imageView.setOnClickListener {
+                    val menuToolbar = BrowserMenu(
+                        context = parent.context,
+                        store = context.components.store,
+                        onItemTapped = {
+                            it.performHapticIfNeeded(view)
+                            interactor.onBrowserToolbarMenuItemTapped(it)
+                        },
+                        lifecycleOwner = lifecycleOwner,
+                        isPinningSupported = context.components.webAppUseCases.isPinningSupported(),
+                        shouldReverseItems = settings.toolbarPosition == ToolbarPosition.TOP.ordinal
+                    )
+                    menuToolbar.menuBuilder.build(parent.context).show(anchor = imageView)
+                }
+                val backgroundResource = parent.context.theme.resolveAttribute(android.R.attr.selectableItemBackgroundBorderless)
+                imageView.setBackgroundResource(backgroundResource)
+                return imageView
+            }
+            
+            override fun bind(view: View) {}
+        }
+        
+        view.addBrowserAction(tabCountAction)
+        view.addBrowserAction(menuAction)
+        
+        context.components.store.flowScoped(lifecycleOwner) { flow ->
+            flow.mapNotNull { it.tabs.size }
+                .distinctUntilChanged()
+                .collect { 
+                    view.invalidateActions()
+                }
         }
     }
 

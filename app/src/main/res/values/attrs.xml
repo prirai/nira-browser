@@ -33,4 +33,7 @@
         <attr name="tabIconBorderWidth" format="dimension"/>
         <attr name="tabIconBorderRadius" format="dimension"/>
     </declare-styleable>
+
+    <!-- Custom state for internal pages -->
+    <attr name="state_internal_page" format="boolean" />
 </resources>

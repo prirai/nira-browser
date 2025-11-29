@@ -7,14 +7,14 @@
 
     <action
         android:id="@+id/action_global_home"
-        app:destination="@id/homeFragment"
-        app:popUpTo="@id/homeFragment"
+        app:destination="@id/browserFragment"
+        app:popUpTo="@id/browserFragment"
         app:popUpToInclusive="true" />
 
     <action
         android:id="@+id/action_global_browser"
         app:destination="@id/browserFragment"
-        app:popUpTo="@id/homeFragment"
+        app:popUpTo="@id/browserFragment"
         app:popUpToInclusive="false" />
 
     <action
@@ -23,18 +23,16 @@
         app:popUpTo="@id/searchDialogFragment"
         app:popUpToInclusive="true"/>
 
+    <!-- HomeFragment removed - using about:homepage in BrowserFragment instead -->
     <fragment
         android:id="@+id/homeFragment"
-        android:name="com.prirai.android.nira.browser.home.HomeFragment"
-        tools:layout="@layout/fragment_home">
+        android:name="com.prirai.android.nira.BrowserFragment"
+        tools:layout="@layout/fragment_browser">
         <argument
-            android:name="focusOnAddressBar"
-            android:defaultValue="false"
-            app:argType="boolean" />
-        <argument
-            android:name="focusOnCollection"
-            android:defaultValue="-1L"
-            app:argType="long" />
+            android:name="activeSessionId"
+            app:argType="string"
+            app:nullable="true"
+            android:defaultValue="@null" />
     </fragment>
 
     <dialog
@@ -56,6 +54,17 @@
         android:id="@+id/browserFragment"
         android:name="com.prirai.android.nira.BrowserFragment"
         app:exitAnim="@anim/fade_out"
+        tools:layout="@layout/fragment_browser">
+        <argument
+            android:name="activeSessionId"
+            app:argType="string"
+            app:nullable="true" />
+    </fragment>
+
+    <!-- External App Browser (Custom Tabs) Fragment -->
+    <fragment
+        android:id="@+id/externalAppBrowserFragment"
+        android:name="com.prirai.android.nira.customtabs.ExternalAppBrowserFragment"
         tools:layout="@layout/fragment_browser">
         <argument
             android:name="activeSessionId"

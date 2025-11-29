@@ -153,7 +153,6 @@
   <string name="stack_items_reverse">Aligner les éléments en bas du panneau de navigation</string>
   <string name="browser_sync">Synchronisation du navigateur</string>
   <string name="browser_sync_disclaimer">Lorsque vous activez cette option, le navigateur synchronise vos onglets avec votre compte Firefox : vos données seront chiffrées puis envoyées sur les serveurs Firefox Sync de Mozilla. Ce service n’est pas affilié à Mozilla, et CookieJarApps n’a aucune obligation de fournir ni assistance technique, ni garantie, ni mises à jour.</string>
-  <string name="load_xpi">Installer un fichier XPI</string>
   <string name="load_xpi_description">Voulez-vous vraiment installer l’extension %1$s ? Elle n’a pas été vérifiée par CookieJarApps et peut donc poser des problèmes de sécurité ou de stabilité.</string>
   <string name="addon_not_available">Cette extension n’est pas disponible dans le magasin de modules supplémentaires. Vous pouvez installer des extensions manuellement depuis le menu «Paramètres avancés».</string>
   <string name="swipe_to_refresh">Glisser vers le bas pour actualiser</string>

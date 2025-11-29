@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="24dp">
+
+    <ImageView
+        android:id="@+id/previewIcon"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:src="@drawable/ic_palette"
+        android:layout_gravity="center"
+        android:contentDescription="@string/preview"
+        android:layout_marginBottom="16dp"
+        app:tint="?attr/colorPrimary" />
+
+    <TextView
+        android:id="@+id/previewText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/preview"
+        android:textSize="16sp"
+        android:layout_gravity="center"
+        android:layout_marginBottom="24dp" />
+
+    <com.google.android.material.slider.Slider
+        android:id="@+id/sizeSlider"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:valueFrom="0.8"
+        android:valueTo="1.5"
+        android:stepSize="0.1"
+        android:value="1.0" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/small"
+            android:textSize="12sp"
+            android:gravity="start" />
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/large"
+            android:textSize="12sp"
+            android:gravity="end" />
+    </LinearLayout>
+
+</LinearLayout>

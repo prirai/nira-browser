@@ -7,8 +7,7 @@
     android:layout_height="@dimen/browser_toolbar_height"
     app:titleMarginStart="16dp"
     app:titleMarginEnd="16dp"
-    android:background="?attr/colorSurface"
-    android:elevation="8dp">
+    android:background="?attr/colorSurface">
 
     <FrameLayout
         android:id="@+id/toolbar_child_container"

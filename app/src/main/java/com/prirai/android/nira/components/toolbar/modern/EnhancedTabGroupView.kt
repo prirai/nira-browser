@@ -26,6 +26,7 @@ class EnhancedTabGroupView @JvmOverloads constructor(
     private var onTabSelected: ((String) -> Unit)? = null
     private var onTabClosed: ((String) -> Unit)? = null
     private var onIslandRenamed: ((String, String) -> Unit)? = null
+    private var onNewTabInIsland: ((String) -> Unit)? = null
 
     private var currentTabs = mutableListOf<SessionState>()
     private var selectedTabId: String? = null
@@ -63,8 +64,9 @@ class EnhancedTabGroupView @JvmOverloads constructor(
         )
         adapter = tabAdapter
 
-        // Layout configuration
+        // Layout configuration - CRITICAL: Allow children to draw outside bounds
         clipToPadding = false
+        clipChildren = false
         overScrollMode = OVER_SCROLL_NEVER
         setPadding(4, 2, 4, 2)
 
@@ -492,16 +494,20 @@ class EnhancedTabGroupView @JvmOverloads constructor(
     fun setup(
         onTabSelected: (String) -> Unit,
         onTabClosed: (String) -> Unit,
-        onIslandRenamed: ((String, String) -> Unit)? = null
+        onIslandRenamed: ((String, String) -> Unit)? = null,
+        onNewTabInIsland: ((String) -> Unit)? = null
     ) {
         this.onTabSelected = onTabSelected
         this.onTabClosed = onTabClosed
         this.onIslandRenamed = onIslandRenamed
+        this.onNewTabInIsland = onNewTabInIsland
         tabAdapter.updateCallbacks(
             onTabSelected,
             { tabId -> handleTabClose(tabId) },
             { islandId -> handleIslandHeaderClick(islandId) },
-            { islandId -> handleIslandLongPress(islandId) }
+            { islandId -> handleIslandLongPress(islandId) },
+            { islandId -> handleIslandPlusClick(islandId) },
+            { tabId, islandId -> handleTabUngroupFromIsland(tabId, islandId) }
         )
     }
 
@@ -613,8 +619,18 @@ class EnhancedTabGroupView @JvmOverloads constructor(
         // Try to add to parent's island
         val parentIsland = islandManager.getIslandForTab(parentTabId)
         if (parentIsland != null) {
+            // Parent is already in an island, add child to same island
             islandManager.addTabToIsland(newTabId, parentIsland.id)
             refreshDisplay()
+        } else {
+            // Parent is not in an island, create a new island for both
+            // This implements feature #3: auto-group new tabs with parent
+            val newIsland = islandManager.createIsland(
+                tabIds = listOf(parentTabId, newTabId),
+                name = null
+            )
+            refreshDisplay()
+            showIslandCreatedFeedback()
         }
     }
 
@@ -672,6 +688,22 @@ class EnhancedTabGroupView @JvmOverloads constructor(
     private fun handleIslandLongPress(islandId: String) {
         // Show island options dialog (rename, ungroup, close all)
         showIslandOptionsDialog(islandId)
+    }
+
+    private fun handleIslandPlusClick(islandId: String) {
+        // Notify parent to create a new tab and add it to this island
+        onNewTabInIsland?.invoke(islandId)
+        performHapticFeedback(android.view.HapticFeedbackConstants.VIRTUAL_KEY)
+    }
+
+    private fun handleTabUngroupFromIsland(tabId: String, islandId: String) {
+        // Remove tab from island
+        islandManager.removeTabFromIsland(tabId, islandId)
+        performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS)
+        post {
+            lastTabIds = emptyList()
+            refreshDisplay()
+        }
     }
 
     private fun showIslandOptionsDialog(islandId: String) {

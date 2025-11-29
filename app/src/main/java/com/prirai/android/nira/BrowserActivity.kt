@@ -1,5 +1,9 @@
 package com.prirai.android.nira
 
+import androidx.lifecycle.DefaultLifecycleObserver
+import androidx.lifecycle.LifecycleOwner
+import mozilla.components.browser.state.action.AppLifecycleAction
+
 import android.content.ComponentCallbacks2
 import android.content.Context
 import android.content.Intent
@@ -25,7 +29,7 @@ import com.prirai.android.nira.browser.BrowsingMode
 import com.prirai.android.nira.browser.BrowsingModeManager
 import com.prirai.android.nira.browser.DefaultBrowsingModeManager
 import com.prirai.android.nira.browser.SearchEngineList
-import com.prirai.android.nira.browser.home.HomeFragmentDirections
+// import com.prirai.android.nira.browser.home.HomeFragmentDirections // Removed - using BrowserFragment for homepage
 import com.prirai.android.nira.databinding.ActivityMainBinding
 import com.prirai.android.nira.ext.alreadyOnDestination
 import com.prirai.android.nira.ext.components
@@ -99,7 +103,17 @@ open class BrowserActivity : LocaleAwareAppCompatActivity(), ComponentCallbacks2
 
         super.onCreate(savedInstanceState)
 
-        components.publicSuffixList.prefetch()
+        // Check for first launch and show onboarding
+        if (UserPreferences(this).firstLaunch) {
+            val intent = Intent(this, com.prirai.android.nira.onboarding.OnboardingActivity::class.java)
+            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            startActivity(intent)
+            finish()
+            return
+        }
+
+        // OPTIMIZATION: Don't access components.publicSuffixList here - defer it
+        // This was triggering lazy initialization chain
 
         browsingModeManager = createBrowsingModeManager(
             if (UserPreferences(this).lastKnownPrivate) BrowsingMode.Private else BrowsingMode.Normal
@@ -111,53 +125,14 @@ open class BrowserActivity : LocaleAwareAppCompatActivity(), ComponentCallbacks2
 
         setContentView(view)
 
-        if (UserPreferences(this).firstLaunch) {
-            UserPreferences(this).firstLaunch = false
-        }
-
         lastToolbarPosition = UserPreferences(this).toolbarPosition
 
-        //TODO: Move to settings page so app restart no longer required
-        //TODO: Differentiate between using search engine / adding to list - the code below removes all from list as I don't support adding to list, only setting as default
-        for (i in components.store.state.search.customSearchEngines) {
-            components.searchUseCases.removeSearchEngine(i)
-        }
-
-        if (UserPreferences(this).customSearchEngine) {
-            // SECURITY: Use lifecycle-aware coroutine scope
-            lifecycleScope.launch {
-                val customSearch =
-                    createSearchEngine(
-                        name = "Custom Search",
-                        url = UserPreferences(this@BrowserActivity).customSearchEngineURL,
-                        icon = components.icons.loadIcon(IconRequest(UserPreferences(this@BrowserActivity).customSearchEngineURL))
-                            .await().bitmap
-                    )
-
-                runOnUiThread {
-                    components.searchUseCases.addSearchEngine(
-                        customSearch
-                    )
-                    components.searchUseCases.selectSearchEngine(
-                        customSearch
-                    )
-                }
-            }
-        } else {
-            if (SearchEngineList().getEngines()[UserPreferences(this).searchEngineChoice].type == SearchEngine.Type.BUNDLED) {
-                components.searchUseCases.selectSearchEngine(
-                    SearchEngineList().getEngines()[UserPreferences(this).searchEngineChoice]
-                )
-            } else {
-                components.searchUseCases.addSearchEngine(
-                    SearchEngineList().getEngines()[UserPreferences(
-                        this
-                    ).searchEngineChoice]
-                )
-                components.searchUseCases.selectSearchEngine(
-                    SearchEngineList().getEngines()[UserPreferences(this).searchEngineChoice]
-                )
-            }
+        // OPTIMIZATION: Defer search engine setup to after first frame
+        // This was accessing components.store.state which triggers heavy initialization
+        view.post {
+            setupSearchEngines()
+            // Also prefetch publicSuffixList after UI is ready
+            components.publicSuffixList.prefetch()
         }
 
         if (isActivityColdStarted(intent, savedInstanceState) &&
@@ -167,23 +142,42 @@ open class BrowserActivity : LocaleAwareAppCompatActivity(), ComponentCallbacks2
         }
 
         applyAppTheme(this)
+        
+        // Register lifecycle observer to capture state on background
+        lifecycle.addObserver(object : DefaultLifecycleObserver {
+            override fun onPause(owner: LifecycleOwner) {
+                // App going to background - trigger state capture
+                components.store.dispatch(AppLifecycleAction.PauseAction)
+            }
+            
+            override fun onResume(owner: LifecycleOwner) {
+                // App coming to foreground
+                components.store.dispatch(AppLifecycleAction.ResumeAction)
+            }
+        })
+        
+        // Make navigation bar transparent globally to prevent black bar with gesture navigation
+        window.navigationBarColor = android.graphics.Color.TRANSPARENT
+        
+        // Remove navigation bar contrast enforcement (removes the white pill/scrim on Android 10+)
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+            window.isNavigationBarContrastEnforced = false
+        }
 
         ViewCompat.setOnApplyWindowInsetsListener(view) { v, insets ->
             val bars = insets.getInsets(
                 WindowInsetsCompat.Type.systemBars()
                         or WindowInsetsCompat.Type.displayCutout()
             )
-            // Force zero top padding when using bottom toolbar
-            val isBottomToolbar = UserPreferences(this).shouldUseBottomToolbar
-            val topPadding = if (isBottomToolbar) {
-                0 // No top padding for bottom toolbar to enable immersive content
-            } else {
-                bars.top // Normal status bar padding for top toolbar
-            }
+            val userPrefs = UserPreferences(this)
+            val isBottomToolbar = userPrefs.shouldUseBottomToolbar
+            
+            // Always respect status bar padding to prevent content overlap
+            val topPadding = bars.top
 
             // Dynamic status bar based on toolbar position
             if (isBottomToolbar) {
-                enableDynamicStatusBar()
+                setupStatusBarForBottomToolbar(userPrefs)
                 // CRITICAL: Hide navigation toolbar stub to prevent any space
                 hideNavigationToolbarForBottomMode()
             } else {
@@ -195,19 +189,28 @@ open class BrowserActivity : LocaleAwareAppCompatActivity(), ComponentCallbacks2
                 left = bars.left,
                 top = topPadding,
                 right = bars.right,
-                bottom = bars.bottom,
+                bottom = 0
             )
             val insetsController = WindowCompat.getInsetsController(window, v)
             insetsController.isAppearanceLightStatusBars = !isAppInDarkTheme()
             WindowInsetsCompat.CONSUMED
-            WindowInsetsCompat.CONSUMED
         }
 
-        components.appRequestInterceptor.setNavController(navHost.navController)
-
-        lifecycle.addObserver(webExtensionPopupFeature)
-
+        // OPTIMIZATION: Components that need lifecycle registration must be initialized in onCreate
+        // These still trigger lazy component init but are required for proper lifecycle
         components.notificationsDelegate.bindToActivity(this)
+        
+        // OPTIMIZATION: Defer non-critical component initialization to after first frame
+        view.post {
+            components.appRequestInterceptor.setNavController(navHost.navController)
+        }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        // Register lifecycle observer here - must be done before RESUMED state
+        // This still defers the components initialization but meets lifecycle requirements
+        lifecycle.addObserver(webExtensionPopupFeature)
     }
 
     override fun onResume() {
@@ -388,7 +391,7 @@ open class BrowserActivity : LocaleAwareAppCompatActivity(), ComponentCallbacks2
         )
 
         navigationToolbar.setNavigationOnClickListener {
-            onBackPressed()
+            onBackPressedDispatcher.onBackPressed()
         }
     }
 
@@ -438,7 +441,7 @@ open class BrowserActivity : LocaleAwareAppCompatActivity(), ComponentCallbacks2
             NavGraphDirections.actionGlobalBrowser(customTabSessionId)
 
         BrowserDirection.FromHome ->
-            HomeFragmentDirections.actionGlobalBrowser(customTabSessionId)
+            NavGraphDirections.actionGlobalBrowser(customTabSessionId)
 
         BrowserDirection.FromSearchDialog ->
             SearchDialogFragmentDirections.actionGlobalBrowser(customTabSessionId)
@@ -451,12 +454,14 @@ open class BrowserActivity : LocaleAwareAppCompatActivity(), ComponentCallbacks2
         forceSearch: Boolean,
         flags: EngineSession.LoadUrlFlags = EngineSession.LoadUrlFlags.none()
     ) {
+        val isPrivateMode = browsingModeManager.mode.isPrivate
+        
         if ((!forceSearch && searchTermOrURL.isUrl()) || engine == null) {
             if (newTab) {
                 components.tabsUseCases.addTab.invoke(
                     searchTermOrURL.toNormalizedUrl(),
                     flags = flags,
-                    private = true,
+                    private = isPrivateMode,
                 )
             } else {
                 components.sessionUseCases.loadUrl.invoke(searchTermOrURL.toNormalizedUrl(), flags)
@@ -467,7 +472,7 @@ open class BrowserActivity : LocaleAwareAppCompatActivity(), ComponentCallbacks2
                     .invoke(
                         searchTermOrURL,
                         SessionState.Source.Internal.UserEntered,
-                        true,
+                        isPrivateMode,
                         searchEngine = engine
                     )
             } else {
@@ -479,6 +484,54 @@ open class BrowserActivity : LocaleAwareAppCompatActivity(), ComponentCallbacks2
     override fun attachBaseContext(base: Context) {
         this.originalContext = base
         super.attachBaseContext(base)
+    }
+
+    /**
+     * Setup search engines - extracted to separate method for deferred initialization
+     */
+    private fun setupSearchEngines() {
+        //TODO: Move to settings page so app restart no longer required
+        //TODO: Differentiate between using search engine / adding to list - the code below removes all from list as I don't support adding to list, only setting as default
+        for (i in components.store.state.search.customSearchEngines) {
+            components.searchUseCases.removeSearchEngine(i)
+        }
+
+        if (UserPreferences(this).customSearchEngine) {
+            // SECURITY: Use lifecycle-aware coroutine scope
+            lifecycleScope.launch {
+                val customSearch =
+                    createSearchEngine(
+                        name = "Custom Search",
+                        url = UserPreferences(this@BrowserActivity).customSearchEngineURL,
+                        icon = components.icons.loadIcon(IconRequest(UserPreferences(this@BrowserActivity).customSearchEngineURL))
+                            .await().bitmap
+                    )
+
+                runOnUiThread {
+                    components.searchUseCases.addSearchEngine(
+                        customSearch
+                    )
+                    components.searchUseCases.selectSearchEngine(
+                        customSearch
+                    )
+                }
+            }
+        } else {
+            if (SearchEngineList(this).getEngines()[UserPreferences(this).searchEngineChoice].type == SearchEngine.Type.BUNDLED) {
+                components.searchUseCases.selectSearchEngine(
+                    SearchEngineList(this).getEngines()[UserPreferences(this).searchEngineChoice]
+                )
+            } else {
+                components.searchUseCases.addSearchEngine(
+                    SearchEngineList(this).getEngines()[UserPreferences(
+                        this
+                    ).searchEngineChoice]
+                )
+                components.searchUseCases.selectSearchEngine(
+                    SearchEngineList(this).getEngines()[UserPreferences(this).searchEngineChoice]
+                )
+            }
+        }
     }
 
     /**
@@ -503,21 +556,54 @@ open class BrowserActivity : LocaleAwareAppCompatActivity(), ComponentCallbacks2
     }
 
     /**
-     * Simple transparent status bar - let content extend behind it
+     * Setup status bar for bottom toolbar mode with optional blur effect
      */
-    private fun enableDynamicStatusBar() {
-        // Simple approach: transparent status bar, content behind it
-        window.statusBarColor = android.graphics.Color.TRANSPARENT
+    private fun setupStatusBarForBottomToolbar(userPrefs: UserPreferences) {
+        // Check if we should enable blur (enabled by default on Android 12+, or if user explicitly enabled it)
+        val shouldBlur = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+            userPrefs.statusBarBlurEnabled // Default is true on Android 12+
+        } else {
+            userPrefs.statusBarBlurEnabled // Default is false on Android 11 and below
+        }
+        
+        // Apply blur effect if enabled
+        if (shouldBlur) {
+            // Use system blur effect on Android 12+ (API 31+)
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                window.attributes = window.attributes.apply {
+                    blurBehindRadius = 80 // Blur radius in pixels
+                }
+                window.setBackgroundBlurRadius(80)
+            }
+            // Set semi-transparent background for blur effect
+            window.statusBarColor = if (isAppInDarkTheme()) {
+                android.graphics.Color.argb(180, 0, 0, 0) // Semi-transparent black
+            } else {
+                android.graphics.Color.argb(180, 255, 255, 255) // Semi-transparent white
+            }
+        } else {
+            // Use default theme-based background
+            window.statusBarColor = if (isAppInDarkTheme()) {
+                getColor(R.color.statusbar_background) // Dark theme color
+            } else {
+                getColor(R.color.statusbar_background) // Light theme color
+            }
+        }
 
         // Enable content to draw behind status bar
-        window.decorView.systemUiVisibility = (
-                android.view.View.SYSTEM_UI_FLAG_LAYOUT_STABLE or
-                        android.view.View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-                )
+        WindowCompat.setDecorFitsSystemWindows(window, false)
 
-        // Make status bar icons visible
+        // Set status bar icons color
         androidx.core.view.WindowInsetsControllerCompat(window, window.decorView).apply {
-            isAppearanceLightStatusBars = true // Dark icons for better visibility
+            isAppearanceLightStatusBars = !isAppInDarkTheme()
+        }
+        
+        // Make navigation bar transparent and content flows behind it
+        window.navigationBarColor = android.graphics.Color.TRANSPARENT
+        
+        // Remove navigation bar contrast enforcement (removes the white pill/scrim on Android 10+)
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+            window.isNavigationBarContrastEnforced = false
         }
     }
 

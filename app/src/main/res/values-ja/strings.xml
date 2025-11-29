@@ -147,7 +147,6 @@
     <string name="stack_items_reverse">ドロワーの下からアイテムをスタックします。</string>
     <string name="browser_sync">ブラウザ間で同期</string>
     <string name="browser_sync_disclaimer">同期を使用すると、ブラウザはあなたのタブを Firefox アカウントと同期します。 つまり、ブラウザは Mozilla が運営する Firefox Sync サーバーに暗号化された形式でデータを保存します。 このサービスは、Mozillaと提携または承認されておらず、CookieJarAppsはサポートサービス、保証、またはアップデートを提供する必要はありません。</string>
-    <string name="load_xpi">サイドロードXPI</string>
     <string name="load_xpi_description">このブラウザーに %1$s をインストールしてもよろしいですか？このアドオンはCookieJarApps によってセキュリティまたは安定性を確認されていません。</string>
     <string name="addon_not_available">このアドオンはアドオンストアからは利用できません。詳細設定でカスタムアドオンをサイドロードできます。</string>
     <string name="swipe_to_refresh">スワイプして更新</string>

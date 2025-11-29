@@ -31,17 +31,20 @@ class ModernToolbarManager(
     private var onTabSelected: ((String) -> Unit)? = null
     private var onTabClosed: ((String) -> Unit)? = null
     private var onNavigationAction: ((NavigationAction) -> Unit)? = null
+    private var onNewTabInIsland: ((String) -> Unit)? = null
 
     fun initialize(
         browserToolbarInstance: BrowserToolbar,
         onTabSelected: (String) -> Unit,
         onTabClosed: (String) -> Unit,
-        onNavigationAction: (NavigationAction) -> Unit
+        onNavigationAction: (NavigationAction) -> Unit,
+        onNewTabInIsland: ((String) -> Unit)? = null
     ) {
         this.browserToolbar = browserToolbarInstance
         this.onTabSelected = onTabSelected
         this.onTabClosed = onTabClosed
         this.onNavigationAction = onNavigationAction
+        this.onNewTabInIsland = onNewTabInIsland
 
         when (toolbarPosition) {
             ToolbarPosition.TOP -> initializeTopToolbar()
@@ -142,6 +145,9 @@ class ModernToolbarManager(
                 },
                 onTabClosed = { tabId ->
                     this@ModernToolbarManager.onTabClosed?.invoke(tabId)
+                },
+                onNewTabInIsland = { islandId ->
+                    this@ModernToolbarManager.onNewTabInIsland?.invoke(islandId)
                 }
             )
         }
@@ -172,6 +178,13 @@ class ModernToolbarManager(
     }
 
     private fun createModernContextualToolbar() {
+        // Check user preference - only create if enabled
+        val prefs = UserPreferences(container.context)
+        if (!prefs.showContextualToolbar) {
+            // Don't create the contextual toolbar if user has disabled it
+            return
+        }
+        
         // COMPLETE migration: Original theming + working functionality
         modernContextualToolbar =
             com.prirai.android.nira.toolbar.ContextualBottomToolbar(container.context).apply {

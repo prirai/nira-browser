@@ -54,6 +54,7 @@ class UserPreferences(appContext: Context) : mozilla.components.support.ktx.andr
         set(_) { /* Always enabled, ignore sets */ }
     var stackFromBottom by booleanPreference(STACK_FROM_BOTTOM, false)
     var showTabsInGrid by booleanPreference(SHOW_TABS_IN_GRID, false)
+    var showContextualToolbar by booleanPreference(SHOW_CONTEXTUAL_TOOLBAR, true)
     var swipeToRefresh by booleanPreference(SWIPE_TO_REFRESH, true)
 
     // SECURITY: Remote debugging disabled for production security
@@ -71,6 +72,16 @@ class UserPreferences(appContext: Context) : mozilla.components.support.ktx.andr
     // var trustThirdPartyCerts by booleanPreference(TRUST_THIRD_PARTY_CERTS, false)
     var barAddonsList by stringPreference(BAR_ADDONS_LIST, "")
     var bookmarkSortType by intPreference(BOOKMARK_SORT_TYPE, BookmarkSortType.MANUAL.ordinal)
+    
+    // Icon size preference (0.8 to 1.5 scale)
+    var toolbarIconSize by floatPreference(TOOLBAR_ICON_SIZE, 1.0f)
+    
+    // Interface font scale (0.8 to 1.3 scale)
+    var interfaceFontScale by floatPreference(INTERFACE_FONT_SCALE, 1.0f)
+    
+    // Status bar blur - forced enabled on Android 12+, disabled on older versions
+    val statusBarBlurEnabled: Boolean
+        get() = android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S
 
     var shouldUseBottomToolbar: Boolean
         get() {
@@ -108,6 +119,7 @@ class UserPreferences(appContext: Context) : mozilla.components.support.ktx.andr
         const val HIDE_URL_BAR = "hide_url_bar"
         const val STACK_FROM_BOTTOM = "stack_from_bottom"
         const val SHOW_TABS_IN_GRID = "show_tabs_in_grid"
+        const val SHOW_CONTEXTUAL_TOOLBAR = "show_contextual_toolbar"
         const val SWIPE_TO_REFRESH = "swipe_to_refresh"
         const val REMOTE_DEBUGGING = "remote_debugging"
         const val PROMPT_EXTERNAL_DOWNLOADER = "prompt_external_downloader"
@@ -122,5 +134,8 @@ class UserPreferences(appContext: Context) : mozilla.components.support.ktx.andr
         const val LOAD_SHORTCUT_ICONS = "load_shortcut_icons"
         const val BAR_ADDONS_LIST = "bar_addons_list"
         const val BOOKMARK_SORT_TYPE = "bookmark_sort_type"
+        const val STATUS_BAR_BLUR = "status_bar_blur"
+        const val TOOLBAR_ICON_SIZE = "toolbar_icon_size"
+        const val INTERFACE_FONT_SCALE = "interface_font_scale"
     }
 }

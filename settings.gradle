@@ -1,2 +1,2 @@
 include ':app'
-include ':engine-gecko'
+// Removed: ':engine-gecko' module does not exist in the project

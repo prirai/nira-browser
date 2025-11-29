@@ -113,8 +113,25 @@ class TabGroupManager(private val context: Context) {
 
     /**
      * Adds a tab to a specific group.
+     * Prevents mixing private and normal tabs in the same group.
      */
     suspend fun addTabToGroup(tabId: String, groupId: String) {
+        // Check if tab privacy mode matches the group
+        val tab = context.components.store.state.tabs.find { it.id == tabId }
+        val isPrivateTab = tab?.content?.private ?: false
+        
+        // Get existing tabs in the group to check their privacy mode
+        val existingTabIds = dao.getTabIdsInGroup(groupId)
+        if (existingTabIds.isNotEmpty()) {
+            val firstExistingTab = context.components.store.state.tabs.find { it.id == existingTabIds.first() }
+            val isPrivateGroup = firstExistingTab?.content?.private ?: false
+            
+            // Don't allow mixing private and normal tabs
+            if (isPrivateTab != isPrivateGroup) {
+                return
+            }
+        }
+        
         removeTabFromGroups(tabId)
 
         val tabCount = dao.getTabCountInGroup(groupId)
@@ -237,6 +254,18 @@ class TabGroupManager(private val context: Context) {
         // Only proceed if we have source information
         if (sourceTabId == null || sourceTabUrl == null) {
             // Fallback to normal auto-grouping
+            autoGroupTab(newTabId, newTabUrl)
+            return
+        }
+        
+        // Check that both tabs are in the same privacy mode
+        val sourceTab = context.components.store.state.tabs.find { it.id == sourceTabId }
+        val newTab = context.components.store.state.tabs.find { it.id == newTabId }
+        val sourceIsPrivate = sourceTab?.content?.private ?: false
+        val newIsPrivate = newTab?.content?.private ?: false
+        
+        // Don't group tabs from different privacy modes
+        if (sourceIsPrivate != newIsPrivate) {
             autoGroupTab(newTabId, newTabUrl)
             return
         }

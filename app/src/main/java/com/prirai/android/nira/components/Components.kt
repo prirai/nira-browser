@@ -1,6 +1,7 @@
 package com.prirai.android.nira.components
 
 import android.content.Context
+import com.prirai.android.nira.perf.VisualCompletenessQueue
 import android.content.SharedPreferences
 import android.content.res.Configuration
 import androidx.core.app.NotificationManagerCompat
@@ -50,6 +51,7 @@ import mozilla.components.feature.session.middleware.undo.UndoMiddleware
 import mozilla.components.feature.tabs.TabsUseCases
 import mozilla.components.feature.webcompat.WebCompatFeature
 import mozilla.components.feature.webnotifications.WebNotificationFeature
+import mozilla.components.feature.customtabs.store.CustomTabsServiceStore
 import mozilla.components.lib.publicsuffixlist.PublicSuffixList
 import mozilla.components.service.location.LocationService
 import org.mozilla.geckoview.GeckoRuntime
@@ -60,7 +62,12 @@ import com.prirai.android.nira.share.SaveToPDFMiddleware
 import com.prirai.android.nira.utils.ClipboardHandler
 import com.prirai.android.nira.utils.FaviconCache
 import com.prirai.android.nira.middleware.FaviconMiddleware
+import com.prirai.android.nira.middleware.EnhancedStateCaptureMiddleware
 import mozilla.components.browser.engine.gecko.ext.toContentBlockingSetting
+import mozilla.components.browser.state.engine.middleware.SessionPrioritizationMiddleware
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import mozilla.components.browser.engine.gecko.permission.GeckoSitePermissionsStorage
 import mozilla.components.concept.engine.EngineSession
 import mozilla.components.feature.addons.amo.AMOAddonsProvider
@@ -79,6 +86,9 @@ private const val DAY_IN_MINUTES = 24 * 60L
 
 @Suppress("LargeClass")
 open class Components(private val applicationContext: Context) {
+    
+    // Visual completeness queue for deferred initialization
+    val visualCompletenessQueue = VisualCompletenessQueue()
     companion object {
         const val BROWSER_PREFERENCES = "browser_preferences"
         const val PREF_LAUNCH_EXTERNAL_APP = "launch_external_app"
@@ -106,10 +116,25 @@ open class Components(private val applicationContext: Context) {
             applicationContext.getSharedPreferences(BROWSER_PREFERENCES, Context.MODE_PRIVATE)
 
 
-    fun darkEnabled(): PreferredColorScheme {
+    fun darkEnabled(url: String? = null): PreferredColorScheme {
         val darkOn =
                 (applicationContext.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) ==
                         Configuration.UI_MODE_NIGHT_YES
+        
+        // Check per-site override first
+        if (url != null) {
+            val siteDarkMode = applicationContext.getSharedPreferences("site_dark_mode_override", android.content.Context.MODE_PRIVATE)
+            if (siteDarkMode.contains(url)) {
+                val override = siteDarkMode.getString(url, "")
+                return when (override) {
+                    "dark" -> PreferredColorScheme.Dark
+                    "light" -> PreferredColorScheme.Light
+                    else -> PreferredColorScheme.Dark // Fallback
+                }
+            }
+        }
+        
+        // Use global web theme
         return when {
             UserPreferences(applicationContext).webThemeChoice == ThemeChoice.DARK.ordinal -> PreferredColorScheme.Dark
             UserPreferences(applicationContext).webThemeChoice == ThemeChoice.LIGHT.ordinal -> PreferredColorScheme.Light
@@ -123,8 +148,8 @@ open class Components(private val applicationContext: Context) {
     }
 
     // Engine Settings
-    private val engineSettings by lazy {
-        DefaultSettings().apply {
+    private val engineSettings: DefaultSettings
+        get() = DefaultSettings().apply {
             historyTrackingDelegate = HistoryDelegate(lazyHistoryStorage)
             requestInterceptor = appRequestInterceptor
             remoteDebuggingEnabled = false // SECURITY: Remote debugging disabled
@@ -137,7 +162,6 @@ open class Components(private val applicationContext: Context) {
             preferredColorScheme = darkEnabled()
             javascriptEnabled = UserPreferences(applicationContext).javaScriptEnabled
         }
-    }
 
     private val notificationManagerCompat = NotificationManagerCompat.from(applicationContext)
 
@@ -188,7 +212,12 @@ open class Components(private val applicationContext: Context) {
                         PromptMiddleware(),
                         LastAccessMiddleware(),
                         SaveToPDFMiddleware(applicationContext),
-                        com.prirai.android.nira.browser.tabgroups.TabGroupMiddleware(tabGroupManager)
+                        com.prirai.android.nira.browser.tabgroups.TabGroupMiddleware(tabGroupManager),
+                        SessionPrioritizationMiddleware(),
+                        EnhancedStateCaptureMiddleware(
+                            scope = CoroutineScope(SupervisorJob() + Dispatchers.Main),
+                            maxTabsToCapture = 3
+                        )
                 ) + EngineMiddleware.create(
                     engine,
                     trimMemoryAutomatically = false,
@@ -338,4 +367,7 @@ open class Components(private val applicationContext: Context) {
     val tabsUseCases: TabsUseCases by lazy { TabsUseCases(store) }
     val downloadsUseCases: DownloadsUseCases by lazy { DownloadsUseCases(store) }
     val contextMenuUseCases: ContextMenuUseCases by lazy { ContextMenuUseCases(store) }
+    
+    // Custom Tabs
+    val customTabsStore by lazy { CustomTabsServiceStore() }
 }

@@ -298,8 +298,10 @@ class TabIslandsVerticalAdapter(
             itemView.alpha = if (isSelected) 1.0f else 0.7f
             if (isSelected) {
                 selectedIndicator.setBackgroundResource(R.drawable.selected_tab_highlight_background)
+                tabTitle.setTypeface(null, android.graphics.Typeface.BOLD)
             } else {
                 selectedIndicator.background = null
+                tabTitle.setTypeface(null, android.graphics.Typeface.NORMAL)
             }
 
             // Accessibility
@@ -371,8 +373,10 @@ class TabIslandsVerticalAdapter(
             itemView.alpha = if (isSelected) 1.0f else 0.7f
             if (isSelected) {
                 selectedIndicator.setBackgroundResource(R.drawable.selected_tab_highlight_background)
+                tabTitle.setTypeface(null, android.graphics.Typeface.BOLD)
             } else {
                 selectedIndicator.background = null
+                tabTitle.setTypeface(null, android.graphics.Typeface.NORMAL)
             }
 
             // Hide group indicator for ungrouped tabs

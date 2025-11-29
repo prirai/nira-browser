@@ -17,6 +17,7 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updatePadding
 import com.prirai.android.nira.R
 import com.prirai.android.nira.ext.isAppInDarkTheme
+import com.prirai.android.nira.ext.getParcelableExtraCompat
 import com.prirai.android.nira.theme.applyAppTheme
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -64,7 +65,7 @@ class AddonDetailsActivity : AppCompatActivity() {
 
         supportActionBar?.elevation = 0f
 
-        val addon = requireNotNull(intent.getParcelableExtra<Addon>("add_on"))
+        val addon = requireNotNull(intent.getParcelableExtraCompat<Addon>("add_on"))
         initViews(addon)
     }
 
@@ -145,7 +146,7 @@ class AddonDetailsActivity : AppCompatActivity() {
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         when (item.itemId) {
             android.R.id.home -> {
-                super.onBackPressed()
+                onBackPressedDispatcher.onBackPressed()
                 return true
             }
         }
