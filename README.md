@@ -277,7 +277,7 @@ SUCH DAMAGES.
 
 **Built with ❤️ for privacy and freedom**
 
-Copyright © 2022 CookieJarApps
+Copyright © prirai
 
 [⬆ Back to Top](#-nira-browser)
 
