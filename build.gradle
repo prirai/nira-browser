@@ -1,8 +1,8 @@
 buildscript {
     repositories {
         maven {
-            name "Mozilla"
-            url "https://maven.mozilla.org/maven2"
+            name = "Mozilla"
+            url = "https://maven.mozilla.org/maven2"
         }
         google()
         mavenCentral()
@@ -28,13 +28,13 @@ allprojects {
         google()
 
         maven {
-            name "Mozilla"
-            url "https://maven.mozilla.org/maven2"
+            name = "Mozilla"
+            url = "https://maven.mozilla.org/maven2"
         }
 
         mavenCentral()
         
-        maven { url "https://jitpack.io" }
+        maven { url = "https://jitpack.io" }
     }
 }
 

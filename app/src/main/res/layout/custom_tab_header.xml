@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/customTabHeader"
     android:layout_width="match_parent"
     android:layout_height="56dp"
@@ -18,8 +19,8 @@
         android:src="@drawable/ic_round_close"
         android:background="?attr/selectableItemBackgroundBorderless"
         android:contentDescription="@string/close"
-        android:tint="?android:attr/textColorPrimary"
-        android:padding="12dp" />
+        android:padding="12dp"
+        app:tint="?android:attr/textColorPrimary" />
 
     <!-- Page info container -->
     <LinearLayout

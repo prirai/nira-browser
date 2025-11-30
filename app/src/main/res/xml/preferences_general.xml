@@ -1,42 +1,57 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Reorganized General Settings - Material 3 -->
 <PreferenceScreen
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    >
+    xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <SwitchPreferenceCompat
-            app:key="@string/key_tracking_protection"
-            app:title="@string/tracking_protection"
-            app:singleLineTitle="false"
-            app:defaultValue="true"/>
+    <PreferenceCategory android:title="@string/search_engine">
+        
+        <Preference
+            app:key="@string/key_search_engine"
+            app:title="@string/search_engine"
+            app:icon="@drawable/ic_search"
+            app:singleLineTitle="false"/>
 
-    <SwitchPreferenceCompat
-            app:key="@string/key_safe_browsing"
-            app:title="@string/safe_browsing"
-            app:singleLineTitle="false"
-            app:defaultValue="true"/>
-
-    <SwitchPreferenceCompat
-        app:key="@string/key_javascript_enabled"
-        app:title="@string/javascript_enabled"
-        app:singleLineTitle="false"
-        app:defaultValue="true"/>
-
-    <Preference
-        app:key="@string/key_search_engine"
-        app:title="@string/search_engine"
-        app:singleLineTitle="false"
-        app:defaultValue="false"/>
-
-    <SwitchPreferenceCompat
+        <SwitchPreferenceCompat
             app:key="@string/key_search_suggestions_enabled"
             app:title="@string/search_suggestions"
             app:singleLineTitle="false"
             app:defaultValue="true"/>
 
-    <Preference
-        app:key="@string/key_homepage_type"
-        app:title="@string/homepage_type"
-        app:singleLineTitle="false"
-        app:defaultValue="false"/>
+    </PreferenceCategory>
+
+    <PreferenceCategory android:title="Privacy &amp; Security">
+        
+        <SwitchPreferenceCompat
+            app:key="@string/key_tracking_protection"
+            app:title="@string/tracking_protection"
+            app:icon="@drawable/ic_round_shield"
+            app:singleLineTitle="false"
+            app:defaultValue="true"/>
+
+        <SwitchPreferenceCompat
+            app:key="@string/key_safe_browsing"
+            app:title="@string/safe_browsing"
+            app:icon="@drawable/ic_baseline_lock"
+            app:singleLineTitle="false"
+            app:defaultValue="true"/>
+
+    </PreferenceCategory>
+
+    <PreferenceCategory android:title="Browser">
+        
+        <Preference
+            app:key="@string/key_homepage_type"
+            app:title="@string/homepage_type"
+            app:icon="@drawable/ic_home"
+            app:singleLineTitle="false"/>
+
+        <SwitchPreferenceCompat
+            app:key="@string/key_javascript_enabled"
+            app:title="@string/javascript_enabled"
+            app:singleLineTitle="false"
+            app:defaultValue="true"/>
+
+    </PreferenceCategory>
 
 </PreferenceScreen>

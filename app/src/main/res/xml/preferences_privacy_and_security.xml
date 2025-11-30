@@ -1,21 +1,35 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Reorganized Privacy & Security Settings - Material 3 -->
 <PreferenceScreen
-    xmlns:app="http://schemas.android.com/apk/res-auto">
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <Preference
-        app:key="@string/key_clear_tabs"
-        app:title="@string/clear_tabs"/>
-    <Preference
+    <PreferenceCategory android:title="Clear Browsing Data">
+        
+        <Preference
             app:key="@string/key_clear_history"
             app:title="@string/clear_history"/>
-    <Preference
+            
+        <Preference
             app:key="@string/key_clear_cookies"
             app:title="@string/clear_cookies"/>
-    <Preference
+            
+        <Preference
             app:key="@string/key_clear_cache"
             app:title="@string/clear_cache"/>
-    <Preference
+
+    </PreferenceCategory>
+
+    <PreferenceCategory android:title="Tabs &amp; Permissions">
+        
+        <Preference
+            app:key="@string/key_clear_tabs"
+            app:title="@string/clear_tabs"/>
+            
+        <Preference
             app:key="@string/key_clear_permissions"
             app:title="@string/clear_permissions"/>
+
+    </PreferenceCategory>
 
 </PreferenceScreen>

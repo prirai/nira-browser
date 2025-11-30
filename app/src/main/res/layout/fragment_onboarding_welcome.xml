@@ -70,7 +70,7 @@
                     android:layout_height="24dp"
                     android:src="@drawable/ic_shield"
                     android:contentDescription="@string/privacy"
-                    android:tint="?attr/colorPrimary" />
+                    app:tint="?attr/colorPrimary" />
 
                 <TextView
                     android:layout_width="0dp"
@@ -92,7 +92,7 @@
                     android:layout_height="24dp"
                     android:src="@drawable/ic_tracking_protection"
                     android:contentDescription="@string/ad_blocking"
-                    android:tint="?attr/colorPrimary" />
+                    app:tint="?attr/colorPrimary" />
 
                 <TextView
                     android:layout_width="0dp"
@@ -114,7 +114,7 @@
                     android:layout_height="24dp"
                     android:src="@drawable/ic_extension"
                     android:contentDescription="@string/extensions"
-                    android:tint="?attr/colorPrimary" />
+                    app:tint="?attr/colorPrimary" />
 
                 <TextView
                     android:layout_width="0dp"

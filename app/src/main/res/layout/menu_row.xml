@@ -1,21 +1,38 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout
+<!-- Modern Material 3 Menu Row Item -->
+<com.google.android.material.card.MaterialCardView
     xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginStart="4dp"
+    android:layout_marginEnd="4dp"
+    android:layout_marginTop="2dp"
+    android:layout_marginBottom="2dp"
+    app:cardCornerRadius="16dp"
+    app:cardElevation="0dp"
+    app:strokeWidth="0dp"
+    app:cardBackgroundColor="@android:color/transparent">
+
+<LinearLayout
     android:orientation="horizontal"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:paddingStart="16dp"
-    android:paddingEnd="16dp"
-    android:paddingTop="12dp"
-    android:paddingBottom="12dp"
-    android:minHeight="48dp"
+    android:paddingStart="20dp"
+    android:paddingEnd="20dp"
+    android:paddingTop="14dp"
+    android:paddingBottom="14dp"
+    android:minHeight="56dp"
+    android:gravity="center_vertical"
     android:background="?attr/selectableItemBackground">
 
     <ImageView android:id="@+id/imgIcon"
         android:layout_width="24dp"
         android:layout_height="24dp"
         android:layout_gravity="center_vertical"
-        android:layout_marginEnd="16dp"
+        android:layout_marginEnd="20dp"
+        android:scaleType="fitCenter"
+        android:importantForAccessibility="no"
         android:tint="?attr/colorOnSurface" />
 
     <TextView android:id="@+id/txtTitle"
@@ -23,8 +40,11 @@
         android:layout_height="wrap_content"
         android:layout_weight="1"
         android:layout_gravity="center_vertical"
-        android:textSize="16sp"
+        android:textAppearance="@style/TextAppearance.Material3.BodyLarge"
         android:textColor="?attr/colorOnSurface"
-        android:fontFamily="sans-serif-medium" />
+        android:maxLines="1"
+        android:ellipsize="end" />
 
 </LinearLayout>
+
+</com.google.android.material.card.MaterialCardView>

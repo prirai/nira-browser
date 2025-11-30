@@ -68,9 +68,8 @@
                 android:layout_height="20dp"
                 android:src="@drawable/ic_expand_less"
                 android:contentDescription="Collapse or expand island"
-                android:tint="?android:attr/textColorSecondary"
                 android:scaleType="centerInside"
-            />
+                app:tint="?android:attr/textColorSecondary" />
 
         </LinearLayout>
 

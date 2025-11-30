@@ -1,46 +1,62 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Modern Material 3 Settings Headers with Reorganization -->
 <androidx.preference.PreferenceScreen
-    xmlns:android="http://schemas.android.com/apk/res/android">
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+    
+    <!-- Core Settings -->
     <androidx.preference.Preference
         android:fragment="com.prirai.android.nira.settings.fragment.GeneralSettingsFragment"
-        android:icon="@drawable/ic_settings_general_layers"
+        android:icon="@drawable/ic_round_settings"
         android:title="@string/settings_general"
         android:singleLineTitle="false"
         android:summary="@string/settings_general_explain"/>
+    
     <androidx.preference.Preference
         android:fragment="com.prirai.android.nira.settings.fragment.PrivacyAndSecuritySettingsFragment"
-        android:icon="@drawable/ic_settings_privacy_and_security_layers"
+        android:icon="@drawable/ic_round_shield"
         android:title="@string/settings_privacy_and_security"
         android:singleLineTitle="false"
         android:summary="@string/settings_privacy_and_security_explain"/>
-    <androidx.preference.Preference
-        android:fragment="com.prirai.android.nira.settings.fragment.ImportExportSettingsFragment"
-        android:icon="@drawable/ic_settings_import_export_layers"
-        android:title="@string/settings_import_and_export"
-        android:singleLineTitle="false"
-        android:summary="@string/settings_import_and_export_explain"/>
+    
+    <!-- Appearance & Customization -->
     <androidx.preference.Preference
         android:fragment="com.prirai.android.nira.settings.fragment.CustomizationSettingsFragment"
-        android:icon="@drawable/ic_settings_customize_layers"
+        android:icon="@drawable/ic_palette"
         android:title="@string/settings_customization"
         android:singleLineTitle="false"
         android:summary="@string/settings_customization_explain"/>
-    <androidx.preference.Preference
-        android:fragment="com.prirai.android.nira.settings.fragment.AdvancedSettingsFragment"
-        android:icon="@drawable/ic_settings_advanced_layers"
-        android:title="@string/settings_advanced"
-        android:singleLineTitle="false"
-        android:summary="@string/settings_advanced_explain"/>
+    
+    <!-- Extensions -->
     <androidx.preference.Preference
         android:fragment="com.prirai.android.nira.addons.AddonsFragment"
-        android:icon="@drawable/ic_settings_addons_layers"
+        android:icon="@drawable/mozac_ic_extension_24"
         android:title="@string/settings_addons"
         android:singleLineTitle="false"
         android:summary="@string/settings_addons_explain"/>
+    
+    <!-- Data Management -->
+    <androidx.preference.Preference
+        android:fragment="com.prirai.android.nira.settings.fragment.ImportExportSettingsFragment"
+        android:icon="@drawable/ic_baseline_swap_horizontal_circle"
+        android:title="@string/settings_import_and_export"
+        android:singleLineTitle="false"
+        android:summary="@string/settings_import_and_export_explain"/>
+    
+    <!-- Advanced -->
+    <androidx.preference.Preference
+        android:fragment="com.prirai.android.nira.settings.fragment.AdvancedSettingsFragment"
+        android:icon="@drawable/ic_baseline_report"
+        android:title="@string/settings_advanced"
+        android:singleLineTitle="false"
+        android:summary="@string/settings_advanced_explain"/>
+    
+    <!-- About -->
     <androidx.preference.Preference
         android:fragment="com.prirai.android.nira.settings.fragment.AboutSettingsFragment"
-        android:icon="@drawable/ic_settings_about_layers"
+        android:icon="@drawable/ic_baseline_info"
         android:title="@string/settings_about"
         android:singleLineTitle="false"
         android:summary="@string/settings_about_explain"/>
+        
 </androidx.preference.PreferenceScreen>

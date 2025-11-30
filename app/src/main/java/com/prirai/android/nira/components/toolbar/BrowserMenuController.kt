@@ -127,9 +127,23 @@ class DefaultBrowserToolbarMenuController(
             }
 
             is ToolbarMenu.Item.InstallWebApp -> {
-                MainScope().launch {
-                    with(activity.components.webAppUseCases) {
-                        addToHomescreen()
+                currentSession?.let { session ->
+                    MainScope().launch {
+                        // Get icon
+                        val icon = activity.components.icons.loadIcon(
+                            mozilla.components.browser.icons.IconRequest(
+                                url = session.content.url
+                            )
+                        ).await()?.bitmap
+                        
+                        // Install PWA using our custom installer
+                        com.prirai.android.nira.webapp.WebAppInstaller.installPwa(
+                            activity,
+                            session,
+                            null, // manifest not needed for basic install
+                            icon
+                        )
+                        
                         android.widget.Toast.makeText(
                             activity,
                             activity.getString(R.string.app_installed),
@@ -150,9 +164,27 @@ class DefaultBrowserToolbarMenuController(
             }
 
             is ToolbarMenu.Item.AddToHomeScreen -> {
-                MainScope().launch {
-                    with(activity.components.webAppUseCases) {
-                        addToHomescreen()
+                currentSession?.let { session ->
+                    MainScope().launch {
+                        // Get icon
+                        val icon = activity.components.icons.loadIcon(
+                            mozilla.components.browser.icons.IconRequest(
+                                url = session.content.url
+                            )
+                        ).await()?.bitmap
+                        
+                        // Add regular shortcut using our custom installer
+                        com.prirai.android.nira.webapp.WebAppInstaller.addToHomescreen(
+                            activity,
+                            session,
+                            icon
+                        )
+                        
+                        android.widget.Toast.makeText(
+                            activity,
+                            "Shortcut added",
+                            android.widget.Toast.LENGTH_SHORT
+                        ).show()
                     }
                 }
             }

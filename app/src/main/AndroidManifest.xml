@@ -207,6 +207,37 @@
       </intent-filter>
     </service>
 
+    <!-- WebApp Activity for PWAs - Fullscreen, no browser chrome -->
+    <activity
+        android:name=".webapp.WebAppActivity"
+        android:configChanges="orientation|screenSize|keyboard|keyboardHidden"
+        android:exported="true"
+        android:launchMode="singleTask"
+        android:excludeFromRecents="false"
+        android:theme="@style/WebAppTheme"
+        android:taskAffinity=".webapp.WebAppActivity">
+      
+      <!-- Handle PWA shortcuts created by webAppUseCases.addToHomescreen() -->
+      <intent-filter>
+        <action android:name="android.intent.action.MAIN" />
+        <category android:name="android.intent.category.LAUNCHER" />
+      </intent-filter>
+      
+      <intent-filter>
+        <action android:name="android.intent.action.VIEW" />
+        <category android:name="android.intent.category.DEFAULT" />
+        <category android:name="android.intent.category.BROWSABLE" />
+        <data android:scheme="https" />
+        <data android:scheme="http" />
+      </intent-filter>
+      
+      <!-- Handle Mozilla PWA launches -->
+      <intent-filter>
+        <action android:name="mozilla.components.feature.pwa.VIEW_PWA" />
+        <category android:name="android.intent.category.DEFAULT" />
+      </intent-filter>
+    </activity>
+
   </application>
 
 

@@ -55,7 +55,7 @@
                         android:layout_height="32dp"
                         android:src="@drawable/ic_tracking_protection"
                         android:contentDescription="@string/tracking_protection"
-                        android:tint="?attr/colorPrimary" />
+                        app:tint="?attr/colorPrimary" />
 
                     <LinearLayout
                         android:layout_width="0dp"
@@ -112,7 +112,7 @@
                         android:layout_height="32dp"
                         android:src="@drawable/ic_shield"
                         android:contentDescription="@string/safe_browsing"
-                        android:tint="?attr/colorPrimary" />
+                        app:tint="?attr/colorPrimary" />
 
                     <LinearLayout
                         android:layout_width="0dp"

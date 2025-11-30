@@ -121,8 +121,7 @@ class BrowserMenu(
     }
 
     private fun canAddToHomescreen(): Boolean =
-        selectedSession != null && isPinningSupported &&
-                !context.components.webAppUseCases.isInstallable()
+        selectedSession != null && isPinningSupported
 
     private val menuItems by lazy {
         val menuItems = listOfNotNull(

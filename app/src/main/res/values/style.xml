@@ -10,6 +10,22 @@
             name="bottomSheetDialogTheme"
         >@style/AppBottomSheetDialogTheme</item>
         <item name="android:statusBarColor">@color/statusbar_background</item>
+        
+        <!-- Material 3 Shape Overrides -->
+        <item name="shapeAppearanceSmallComponent">@style/ShapeAppearance.Material3.SmallComponent</item>
+        <item name="shapeAppearanceMediumComponent">@style/ShapeAppearance.Material3.MediumComponent</item>
+        <item name="shapeAppearanceLargeComponent">@style/ShapeAppearance.Material3.LargeComponent</item>
+        
+        <!-- Material 3 Button Styles -->
+        <item name="materialButtonStyle">@style/Widget.Material3.Button</item>
+        <item name="materialButtonOutlinedStyle">@style/Widget.Material3.Button.OutlinedButton</item>
+        
+        <!-- Material 3 Card Style -->
+        <item name="materialCardViewStyle">@style/Widget.Material3.CardView.Elevated</item>
+        
+        <!-- Material 3 Checkbox and Switch -->
+        <item name="checkboxStyle">@style/Widget.Material3.CompoundButton.CheckBox</item>
+        <item name="switchStyle">@style/Widget.Material3.CompoundButton.MaterialSwitch</item>
     </style>
 
     <!-- Splash Screen Theme -->
@@ -20,6 +36,17 @@
         <item name="android:windowNoTitle">true</item>
         <item name="android:windowFullscreen">false</item>
         <item name="android:windowDrawsSystemBarBackgrounds">true</item>
+    </style>
+
+    <!-- WebApp Theme for PWAs - Fullscreen, No Chrome -->
+    <style name="WebAppTheme" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowFullscreen">true</item>
+        <item name="android:windowDrawsSystemBarBackgrounds">true</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowTranslucentStatus">false</item>
+        <item name="android:windowTranslucentNavigation">false</item>
     </style>
 
     <style name="AppThemeAddons" parent="Theme.Material3.DayNight">
@@ -89,6 +116,7 @@
         parent="Preference.SwitchPreferenceCompat"
     >
         <item name="android:layout">@layout/preference_material3</item>
+        <item name="android:widgetLayout">@layout/preference_widget_material_switch</item>
     </style>
 
     <style
@@ -125,5 +153,21 @@
 
     <style name="AppModalStyle" parent="Widget.Design.BottomSheet.Modal">
         <item name="android:background">@drawable/rounded_bottom_sheet</item>
+    </style>
+    
+    <!-- Material 3 Shape Appearances -->
+    <style name="ShapeAppearance.Material3.SmallComponent" parent="ShapeAppearance.MaterialComponents.SmallComponent">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">12dp</item>
+    </style>
+    
+    <style name="ShapeAppearance.Material3.MediumComponent" parent="ShapeAppearance.MaterialComponents.MediumComponent">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">16dp</item>
+    </style>
+    
+    <style name="ShapeAppearance.Material3.LargeComponent" parent="ShapeAppearance.MaterialComponents.LargeComponent">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">28dp</item>
     </style>
 </resources>

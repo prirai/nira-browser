@@ -1,10 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Reorganized About Settings - Material 3 -->
 <PreferenceScreen
-    xmlns:android="http://schemas.android.com/apk/res/android">
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
 
     <PreferenceCategory android:title="@string/settings_about">
+        
         <Preference
             android:summary="@string/url_project"
+            app:icon="@drawable/ic_baseline_info"
             android:title="@string/more">
             <intent
                 android:action="android.intent.action.VIEW"
@@ -14,17 +18,23 @@
                     android:value="SELF" />
             </intent>
         </Preference>
+        
         <Preference
             android:key="pref_version"
             android:title="@string/version" />
+            
         <Preference
             android:key="pref_version_geckoview"
             android:title="@string/geckoview" />
+            
         <Preference
             android:key="pref_version_mozac"
             android:title="@string/mozac" />
+            
     </PreferenceCategory>
+    
     <PreferenceCategory android:title="@string/licenses">
+        
         <Preference
             android:summary="@string/mpl_license"
             android:title="@string/app_name">
@@ -36,6 +46,7 @@
                     android:value="SELF" />
             </intent>
         </Preference>
+        
         <Preference
             android:summary="@string/apache"
             android:title="@string/android_open_source_project">
@@ -47,6 +58,7 @@
                     android:value="SELF" />
             </intent>
         </Preference>
+        
         <Preference
             android:summary="@string/mpl_license"
             android:title="@string/mozac">
@@ -58,6 +70,7 @@
                     android:value="SELF" />
             </intent>
         </Preference>
+        
         <Preference
             android:summary="@string/mpl_license"
             android:title="@string/geckoview">

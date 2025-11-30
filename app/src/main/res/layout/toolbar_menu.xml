@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Modern Material 3 Toolbar Menu with rounded corners and updated styling -->
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
@@ -12,80 +13,71 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_margin="8dp"
-        app:cardCornerRadius="16dp"
-        app:cardElevation="8dp"
-        app:cardBackgroundColor="?attr/colorSurface">
+        app:cardCornerRadius="28dp"
+        app:cardElevation="3dp"
+        app:cardBackgroundColor="?attr/colorSurfaceContainer">
 
         <androidx.constraintlayout.widget.ConstraintLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content">
 
-        <LinearLayout
+        <!-- Modern Action Bar with Material 3 Buttons -->
+        <com.google.android.material.card.MaterialCardView
             android:id="@+id/topBar"
             android:layout_width="match_parent"
-            android:layout_height="48dp"
-            android:gravity="center"
+            android:layout_height="wrap_content"
+            android:layout_margin="8dp"
+            app:cardCornerRadius="20dp"
+            app:cardElevation="0dp"
+            app:strokeWidth="0dp"
+            app:cardBackgroundColor="?attr/colorSurfaceContainerHighest"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent">
 
-            <androidx.appcompat.widget.AppCompatImageButton
-                android:id="@+id/back_option"
-                android:layout_width="wrap_content"
+            <LinearLayout
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:paddingStart="6dp"
-                android:paddingTop="4dp"
-                android:paddingEnd="6dp"
-                app:srcCompat="@drawable/ic_action_back" />
+                android:orientation="horizontal"
+                android:gravity="center"
+                android:padding="8dp">
 
-            <androidx.appcompat.widget.AppCompatImageButton
-                android:id="@+id/shield"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:paddingStart="6dp"
-                android:paddingTop="4dp"
-                android:paddingEnd="6dp"
-                app:srcCompat="@drawable/ic_round_shield" />
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/back_option"
+                    style="@style/Widget.Material3.Button.IconButton.Filled.Tonal"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:layout_margin="4dp"
+                    android:contentDescription="@string/back"
+                    app:icon="@drawable/ic_action_back"
+                    app:iconSize="24dp"
+                    app:iconGravity="textStart"
+                    app:iconPadding="0dp" />
 
-         <!--   <androidx.appcompat.widget.AppCompatImageButton
-                android:id="@+id/forward_option"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:paddingStart="6dp"
-                android:paddingTop="4dp"
-                android:paddingEnd="6dp"
-                app:srcCompat="@drawable/ic_action_forward" />
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/shield"
+                    style="@style/Widget.Material3.Button.IconButton.Filled.Tonal"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:layout_margin="4dp"
+                    android:contentDescription="@string/privacy_security"
+                    app:icon="@drawable/ic_round_shield"
+                    app:iconSize="24dp"
+                    app:iconGravity="textStart"
+                    app:iconPadding="0dp" />
 
-            <androidx.appcompat.widget.AppCompatImageButton
-                android:id="@+id/bookmark_option"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:paddingStart="6dp"
-                android:paddingTop="4dp"
-                android:paddingEnd="6dp"
-                app:srcCompat="@drawable/ic_action_star" />
+            </LinearLayout>
 
-            <androidx.appcompat.widget.AppCompatImageButton
-                android:id="@+id/close_option"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:paddingStart="6dp"
-                android:paddingTop="4dp"
-                android:paddingEnd="6dp"
-                app:srcCompat="@drawable/ic_action_delete" /> -->
+        </com.google.android.material.card.MaterialCardView>
 
-
-        </LinearLayout>
-
+        <!-- Menu Items with better spacing -->
         <LinearLayout
             android:id="@+id/text_options"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:paddingStart="8dp"
+            android:paddingEnd="8dp"
+            android:paddingBottom="8dp"
             app:layout_constrainedHeight="true"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintTop_toBottomOf="@+id/topBar">
@@ -97,7 +89,9 @@
                 android:choiceMode="singleChoice"
                 android:divider="@android:color/transparent"
                 android:dividerHeight="0dp"
-                android:paddingBottom="8dp" />
+                android:clipToPadding="false"
+                android:scrollbars="none"
+                android:overScrollMode="never" />
 
         </LinearLayout>
 

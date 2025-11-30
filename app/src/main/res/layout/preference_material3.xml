@@ -1,7 +1,20 @@
 <?xml version="1.0" encoding="utf-8" ?>
-<!-- Modern Material 3 Preference Layout with proper icon visibility -->
-<LinearLayout
+<!-- Enhanced Material 3 Preference Layout with modern styling -->
+<com.google.android.material.card.MaterialCardView
     xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginStart="12dp"
+    android:layout_marginEnd="12dp"
+    android:layout_marginTop="4dp"
+    android:layout_marginBottom="4dp"
+    app:cardCornerRadius="16dp"
+    app:cardElevation="0dp"
+    app:strokeWidth="0dp"
+    app:cardBackgroundColor="@android:color/transparent">
+
+<LinearLayout
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:minHeight="64dp"
@@ -76,3 +89,5 @@
     />
 
 </LinearLayout>
+
+</com.google.android.material.card.MaterialCardView>

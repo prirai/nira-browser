@@ -13,28 +13,28 @@ plugins {
 
 android {
 
-    compileSdkVersion 36
+    compileSdkVersion = 36
     buildFeatures {
-        buildConfig true
-        viewBinding true
-        compose true
+        buildConfig = true
+        viewBinding = true
+        compose = true
     }
 
-    namespace 'com.prirai.android.nira'
+    namespace = 'com.prirai.android.nira'
 
     defaultConfig {
-        applicationId "com.prirai.android.nira"
-        minSdkVersion 26
-        targetSdkVersion 36
+        applicationId = "com.prirai.android.nira"
+        minSdkVersion = 26
+        targetSdkVersion = 36
         // Increment by 4 with each update
-        versionCode 4
-        versionName "0.2"
-        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        versionCode = 4
+        versionName = "0.2"
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_17
-        targetCompatibility JavaVersion.VERSION_17
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
 
     kotlinOptions {
@@ -43,20 +43,24 @@ android {
 
     buildTypes {
         release {
-            minifyEnabled true
-            shrinkResources true
+            minifyEnabled = true
+            shrinkResources = true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+        debug {
+            resValue "string", "app_name", "Nira (Debug)"
+            applicationIdSuffix = '.debug'
         }
     }
 
-    flavorDimensions "abi"
+    flavorDimensions = ["abi"]
 
     splits {
         abi {
-            enable true
+            enable = true
             reset()
-            include 'arm64-v8a', 'armeabi-v7a'
-            universalApk false
+            include 'arm64-v8a', 'armeabi-v7a', 'x86_64'
+            universalApk = false
         }
     }
 
@@ -69,7 +73,7 @@ android {
     }
 
     lint {
-        abortOnError false
+        abortOnError = false
     }
 }
 
@@ -211,6 +215,8 @@ dependencies {
     implementation "androidx.compose.ui:ui:1.9.5"
     implementation "androidx.compose.foundation:foundation:1.9.5"
     implementation "androidx.compose.material:material:1.9.5"
+    implementation "androidx.compose.material3:material3:1.3.1"
+    implementation "androidx.compose.runtime:runtime:1.9.5"
 
     implementation 'org.jsoup:jsoup:1.21.2'
 }

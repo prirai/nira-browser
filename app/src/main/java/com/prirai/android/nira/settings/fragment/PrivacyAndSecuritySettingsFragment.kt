@@ -1,6 +1,5 @@
 package com.prirai.android.nira.settings.fragment
 
-import android.app.AlertDialog
 import android.content.Context.LAYOUT_INFLATER_SERVICE
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -61,20 +60,18 @@ class PrivacyAndSecuritySettingsFragment : BaseSettingsFragment() {
     }
 
     private fun clearHistory(){
-        val historyDialog = AlertDialog.Builder(requireContext()).create()
         val inflater = requireContext().getSystemService(LAYOUT_INFLATER_SERVICE) as LayoutInflater
-        val layout: View =
-            inflater.inflate(R.layout.dialog_clear_history, null)
+        val layout: View = inflater.inflate(R.layout.dialog_clear_history, null)
 
-        val timeArray: Array<Long> = arrayOf(System.currentTimeMillis() - TimeUnit.HOURS.toMillis(1),
+        val timeArray: Array<Long> = arrayOf(
+            System.currentTimeMillis() - TimeUnit.HOURS.toMillis(1),
             System.currentTimeMillis() - TimeUnit.DAYS.toMillis(1),
             System.currentTimeMillis() - TimeUnit.DAYS.toMillis(2),
             System.currentTimeMillis() - TimeUnit.DAYS.toMillis(7),
             System.currentTimeMillis() - TimeUnit.DAYS.toMillis(30),
             System.currentTimeMillis() - TimeUnit.DAYS.toMillis(365),
-            0)
-        historyDialog.setView(layout)
-        historyDialog.show()
+            0
+        )
 
         val spinner: Spinner = layout.findViewById(R.id.timeSpinner)
         ArrayAdapter.createFromResource(
@@ -85,6 +82,10 @@ class PrivacyAndSecuritySettingsFragment : BaseSettingsFragment() {
             adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
             spinner.adapter = adapter
         }
+
+        val historyDialog = MaterialAlertDialogBuilder(requireContext())
+            .setView(layout)
+            .create()
 
         layout.findViewById<Button>(R.id.clearButton).setOnClickListener {
             // SECURITY: Use lifecycle-aware coroutine scope
@@ -98,6 +99,8 @@ class PrivacyAndSecuritySettingsFragment : BaseSettingsFragment() {
         layout.findViewById<Button>(R.id.cancelButton).setOnClickListener {
             historyDialog.dismiss()
         }
+
+        historyDialog.show()
     }
 
     private fun clearCookies(){
