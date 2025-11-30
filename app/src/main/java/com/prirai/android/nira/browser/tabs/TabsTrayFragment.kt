@@ -64,7 +64,7 @@ class TabsTrayFragment : Fragment() {
 
         browsingModeManager = (activity as BrowserActivity).browsingModeManager
         configuration =
-            Configuration(if (browsingModeManager.mode == BrowsingMode.Normal) BrowserTabType.NORMAL else BrowserTabType.PRIVATE)
+            Configuration(if (browsingModeManager.mode.isPrivate) BrowserTabType.PRIVATE else BrowserTabType.NORMAL)
 
         binding.toolbar.inflateMenu(R.menu.tabstray_menu)
         binding.toolbar.setOnMenuItemClickListener {
@@ -275,9 +275,10 @@ class TabsTrayFragment : Fragment() {
 
                     if (tab.content.url == "about:homepage") {
                         // Homepage will not correctly set private / normal mode
-                        if (tab.content.private && browsingModeManager.mode == BrowsingMode.Normal) {
+                        if (tab.content.private && !browsingModeManager.mode.isPrivate) {
                             browsingModeManager.mode = BrowsingMode.Private
-                        } else if (!tab.content.private && browsingModeManager.mode == BrowsingMode.Private) {
+                        } else if (!tab.content.private && browsingModeManager.mode.isPrivate) {
+                            val profileManager = com.prirai.android.nira.browser.profile.ProfileManager.getInstance(requireContext())
                             browsingModeManager.mode = BrowsingMode.Normal
                         }
                         requireContext().components.sessionUseCases.reload(tab.id)
@@ -339,7 +340,7 @@ class TabsTrayFragment : Fragment() {
     fun notifyBrowsingModeStateChanged() {
         browsingModeManager = (activity as BrowserActivity).browsingModeManager
         configuration =
-            Configuration(if (browsingModeManager.mode == BrowsingMode.Normal) BrowserTabType.NORMAL else BrowserTabType.PRIVATE)
+            Configuration(if (browsingModeManager.mode != BrowsingMode.Private && !browsingModeManager.mode.isPrivate) BrowserTabType.NORMAL else BrowserTabType.PRIVATE)
 
         binding.tabLayout.selectTab(binding.tabLayout.getTabAt(browsingModeManager.mode.ordinal))
     }

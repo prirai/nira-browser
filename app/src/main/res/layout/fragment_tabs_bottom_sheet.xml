@@ -13,42 +13,13 @@
         android:layout_marginTop="24dp"
         android:background="?android:attr/textColorSecondary" />
 
-    <!-- Tab mode toggle (Normal/Private) -->
-    <com.google.android.material.tabs.TabLayout
-        android:id="@+id/tabModeToggle"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_below="@id/dragHandle"
-        android:layout_marginTop="32dp"
-        android:layout_marginHorizontal="16dp"
-        app:tabGravity="fill"
-        app:tabMode="fixed"
-        app:tabIndicatorColor="?attr/colorPrimary"
-        app:tabSelectedTextColor="?attr/colorPrimary"
-        app:tabTextColor="?android:attr/textColorSecondary"
-        app:tabIconTint="?attr/colorPrimary">
-
-        <com.google.android.material.tabs.TabItem
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:icon="@drawable/ic_tabs"
-            android:text="@string/tabs_normal" />
-
-        <com.google.android.material.tabs.TabItem
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:icon="@drawable/ic_incognito"
-            android:text="@string/tabs_private" />
-
-    </com.google.android.material.tabs.TabLayout>
-
     <!-- New Tab Button -->
     <com.google.android.material.button.MaterialButton
         android:id="@+id/newTabButton"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_below="@id/tabModeToggle"
-        android:layout_marginTop="16dp"
+        android:layout_below="@id/dragHandle"
+        android:layout_marginTop="32dp"
         android:layout_marginHorizontal="16dp"
         android:text="@string/new_tab"
         android:drawableStart="@drawable/ic_round_add"
@@ -61,9 +32,9 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:layout_below="@id/newTabButton"
+        android:layout_above="@id/profileChipScrollView"
         android:layout_marginTop="16dp"
-        android:layout_marginBottom="32dp"
-        android:paddingBottom="64dp"
+        android:paddingBottom="16dp"
         android:paddingLeft="12dp"
         android:paddingRight="12dp"
         android:clipToPadding="false"
@@ -76,6 +47,7 @@
         android:layout_width="wrap_content"
         android:layout_height="match_parent"
         android:layout_below="@id/newTabButton"
+        android:layout_above="@id/profileChipScrollView"
         android:layout_centerHorizontal="true"
         android:layout_marginTop="32dp"
         android:orientation="vertical"
@@ -109,5 +81,28 @@
             android:layout_marginHorizontal="24dp" />
 
     </LinearLayout>
+
+    <!-- Profile mode chips at bottom -->
+    <HorizontalScrollView
+        android:id="@+id/profileChipScrollView"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:layout_marginBottom="12dp"
+        android:scrollbars="none"
+        android:overScrollMode="never"
+        android:background="?attr/colorSurfaceVariant"
+        android:paddingVertical="8dp">
+        
+        <com.google.android.material.chip.ChipGroup
+            android:id="@+id/profileChipGroup"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:paddingHorizontal="16dp"
+            app:singleSelection="true"
+            app:selectionRequired="true"
+            app:chipSpacing="8dp" />
+            
+    </HorizontalScrollView>
 
 </RelativeLayout>

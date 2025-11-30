@@ -149,7 +149,7 @@
   <string name="custom">Custom</string>
 
   <string name="tabs">Tabs</string>
-  <string name="tabs_normal">Normal</string>
+  <string name="tabs_normal">Default</string>
   <string name="tabs_private">Private</string>
   <string name="tabs_count_normal">%d Normal Tabs</string>
   <string name="tabs_count_private">%d Private Tabs</string>

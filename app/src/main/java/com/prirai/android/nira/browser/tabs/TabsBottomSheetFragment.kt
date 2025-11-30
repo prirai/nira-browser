@@ -100,11 +100,32 @@ class TabsBottomSheetFragment : BottomSheetDialogFragment() {
 
     private fun setupUI() {
         browsingModeManager = (activity as BrowserActivity).browsingModeManager
+        
+        // Determine the correct profile from the currently selected tab
+        val store = requireContext().components.store.state
+        val selectedTab = store.tabs.find { it.id == store.selectedTabId }
+        
+        if (selectedTab != null) {
+            if (selectedTab.content.private) {
+                // Private tab selected
+                browsingModeManager.mode = BrowsingMode.Private
+            } else {
+                // Normal tab - determine profile from contextId
+                val contextId = selectedTab.contextId ?: "profile_default"
+                val profileId = contextId.removePrefix("profile_")
+                val profileManager = com.prirai.android.nira.browser.profile.ProfileManager.getInstance(requireContext())
+                val profile = profileManager.getAllProfiles().find { it.id == profileId } 
+                    ?: com.prirai.android.nira.browser.profile.BrowserProfile.getDefaultProfile()
+                browsingModeManager.currentProfile = profile
+                browsingModeManager.mode = BrowsingMode.Normal
+            }
+        }
+        
         configuration = Configuration(
-            if (browsingModeManager.mode == BrowsingMode.Normal)
-                BrowserTabType.NORMAL
-            else
+            if (browsingModeManager.mode.isPrivate)
                 BrowserTabType.PRIVATE
+            else
+                BrowserTabType.NORMAL
         )
 
         // Setup new tab button
@@ -113,25 +134,183 @@ class TabsBottomSheetFragment : BottomSheetDialogFragment() {
             contentDescription = getString(R.string.new_tab)
         }
 
-        // Setup tab mode toggle
-        binding.tabModeToggle.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
-            override fun onTabSelected(tab: TabLayout.Tab) {
-                if (isInitializing) return
-
-                when (tab.position) {
-                    0 -> animateTabModeTransition(BrowserTabType.NORMAL)
-                    1 -> animateTabModeTransition(BrowserTabType.PRIVATE)
+        setupProfileChips()
+        binding.dragHandle.contentDescription = getString(R.string.drag_handle_description)
+    }
+    
+    private fun setupProfileChips() {
+        val profileManager = com.prirai.android.nira.browser.profile.ProfileManager.getInstance(requireContext())
+        val profiles = profileManager.getAllProfiles()
+        val isPrivateMode = browsingModeManager.mode.isPrivate
+        val currentProfile = browsingModeManager.currentProfile
+        
+        binding.profileChipGroup.removeAllViews()
+        
+        // Remove any existing listeners to prevent duplicates
+        binding.profileChipGroup.setOnCheckedStateChangeListener(null)
+        
+        var chipToCheck: com.google.android.material.chip.Chip? = null
+        val profileIdMap = mutableMapOf<Int, String>()
+        
+        // Add profile chips
+        profiles.forEach { profile ->
+            val chip = LayoutInflater.from(requireContext())
+                .inflate(R.layout.item_profile_chip, binding.profileChipGroup, false) as com.google.android.material.chip.Chip
+            
+            chip.text = "${profile.emoji} ${profile.name}"
+            chip.tag = profile.id
+            chip.id = View.generateViewId()
+            profileIdMap[chip.id] = profile.id
+            
+            // Set chip long-press listener for editing
+            chip.setOnLongClickListener {
+                if (!isInitializing) {
+                    showProfileEditDialog(profile)
+                }
+                true
+            }
+            
+            binding.profileChipGroup.addView(chip)
+            
+            // Remember which chip to check
+            if (!isPrivateMode && profile.id == currentProfile.id) {
+                chipToCheck = chip
+            }
+        }
+        
+        // Add Private mode chip
+        val privateChip = LayoutInflater.from(requireContext())
+            .inflate(R.layout.item_profile_chip, binding.profileChipGroup, false) as com.google.android.material.chip.Chip
+        privateChip.text = "🕵️ Private"
+        privateChip.tag = "private"
+        privateChip.id = View.generateViewId()
+        profileIdMap[privateChip.id] = "private"
+        binding.profileChipGroup.addView(privateChip)
+        
+        if (isPrivateMode) {
+            chipToCheck = privateChip
+        }
+        
+        // Add "+" chip to create new profile
+        val addChip = LayoutInflater.from(requireContext())
+            .inflate(R.layout.item_profile_chip, binding.profileChipGroup, false) as com.google.android.material.chip.Chip
+        addChip.text = "+"
+        addChip.isCheckable = false
+        addChip.id = View.generateViewId()
+        addChip.setOnClickListener {
+            showProfileCreateDialog()
+        }
+        binding.profileChipGroup.addView(addChip)
+        
+        // Check the appropriate chip using ChipGroup's method
+        chipToCheck?.let {
+            binding.profileChipGroup.check(it.id)
+        }
+        
+        // Set up listener for chip selection changes
+        binding.profileChipGroup.setOnCheckedStateChangeListener { group, checkedIds ->
+            if (isInitializing || checkedIds.isEmpty()) return@setOnCheckedStateChangeListener
+            
+            val selectedChipId = checkedIds.first()
+            val selectedProfileId = profileIdMap[selectedChipId]
+            
+            when (selectedProfileId) {
+                "private" -> {
+                    // Switch to private mode
+                    if (!browsingModeManager.mode.isPrivate) {
+                        browsingModeManager.mode = BrowsingMode.Private
+                        profileManager.setPrivateMode(true)
+                        animateTabModeTransition(BrowserTabType.PRIVATE)
+                    }
+                }
+                else -> {
+                    // Switch to normal profile
+                    val profile = profiles.find { it.id == selectedProfileId }
+                    if (profile != null && (browsingModeManager.mode.isPrivate || profile.id != browsingModeManager.currentProfile.id)) {
+                        browsingModeManager.currentProfile = profile
+                        browsingModeManager.mode = BrowsingMode.Normal
+                        profileManager.setActiveProfile(profile)
+                        profileManager.setPrivateMode(false)
+                        animateTabModeTransition(BrowserTabType.NORMAL)
+                    }
                 }
             }
-
-            override fun onTabUnselected(tab: TabLayout.Tab) {}
-            override fun onTabReselected(tab: TabLayout.Tab) {}
-        })
-
-        // Add content descriptions for accessibility
-        binding.tabModeToggle.getTabAt(0)?.contentDescription = getString(R.string.tabs_normal)
-        binding.tabModeToggle.getTabAt(1)?.contentDescription = getString(R.string.tabs_private)
-        binding.dragHandle.contentDescription = getString(R.string.drag_handle_description)
+        }
+    }
+    
+    private fun showProfileCreateDialog() {
+        val composeView = androidx.compose.ui.platform.ComposeView(requireContext())
+        composeView.setContent {
+            androidx.compose.material3.MaterialTheme {
+                com.prirai.android.nira.browser.profile.ProfileCreateDialog(
+                    onDismiss = { 
+                        (composeView.parent as? ViewGroup)?.removeView(composeView)
+                    },
+                    onConfirm = { name, color, emoji ->
+                        val profileManager = com.prirai.android.nira.browser.profile.ProfileManager.getInstance(requireContext())
+                        val newProfile = profileManager.createProfile(name, color, emoji)
+                        
+                        // Refresh profile chips
+                        setupProfileChips()
+                        
+                        // Switch to new profile
+                        browsingModeManager.currentProfile = newProfile
+                        browsingModeManager.mode = BrowsingMode.Normal
+                        updateTabsDisplay()
+                        
+                        (composeView.parent as? ViewGroup)?.removeView(composeView)
+                    }
+                )
+            }
+        }
+        
+        (binding.root as ViewGroup).addView(composeView)
+    }
+    
+    private fun showProfileEditDialog(profile: com.prirai.android.nira.browser.profile.BrowserProfile) {
+        val composeView = androidx.compose.ui.platform.ComposeView(requireContext())
+        composeView.setContent {
+            androidx.compose.material3.MaterialTheme {
+                com.prirai.android.nira.browser.profile.ProfileEditDialog(
+                    profile = profile,
+                    onDismiss = { 
+                        (composeView.parent as? ViewGroup)?.removeView(composeView)
+                    },
+                    onConfirm = { name, color, emoji ->
+                        val profileManager = com.prirai.android.nira.browser.profile.ProfileManager.getInstance(requireContext())
+                        val updatedProfile = profile.copy(name = name, color = color, emoji = emoji)
+                        profileManager.updateProfile(updatedProfile)
+                        
+                        if (profile.id == browsingModeManager.currentProfile.id) {
+                            browsingModeManager.currentProfile = updatedProfile
+                        }
+                        
+                        // Refresh profile chips
+                        setupProfileChips()
+                        
+                        (composeView.parent as? ViewGroup)?.removeView(composeView)
+                    },
+                    onDelete = {
+                        val profileManager = com.prirai.android.nira.browser.profile.ProfileManager.getInstance(requireContext())
+                        
+                        // Switch to default profile if deleting current
+                        if (profile.id == browsingModeManager.currentProfile.id) {
+                            browsingModeManager.currentProfile = com.prirai.android.nira.browser.profile.BrowserProfile.getDefaultProfile()
+                        }
+                        
+                        profileManager.deleteProfile(profile.id)
+                        
+                        // Refresh profile chips
+                        setupProfileChips()
+                        updateTabsDisplay()
+                        
+                        (composeView.parent as? ViewGroup)?.removeView(composeView)
+                    }
+                )
+            }
+        }
+        
+        (binding.root as ViewGroup).addView(composeView)
     }
 
     private fun setupTabsAdapter() {
@@ -851,9 +1030,16 @@ class TabsBottomSheetFragment : BottomSheetDialogFragment() {
         isUpdating = true
 
         val store = requireContext().components.store.state
+        val metadata = com.prirai.android.nira.browser.profile.TabProfileMetadata.getInstance(requireContext())
+        
         val tabs = if (configuration.browserTabType == BrowserTabType.NORMAL) {
-            store.tabs.filter { !it.content.private }
+            // Filter by current profile and non-private
+            val currentProfileId = browsingModeManager.currentProfile.id
+            store.tabs.filter { tab ->
+                !tab.content.private && metadata.getTabProfile(tab.id) == currentProfileId
+            }
         } else {
+            // Private tabs
             store.tabs.filter { it.content.private }
         }
 
@@ -893,10 +1079,24 @@ class TabsBottomSheetFragment : BottomSheetDialogFragment() {
         if (!::tabsAdapter.isInitialized) return
 
         val store = requireContext().components.store.state
+        
         val tabs = if (configuration.browserTabType == BrowserTabType.NORMAL) {
-            store.tabs.filter { !it.content.private }
+            // Filter by current profile using contextId (Gecko-native)
+            val currentProfileContextId = "profile_${browsingModeManager.currentProfile.id}"
+            android.util.Log.d("TabsBottomSheet", "Filtering tabs for contextId=$currentProfileContextId")
+            val filteredTabs = store.tabs.filter { tab ->
+                !tab.content.private && tab.contextId == currentProfileContextId
+            }
+            android.util.Log.d("TabsBottomSheet", "Found ${filteredTabs.size} tabs: ${filteredTabs.map { "id=${it.id}, contextId=${it.contextId}" }}")
+            filteredTabs
         } else {
-            store.tabs.filter { it.content.private }
+            // Private tabs use contextId = "private"
+            android.util.Log.d("TabsBottomSheet", "Filtering private tabs")
+            val filteredTabs = store.tabs.filter { tab ->
+                tab.content.private && tab.contextId == "private"
+            }
+            android.util.Log.d("TabsBottomSheet", "Found ${filteredTabs.size} private tabs")
+            filteredTabs
         }
 
         // Get all islands from island manager
@@ -916,6 +1116,12 @@ class TabsBottomSheetFragment : BottomSheetDialogFragment() {
             .alpha(0.95f)
             .setDuration(50)
             .withEndAction {
+                // Check if binding is still valid (fragment might be detached during animation)
+                if (_binding == null) {
+                    android.util.Log.w("TabsBottomSheet", "Binding is null, skipping update")
+                    return@withEndAction
+                }
+                
                 tabsAdapter.updateData(
                     islands = islandsWithTabs,
                     ungroupedTabs = ungroupedTabs,
@@ -955,35 +1161,50 @@ class TabsBottomSheetFragment : BottomSheetDialogFragment() {
             binding.emptyStateLayout.visibility = View.GONE
         }
 
-        // Set correct tab mode selection
+        // Update UI state after initialization
         if (isInitializing) {
-            binding.tabModeToggle.selectTab(
-                binding.tabModeToggle.getTabAt(browsingModeManager.mode.ordinal)
-            )
             isInitializing = false
         }
     }
 
     private fun animateTabModeTransition(targetMode: BrowserTabType) {
+        // Immediately switch mode without animation if fragment is detaching
+        if (!isAdded || context == null) {
+            return
+        }
+        
         binding.tabsRecyclerView.animate()
             .alpha(0f)
             .setDuration(150)
             .withEndAction {
-                switchToTabMode(targetMode)
-                binding.tabsRecyclerView.animate()
-                    .alpha(1f)
-                    .setDuration(150)
-                    .start()
+                // Double check fragment is still attached before proceeding
+                if (isAdded && context != null && view != null) {
+                    switchToTabMode(targetMode)
+                    binding.tabsRecyclerView.animate()
+                        .alpha(1f)
+                        .setDuration(150)
+                        .start()
+                }
             }
             .start()
     }
 
     private fun switchToTabMode(targetMode: BrowserTabType) {
-        val store = requireContext().components.store.state
+        // Triple check - animation callbacks can fire after detachment
+        if (!isAdded || context == null || view == null) return
+        val ctx = context ?: return
+        val store = ctx.components.store.state
         val targetTabs = if (targetMode == BrowserTabType.NORMAL) {
-            store.tabs.filter { !it.content.private }
+            // Filter by current profile using contextId
+            val currentProfileContextId = "profile_${browsingModeManager.currentProfile.id}"
+            store.tabs.filter { tab ->
+                !tab.content.private && tab.contextId == currentProfileContextId
+            }
         } else {
-            store.tabs.filter { it.content.private }
+            // Private tabs use contextId = "private"
+            store.tabs.filter { tab ->
+                tab.content.private && tab.contextId == "private"
+            }
         }
 
         browsingModeManager.mode = if (targetMode == BrowserTabType.NORMAL) {
@@ -1014,11 +1235,17 @@ class TabsBottomSheetFragment : BottomSheetDialogFragment() {
         val isPrivate = configuration.browserTabType == BrowserTabType.PRIVATE
         val homepage = "about:homepage"
 
-        requireContext().components.tabsUseCases.addTab.invoke(
+        val newTabId = requireContext().components.tabsUseCases.addTab.invoke(
             homepage,
             selectTab = true,
             private = isPrivate
         )
+        
+        // Associate tab with current profile (unless private)
+        if (!isPrivate) {
+            val metadata = com.prirai.android.nira.browser.profile.TabProfileMetadata.getInstance(requireContext())
+            metadata.setTabProfile(newTabId, browsingModeManager.currentProfile.id)
+        }
 
         dismiss()
     }
@@ -1029,9 +1256,10 @@ class TabsBottomSheetFragment : BottomSheetDialogFragment() {
 
         requireContext().components.tabsUseCases.selectTab(tab.id)
 
-        if (tab.content.private && browsingModeManager.mode == BrowsingMode.Normal) {
+        if (tab.content.private && !browsingModeManager.mode.isPrivate) {
             browsingModeManager.mode = BrowsingMode.Private
-        } else if (!tab.content.private && browsingModeManager.mode == BrowsingMode.Private) {
+        } else if (!tab.content.private && browsingModeManager.mode.isPrivate) {
+            val profileManager = com.prirai.android.nira.browser.profile.ProfileManager.getInstance(requireContext())
             browsingModeManager.mode = BrowsingMode.Normal
         }
 

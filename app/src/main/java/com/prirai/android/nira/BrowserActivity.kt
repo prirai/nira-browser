@@ -41,6 +41,7 @@ import com.prirai.android.nira.theme.applyAppTheme
 import com.prirai.android.nira.utils.Utils
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
 import mozilla.components.browser.icons.IconRequest
 import mozilla.components.browser.state.search.SearchEngine
 import mozilla.components.browser.state.state.SessionState
@@ -115,8 +116,13 @@ open class BrowserActivity : LocaleAwareAppCompatActivity(), ComponentCallbacks2
         // OPTIMIZATION: Don't access components.publicSuffixList here - defer it
         // This was triggering lazy initialization chain
 
+        val profileManager = com.prirai.android.nira.browser.profile.ProfileManager.getInstance(this)
+        val initialProfile = profileManager.getActiveProfile()
+        val isPrivate = UserPreferences(this).lastKnownPrivate
+        
         browsingModeManager = createBrowsingModeManager(
-            if (UserPreferences(this).lastKnownPrivate) BrowsingMode.Private else BrowsingMode.Normal
+            if (isPrivate) BrowsingMode.Private else BrowsingMode.Normal,
+            initialProfile
         )
         currentTheme = browsingModeManager.mode
 
@@ -155,6 +161,9 @@ open class BrowserActivity : LocaleAwareAppCompatActivity(), ComponentCallbacks2
                 components.store.dispatch(AppLifecycleAction.ResumeAction)
             }
         })
+        
+        // Setup auto-tagging of new tabs with current profile
+        setupTabProfileTagging()
         
         // Make navigation bar transparent globally to prevent black bar with gesture navigation
         window.navigationBarColor = android.graphics.Color.TRANSPARENT
@@ -235,8 +244,8 @@ open class BrowserActivity : LocaleAwareAppCompatActivity(), ComponentCallbacks2
         val intentProcessors = externalSourceIntentProcessors
         val intentHandled =
             intentProcessors.any { it.process(intent, navHost.navController, this.intent) }
-        browsingModeManager.mode = BrowsingMode.Normal
-
+        
+        // Default mode already set in onCreate
         if (intentHandled) {
             supportFragmentManager
                 .primaryNavigationFragment
@@ -251,13 +260,32 @@ open class BrowserActivity : LocaleAwareAppCompatActivity(), ComponentCallbacks2
             openToBrowser(BrowserDirection.FromGlobal, null)
         }
     }
+    
+    private fun setupTabProfileTagging() {
+        // Tab profile tagging is now handled by ProfileMiddleware
+        // which sets contextId on tab creation for proper Gecko-level cookie isolation
+        // This function kept for compatibility but logic moved to middleware
+    }
 
-    protected open fun createBrowsingModeManager(initialMode: BrowsingMode): BrowsingModeManager {
-        return DefaultBrowsingModeManager(initialMode, UserPreferences(this)) { newMode ->
-            if (newMode != currentTheme) {
-                if (!isFinishing) recreate()
+    protected open fun createBrowsingModeManager(
+        initialMode: BrowsingMode,
+        initialProfile: com.prirai.android.nira.browser.profile.BrowserProfile
+    ): BrowsingModeManager {
+        return DefaultBrowsingModeManager(
+            initialMode, 
+            initialProfile,
+            UserPreferences(this),
+            { newMode ->
+                // Update current theme but don't recreate - profile switching handles UI updates
+                currentTheme = newMode
+                // Save the private mode state
+                UserPreferences(this).lastKnownPrivate = newMode.isPrivate
+            },
+            { newProfile ->
+                // Profile changed - save to ProfileManager
+                com.prirai.android.nira.browser.profile.ProfileManager.getInstance(this).setActiveProfile(newProfile)
             }
-        }
+        )
     }
 
     final override fun onBackPressed() {

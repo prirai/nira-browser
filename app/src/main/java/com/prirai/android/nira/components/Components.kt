@@ -194,6 +194,10 @@ open class Components(private val applicationContext: Context) {
     val permissionStorage by lazy { GeckoSitePermissionsStorage(runtime, OnDiskSitePermissionsStorage(applicationContext)) }
 
     val thumbnailStorage by lazy { ThumbnailStorage(applicationContext) }
+    
+    val profileManager by lazy { 
+        com.prirai.android.nira.browser.profile.ProfileManager.getInstance(applicationContext)
+    }
 
     val store by lazy {
         BrowserStore(
@@ -213,6 +217,7 @@ open class Components(private val applicationContext: Context) {
                         LastAccessMiddleware(),
                         SaveToPDFMiddleware(applicationContext),
                         com.prirai.android.nira.browser.tabgroups.TabGroupMiddleware(tabGroupManager),
+                        com.prirai.android.nira.browser.profile.ProfileMiddleware(profileManager),
                         SessionPrioritizationMiddleware(),
                         EnhancedStateCaptureMiddleware(
                             scope = CoroutineScope(SupervisorJob() + Dispatchers.Main),
