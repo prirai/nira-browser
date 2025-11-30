@@ -3,11 +3,12 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:minHeight="48dp"
-    android:background="?attr/colorSurface"
+    android:minHeight="52dp"
+    android:background="?attr/colorSurfaceVariant"
     android:orientation="horizontal"
-    android:paddingHorizontal="8dp"
-    android:paddingVertical="6dp">
+    android:paddingHorizontal="12dp"
+    android:paddingVertical="8dp"
+    android:elevation="2dp">
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/tabGroupsRecyclerView"

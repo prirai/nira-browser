@@ -421,11 +421,20 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
 
                     lastTabIds = currentTabIds
 
-                    // Filter tabs by browsing mode before passing to toolbar
+                    // Filter tabs by browsing mode AND profile before passing to toolbar
                     val activity = requireActivity() as? BrowserActivity
                     val isPrivateMode = activity?.browsingModeManager?.mode?.isPrivate ?: false
+                    val profileManager = com.prirai.android.nira.browser.profile.ProfileManager.getInstance(requireContext())
+                    val currentProfile = profileManager.getActiveProfile()
+                    val currentProfileContextId = if (isPrivateMode) {
+                        "private"
+                    } else {
+                        "profile_${currentProfile.id}"
+                    }
+                    
                     val filteredTabs = state.tabs.filter { tab ->
-                        (tab.content.private == isPrivateMode)
+                        // Match both private mode AND profile context
+                        (tab.content.private == isPrivateMode) && (tab.contextId == currentProfileContextId)
                     }
 
                     modernToolbarManager?.updateTabs(filteredTabs, state.selectedTabId)

@@ -54,29 +54,45 @@ class TabGroupBar @JvmOverloads constructor(
 
         binding.tabGroupsRecyclerView.adapter = adapter
 
-        // Observe groups and current group changes
-        // Observe current group changes
-        lifecycleOwner.lifecycleScope.launch {
-            tabGroupManager.currentGroup.collect { currentGroup ->
-                updateCurrentGroup(currentGroup)
-            }
-        }
-
-        // Observe selected tab changes AND its privacy mode
+        // Observe browser store for ALL tabs (not just grouped ones)
         context.components.store.flowScoped(lifecycleOwner) { flow ->
             flow.map { state -> 
                 val selectedTab = state.selectedTab
-                Pair(selectedTab?.id, selectedTab?.content?.private)
+                Triple(state.tabs.map { it.id }, selectedTab?.id, selectedTab?.content?.private)
             }
             .distinctUntilChanged()
-            .collect { (selectedTabId, isPrivate) ->
-                // When selected tab or its privacy mode changes, refresh the group display
-                val currentGroup = tabGroupManager?.currentGroup?.value
-                if (currentGroup != null && currentGroup.tabCount > 1) {
-                    updateCurrentGroup(currentGroup)
-                } else if (isVisible && currentGroup != null) {
-                    // Still update to reflect current selection even if not showing
-                    adapter?.updateCurrentGroup(currentGroup, selectedTabId)
+            .collect { (allTabIds, selectedTabId, isPrivate) ->
+                // Get browsing mode from BrowserActivity
+                val activity = context as? com.prirai.android.nira.BrowserActivity
+                val currentBrowsingMode = activity?.browsingModeManager?.mode?.isPrivate ?: false
+                val currentProfile = activity?.browsingModeManager?.currentProfile
+                
+                // Filter tabs by current profile and privacy mode
+                val store = context.components.store.state
+                val filteredTabIds = allTabIds.filter { tabId ->
+                    val tab = store.tabs.find { it.id == tabId }
+                    val tabIsPrivate = tab?.content?.private ?: false
+                    
+                    // Check privacy mode AND profile contextId
+                    if (tabIsPrivate != currentBrowsingMode) {
+                        false
+                    } else if (currentBrowsingMode) {
+                        // Private tabs
+                        tab?.contextId == "private"
+                    } else {
+                        // Normal tabs: check profile contextId
+                        val expectedContextId = "profile_${currentProfile?.id ?: "default"}"
+                        tab?.contextId == expectedContextId
+                    }
+                }
+                
+                // Create a virtual group with all filtered tabs
+                if (filteredTabIds.isNotEmpty()) {
+                    val virtualGroup = TabGroupWithTabs(
+                        group = TabGroup(id = "virtual", name = "All Tabs", color = "blue", createdAt = 0, isActive = true),
+                        tabIds = filteredTabIds
+                    )
+                    updateCurrentGroup(virtualGroup)
                 }
             }
         }
@@ -124,23 +140,35 @@ class TabGroupBar @JvmOverloads constructor(
     }
 
     private fun updateCurrentGroup(currentGroup: TabGroupWithTabs?) {
-        // Filter tabs to only show those matching current browsing mode
+        // Filter tabs to only show those matching current browsing mode AND profile
         val filteredGroup = if (currentGroup != null) {
             val browserState = context.components.store.state
             
             // Get browsing mode from BrowserActivity
             val activity = context as? com.prirai.android.nira.BrowserActivity
             val isPrivateMode = activity?.browsingModeManager?.mode?.isPrivate ?: false
+            val currentProfile = activity?.browsingModeManager?.currentProfile
             
-            // Filter tab IDs to only include those from current browsing mode
+            // Filter tab IDs to only include those from current browsing mode AND profile
             val filteredTabIds = currentGroup.tabIds.filter { tabId ->
                 val tab = browserState.tabs.find { it.id == tabId }
                 val tabIsPrivate = tab?.content?.private ?: false
-                tabIsPrivate == isPrivateMode
+                
+                // Check privacy mode AND profile contextId
+                if (tabIsPrivate != isPrivateMode) {
+                    false
+                } else if (isPrivateMode) {
+                    // Private tabs always use contextId = "private"
+                    tab?.contextId == "private"
+                } else {
+                    // Normal tabs: check profile contextId
+                    val expectedContextId = "profile_${currentProfile?.id ?: "default"}"
+                    tab?.contextId == expectedContextId
+                }
             }
             
-            // Only show group if it has multiple tabs after filtering
-            if (filteredTabIds.size > 1) {
+            // Show group even with just one tab (changed from >= 1 instead of > 1)
+            if (filteredTabIds.isNotEmpty()) {
                 TabGroupWithTabs(currentGroup.group, filteredTabIds)
             } else {
                 null
@@ -149,8 +177,8 @@ class TabGroupBar @JvmOverloads constructor(
             null
         }
         
-        // Only show if filtered group has multiple tabs
-        val shouldShow = filteredGroup != null && filteredGroup.tabCount > 1
+        // Show if filtered group has any tabs (changed from > 1 to isNotEmpty)
+        val shouldShow = filteredGroup != null && filteredGroup.tabIds.isNotEmpty()
 
         if (shouldShow) {
             // Get selected tab ID from the browser store

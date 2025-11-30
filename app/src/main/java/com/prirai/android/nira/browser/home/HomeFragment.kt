@@ -316,7 +316,7 @@ class HomeFragment : Fragment() {
         }
 
         // Apply private browsing theme
-        if (browsingModeManager.mode == BrowsingMode.Private) {
+        if (browsingModeManager.mode.isPrivate) {
             setupPrivateBrowsingTheme()
         } else {
             setupNormalBrowsingTheme()

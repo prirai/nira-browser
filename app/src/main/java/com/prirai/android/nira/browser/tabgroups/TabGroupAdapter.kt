@@ -65,131 +65,71 @@ class TabGroupAdapter(
                 val store = binding.root.context.components.store
                 val faviconCache = binding.root.context.components.faviconCache
 
-                // Create circular favicon for each tab in the group (maintain original order)
+                // Create pill-shaped tab for each tab in the group (maintain original order)
                 groupWithTabs.tabIds.forEachIndexed { index, tabId ->
                     val tab = store.state.tabs.find { it.id == tabId }
                     if (tab != null) {
-                        createFaviconCircle(faviconContainer, tab, tabId == selectedTabId, faviconCache)
+                        createTabPill(faviconContainer, tab, tabId == selectedTabId, faviconCache)
                     }
                 }
             }
         }
 
-        private fun createFaviconCircle(
+        private fun createTabPill(
             container: LinearLayout,
             tab: mozilla.components.browser.state.state.TabSessionState,
             isSelected: Boolean,
             faviconCache: com.prirai.android.nira.utils.FaviconCache
         ) {
             val context = container.context
-            val faviconView = LayoutInflater.from(context)
-                .inflate(R.layout.tab_favicon_circle, container, false)
+            val pillView = LayoutInflater.from(context)
+                .inflate(R.layout.tab_pill_item, container, false) as com.google.android.material.card.MaterialCardView
 
-            val faviconContainer = faviconView.findViewById<FrameLayout>(R.id.faviconContainer)
-            val imageView = faviconView.findViewById<ImageView>(R.id.faviconImage)
-            val selectionIndicator = faviconView.findViewById<View>(R.id.selectionIndicator)
-            val closeButton = faviconView.findViewById<ImageView>(R.id.closeButton)
+            val faviconImage = pillView.findViewById<ImageView>(R.id.faviconImage)
+            val tabTitle = pillView.findViewById<android.widget.TextView>(R.id.tabTitle)
+            val closeButton = pillView.findViewById<ImageView>(R.id.closeButton)
 
             // Set selection state
-            selectionIndicator.isVisible = isSelected
+            pillView.isSelected = isSelected
 
-            // Show close button on hover/long press (for now always visible for testing)
-            closeButton.isVisible = true
+            // Set tab title
+            val title = tab.content.title.ifBlank { tab.content.url }
+            tabTitle.text = if (title.length > 20) {
+                title.substring(0, 20) + "..."
+            } else {
+                title
+            }
 
-            // Set favicon with smart circular clipping
+            // Set favicon
             if (tab.content.icon != null) {
-                val icon = tab.content.icon!!
-                val minDimension = kotlin.math.min(icon.width, icon.height)
-
-                // Create circular bitmap with proper sizing
-                val circularIcon = android.graphics.Bitmap.createBitmap(
-                    minDimension,
-                    minDimension,
-                    android.graphics.Bitmap.Config.ARGB_8888
-                )
-                val canvas = android.graphics.Canvas(circularIcon)
-                val paint = android.graphics.Paint().apply {
-                    isAntiAlias = true
-                }
-
-                // Draw circular background
-                val radius = minDimension / 2f
-                canvas.drawCircle(radius, radius, radius, paint)
-
-                // Clip to circle and draw original icon
-                paint.xfermode = android.graphics.PorterDuffXfermode(android.graphics.PorterDuff.Mode.SRC_IN)
-
-                // Scale and center the original icon
-                val srcRect = android.graphics.Rect(
-                    (icon.width - minDimension) / 2,
-                    (icon.height - minDimension) / 2,
-                    (icon.width + minDimension) / 2,
-                    (icon.height + minDimension) / 2
-                )
-                val dstRect = android.graphics.Rect(0, 0, minDimension, minDimension)
-                canvas.drawBitmap(icon, srcRect, dstRect, paint)
-
-                imageView.setImageBitmap(circularIcon)
+                faviconImage.setImageBitmap(tab.content.icon)
             } else {
                 // Try to load from cache
                 CoroutineScope(Dispatchers.Main).launch {
                     val cachedIcon = faviconCache.loadFavicon(tab.content.url)
                     if (cachedIcon != null) {
-                        imageView.setImageBitmap(cachedIcon)
+                        faviconImage.setImageBitmap(cachedIcon)
                     } else {
                         // Fallback to default icon
-                        imageView.setImageResource(R.drawable.ic_baseline_link)
+                        faviconImage.setImageResource(R.drawable.ic_baseline_link)
                     }
                 }
             }
 
-            // Set touch listener to distinguish between tap and drag
-            val touchListener = createTapOnlyTouchListener(tab.id)
-            faviconView.setOnTouchListener(touchListener)
-            faviconContainer.setOnTouchListener(touchListener)
-
-            // Set close button with tap-only touch listener
-            closeButton.setOnTouchListener { v, event ->
-                when (event.action) {
-                    MotionEvent.ACTION_DOWN -> {
-                        v.isPressed = true
-                        true
-                    }
-
-                    MotionEvent.ACTION_UP -> {
-                        if (v.isPressed) {
-                            v.isPressed = false
-                            v.performClick()
-                            // Close the tab
-                            CoroutineScope(Dispatchers.Main).launch {
-                                try {
-                                    val tabsUseCases = context.components.tabsUseCases
-                                    tabsUseCases.removeTab(tab.id)
-                                } catch (e: Exception) {
-                                }
-                            }
-                        }
-                        true
-                    }
-
-                    MotionEvent.ACTION_CANCEL -> {
-                        v.isPressed = false
-                        true
-                    }
-
-                    else -> false
-                }
+            // Tab click listener
+            pillView.setOnClickListener {
+                onTabClick(tab.id)
             }
 
-            // Make sure the views are clickable and focusable
-            faviconView.isClickable = true
-            faviconView.isFocusable = true
-            faviconContainer.isClickable = true
-            faviconContainer.isFocusable = true
-            closeButton.isClickable = true
-            closeButton.isFocusable = true
+            // Close button click listener
+            closeButton.setOnClickListener {
+                // Handle close tab
+                val store = context.components.store
+                val tabsUseCases = context.components.tabsUseCases
+                tabsUseCases.removeTab(tab.id)
+            }
 
-            container.addView(faviconView)
+            container.addView(pillView)
         }
 
         /**

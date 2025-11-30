@@ -211,7 +211,7 @@ class AwesomeBarView(
             providersToAdd.addAll(getSelectedSearchSuggestionProvider(context, state))
         }
 
-        if (activity.browsingModeManager.mode == BrowsingMode.Normal) {
+        if (!activity.browsingModeManager.mode.isPrivate) {
             providersToAdd.add(sessionProvider)
         }
 
@@ -231,7 +231,7 @@ class AwesomeBarView(
             providersToRemove.addAll(getSelectedSearchSuggestionProvider(context, state))
         }
 
-        if (activity.browsingModeManager.mode == BrowsingMode.Private) {
+        if (activity.browsingModeManager.mode.isPrivate) {
             providersToRemove.add(sessionProvider)
         }
 

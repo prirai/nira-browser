@@ -4,6 +4,7 @@ import android.view.ViewGroup
 import androidx.coordinatorlayout.widget.CoordinatorLayout
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.LifecycleOwner
+import com.prirai.android.nira.browser.profile.BrowserProfile
 import com.prirai.android.nira.components.toolbar.ToolbarPosition
 import com.prirai.android.nira.preferences.UserPreferences
 import mozilla.components.browser.toolbar.BrowserToolbar
@@ -22,7 +23,7 @@ class ModernToolbarManager(
 
     var modernToolbarSystem: ModernToolbarSystem? = null
         private set
-    private var enhancedTabGroupView: EnhancedTabGroupView? = null
+    private var tabGroupWithSwitcher: TabGroupWithProfileSwitcher? = null
     private var modernContextualToolbar: com.prirai.android.nira.toolbar.ContextualBottomToolbar? =
         null
     private var browserToolbar: BrowserToolbar? = null
@@ -138,7 +139,7 @@ class ModernToolbarManager(
     }
 
     private fun createEnhancedTabGroupView() {
-        enhancedTabGroupView = EnhancedTabGroupView(container.context).apply {
+        tabGroupWithSwitcher = TabGroupWithProfileSwitcher(container.context).apply {
             setup(
                 onTabSelected = { tabId ->
                     this@ModernToolbarManager.onTabSelected?.invoke(tabId)
@@ -148,12 +149,30 @@ class ModernToolbarManager(
                 },
                 onNewTabInIsland = { islandId ->
                     this@ModernToolbarManager.onNewTabInIsland?.invoke(islandId)
+                },
+                onProfileSelected = { profile ->
+                    // Switch to the selected profile
+                    val profileManager = com.prirai.android.nira.browser.profile.ProfileManager.getInstance(container.context)
+                    profileManager.setActiveProfile(profile)
+                    profileManager.setPrivateMode(false)
+                    
+                    // Update browsing mode manager
+                    (container.context as? android.app.Activity)?.let { activity ->
+                        (activity as? com.prirai.android.nira.BrowserActivity)?.let { browserActivity ->
+                            browserActivity.browsingModeManager.currentProfile = profile
+                            browserActivity.browsingModeManager.mode = com.prirai.android.nira.browser.BrowsingMode.Normal
+                        }
+                    }
                 }
             )
+            
+            // Update profile icon
+            val profileManager = com.prirai.android.nira.browser.profile.ProfileManager.getInstance(container.context)
+            updateProfileIcon(profileManager.getActiveProfile())
         }
 
         modernToolbarSystem?.addComponent(
-            enhancedTabGroupView!!,
+            tabGroupWithSwitcher!!,
             ModernToolbarSystem.ComponentType.TAB_GROUP
         )
     }
@@ -232,15 +251,15 @@ class ModernToolbarManager(
     }
 
     fun updateTabs(tabs: List<SessionState>, selectedTabId: String?) {
-        enhancedTabGroupView?.updateTabs(tabs, selectedTabId)
+        tabGroupWithSwitcher?.updateTabs(tabs, selectedTabId)
     }
 
     fun recordTabParent(childTabId: String, parentTabId: String) {
-        enhancedTabGroupView?.recordTabParent(childTabId, parentTabId)
+        tabGroupWithSwitcher?.tabGroupView?.recordTabParent(childTabId, parentTabId)
     }
 
     fun autoGroupNewTab(newTabId: String) {
-        enhancedTabGroupView?.autoGroupNewTab(newTabId)
+        tabGroupWithSwitcher?.tabGroupView?.autoGroupNewTab(newTabId)
     }
 
     fun updateNavigationState(canGoBack: Boolean, canGoForward: Boolean) {
