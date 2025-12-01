@@ -53,11 +53,19 @@ class TabGroupDragHelper(
         val toPosition = target.bindingAdapterPosition
         
         if (fromPosition == RecyclerView.NO_POSITION || toPosition == RecyclerView.NO_POSITION) {
+            lastTargetPosition = -1 // Reset when no valid position
             return false
         }
 
-        // Store target for drop handling
-        lastTargetPosition = toPosition
+        val targetItem = adapter.currentList.getOrNull(toPosition)
+        
+        // Only set target position if hovering over valid drop targets
+        // (Group headers or SingleTabs, but not null)
+        if (targetItem != null) {
+            lastTargetPosition = toPosition
+        } else {
+            lastTargetPosition = -1
+        }
         
         return true
     }
@@ -144,6 +152,36 @@ class TabGroupDragHelper(
         if (actionState == ItemTouchHelper.ACTION_STATE_DRAG && isCurrentlyActive) {
             val dragDistance = kotlin.math.abs(dY)
             
+            // Check if we're currently over a valid drop target
+            val currentY = viewHolder.itemView.y + dY
+            var isOverValidTarget = false
+            var currentTargetPosition = -1
+            
+            // Check each item in the adapter to see if we're hovering over it
+            for (i in 0 until adapter.itemCount) {
+                val targetView = recyclerView.layoutManager?.findViewByPosition(i)
+                if (targetView != null) {
+                    val targetTop = targetView.top.toFloat()
+                    val targetBottom = targetView.bottom.toFloat()
+                    
+                    // Check if dragged item overlaps with this target
+                    if (currentY >= targetTop && currentY <= targetBottom) {
+                        val targetItem = adapter.currentList.getOrNull(i)
+                        if (targetItem != null) {
+                            isOverValidTarget = true
+                            currentTargetPosition = i
+                            lastTargetPosition = i
+                        }
+                        break
+                    }
+                }
+            }
+            
+            // If not over a valid target, reset
+            if (!isOverValidTarget && dragDistance < ungroupThreshold) {
+                lastTargetPosition = -1
+            }
+            
             // Check if dragged far enough to ungroup
             val draggedItem = this.draggedItem
             if (draggedItem is TabItem.SingleTab) {
@@ -162,8 +200,8 @@ class TabGroupDragHelper(
                 viewHolder.itemView.alpha = 0.7f
             }
 
-            // Highlight drop target
-            if (lastTargetPosition >= 0 && !isOverUngroupZone) {
+            // Highlight drop target only if actively over it
+            if (lastTargetPosition >= 0 && !isOverUngroupZone && isOverValidTarget) {
                 highlightDropTarget(c, recyclerView, lastTargetPosition)
             }
         }

@@ -295,7 +295,7 @@ class TabsWithGroupsAdapter(
 
         fun bind(group: TabItem.Group, isExpanded: Boolean, selectedId: String?) {
             groupName.text = if (group.name.isBlank()) "" else group.name
-            tabCount.text = "${group.tabs.size} tab${if (group.tabs.size != 1) "s" else ""}"
+            tabCount.text = "${group.tabs.size}" // Just the number
             
             colorStripe.setBackgroundColor(group.color)
 

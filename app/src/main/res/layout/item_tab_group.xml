@@ -44,41 +44,39 @@
                 app:tint="?attr/colorOnSurfaceVariant"
                 tools:ignore="ContentDescription" />
 
-            <!-- Group info -->
-            <LinearLayout
+            <!-- Group name -->
+            <TextView
+                android:id="@+id/groupName"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:layout_marginStart="16dp"
-                android:orientation="vertical">
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:textColor="?attr/colorOnSurface"
+                android:maxLines="1"
+                android:ellipsize="end"
+                tools:text="Work Tabs" />
 
-                <TextView
-                    android:id="@+id/groupName"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:textSize="16sp"
-                    android:textStyle="bold"
-                    android:textColor="?attr/colorOnSurface"
-                    android:maxLines="1"
-                    android:ellipsize="end"
-                    tools:text="Work Tabs" />
-
-                <TextView
-                    android:id="@+id/tabCount"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:textSize="14sp"
-                    android:layout_marginTop="4dp"
-                    android:textColor="?attr/colorOnSurfaceVariant"
-                    tools:text="5 tabs" />
-
-            </LinearLayout>
+            <!-- Tab count in circle -->
+            <TextView
+                android:id="@+id/tabCount"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:layout_marginStart="8dp"
+                android:gravity="center"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                android:textColor="?attr/colorOnSurface"
+                android:background="@drawable/circle_background"
+                tools:text="5" />
 
             <!-- More options button -->
             <ImageView
                 android:id="@+id/moreButton"
                 android:layout_width="40dp"
                 android:layout_height="40dp"
+                android:layout_marginStart="4dp"
                 android:src="@drawable/ic_more_vert"
                 android:padding="8dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
