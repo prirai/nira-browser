@@ -31,11 +31,12 @@ class TabGroupManager(private val context: Context) {
     /**
      * Creates a new tab group with auto-generated name.
      */
-    suspend fun createGroup(name: String? = null): TabGroupWithTabs {
+    suspend fun createGroup(name: String? = null, color: String? = null): TabGroupWithTabs {
         val groupName = name ?: nameGenerator.generateName()
+        val groupColor = color ?: getRandomColor()
         val group = TabGroup(
             name = groupName,
-            color = getRandomColor(),
+            color = groupColor,
             createdAt = System.currentTimeMillis()
         )
 
@@ -169,10 +170,38 @@ class TabGroupManager(private val context: Context) {
     }
 
     /**
+     * Removes a tab from a specific group.
+     */
+    suspend fun removeTabFromGroup(tabId: String, groupId: String) {
+        dao.removeTabFromGroup(tabId, groupId)
+
+        // Update current group if affected
+        if (_currentGroup.value?.group?.id == groupId) {
+            val updatedGroup = _currentGroup.value?.copy(
+                tabIds = _currentGroup.value!!.tabIds - tabId
+            )
+            _currentGroup.value = updatedGroup
+        }
+        
+        // If group becomes empty, delete it
+        val remainingTabs = dao.getTabIdsInGroup(groupId)
+        if (remainingTabs.isEmpty()) {
+            deleteGroup(groupId)
+        }
+    }
+
+    /**
      * Get all active groups.
      */
     suspend fun getAllGroups(): List<TabGroup> {
         return dao.getAllActiveGroups().first()
+    }
+    
+    /**
+     * Gets the group ID for a specific tab.
+     */
+    suspend fun getGroupIdForTab(tabId: String): String? {
+        return dao.getGroupIdForTab(tabId)
     }
 
     /**
@@ -203,6 +232,22 @@ class TabGroupManager(private val context: Context) {
             dao.updateGroup(updatedGroup)
 
             // Update current group if it's the one being renamed
+            if (_currentGroup.value?.group?.id == groupId) {
+                _currentGroup.value = _currentGroup.value?.copy(group = updatedGroup)
+            }
+        }
+    }
+    
+    /**
+     * Changes the color of a group.
+     */
+    suspend fun changeGroupColor(groupId: String, newColor: String) {
+        val group = dao.getGroupById(groupId)
+        if (group != null) {
+            val updatedGroup = group.copy(color = newColor)
+            dao.updateGroup(updatedGroup)
+
+            // Update current group if it's the one being updated
             if (_currentGroup.value?.group?.id == groupId) {
                 _currentGroup.value = _currentGroup.value?.copy(group = updatedGroup)
             }

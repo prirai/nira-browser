@@ -101,6 +101,12 @@ class EnhancedTabGroupView @JvmOverloads constructor(
 
     private fun setupIslandManager() {
         islandManager = TabIslandManager.getInstance(context)
+        
+        // Register listener to refresh display when islands change
+        islandManager.addChangeListener {
+            android.util.Log.d("EnhancedTabGroupView", "Island change detected, refreshing display")
+            refreshDisplay()
+        }
     }
 
     private fun setupItemTouchHelper() {

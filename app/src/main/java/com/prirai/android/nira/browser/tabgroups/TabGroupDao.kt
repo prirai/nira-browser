@@ -42,6 +42,9 @@ interface TabGroupDao {
     @Query("DELETE FROM tab_group_members WHERE tabId = :tabId")
     suspend fun removeTabFromAllGroups(tabId: String)
     
+    @Query("DELETE FROM tab_group_members WHERE tabId = :tabId AND groupId = :groupId")
+    suspend fun removeTabFromGroup(tabId: String, groupId: String)
+    
     @Query("DELETE FROM tab_group_members WHERE groupId = :groupId")
     suspend fun removeAllTabsFromGroup(groupId: String)
     

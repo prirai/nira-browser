@@ -1,101 +1,126 @@
 package com.prirai.android.nira.browser.tabs
 
-import android.content.Context
-import android.graphics.Canvas
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ImageView
 import android.widget.TextView
-import androidx.core.view.isVisible
-import androidx.recyclerview.widget.ItemTouchHelper
+import androidx.recyclerview.widget.DiffUtil
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.card.MaterialCardView
 import com.prirai.android.nira.R
-import com.prirai.android.nira.browser.tabgroups.TabGroupWithTabs
-import com.prirai.android.nira.databinding.ItemTabGroupHeaderBinding
-import com.prirai.android.nira.databinding.ItemTabInListBinding
 import com.prirai.android.nira.ext.components
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import mozilla.components.browser.state.state.TabSessionState
-import mozilla.components.concept.base.images.ImageLoader
-import mozilla.components.concept.base.images.ImageLoadRequest
-import mozilla.components.support.ktx.util.URLStringUtils
 
 /**
- * Adapter for displaying tabs with group support in a single column layout
- * Supports collapsing/expanding groups and drag-and-drop between groups
+ * Adapter for tabs within a group with long-press support
  */
-class TabsWithGroupsAdapter(
-    private val context: Context,
-    private val thumbnailLoader: ImageLoader,
+class GroupTabsAdapter(
     private val onTabClick: (String) -> Unit,
     private val onTabClose: (String) -> Unit,
-    private val onGroupExpand: (String) -> Unit,
-    private val onTabMovedToGroup: (String, String?) -> Unit,
-    private val onTabRemovedFromGroup: (String) -> Unit
-) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
+    private val onTabLongPress: (String, View) -> Boolean
+) : ListAdapter<TabSessionState, GroupTabsAdapter.TabViewHolder>(TabDiffCallback()) {
 
-    private val items = mutableListOf<ListItem>()
-    private val expandedGroups = mutableSetOf<String>()
     private var selectedTabId: String? = null
-    private var draggedItem: ListItem.TabItem? = null
-    private var allTabs = listOf<TabSessionState>()
 
-    companion object {
-        private const val VIEW_TYPE_GROUP_HEADER = 0
-        private const val VIEW_TYPE_TAB = 1
-        private const val VIEW_TYPE_UNGROUPED_HEADER = 2
+    fun updateTabs(tabs: List<TabSessionState>, selectedId: String?) {
+        selectedTabId = selectedId
+        submitList(tabs)
     }
 
-    sealed class ListItem {
-        data class GroupHeader(val group: TabGroupWithTabs, val isExpanded: Boolean) : ListItem()
-        data class TabItem(val tab: TabSessionState, val groupId: String?) : ListItem()
-        object UngroupedHeader : ListItem()
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): TabViewHolder {
+        val view = LayoutInflater.from(parent.context)
+            .inflate(R.layout.item_tab_card, parent, false)
+        return TabViewHolder(view as MaterialCardView)
     }
 
-    fun updateData(
-        groups: List<TabGroupWithTabs>,
-        ungroupedTabs: List<TabSessionState>,
-        selectedTabId: String?
-    ) {
-        this.selectedTabId = selectedTabId
-        this.allTabs = ungroupedTabs + groups.flatMap { group ->
-            group.tabIds.mapNotNull { tabId ->
-                context.components.store.state.tabs.find { it.id == tabId }
-            }
-        }
-        items.clear()
+    override fun onBindViewHolder(holder: TabViewHolder, position: Int) {
+        holder.bind(getItem(position), selectedTabId)
+    }
 
-        // Add grouped tabs
-        for (group in groups) {
-            val isExpanded = expandedGroups.contains(group.group.id)
-            items.add(ListItem.GroupHeader(group, isExpanded))
+    inner class TabViewHolder(private val cardView: MaterialCardView) : RecyclerView.ViewHolder(cardView) {
+        private val favicon: ImageView = cardView.findViewById(R.id.favicon)
+        private val tabTitle: TextView = cardView.findViewById(R.id.tabTitle)
+        private val tabUrl: TextView = cardView.findViewById(R.id.tabUrl)
+        private val closeButton: ImageView = cardView.findViewById(R.id.closeButton)
 
-            if (isExpanded) {
-                for (tabId in group.tabIds) {
-                    // Find the actual tab session
-                    val tab = getTabById(tabId)
-                    if (tab != null) {
-                        items.add(ListItem.TabItem(tab, group.group.id))
+        fun bind(tab: TabSessionState, selectedId: String?) {
+            cardView.isSelected = tab.id == selectedId
+
+            val title = tab.content.title.ifBlank { "New Tab" }
+            tabTitle.text = title
+            tabUrl.text = tab.content.url
+
+            if (tab.content.icon != null) {
+                favicon.setImageBitmap(tab.content.icon)
+            } else {
+                CoroutineScope(Dispatchers.Main).launch {
+                    val context = cardView.context
+                    val faviconCache = context.components.faviconCache
+                    val cachedIcon = faviconCache.loadFavicon(tab.content.url)
+                    if (cachedIcon != null) {
+                        favicon.setImageBitmap(cachedIcon)
+                    } else {
+                        favicon.setImageResource(R.drawable.ic_baseline_link)
                     }
                 }
             }
-        }
 
-        // Add ungrouped tabs section if there are any
-        if (ungroupedTabs.isNotEmpty()) {
-            items.add(ListItem.UngroupedHeader)
-            for (tab in ungroupedTabs) {
-                items.add(ListItem.TabItem(tab, null))
+            cardView.setOnClickListener {
+                onTabClick(tab.id)
+            }
+
+            cardView.setOnLongClickListener {
+                onTabLongPress(tab.id, it)
+            }
+
+            closeButton.setOnClickListener {
+                onTabClose(tab.id)
             }
         }
-
-        notifyDataSetChanged()
     }
 
-    private fun getTabById(tabId: String): TabSessionState? {
-        return context.components.store.state.tabs.find { it.id == tabId }
+    private class TabDiffCallback : DiffUtil.ItemCallback<TabSessionState>() {
+        override fun areItemsTheSame(oldItem: TabSessionState, newItem: TabSessionState): Boolean {
+            return oldItem.id == newItem.id
+        }
+
+        override fun areContentsTheSame(oldItem: TabSessionState, newItem: TabSessionState): Boolean {
+            return oldItem.content.title == newItem.content.title &&
+                    oldItem.content.url == newItem.content.url &&
+                    oldItem.content.icon == newItem.content.icon
+        }
+    }
+}
+
+class TabsWithGroupsAdapter(
+    private val onTabClick: (String) -> Unit,
+    private val onTabClose: (String) -> Unit,
+    private val onGroupClick: (String) -> Unit,
+    private val onGroupMoreClick: (String, View) -> Unit,
+    private val onTabLongPress: (String, View) -> Boolean,
+    private val onGroupTabLongPress: (String, String, View) -> Boolean = { _, _, _ -> false } // tabId, groupId, view
+) : ListAdapter<TabItem, RecyclerView.ViewHolder>(TabItemDiffCallback()) {
+
+    private var selectedTabId: String? = null
+    private val expandedGroups = mutableSetOf<String>()
+
+    companion object {
+        private const val VIEW_TYPE_GROUP = 0
+        private const val VIEW_TYPE_SINGLE_TAB = 1
     }
 
-    fun toggleGroupExpanded(groupId: String) {
+    fun updateItems(items: List<TabItem>, selectedId: String?) {
+        selectedTabId = selectedId
+        submitList(items)
+    }
+
+    fun toggleGroup(groupId: String) {
         if (expandedGroups.contains(groupId)) {
             expandedGroups.remove(groupId)
         } else {
@@ -104,289 +129,155 @@ class TabsWithGroupsAdapter(
         notifyDataSetChanged()
     }
 
-    override fun getItemViewType(position: Int): Int = when (items[position]) {
-        is ListItem.GroupHeader -> VIEW_TYPE_GROUP_HEADER
-        is ListItem.TabItem -> VIEW_TYPE_TAB
-        is ListItem.UngroupedHeader -> VIEW_TYPE_UNGROUPED_HEADER
+    fun expandGroup(groupId: String) {
+        if (!expandedGroups.contains(groupId)) {
+            expandedGroups.add(groupId)
+            notifyDataSetChanged()
+        }
+    }
+
+    fun collapseGroup(groupId: String) {
+        if (expandedGroups.contains(groupId)) {
+            expandedGroups.remove(groupId)
+            notifyDataSetChanged()
+        }
+    }
+
+    override fun getItemViewType(position: Int): Int {
+        return when (getItem(position)) {
+            is TabItem.Group -> VIEW_TYPE_GROUP
+            is TabItem.SingleTab -> VIEW_TYPE_SINGLE_TAB
+        }
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
         return when (viewType) {
-            VIEW_TYPE_GROUP_HEADER -> {
-                val binding = ItemTabGroupHeaderBinding.inflate(
-                    LayoutInflater.from(parent.context),
-                    parent,
-                    false
-                )
-                GroupHeaderViewHolder(binding)
+            VIEW_TYPE_GROUP -> {
+                val view = LayoutInflater.from(parent.context)
+                    .inflate(R.layout.item_tab_group, parent, false)
+                GroupViewHolder(view as MaterialCardView)
             }
-
-            VIEW_TYPE_TAB -> {
-                val binding = ItemTabInListBinding.inflate(
-                    LayoutInflater.from(parent.context),
-                    parent,
-                    false
-                )
-                TabViewHolder(binding)
+            else -> {
+                val view = LayoutInflater.from(parent.context)
+                    .inflate(R.layout.item_tab_card, parent, false)
+                SingleTabViewHolder(view as MaterialCardView)
             }
-
-            VIEW_TYPE_UNGROUPED_HEADER -> {
-                val view = LayoutInflater.from(parent.context).inflate(
-                    R.layout.item_ungrouped_tabs_header,
-                    parent,
-                    false
-                )
-                UngroupedHeaderViewHolder(view)
-            }
-
-            else -> throw IllegalArgumentException("Unknown view type: $viewType")
         }
     }
 
     override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
-        when (val item = items[position]) {
-            is ListItem.GroupHeader -> (holder as GroupHeaderViewHolder).bind(item)
-            is ListItem.TabItem -> (holder as TabViewHolder).bind(item)
-            is ListItem.UngroupedHeader -> (holder as UngroupedHeaderViewHolder).bind()
+        when (val item = getItem(position)) {
+            is TabItem.Group -> {
+                (holder as GroupViewHolder).bind(
+                    item,
+                    expandedGroups.contains(item.groupId),
+                    selectedTabId
+                )
+            }
+            is TabItem.SingleTab -> {
+                (holder as SingleTabViewHolder).bind(item.tab, selectedTabId)
+            }
         }
     }
 
-    override fun getItemCount() = items.size
+    inner class GroupViewHolder(private val cardView: MaterialCardView) : RecyclerView.ViewHolder(cardView) {
+        private val expandIcon: ImageView = cardView.findViewById(R.id.expandIcon)
+        private val colorStripe: View = cardView.findViewById(R.id.colorStripe)
+        private val groupName: TextView = cardView.findViewById(R.id.groupName)
+        private val tabCount: TextView = cardView.findViewById(R.id.tabCount)
+        private val moreButton: ImageView = cardView.findViewById(R.id.moreButton)
+        private val groupHeader: View = cardView.findViewById(R.id.groupHeader)
+        private val tabsRecyclerView: RecyclerView = cardView.findViewById(R.id.groupTabsRecyclerView)
 
-    fun getItem(position: Int): ListItem? = items.getOrNull(position)
+        fun bind(group: TabItem.Group, isExpanded: Boolean, selectedId: String?) {
+            groupName.text = if (group.name.isBlank()) "" else group.name
+            tabCount.text = "${group.tabs.size} tab${if (group.tabs.size != 1) "s" else ""}"
+            
+            colorStripe.setBackgroundColor(group.color)
 
-    fun setDraggedItem(item: ListItem.TabItem?) {
-        draggedItem = item
-    }
+            expandIcon.animate().rotation(if (isExpanded) 180f else 0f).setDuration(200).start()
 
-    fun getDraggedItem() = draggedItem
-
-    inner class GroupHeaderViewHolder(
-        private val binding: ItemTabGroupHeaderBinding
-    ) : RecyclerView.ViewHolder(binding.root) {
-
-        fun bind(item: ListItem.GroupHeader) {
-            val group = item.group
-            val tabCount = group.tabCount
-
-            // Set group name or show tab count if no name
-            binding.groupName.text = if (group.group.name.isNotBlank()) {
-                group.group.name
+            if (isExpanded) {
+                tabsRecyclerView.visibility = View.VISIBLE
+                setupGroupTabs(tabsRecyclerView, group.tabs, group.groupId, selectedId)
             } else {
-                "${tabCount} tabs"
+                tabsRecyclerView.visibility = View.GONE
             }
 
-            // Set expand/collapse icon
-            binding.expandIcon.rotation = if (item.isExpanded) 180f else 0f
-
-            // Show tab count
-            binding.tabCount.text = "$tabCount"
-            binding.tabCount.isVisible = true
-
-            // Handle click to expand/collapse
-            binding.root.setOnClickListener {
-                onGroupExpand(group.group.id)
+            groupHeader.setOnClickListener {
+                onGroupClick(group.groupId)
             }
+
+            moreButton.setOnClickListener {
+                onGroupMoreClick(group.groupId, it)
+            }
+        }
+
+        private fun setupGroupTabs(recyclerView: RecyclerView, tabs: List<TabSessionState>, groupId: String, selectedId: String?) {
+            val adapter = GroupTabsAdapter(
+                onTabClick = onTabClick,
+                onTabClose = onTabClose,
+                onTabLongPress = { tabId, view -> onGroupTabLongPress(tabId, groupId, view) }
+            )
+            recyclerView.layoutManager = LinearLayoutManager(recyclerView.context)
+            recyclerView.adapter = adapter
+            adapter.updateTabs(tabs, selectedId)
         }
     }
 
-    inner class TabViewHolder(
-        private val binding: ItemTabInListBinding
-    ) : RecyclerView.ViewHolder(binding.root) {
+    inner class SingleTabViewHolder(private val cardView: MaterialCardView) : RecyclerView.ViewHolder(cardView) {
+        private val favicon: ImageView = cardView.findViewById(R.id.favicon)
+        private val tabTitle: TextView = cardView.findViewById(R.id.tabTitle)
+        private val tabUrl: TextView = cardView.findViewById(R.id.tabUrl)
+        private val closeButton: ImageView = cardView.findViewById(R.id.closeButton)
 
-        fun bind(item: ListItem.TabItem) {
-            val tab = item.tab
-            val isSelected = tab.id == selectedTabId
+        fun bind(tab: TabSessionState, selectedId: String?) {
+            cardView.isSelected = tab.id == selectedId
 
-            // Set tab title
-            // Show title if available, only show "Loading..." when actively loading a real URL
-            val isRealUrl = tab.content.url.isNotBlank() &&
-                    !tab.content.url.startsWith("about:")
-            binding.tabTitle.text = when {
-                tab.content.title.isNotBlank() -> tab.content.title
-                tab.content.loading && isRealUrl -> "Loading..."
-                tab.content.url.isNotBlank() && !tab.content.url.startsWith("about:") -> URLStringUtils.toDisplayUrl(tab.content.url)
-                else -> "New Tab"
+            val title = tab.content.title.ifBlank { "New Tab" }
+            tabTitle.text = title
+            tabUrl.text = tab.content.url
+
+            if (tab.content.icon != null) {
+                favicon.setImageBitmap(tab.content.icon)
+            } else {
+                CoroutineScope(Dispatchers.Main).launch {
+                    val context = cardView.context
+                    val faviconCache = context.components.faviconCache
+                    val cachedIcon = faviconCache.loadFavicon(tab.content.url)
+                    if (cachedIcon != null) {
+                        favicon.setImageBitmap(cachedIcon)
+                    } else {
+                        favicon.setImageResource(R.drawable.ic_baseline_link)
+                    }
+                }
             }
 
-            // Set URL
-            binding.tabUrl.text = URLStringUtils.toDisplayUrl(tab.content.url)
-            binding.tabUrl.isVisible = true
-
-            // Load favicon or thumbnail
-            loadTabIcon(tab)
-
-            // Highlight selected tab
-            binding.root.alpha = if (isSelected) 1.0f else 0.7f
-            binding.selectedIndicator.isVisible = isSelected
-
-            // Show group indicator if tab is in a group
-            binding.groupIndicator.isVisible = item.groupId != null
-
-            // Click to select tab
-            binding.root.setOnClickListener {
+            cardView.setOnClickListener {
                 onTabClick(tab.id)
             }
 
-            // Close button
-            binding.closeButton.setOnClickListener {
+            cardView.setOnLongClickListener {
+                onTabLongPress(tab.id, it)
+            }
+
+            closeButton.setOnClickListener {
                 onTabClose(tab.id)
             }
         }
-
-        private fun loadTabIcon(tab: TabSessionState) {
-            val iconSize = binding.tabIcon.resources.getDimensionPixelSize(R.dimen.tab_icon_size)
-
-            // Try to load thumbnail first
-            thumbnailLoader.loadIntoView(
-                binding.tabIcon,
-                ImageLoadRequest(tab.id, iconSize, isPrivate = tab.content.private)
-            )
-        }
     }
 
-    inner class UngroupedHeaderViewHolder(
-        itemView: View
-    ) : RecyclerView.ViewHolder(itemView) {
-        private val titleText: TextView = itemView.findViewById(R.id.header_title)
-
-        fun bind() {
-            titleText.text = itemView.context.getString(R.string.ungrouped_tabs)
-        }
-    }
-}
-
-/**
- * ItemTouchHelper callback for drag-and-drop functionality
- */
-class TabDragCallback(
-    private val adapter: TabsWithGroupsAdapter
-) : ItemTouchHelper.Callback() {
-
-    override fun getMovementFlags(
-        recyclerView: RecyclerView,
-        viewHolder: RecyclerView.ViewHolder
-    ): Int {
-        // Only allow dragging for tab items
-        val item = adapter.getItem(viewHolder.bindingAdapterPosition)
-        if (item !is TabsWithGroupsAdapter.ListItem.TabItem) {
-            return makeMovementFlags(0, 0)
-        }
-
-        val dragFlags = ItemTouchHelper.UP or ItemTouchHelper.DOWN
-        return makeMovementFlags(dragFlags, 0)
-    }
-
-    override fun onMove(
-        recyclerView: RecyclerView,
-        viewHolder: RecyclerView.ViewHolder,
-        target: RecyclerView.ViewHolder
-    ): Boolean {
-        // Handle reordering within the same group or moving between groups
-        val fromPosition = viewHolder.bindingAdapterPosition
-        val toPosition = target.bindingAdapterPosition
-
-        val fromItem = adapter.getItem(fromPosition)
-        val toItem = adapter.getItem(toPosition)
-
-        if (fromItem !is TabsWithGroupsAdapter.ListItem.TabItem) {
-            return false
-        }
-
-        when (toItem) {
-            is TabsWithGroupsAdapter.ListItem.TabItem -> {
-                // Moving to another tab position
-                if (fromItem.groupId != toItem.groupId) {
-                    // Moving between groups or from ungrouped to grouped
-                    // This will be handled on drop
-                }
-                return true
-            }
-
-            is TabsWithGroupsAdapter.ListItem.GroupHeader -> {
-                // Dropped on a group header - add to that group
-                return true
-            }
-
-            is TabsWithGroupsAdapter.ListItem.UngroupedHeader -> {
-                // Dropped on ungrouped header - remove from group
-                return true
-            }
-
-            else -> return false
-        }
-    }
-
-    override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {
-        // Not used - we don't support swipe to dismiss in this implementation
-    }
-
-    override fun isLongPressDragEnabled() = true
-
-    override fun isItemViewSwipeEnabled() = false
-
-    override fun onSelectedChanged(viewHolder: RecyclerView.ViewHolder?, actionState: Int) {
-        super.onSelectedChanged(viewHolder, actionState)
-
-        if (actionState == ItemTouchHelper.ACTION_STATE_DRAG && viewHolder != null) {
-            val item = adapter.getItem(viewHolder.bindingAdapterPosition)
-            if (item is TabsWithGroupsAdapter.ListItem.TabItem) {
-                adapter.setDraggedItem(item)
-                viewHolder.itemView.alpha = 0.5f
+    private class TabItemDiffCallback : DiffUtil.ItemCallback<TabItem>() {
+        override fun areItemsTheSame(oldItem: TabItem, newItem: TabItem): Boolean {
+            return when {
+                oldItem is TabItem.Group && newItem is TabItem.Group -> oldItem.groupId == newItem.groupId
+                oldItem is TabItem.SingleTab && newItem is TabItem.SingleTab -> oldItem.tab.id == newItem.tab.id
+                else -> false
             }
         }
-    }
 
-    override fun clearView(recyclerView: RecyclerView, viewHolder: RecyclerView.ViewHolder) {
-        super.clearView(recyclerView, viewHolder)
-        viewHolder.itemView.alpha = 1.0f
-
-        val draggedItem = adapter.getDraggedItem()
-        if (draggedItem != null) {
-            val targetPosition = viewHolder.bindingAdapterPosition
-            val targetItem = adapter.getItem(targetPosition)
-
-            when (targetItem) {
-                is TabsWithGroupsAdapter.ListItem.GroupHeader -> {
-                    // Add to group - callback to handle in fragment
-                }
-
-                is TabsWithGroupsAdapter.ListItem.UngroupedHeader -> {
-                    // Remove from group - callback to handle in fragment
-                }
-
-                is TabsWithGroupsAdapter.ListItem.TabItem -> {
-                    // Reordered within same group or moved to different group
-                }
-
-                else -> {
-                    // No action
-                }
-            }
-
-            adapter.setDraggedItem(null)
-        }
-    }
-
-    override fun onChildDraw(
-        c: Canvas,
-        recyclerView: RecyclerView,
-        viewHolder: RecyclerView.ViewHolder,
-        dX: Float,
-        dY: Float,
-        actionState: Int,
-        isCurrentlyActive: Boolean
-    ) {
-        if (actionState == ItemTouchHelper.ACTION_STATE_DRAG) {
-            // Add elevation and scale effect during drag
-            viewHolder.itemView.translationY = dY
-            if (isCurrentlyActive) {
-                viewHolder.itemView.scaleX = 1.05f
-                viewHolder.itemView.scaleY = 1.05f
-                viewHolder.itemView.elevation = 8f
-            }
-        } else {
-            super.onChildDraw(c, recyclerView, viewHolder, dX, dY, actionState, isCurrentlyActive)
+        override fun areContentsTheSame(oldItem: TabItem, newItem: TabItem): Boolean {
+            return oldItem == newItem
         }
     }
 }
