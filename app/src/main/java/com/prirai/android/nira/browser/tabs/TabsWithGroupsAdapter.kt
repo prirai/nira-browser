@@ -23,7 +23,8 @@ import mozilla.components.browser.state.state.TabSessionState
 class GroupTabsAdapter(
     private val onTabClick: (String) -> Unit,
     private val onTabClose: (String) -> Unit,
-    private val onTabLongPress: (String, View) -> Boolean
+    private val onTabLongPress: (String, View) -> Boolean,
+    private val groupColor: Int
 ) : ListAdapter<TabSessionState, GroupTabsAdapter.TabViewHolder>(TabDiffCallback()) {
 
     private var selectedTabId: String? = null
@@ -52,11 +53,27 @@ class GroupTabsAdapter(
         private val closeButton: ImageView = cardView.findViewById(R.id.closeButton)
 
         fun bind(tab: TabSessionState, selectedId: String?, isFirst: Boolean, isLast: Boolean) {
-            cardView.isSelected = tab.id == selectedId
+            val isSelected = tab.id == selectedId
+            cardView.isSelected = isSelected
 
             val title = tab.content.title.ifBlank { "New Tab" }
             tabTitle.text = title
             tabUrl.text = tab.content.url
+            
+            // Highlight selected tab with thicker border
+            if (isSelected) {
+                val strokeWidth = (3 * cardView.context.resources.displayMetrics.density).toInt()
+                cardView.strokeWidth = strokeWidth
+                cardView.strokeColor = groupColor
+                cardView.cardElevation = 4f * cardView.context.resources.displayMetrics.density
+            } else {
+                cardView.strokeWidth = (1 * cardView.context.resources.displayMetrics.density).toInt()
+                cardView.strokeColor = androidx.core.content.ContextCompat.getColor(
+                    cardView.context,
+                    R.color.tab_card_stroke
+                )
+                cardView.cardElevation = 2f * cardView.context.resources.displayMetrics.density
+            }
             
             // Apply corner radius based on position
             val cornerRadius = 12f * cardView.context.resources.displayMetrics.density
@@ -303,7 +320,7 @@ class TabsWithGroupsAdapter(
 
             if (isExpanded) {
                 tabsRecyclerView.visibility = View.VISIBLE
-                setupGroupTabs(tabsRecyclerView, group.tabs, group.groupId, selectedId)
+                setupGroupTabs(tabsRecyclerView, group.tabs, group.groupId, group.color, selectedId)
             } else {
                 tabsRecyclerView.visibility = View.GONE
             }
@@ -317,11 +334,12 @@ class TabsWithGroupsAdapter(
             }
         }
 
-        private fun setupGroupTabs(recyclerView: RecyclerView, tabs: List<TabSessionState>, groupId: String, selectedId: String?) {
+        private fun setupGroupTabs(recyclerView: RecyclerView, tabs: List<TabSessionState>, groupId: String, groupColor: Int, selectedId: String?) {
             val adapter = GroupTabsAdapter(
                 onTabClick = onTabClick,
                 onTabClose = onTabClose,
-                onTabLongPress = { tabId, view -> onGroupTabLongPress(tabId, groupId, view) }
+                onTabLongPress = { tabId, view -> onGroupTabLongPress(tabId, groupId, view) },
+                groupColor = groupColor
             )
             recyclerView.layoutManager = LinearLayoutManager(recyclerView.context)
             recyclerView.adapter = adapter
@@ -336,11 +354,30 @@ class TabsWithGroupsAdapter(
         private val closeButton: ImageView = cardView.findViewById(R.id.closeButton)
 
         fun bind(tab: TabSessionState, selectedId: String?) {
-            cardView.isSelected = tab.id == selectedId
+            val isSelected = tab.id == selectedId
+            cardView.isSelected = isSelected
 
             val title = tab.content.title.ifBlank { "New Tab" }
             tabTitle.text = title
             tabUrl.text = tab.content.url
+            
+            // Highlight selected tab with thicker border - use purple for ungrouped tabs
+            if (isSelected) {
+                val strokeWidth = (3 * cardView.context.resources.displayMetrics.density).toInt()
+                cardView.strokeWidth = strokeWidth
+                cardView.strokeColor = androidx.core.content.ContextCompat.getColor(
+                    cardView.context,
+                    R.color.ungrouped_tab_color
+                )
+                cardView.cardElevation = 4f * cardView.context.resources.displayMetrics.density
+            } else {
+                cardView.strokeWidth = (1 * cardView.context.resources.displayMetrics.density).toInt()
+                cardView.strokeColor = androidx.core.content.ContextCompat.getColor(
+                    cardView.context,
+                    R.color.tab_card_stroke
+                )
+                cardView.cardElevation = 2f * cardView.context.resources.displayMetrics.density
+            }
 
             if (tab.content.icon != null) {
                 favicon.setImageBitmap(tab.content.icon)

@@ -106,9 +106,7 @@ class UnifiedTabGroupManager private constructor(private val context: Context) {
             }
 
             _groupsState.value = groupDataList
-            Log.d(TAG, "Loaded ${groupDataList.size} groups from database")
         } catch (e: Exception) {
-            Log.e(TAG, "Error loading groups from database", e)
         }
     }
 
@@ -173,7 +171,6 @@ class UnifiedTabGroupManager private constructor(private val context: Context) {
         emitStateUpdate()
         _groupEvents.emit(GroupEvent.GroupCreated(groupData))
 
-        Log.d(TAG, "Created group $groupId with ${tabIds.size} tabs")
         groupData
     }
 
@@ -219,7 +216,6 @@ class UnifiedTabGroupManager private constructor(private val context: Context) {
             _groupEvents.emit(GroupEvent.TabAddedToGroup(tabId, groupId))
         }
 
-        Log.d(TAG, "Added tab $tabId to group $groupId")
         true
     }
 
@@ -253,7 +249,6 @@ class UnifiedTabGroupManager private constructor(private val context: Context) {
             _groupEvents.emit(GroupEvent.TabRemovedFromGroup(tabId, groupId))
         }
 
-        Log.d(TAG, "Removed tab $tabId from group $groupId")
         true
     }
 
@@ -273,7 +268,6 @@ class UnifiedTabGroupManager private constructor(private val context: Context) {
         emitStateUpdate()
         _groupEvents.emit(GroupEvent.GroupRenamed(groupId, newName))
 
-        Log.d(TAG, "Renamed group $groupId to '$newName'")
         true
     }
 
@@ -293,7 +287,6 @@ class UnifiedTabGroupManager private constructor(private val context: Context) {
         emitStateUpdate()
         _groupEvents.emit(GroupEvent.GroupColorChanged(groupId, newColor))
 
-        Log.d(TAG, "Changed color of group $groupId")
         true
     }
 
@@ -318,7 +311,6 @@ class UnifiedTabGroupManager private constructor(private val context: Context) {
             _groupEvents.emit(GroupEvent.GroupDeleted(groupId))
         }
 
-        Log.d(TAG, "Deleted group $groupId")
         true
     }
 
@@ -408,7 +400,6 @@ class UnifiedTabGroupManager private constructor(private val context: Context) {
             emitStateUpdate()
             _groupEvents.emit(GroupEvent.GroupsMerged(sourceGroupId, targetGroupId))
 
-            Log.d(TAG, "Merged group $sourceGroupId into $targetGroupId")
         }
         return true
     }
@@ -430,7 +421,6 @@ class UnifiedTabGroupManager private constructor(private val context: Context) {
         }
         emitStateUpdate()
         _groupEvents.emit(GroupEvent.AllGroupsCleared)
-        Log.d(TAG, "Cleared all groups")
     }
 
     private suspend fun emitStateUpdate() {

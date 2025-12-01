@@ -144,7 +144,7 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
                         tab.content.url,
                         tab.id
                     )
-                }.collect {
+                }.collect { tab ->
                     // Update toolbar when navigation state changes (only if fragment is still attached)
                     if (isAdded && view != null) {
                         updateContextualToolbar()

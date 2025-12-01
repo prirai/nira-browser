@@ -100,7 +100,6 @@ class TabGroupMiddleware(
                                 sourceTabUrl = sourceUrl
                             )
                         } catch (e: Exception) {
-                            android.util.Log.e("TabGroupMiddleware", "Error in cross-domain grouping", e)
                         }
                     }
                 } else {

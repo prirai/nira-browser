@@ -86,46 +86,6 @@ class DefaultBrowserToolbarMenuController(
                 }
             }
 
-            is ToolbarMenu.Item.ForceDarkMode -> {
-                currentSession?.let { session ->
-                    val userPrefs = activity.getSharedPreferences("scw_preferences", android.content.Context.MODE_PRIVATE)
-                    val siteDarkMode = activity.getSharedPreferences("site_dark_mode_override", android.content.Context.MODE_PRIVATE)
-                    val currentUrl = session.content.url
-                    
-                    val globalWebTheme = userPrefs.getInt("web_theme_choice", com.prirai.android.nira.settings.ThemeChoice.SYSTEM.ordinal)
-                    
-                    if (item.isChecked) {
-                        // User wants dark mode for this site
-                        if (globalWebTheme == com.prirai.android.nira.settings.ThemeChoice.LIGHT.ordinal) {
-                            // Global is light, save site override as "dark"
-                            siteDarkMode.edit().putString(currentUrl, "dark").apply()
-                        } else {
-                            // Global is dark or system, remove any override
-                            siteDarkMode.edit().remove(currentUrl).apply()
-                        }
-                    } else {
-                        // User wants light mode for this site
-                        if (globalWebTheme == com.prirai.android.nira.settings.ThemeChoice.DARK.ordinal) {
-                            // Global is dark, save site override as "light"
-                            siteDarkMode.edit().putString(currentUrl, "light").apply()
-                        } else {
-                            // Global is light or system, remove any override
-                            siteDarkMode.edit().remove(currentUrl).apply()
-                        }
-                    }
-                    
-                    // Update engine settings with the new color scheme
-                    val newColorScheme = activity.components.darkEnabled(currentUrl)
-                    activity.components.engine.settings.preferredColorScheme = newColorScheme
-                    
-                    // Reload to apply the changes
-                    sessionUseCases.reload.invoke(
-                        session.id,
-                        LoadUrlFlags.select(LoadUrlFlags.BYPASS_CACHE)
-                    )
-                }
-            }
-
             is ToolbarMenu.Item.InstallWebApp -> {
                 currentSession?.let { session ->
                     MainScope().launch {

@@ -8,7 +8,6 @@ import androidx.lifecycle.LifecycleOwner
 import com.prirai.android.nira.R
 import com.prirai.android.nira.addons.AddonsActivity
 import com.prirai.android.nira.ext.components
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import mozilla.components.browser.menu.WebExtensionBrowserMenuBuilder
 import mozilla.components.browser.menu.item.BrowserMenuDivider
 import mozilla.components.browser.menu.item.BrowserMenuImageSwitch
@@ -17,9 +16,9 @@ import mozilla.components.browser.menu.item.BrowserMenuItemToolbar
 import mozilla.components.browser.state.selector.selectedTab
 import mozilla.components.browser.state.state.TabSessionState
 import mozilla.components.browser.state.store.BrowserStore
+import com.prirai.android.nira.components.toolbar.BrowserMenuImageCheckbox
 
 @Suppress("LargeClass", "LongParameterList")
-@ExperimentalCoroutinesApi
 class BrowserMenu(
     private val context: Context,
     private val store: BrowserStore,
@@ -137,7 +136,6 @@ class BrowserMenu(
             addToHomescreen.apply { visible = ::canAddToHomescreen },
             externalAppItem,
             desktopMode,
-            forceDarkMode,
             BrowserMenuDivider(),
             newPrivateTabItem,
             newTabItem,
@@ -160,7 +158,7 @@ class BrowserMenu(
         onItemTapped.invoke(ToolbarMenu.Item.Settings)
     }
 
-    private val desktopMode = BrowserMenuImageSwitch(
+    private val desktopMode = BrowserMenuImageCheckbox(
         imageResource = R.drawable.ic_desktop,
         label = context.getString(R.string.desktop_mode),
         initialState = {
@@ -168,28 +166,6 @@ class BrowserMenu(
         }
     ) { checked ->
         onItemTapped.invoke(ToolbarMenu.Item.RequestDesktop(checked))
-    }
-
-    private val forceDarkMode = BrowserMenuImageSwitch(
-        imageResource = R.drawable.ic_dark_mode,
-        label = context.getString(R.string.force_dark_mode),
-        initialState = {
-            val userPrefs = context.getSharedPreferences("scw_preferences", android.content.Context.MODE_PRIVATE)
-            val siteDarkMode = context.getSharedPreferences("site_dark_mode_override", android.content.Context.MODE_PRIVATE)
-            val currentUrl = selectedSession?.content?.url ?: ""
-            
-            // Check if site has explicit override
-            if (siteDarkMode.contains(currentUrl)) {
-                val sitePreference = siteDarkMode.getString(currentUrl, "")
-                sitePreference == "dark"
-            } else {
-                // Use global web theme
-                val globalWebTheme = userPrefs.getInt("web_theme_choice", com.prirai.android.nira.settings.ThemeChoice.SYSTEM.ordinal)
-                globalWebTheme == com.prirai.android.nira.settings.ThemeChoice.DARK.ordinal
-            }
-        }
-    ) { checked ->
-        onItemTapped.invoke(ToolbarMenu.Item.ForceDarkMode(checked))
     }
 
     private val installWebApp = BrowserMenuImageText(
