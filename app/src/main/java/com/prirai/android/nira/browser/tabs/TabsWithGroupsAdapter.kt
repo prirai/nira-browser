@@ -40,7 +40,9 @@ class GroupTabsAdapter(
     }
 
     override fun onBindViewHolder(holder: TabViewHolder, position: Int) {
-        holder.bind(getItem(position), selectedTabId)
+        val isFirst = position == 0
+        val isLast = position == itemCount - 1
+        holder.bind(getItem(position), selectedTabId, isFirst, isLast)
     }
 
     inner class TabViewHolder(private val cardView: MaterialCardView) : RecyclerView.ViewHolder(cardView) {
@@ -49,12 +51,52 @@ class GroupTabsAdapter(
         private val tabUrl: TextView = cardView.findViewById(R.id.tabUrl)
         private val closeButton: ImageView = cardView.findViewById(R.id.closeButton)
 
-        fun bind(tab: TabSessionState, selectedId: String?) {
+        fun bind(tab: TabSessionState, selectedId: String?, isFirst: Boolean, isLast: Boolean) {
             cardView.isSelected = tab.id == selectedId
 
             val title = tab.content.title.ifBlank { "New Tab" }
             tabTitle.text = title
             tabUrl.text = tab.content.url
+            
+            // Apply corner radius based on position
+            val cornerRadius = 12f * cardView.context.resources.displayMetrics.density
+            when {
+                isFirst && isLast -> {
+                    // Single item - all corners rounded
+                    cardView.radius = cornerRadius
+                }
+                isFirst -> {
+                    // First item - only top corners rounded
+                    cardView.radius = 0f
+                    cardView.shapeAppearanceModel = cardView.shapeAppearanceModel.toBuilder()
+                        .setTopLeftCornerSize(cornerRadius)
+                        .setTopRightCornerSize(cornerRadius)
+                        .setBottomLeftCornerSize(0f)
+                        .setBottomRightCornerSize(0f)
+                        .build()
+                }
+                isLast -> {
+                    // Last item - only bottom corners rounded
+                    cardView.radius = 0f
+                    cardView.shapeAppearanceModel = cardView.shapeAppearanceModel.toBuilder()
+                        .setTopLeftCornerSize(0f)
+                        .setTopRightCornerSize(0f)
+                        .setBottomLeftCornerSize(cornerRadius)
+                        .setBottomRightCornerSize(cornerRadius)
+                        .build()
+                }
+                else -> {
+                    // Middle items - no corners rounded
+                    cardView.radius = 0f
+                }
+            }
+            
+            // Remove margins between items in a group
+            val layoutParams = cardView.layoutParams as? ViewGroup.MarginLayoutParams
+            layoutParams?.let {
+                it.setMargins(0, 0, 0, 0)
+                cardView.layoutParams = it
+            }
 
             if (tab.content.icon != null) {
                 favicon.setImageBitmap(tab.content.icon)

@@ -570,15 +570,16 @@ class ModernTabPillAdapter(
         }
 
         private fun animateClick() {
+            // Quick, subtle click animation
             cardView.animate()
-                .scaleX(0.95f)
-                .scaleY(0.95f)
-                .setDuration(100)
+                .scaleX(0.98f)
+                .scaleY(0.98f)
+                .setDuration(50)
                 .withEndAction {
                     cardView.animate()
-                        .scaleX(1.02f)
-                        .scaleY(1.02f)
-                        .setDuration(100)
+                        .scaleX(1.0f)
+                        .scaleY(1.0f)
+                        .setDuration(50)
                         .start()
                 }
                 .start()
