@@ -79,7 +79,7 @@ import mozilla.components.feature.session.PictureInPictureFeature
 import mozilla.components.feature.session.SessionFeature
 import mozilla.components.feature.session.SwipeRefreshFeature
 import mozilla.components.feature.sitepermissions.SitePermissionsFeature
-import mozilla.components.feature.webauthn.WebAuthnFeature
+import com.prirai.android.nira.auth.PasskeyAuthFeature
 import mozilla.components.lib.state.ext.consumeFlow
 import mozilla.components.support.base.feature.ActivityResultHandler
 import mozilla.components.support.base.feature.PermissionsFeature
@@ -138,7 +138,7 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
     private var fullScreenMediaSessionFeature =
         ViewBoundFeatureWrapper<MediaSessionFullscreenFeature>()
     private val searchFeature = ViewBoundFeatureWrapper<SearchFeature>()
-    private val webAuthnFeature = ViewBoundFeatureWrapper<WebAuthnFeature>()
+    private val passkeyAuthFeature = ViewBoundFeatureWrapper<PasskeyAuthFeature>()
     private var pipFeature: PictureInPictureFeature? = null
     val readerViewFeature = ViewBoundFeatureWrapper<ReaderModeIntegration>()
     private val reloadStopButtonFeature = ViewBoundFeatureWrapper<ReloadStopButtonIntegration>()
@@ -405,14 +405,13 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
             view = view
         )
 
-        webAuthnFeature.set(
-            feature = WebAuthnFeature(
+        passkeyAuthFeature.set(
+            feature = PasskeyAuthFeature(
                 engine = requireContext().components.engine,
                 activity = requireActivity(),
-                exitFullScreen = {
-                    requireContext().components.sessionUseCases.exitFullscreen.invoke()
-                }
-            ) { store.state.selectedTabId },
+                store = store,
+                onGetTabId = { store.state.selectedTabId }
+            ),
             owner = this,
             view = view
         )
