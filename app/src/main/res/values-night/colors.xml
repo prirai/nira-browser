@@ -16,4 +16,9 @@
 
     <!-- Selected tab highlight -->
     <color name="selected_tab_highlight">#263238</color>
+    
+    <!-- Tab card colors (dark mode) -->
+    <color name="tab_card_background">#2C2C2C</color>
+    <color name="tab_card_stroke">#404040</color>
+    <color name="tab_sheet_background">#1E1E1E</color>
 </resources>

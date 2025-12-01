@@ -43,21 +43,48 @@ class TabGroupWithProfileSwitcher @JvmOverloads constructor(
                 LayoutParams.MATCH_PARENT,
                 LayoutParams.WRAP_CONTENT
             )
+            // Add padding at the end to make room for profile switcher
+            // Profile pill: 40dp (no margin since it's flush to edge)
+            val endPadding = (40 * resources.displayMetrics.density).toInt()
+            setPadding(paddingLeft, paddingTop, endPadding, paddingBottom)
         }
         addView(tabGroupView)
 
         // Create profile switcher pill (above tabs) - emoji only
         profilePillCard = CardView(context).apply {
             layoutParams = LayoutParams(
-                (40 * resources.displayMetrics.density).toInt(), // 40dp width (square-ish)
+                (40 * resources.displayMetrics.density).toInt(), // 40dp width
                 (40 * resources.displayMetrics.density).toInt() // 40dp height
             ).apply {
                 gravity = Gravity.END or Gravity.CENTER_VERTICAL
-                marginEnd = (8 * resources.displayMetrics.density).toInt() // 8dp margin
+                marginEnd = 0 // No margin - flush to the right edge
             }
             
-            radius = (20 * resources.displayMetrics.density) // 20dp corner radius (circular)
+            radius = 0f // No radius - will apply custom shape
             cardElevation = 8f // Higher elevation to appear above tabs
+            
+            // Apply custom background with rounded left corners only
+            post {
+                val bg = GradientDrawable().apply {
+                    val cornerRadius = 20f * resources.displayMetrics.density
+                    cornerRadii = floatArrayOf(
+                        cornerRadius, cornerRadius, // top-left
+                        0f, 0f,                     // top-right (square)
+                        0f, 0f,                     // bottom-right (square)
+                        cornerRadius, cornerRadius  // bottom-left
+                    )
+                    setColor(ContextCompat.getColor(context, android.R.color.white))
+                    
+                    // Add elevation shadow effect
+                    val isDark = context.resources.configuration.uiMode and 
+                        android.content.res.Configuration.UI_MODE_NIGHT_MASK ==
+                        android.content.res.Configuration.UI_MODE_NIGHT_YES
+                    if (isDark) {
+                        setColor(ContextCompat.getColor(context, android.R.color.darker_gray))
+                    }
+                }
+                background = bg
+            }
             
             // Inner container for pill content
             val pillContent = LinearLayout(context).apply {
