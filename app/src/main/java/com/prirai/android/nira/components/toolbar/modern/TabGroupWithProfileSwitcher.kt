@@ -1,12 +1,16 @@
 package com.prirai.android.nira.components.toolbar.modern
 
 import android.content.Context
+import android.graphics.drawable.GradientDrawable
 import android.util.AttributeSet
 import android.view.Gravity
 import android.view.View
+import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.PopupMenu
+import android.widget.TextView
+import androidx.cardview.widget.CardView
 import androidx.core.content.ContextCompat
 import com.prirai.android.nira.R
 import com.prirai.android.nira.browser.profile.BrowserProfile
@@ -14,76 +18,96 @@ import com.prirai.android.nira.browser.profile.ProfileManager
 import mozilla.components.browser.state.state.SessionState
 
 /**
- * Container that wraps EnhancedTabGroupView and adds a profile switcher button at the end
+ * Container that wraps EnhancedTabGroupView and adds a profile switcher pill at the end
  */
 class TabGroupWithProfileSwitcher @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,
     defStyleAttr: Int = 0
-) : LinearLayout(context, attrs, defStyleAttr) {
+) : FrameLayout(context, attrs, defStyleAttr) {
 
     val tabGroupView: EnhancedTabGroupView
-    private val profileSwitcherButton: ImageView
+    private val profilePillCard: CardView
+    private val profileEmojiText: TextView
+    private val profileNameText: TextView
     
     private var onProfileSelected: ((BrowserProfile) -> Unit)? = null
 
     init {
-        orientation = HORIZONTAL
-        gravity = Gravity.CENTER_VERTICAL
         clipToPadding = false
         clipChildren = false
 
-        // Create tab group view
+        // Create tab group view (below)
         tabGroupView = EnhancedTabGroupView(context).apply {
             layoutParams = LayoutParams(
-                0,
-                LayoutParams.WRAP_CONTENT,
-                1f // Take all available space
+                LayoutParams.MATCH_PARENT,
+                LayoutParams.WRAP_CONTENT
             )
         }
         addView(tabGroupView)
 
-        // Create profile switcher button
-        profileSwitcherButton = ImageView(context).apply {
+        // Create profile switcher pill (above tabs) - emoji only
+        profilePillCard = CardView(context).apply {
             layoutParams = LayoutParams(
-                resources.getDimensionPixelSize(R.dimen.profile_switcher_size),
-                resources.getDimensionPixelSize(R.dimen.profile_switcher_size)
+                (40 * resources.displayMetrics.density).toInt(), // 40dp width (square-ish)
+                (40 * resources.displayMetrics.density).toInt() // 40dp height
             ).apply {
-                marginStart = resources.getDimensionPixelSize(R.dimen.profile_switcher_margin)
-                marginEnd = resources.getDimensionPixelSize(R.dimen.profile_switcher_margin)
+                gravity = Gravity.END or Gravity.CENTER_VERTICAL
+                marginEnd = (8 * resources.displayMetrics.density).toInt() // 8dp margin
             }
-            setImageResource(android.R.drawable.ic_menu_preferences)
-            scaleType = ImageView.ScaleType.FIT_CENTER
-            contentDescription = "Switch profile"
             
-            // Style the button
-            val padding = resources.getDimensionPixelSize(R.dimen.profile_switcher_padding)
-            setPadding(padding, padding, padding, padding)
+            radius = (20 * resources.displayMetrics.density) // 20dp corner radius (circular)
+            cardElevation = 8f // Higher elevation to appear above tabs
+            
+            // Inner container for pill content
+            val pillContent = LinearLayout(context).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER // Center the emoji
+                val padding = (8 * resources.displayMetrics.density).toInt()
+                setPadding(padding, padding, padding, padding)
+                
+                // Profile emoji only (no name)
+                profileEmojiText = TextView(context).apply {
+                    text = "👤"
+                    textSize = 22f // Larger emoji
+                    gravity = Gravity.CENTER
+                    includeFontPadding = false // Remove extra padding
+                    layoutParams = LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.WRAP_CONTENT,
+                        LinearLayout.LayoutParams.WRAP_CONTENT
+                    )
+                }
+                addView(profileEmojiText)
+                
+                // Hidden profile name (kept for updateProfileIcon compatibility)
+                profileNameText = TextView(context).apply {
+                    text = ""
+                    visibility = View.GONE
+                }
+                
+                // No dropdown icon needed since it's just the emoji
+            }
+            
+            addView(pillContent)
             
             // Add ripple effect
-            val outValue = android.util.TypedValue()
-            context.theme.resolveAttribute(
-                android.R.attr.selectableItemBackgroundBorderless,
-                outValue,
-                true
+            foreground = ContextCompat.getDrawable(
+                context,
+                android.R.drawable.list_selector_background
             )
-            setBackgroundResource(outValue.resourceId)
+            
+            isClickable = true
+            isFocusable = true
             
             setOnClickListener {
+                it.performHapticFeedback(android.view.HapticFeedbackConstants.CONTEXT_CLICK)
                 showProfileSwitcherMenu()
             }
         }
-        addView(profileSwitcherButton)
-
-        // Set background
-        val backgroundColor = if (isDarkMode()) {
-            ContextCompat.getColor(context, android.R.color.background_dark)
-        } else {
-            ContextCompat.getColor(context, android.R.color.background_light)
-        }
-        setBackgroundColor(backgroundColor)
-        elevation = 2f
+        addView(profilePillCard)
     }
+
+    private fun Int.dpToPx(): Int = (this * resources.displayMetrics.density).toInt()
 
     private fun isDarkMode(): Boolean {
         return when (context.resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) {
@@ -101,6 +125,11 @@ class TabGroupWithProfileSwitcher @JvmOverloads constructor(
     ) {
         tabGroupView.setup(onTabSelected, onTabClosed, onIslandRenamed, onNewTabInIsland)
         this.onProfileSelected = onProfileSelected
+        
+        // Initialize with current profile
+        val profileManager = ProfileManager.getInstance(context)
+        val currentProfile = profileManager.getActiveProfile()
+        updateProfileIcon(currentProfile)
     }
 
     fun updateTabs(tabs: List<SessionState>, selectedId: String?) {
@@ -108,10 +137,28 @@ class TabGroupWithProfileSwitcher @JvmOverloads constructor(
     }
 
     fun updateProfileIcon(profile: BrowserProfile) {
-        // Update button to show current profile emoji as text
-        // For now, just use an icon - we'll show emoji in the popup
-        profileSwitcherButton.setImageResource(android.R.drawable.ic_menu_sort_by_size)
-        profileSwitcherButton.setColorFilter(profile.color)
+        profileEmojiText.text = profile.emoji
+        profileNameText.text = profile.name
+        
+        // Update pill background color with profile color (subtle)
+        val isDark = isDarkMode()
+        val backgroundColor = if (isDark) {
+            0xFF1E1E1E.toInt() // Dark surface color
+        } else {
+            0xFFF5F5F5.toInt() // Light surface color
+        }
+        
+        // Add subtle tint of profile color
+        val tintedColor = blendColors(backgroundColor, profile.color, 0.15f)
+        profilePillCard.setCardBackgroundColor(tintedColor)
+    }
+
+    private fun blendColors(color1: Int, color2: Int, ratio: Float): Int {
+        val inverseRatio = 1f - ratio
+        val r = android.graphics.Color.red(color1) * inverseRatio + android.graphics.Color.red(color2) * ratio
+        val g = android.graphics.Color.green(color1) * inverseRatio + android.graphics.Color.green(color2) * ratio
+        val b = android.graphics.Color.blue(color1) * inverseRatio + android.graphics.Color.blue(color2) * ratio
+        return android.graphics.Color.rgb(r.toInt(), g.toInt(), b.toInt())
     }
 
     private fun showProfileSwitcherMenu() {
@@ -120,9 +167,8 @@ class TabGroupWithProfileSwitcher @JvmOverloads constructor(
         val currentProfile = profileManager.getActiveProfile()
         val isPrivate = profileManager.isPrivateMode()
 
-        val popup = PopupMenu(context, profileSwitcherButton, Gravity.END)
-        
-        android.util.Log.d("TabGroupWithProfileSwitcher", "showProfileSwitcherMenu: profiles=${profiles.size}, currentProfile=${currentProfile.name}, isPrivate=$isPrivate")
+        // Create popup menu with Gravity.TOP to appear above the pill
+        val popup = PopupMenu(context, profilePillCard, Gravity.TOP or Gravity.END)
         
         // Add profile options (only regular profiles, NOT private mode)
         profiles.forEachIndexed { index, profile ->
@@ -131,7 +177,6 @@ class TabGroupWithProfileSwitcher @JvmOverloads constructor(
             // Mark current profile
             if (profile.id == currentProfile.id && !isPrivate) {
                 item.isChecked = true
-                android.util.Log.d("TabGroupWithProfileSwitcher", "Marked profile ${profile.name} as checked")
             }
         }
 
@@ -140,15 +185,18 @@ class TabGroupWithProfileSwitcher @JvmOverloads constructor(
 
         popup.setOnMenuItemClickListener { item ->
             val itemId = item.itemId
-            android.util.Log.d("TabGroupWithProfileSwitcher", "Menu item clicked: itemId=$itemId, profilesSize=${profiles.size}")
             
             if (itemId < profiles.size) {
                 // Profile selected
                 val profile = profiles[itemId]
-                android.util.Log.d("TabGroupWithProfileSwitcher", "Profile selected: ${profile.name}")
-                onProfileSelected?.invoke(profile)
                 profileManager.setActiveProfile(profile)
                 profileManager.setPrivateMode(false)
+                
+                // Update the emoji to show the new profile
+                updateProfileIcon(profile)
+                
+                // Notify callback
+                onProfileSelected?.invoke(profile)
                 true
             } else {
                 false
