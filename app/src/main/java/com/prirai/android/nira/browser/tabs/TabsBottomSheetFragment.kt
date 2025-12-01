@@ -294,6 +294,12 @@ class TabsBottomSheetFragment : BottomSheetDialogFragment() {
             
             val tabItems = mutableListOf<TabItem>()
             
+            // Find group containing selected tab to auto-expand it
+            val selectedTabId = store.selectedTabId
+            val groupWithSelectedTab = allGroups.find { group ->
+                group.tabIds.contains(selectedTabId)
+            }
+            
             for (group in allGroups) {
                 val groupTabs = filteredTabs.filter { it.id in group.tabIds }
                 
@@ -304,6 +310,11 @@ class TabsBottomSheetFragment : BottomSheetDialogFragment() {
                         color = group.color,
                         tabs = groupTabs
                     ))
+                    
+                    // Auto-expand group containing selected tab
+                    if (group.id == groupWithSelectedTab?.id) {
+                        tabsAdapter.expandGroup(group.id)
+                    }
                 }
             }
             
@@ -391,21 +402,37 @@ class TabsBottomSheetFragment : BottomSheetDialogFragment() {
 
     private fun showGroupOptionsMenu(groupId: String, view: View) {
         val popup = androidx.appcompat.widget.PopupMenu(requireContext(), view)
-        popup.inflate(R.menu.group_options_menu)
+        
+        // Add menu items to match tab bar options
+        popup.menu.add(0, 1, 0, "Rename Island")
+        popup.menu.add(0, 2, 1, "Change Color")
+        popup.menu.add(0, 3, 2, "Ungroup All Tabs")
+        popup.menu.add(0, 4, 3, "Close All Tabs")
         
         popup.setOnMenuItemClickListener { item ->
             when (item.itemId) {
-                R.id.action_rename_group -> {
+                1 -> { // Rename Island
                     showRenameGroupDialog(groupId)
                     true
                 }
-                R.id.action_change_color -> {
+                2 -> { // Change Color
                     showChangeGroupColorDialog(groupId)
                     true
                 }
-                R.id.action_ungroup -> {
+                3 -> { // Ungroup All Tabs
                     lifecycleScope.launch {
                         unifiedGroupManager.deleteGroup(groupId)
+                        updateTabsDisplay()
+                    }
+                    true
+                }
+                4 -> { // Close All Tabs
+                    lifecycleScope.launch {
+                        val group = unifiedGroupManager.getGroup(groupId)
+                        group?.tabIds?.forEach { tabId ->
+                            requireContext().components.tabsUseCases.removeTab(tabId)
+                        }
+                        // Group will be auto-deleted when tabs are removed
                         updateTabsDisplay()
                     }
                     true

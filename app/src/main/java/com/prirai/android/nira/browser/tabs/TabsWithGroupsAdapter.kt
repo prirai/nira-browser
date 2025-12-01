@@ -75,8 +75,70 @@ class GroupTabsAdapter(
                 onTabClick(tab.id)
             }
 
+            // Add touch listener for drag-out-to-ungroup
+            var startY = 0f
+            var isDragging = false
+            
+            cardView.setOnTouchListener { v, event ->
+                when (event.action) {
+                    android.view.MotionEvent.ACTION_DOWN -> {
+                        startY = event.rawY
+                        isDragging = false
+                        false
+                    }
+                    
+                    android.view.MotionEvent.ACTION_MOVE -> {
+                        val deltaY = kotlin.math.abs(startY - event.rawY)
+                        
+                        if (deltaY > 30 && !isDragging) {
+                            isDragging = true
+                            v.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS)
+                        }
+                        
+                        if (isDragging) {
+                            // Visual feedback during drag
+                            val progress = (deltaY / 150f).coerceIn(0f, 1f)
+                            cardView.alpha = 1f - (progress * 0.3f)
+                            cardView.scaleX = 1f - (progress * 0.1f)
+                            cardView.scaleY = 1f - (progress * 0.1f)
+                            true
+                        } else {
+                            false
+                        }
+                    }
+                    
+                    android.view.MotionEvent.ACTION_UP, android.view.MotionEvent.ACTION_CANCEL -> {
+                        if (isDragging) {
+                            val deltaY = kotlin.math.abs(startY - event.rawY)
+                            if (deltaY > 150) {
+                                // Trigger ungroup - call long press to show menu
+                                cardView.performLongClick()
+                            } else {
+                                // Spring back
+                                cardView.animate()
+                                    .alpha(1f)
+                                    .scaleX(1f)
+                                    .scaleY(1f)
+                                    .setDuration(200)
+                                    .start()
+                            }
+                            isDragging = false
+                            true
+                        } else {
+                            false
+                        }
+                    }
+                    
+                    else -> false
+                }
+            }
+
             cardView.setOnLongClickListener {
-                onTabLongPress(tab.id, it)
+                if (!isDragging) {
+                    onTabLongPress(tab.id, it)
+                } else {
+                    false
+                }
             }
 
             closeButton.setOnClickListener {

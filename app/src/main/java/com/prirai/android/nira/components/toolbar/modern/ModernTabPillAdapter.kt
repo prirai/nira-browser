@@ -278,6 +278,7 @@ class ModernTabPillAdapter(
         private val selectionIndicator: View = itemView.findViewById(R.id.selectionIndicator)
 
         private var currentTabId: String? = null
+        private var isDragging = false
 
         fun bind(item: TabPillItem.Tab, isSelected: Boolean) {
             val tab = item.session
@@ -313,8 +314,11 @@ class ModernTabPillAdapter(
 
             // Add long-press for context menu
             cardView.setOnLongClickListener {
-                vibrateHaptic()
-                showStandaloneTabContextMenu(cardView, tab.id)
+                // Don't show menu if we're dragging
+                if (!isDragging) {
+                    vibrateHaptic()
+                    showStandaloneTabContextMenu(cardView, tab.id)
+                }
                 true
             }
 
