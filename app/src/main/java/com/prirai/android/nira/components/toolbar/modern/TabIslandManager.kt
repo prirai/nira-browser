@@ -1,41 +1,39 @@
 package com.prirai.android.nira.components.toolbar.modern
 
 import android.content.Context
-import android.content.SharedPreferences
-import com.squareup.moshi.Moshi
-import com.squareup.moshi.Types
-import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import mozilla.components.browser.state.state.SessionState
+import com.prirai.android.nira.browser.tabgroups.TabGroupManager
+import com.prirai.android.nira.browser.tabgroups.UnifiedTabGroupManager
+import com.prirai.android.nira.browser.tabgroups.TabGroupData
+import com.prirai.android.nira.ext.components
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import android.util.Log
 
 /**
  * Manages Tab Islands - grouping, ungrouping, renaming, collapsing, and persistence.
- * Handles automatic grouping based on parent-child relationships and manual grouping.
+ * Now uses UnifiedTabGroupManager as backend for synchronization with tab sheet.
+ * This class provides tab bar specific functionality while delegating persistence
+ * to the unified manager.
  */
 class TabIslandManager(private val context: Context) {
 
-    private val prefs: SharedPreferences = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-    private val moshi = Moshi.Builder()
-        .add(KotlinJsonAdapterFactory())
-        .build()
-
-    // In-memory cache of islands
-    private val islands = mutableMapOf<String, TabIsland>()
-
-    // Map of tab ID to island ID for quick lookup
-    private val tabToIslandMap = mutableMapOf<String, String>()
-
-    // Track parent-child relationships for automatic grouping
-    private val parentChildRelationships = mutableMapOf<String, String>()
-
-    init {
-        loadIslands()
+    // Delegate persistence to unified manager
+    private val unifiedManager: UnifiedTabGroupManager by lazy { 
+        UnifiedTabGroupManager.getInstance(context)
     }
+    
+    private val scope = CoroutineScope(Dispatchers.Main)
+    
+    // UI-only state for collapse/expand (not persisted)
+    private val collapseState = mutableMapOf<String, Boolean>()
+    
+    // Listeners for island changes
+    private val changeListeners = mutableListOf<() -> Unit>()
 
     companion object {
-        private const val PREFS_NAME = "tab_islands"
-        private const val KEY_ISLANDS = "islands"
-        private const val KEY_TAB_TO_ISLAND_MAP = "tab_to_island_map"
-        private const val KEY_PARENT_CHILD_MAP = "parent_child_map"
+        private const val TAG = "TabIslandManager"
 
         @Volatile
         private var instance: TabIslandManager? = null
@@ -46,6 +44,39 @@ class TabIslandManager(private val context: Context) {
             }
         }
     }
+    
+    /**
+     * Register a listener for island changes
+     */
+    fun addChangeListener(listener: () -> Unit) {
+        if (!changeListeners.contains(listener)) {
+            changeListeners.add(listener)
+        }
+    }
+    
+    /**
+     * Unregister a listener
+     */
+    fun removeChangeListener(listener: () -> Unit) {
+        changeListeners.remove(listener)
+    }
+    
+    /**
+     * Notify all listeners of changes
+     */
+    private fun notifyListeners() {
+        changeListeners.forEach { it.invoke() }
+    }
+
+    init {
+        // Listen to unified manager for changes
+        scope.launch {
+            unifiedManager.groupEvents.collect {
+                notifyListeners()
+            }
+        }
+    }
+
 
     /**
      * Creates a new island from the given tabs
@@ -55,45 +86,43 @@ class TabIslandManager(private val context: Context) {
         name: String? = null,
         colorIndex: Int? = null
     ): TabIsland {
-        // Remove tabs from existing islands first
-        tabIds.forEach { tabId ->
-            tabToIslandMap[tabId]?.let { islandId ->
-                removeTabFromIsland(tabId, islandId)
-            }
+        Log.d(TAG, "createIsland: Creating island with ${tabIds.size} tabs, name=$name")
+        
+        val color = if (colorIndex != null) {
+            TabIsland.DEFAULT_COLORS[colorIndex % TabIsland.DEFAULT_COLORS.size]
+        } else {
+            TabIsland.DEFAULT_COLORS.random()
         }
-
-        val island = TabIsland.create(
-            tabIds = tabIds,
-            colorIndex = colorIndex ?: islands.size,
-            name = name
+        
+        scope.launch {
+            val group = unifiedManager.createGroup(
+                tabIds = tabIds,
+                name = name ?: "",
+                color = color
+            )
+            Log.d(TAG, "createIsland: Created group ${group.id}")
+        }
+        
+        // Return optimistic result
+        return TabIsland(
+            id = java.util.UUID.randomUUID().toString(),
+            name = name ?: "",
+            color = color,
+            tabIds = tabIds.toMutableList(),
+            isCollapsed = false
         )
-
-        islands[island.id] = island
-        tabIds.forEach { tabId ->
-            tabToIslandMap[tabId] = island.id
-        }
-
-        saveIslands()
-        return island
     }
 
     /**
      * Adds a tab to an existing island
      */
     fun addTabToIsland(tabId: String, islandId: String): Boolean {
-        val island = islands[islandId] ?: return false
+        Log.d(TAG, "addTabToIsland: Adding tab $tabId to island $islandId")
 
-        // Remove from previous island if exists
-        tabToIslandMap[tabId]?.let { previousIslandId ->
-            if (previousIslandId != islandId) {
-                removeTabFromIsland(tabId, previousIslandId)
-            }
+        scope.launch {
+            unifiedManager.addTabToGroup(tabId, islandId)
         }
-
-        islands[islandId] = island.withTabAdded(tabId)
-        tabToIslandMap[tabId] = islandId
-
-        saveIslands()
+        
         return true
     }
 
@@ -101,17 +130,12 @@ class TabIslandManager(private val context: Context) {
      * Removes a tab from an island
      */
     fun removeTabFromIsland(tabId: String, islandId: String): Boolean {
-        val island = islands[islandId] ?: return false
+        Log.d(TAG, "removeTabFromIsland: Removing tab $tabId from island $islandId")
 
-        islands[islandId] = island.withTabRemoved(tabId)
-        tabToIslandMap.remove(tabId)
-
-        // If island is now empty, remove it
-        if (island.isEmpty()) {
-            islands.remove(islandId)
+        scope.launch {
+            unifiedManager.removeTabFromGroup(tabId)
         }
-
-        saveIslands()
+        
         return true
     }
 
@@ -119,17 +143,19 @@ class TabIslandManager(private val context: Context) {
      * Removes a tab from any island it belongs to
      */
     fun removeTabFromAnyIsland(tabId: String): Boolean {
-        val islandId = tabToIslandMap[tabId] ?: return false
-        return removeTabFromIsland(tabId, islandId)
+        scope.launch {
+            unifiedManager.removeTabFromGroup(tabId)
+        }
+        return true
     }
 
     /**
      * Renames an island
      */
     fun renameIsland(islandId: String, newName: String): Boolean {
-        val island = islands[islandId] ?: return false
-        islands[islandId] = island.withName(newName)
-        saveIslands()
+        scope.launch {
+            unifiedManager.renameGroup(islandId, newName)
+        }
         return true
     }
 
@@ -137,9 +163,9 @@ class TabIslandManager(private val context: Context) {
      * Changes the color of an island
      */
     fun changeIslandColor(islandId: String, newColor: Int): Boolean {
-        val island = islands[islandId] ?: return false
-        islands[islandId] = island.withColor(newColor)
-        saveIslands()
+        scope.launch {
+            unifiedManager.changeGroupColor(islandId, newColor)
+        }
         return true
     }
 
@@ -149,21 +175,20 @@ class TabIslandManager(private val context: Context) {
      * Use this for the toolbar pill bar.
      */
     fun toggleIslandCollapse(islandId: String): Boolean {
-        val island = islands[islandId] ?: return false
-        val newCollapsedState = !island.isCollapsed
+        val currentState = collapseState[islandId] ?: false
+        val newState = !currentState
 
         // If expanding this island, collapse all others
-        if (!newCollapsedState) {
-            // Collapse all other islands
-            islands.forEach { (otherId, otherIsland) ->
-                if (otherId != islandId && !otherIsland.isCollapsed) {
-                    islands[otherId] = otherIsland.withCollapsed(true)
+        if (!newState) {
+            collapseState.keys.forEach { id ->
+                if (id != islandId) {
+                    collapseState[id] = true
                 }
             }
         }
 
-        islands[islandId] = island.withCollapsed(newCollapsedState)
-        saveIslands()
+        collapseState[islandId] = newState
+        notifyListeners()
         return true
     }
 
@@ -173,11 +198,9 @@ class TabIslandManager(private val context: Context) {
      * State persists across reopens.
      */
     fun toggleIslandCollapseBottomSheet(islandId: String): Boolean {
-        val island = islands[islandId] ?: return false
-        val newCollapsedState = !island.isCollapsed
-
-        islands[islandId] = island.withCollapsed(newCollapsedState)
-        saveIslands()
+        val currentState = collapseState[islandId] ?: false
+        collapseState[islandId] = !currentState
+        notifyListeners()
         return true
     }
 
@@ -185,9 +208,8 @@ class TabIslandManager(private val context: Context) {
      * Collapses an island
      */
     fun collapseIsland(islandId: String): Boolean {
-        val island = islands[islandId] ?: return false
-        islands[islandId] = island.withCollapsed(true)
-        saveIslands()
+        collapseState[islandId] = true
+        notifyListeners()
         return true
     }
 
@@ -195,17 +217,15 @@ class TabIslandManager(private val context: Context) {
      * Expands an island and collapses all others to maintain single-expand behavior.
      */
     fun expandIsland(islandId: String): Boolean {
-        val island = islands[islandId] ?: return false
-
         // Collapse all other islands when expanding this one
-        islands.forEach { (otherId, otherIsland) ->
-            if (otherId != islandId && !otherIsland.isCollapsed) {
-                islands[otherId] = otherIsland.withCollapsed(true)
+        collapseState.keys.forEach { id ->
+            if (id != islandId) {
+                collapseState[id] = true
             }
         }
 
-        islands[islandId] = island.withCollapsed(false)
-        saveIslands()
+        collapseState[islandId] = false
+        notifyListeners()
         return true
     }
 
@@ -213,15 +233,13 @@ class TabIslandManager(private val context: Context) {
      * Deletes an island (ungroups all tabs)
      */
     fun deleteIsland(islandId: String): Boolean {
-        val island = islands[islandId] ?: return false
+        Log.d(TAG, "deleteIsland: Deleting island $islandId")
 
-        // Remove all tab associations
-        island.tabIds.forEach { tabId ->
-            tabToIslandMap.remove(tabId)
+        scope.launch {
+            unifiedManager.deleteGroup(islandId)
         }
-
-        islands.remove(islandId)
-        saveIslands()
+        
+        collapseState.remove(islandId)
         return true
     }
 
@@ -229,90 +247,49 @@ class TabIslandManager(private val context: Context) {
      * Gets the island for a given tab ID
      */
     fun getIslandForTab(tabId: String): TabIsland? {
-        val islandId = tabToIslandMap[tabId] ?: return null
-        return islands[islandId]
+        val group = unifiedManager.getGroupForTab(tabId) ?: return null
+        return groupToIsland(group)
     }
 
     /**
      * Gets all islands
      */
     fun getAllIslands(): List<TabIsland> {
-        return islands.values.toList().sortedBy { it.createdAt }
+        return unifiedManager.getAllGroups().map { groupToIsland(it) }
     }
 
     /**
      * Gets an island by ID
      */
     fun getIsland(islandId: String): TabIsland? {
-        return islands[islandId]
+        val group = unifiedManager.getGroup(islandId) ?: return null
+        return groupToIsland(group)
     }
 
     /**
      * Checks if a tab belongs to any island
      */
     fun isTabInIsland(tabId: String): Boolean {
-        return tabToIslandMap.containsKey(tabId)
+        return unifiedManager.isTabGrouped(tabId)
     }
 
     /**
-     * Records parent-child relationship for automatic grouping
+     * Cleans up islands when a tab is closed
      */
-    fun recordParentChildRelationship(childTabId: String, parentTabId: String) {
-        parentChildRelationships[childTabId] = parentTabId
-        saveIslands()
-    }
-
-    /**
-     * Automatically groups a new tab with its parent if parent is in an island
-     */
-    fun autoGroupWithParent(newTabId: String, parentTabId: String): Boolean {
-        recordParentChildRelationship(newTabId, parentTabId)
-
-        // Check if parent is in an island
-        val parentIslandId = tabToIslandMap[parentTabId] ?: return false
-
-        // Add child to the same island
-        return addTabToIsland(newTabId, parentIslandId)
-    }
-
-    /**
-     * Groups tabs by domain similarity (manual operation)
-     */
-    fun groupTabsByDomain(tabs: List<SessionState>): List<TabIsland> {
-        val domainGroups = mutableMapOf<String, MutableList<String>>()
-
-        tabs.forEach { tab ->
-            val domain = extractDomain(tab.content.url ?: "")
-            if (domain.isNotBlank()) {
-                domainGroups.getOrPut(domain) { mutableListOf() }.add(tab.id)
-            }
+    fun onTabClosed(tabId: String) {
+        scope.launch {
+            unifiedManager.onTabClosed(tabId)
         }
-
-        val createdIslands = mutableListOf<TabIsland>()
-        var colorIndex = islands.size
-
-        domainGroups.forEach { (domain, tabIds) ->
-            if (tabIds.size > 1) {
-                val island = createIsland(
-                    tabIds = tabIds,
-                    name = domain,
-                    colorIndex = colorIndex++
-                )
-                createdIslands.add(island)
-            }
-        }
-
-        return createdIslands
     }
 
     /**
-     * Reorders tabs within an island
+     * Cleans up islands when all tabs are closed
      */
-    fun reorderTabsInIsland(islandId: String, newTabOrder: List<String>): Boolean {
-        val island = islands[islandId] ?: return false
-        islands[islandId] = island.withTabsReordered(newTabOrder)
-        saveIslands()
-        return true
+    fun onAllTabsClosed() {
+        scope.launch {
+            unifiedManager.clearAllGroups()
+        }
+        collapseState.clear()
     }
 
     /**
@@ -324,6 +301,14 @@ class TabIslandManager(private val context: Context) {
         val processedIslands = mutableSetOf<String>()
         val processedTabs = mutableSetOf<String>()
 
+        val allGroups = unifiedManager.getAllGroups()
+        val tabToGroupMap = mutableMapOf<String, TabGroupData>()
+        allGroups.forEach { group ->
+            group.tabIds.forEach { tabId ->
+                tabToGroupMap[tabId] = group
+            }
+        }
+
         // Process tabs in their original order
         tabs.forEach { tab ->
             // Skip if we already added this tab as part of an island
@@ -331,39 +316,39 @@ class TabIslandManager(private val context: Context) {
                 return@forEach
             }
 
-            val islandId = tabToIslandMap[tab.id]
+            val group = tabToGroupMap[tab.id]
 
-            if (islandId != null && !processedIslands.contains(islandId)) {
+            if (group != null && !processedIslands.contains(group.id)) {
                 // First tab of an island - add the island here
-                val island = islands[islandId]
-                if (island != null) {
-                    processedIslands.add(islandId)
+                processedIslands.add(group.id)
 
-                    if (island.isCollapsed) {
-                        // Show collapsed island pill
-                        displayItems.add(
-                            TabPillItem.CollapsedIsland(
-                                island = island,
-                                tabCount = island.size()
-                            )
+                val island = groupToIsland(group)
+                val isCollapsed = collapseState[island.id] ?: false
+
+                if (isCollapsed) {
+                    // Show collapsed island pill
+                    displayItems.add(
+                        TabPillItem.CollapsedIsland(
+                            island = island.copy(isCollapsed = true),
+                            tabCount = island.size()
                         )
-                    } else {
-                        // Show expanded island group (header + tabs as one unit)
-                        val islandTabs = island.tabIds.mapNotNull { tabId ->
-                            tabs.find { it.id == tabId }
-                        }
-                        displayItems.add(
-                            TabPillItem.ExpandedIslandGroup(
-                                island = island,
-                                tabs = islandTabs
-                            )
-                        )
+                    )
+                } else {
+                    // Show expanded island group (header + tabs as one unit)
+                    val islandTabs = island.tabIds.mapNotNull { tabId ->
+                        tabs.find { it.id == tabId }
                     }
-
-                    // Mark all island tabs as processed
-                    island.tabIds.forEach { processedTabs.add(it) }
+                    displayItems.add(
+                        TabPillItem.ExpandedIslandGroup(
+                            island = island.copy(isCollapsed = false),
+                            tabs = islandTabs
+                        )
+                    )
                 }
-            } else if (islandId == null) {
+
+                // Mark all island tabs as processed
+                island.tabIds.forEach { processedTabs.add(it) }
+            } else if (group == null) {
                 // Tab is not in any island - add it in its original position
                 displayItems.add(TabPillItem.Tab(session = tab))
                 processedTabs.add(tab.id)
@@ -374,107 +359,39 @@ class TabIslandManager(private val context: Context) {
     }
 
     /**
-     * Cleans up islands when a tab is closed
+     * Converts TabGroupData to TabIsland
      */
-    fun onTabClosed(tabId: String) {
-        removeTabFromAnyIsland(tabId)
-        parentChildRelationships.remove(tabId)
-        saveIslands()
+    private fun groupToIsland(group: TabGroupData): TabIsland {
+        return TabIsland(
+            id = group.id,
+            name = group.name,
+            color = group.color,
+            tabIds = group.tabIds.toMutableList(),
+            isCollapsed = collapseState[group.id] ?: false,
+            createdAt = group.createdAt,
+            lastModifiedAt = group.createdAt
+        )
     }
 
-    /**
-     * Cleans up islands when all tabs are closed
-     */
-    fun onAllTabsClosed() {
-        islands.clear()
-        tabToIslandMap.clear()
-        parentChildRelationships.clear()
-        saveIslands()
+    // Deprecated methods kept for compatibility
+    @Deprecated("Use unified manager directly", ReplaceWith(""))
+    fun recordParentChildRelationship(childTabId: String, parentTabId: String) {
+        // No-op
     }
 
-    // Persistence methods
-
-    private fun saveIslands() {
-        try {
-            val islandsAdapter = moshi.adapter<List<TabIsland>>(
-                Types.newParameterizedType(List::class.java, TabIsland::class.java)
-            )
-            val mapAdapter = moshi.adapter<Map<String, String>>(
-                Types.newParameterizedType(Map::class.java, String::class.java, String::class.java)
-            )
-
-            prefs.edit().apply {
-                putString(KEY_ISLANDS, islandsAdapter.toJson(islands.values.toList()))
-                putString(KEY_TAB_TO_ISLAND_MAP, mapAdapter.toJson(tabToIslandMap))
-                putString(KEY_PARENT_CHILD_MAP, mapAdapter.toJson(parentChildRelationships))
-                apply()
-            }
-        } catch (e: Exception) {
-            android.util.Log.e("TabIslandManager", "Failed to save islands", e)
-        }
+    @Deprecated("Use unified manager directly", ReplaceWith(""))
+    fun autoGroupWithParent(newTabId: String, parentTabId: String): Boolean {
+        return false
     }
 
-    private fun loadIslands() {
-        try {
-            val islandsAdapter = moshi.adapter<List<TabIsland>>(
-                Types.newParameterizedType(List::class.java, TabIsland::class.java)
-            )
-            val mapAdapter = moshi.adapter<Map<String, String>>(
-                Types.newParameterizedType(Map::class.java, String::class.java, String::class.java)
-            )
-
-            // Load islands
-            val islandsJson = prefs.getString(KEY_ISLANDS, null)
-            if (islandsJson != null) {
-                val loadedIslands = islandsAdapter.fromJson(islandsJson)
-                if (loadedIslands != null) {
-                    islands.clear()
-                    loadedIslands.forEach { island ->
-                        islands[island.id] = island
-                    }
-                }
-            }
-
-            // Load tab to island map
-            val mapJson = prefs.getString(KEY_TAB_TO_ISLAND_MAP, null)
-            if (mapJson != null) {
-                val loadedMap = mapAdapter.fromJson(mapJson)
-                if (loadedMap != null) {
-                    tabToIslandMap.clear()
-                    tabToIslandMap.putAll(loadedMap)
-                }
-            }
-
-            // Load parent-child relationships
-            val parentChildJson = prefs.getString(KEY_PARENT_CHILD_MAP, null)
-            if (parentChildJson != null) {
-                val loadedMap = mapAdapter.fromJson(parentChildJson)
-                if (loadedMap != null) {
-                    parentChildRelationships.clear()
-                    parentChildRelationships.putAll(loadedMap)
-                }
-            }
-
-            // Clean up stale entries
-            cleanupStaleData()
-        } catch (e: Exception) {
-            android.util.Log.e("TabIslandManager", "Failed to load islands", e)
-            islands.clear()
-            tabToIslandMap.clear()
-            parentChildRelationships.clear()
-        }
+    @Deprecated("Use unified manager directly", ReplaceWith(""))
+    fun groupTabsByDomain(tabs: List<SessionState>): List<TabIsland> {
+        return emptyList()
     }
 
-    private fun cleanupStaleData() {
-        // Remove empty islands
-        val emptyIslands = islands.filter { it.value.isEmpty() }.keys
-        emptyIslands.forEach { islandId ->
-            islands.remove(islandId)
-        }
-
-        // Remove orphaned tab mappings
-        val validTabIds = islands.values.flatMap { it.tabIds }.toSet()
-        tabToIslandMap.keys.retainAll(validTabIds)
+    @Deprecated("Use unified manager directly", ReplaceWith(""))
+    fun reorderTabsInIsland(islandId: String, newTabOrder: List<String>): Boolean {
+        return false
     }
 
     private fun extractDomain(url: String): String {

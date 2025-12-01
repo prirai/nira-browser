@@ -68,6 +68,8 @@ open class BrowserActivity : LocaleAwareAppCompatActivity(), ComponentCallbacks2
 
     lateinit var browsingModeManager: BrowsingModeManager
     lateinit private var currentTheme: BrowsingMode
+    
+    lateinit var tabGroupManager: com.prirai.android.nira.browser.tabgroups.TabGroupManager
 
     private var isToolbarInflated = false
     private lateinit var navigationToolbar: Toolbar
@@ -125,6 +127,9 @@ open class BrowserActivity : LocaleAwareAppCompatActivity(), ComponentCallbacks2
             initialProfile
         )
         currentTheme = browsingModeManager.mode
+        
+        // Initialize TabGroupManager - shared across all components
+        tabGroupManager = com.prirai.android.nira.browser.tabgroups.TabGroupManager(this)
 
         binding = ActivityMainBinding.inflate(layoutInflater)
         val view = binding.root

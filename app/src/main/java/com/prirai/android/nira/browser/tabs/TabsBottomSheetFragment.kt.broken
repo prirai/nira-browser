@@ -1,31 +1,23 @@
 package com.prirai.android.nira.browser.tabs
 
-import android.graphics.Color
 import android.os.Bundle
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.lifecycle.lifecycleScope
-import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
 import com.prirai.android.nira.BrowserActivity
 import com.prirai.android.nira.R
 import com.prirai.android.nira.browser.BrowsingMode
 import com.prirai.android.nira.browser.BrowsingModeManager
-import com.prirai.android.nira.browser.tabgroups.TabGroupManager
-import com.prirai.android.nira.browser.tabgroups.UnifiedTabGroupManager
-import com.prirai.android.nira.browser.tabgroups.TabGroupData
 import com.prirai.android.nira.databinding.FragmentTabsBottomSheetBinding
 import com.prirai.android.nira.ext.components
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import mozilla.components.lib.state.ext.flowScoped
-import kotlin.random.Random
+import mozilla.components.browser.state.state.TabSessionState
 
 class TabsBottomSheetFragment : BottomSheetDialogFragment() {
 
@@ -33,17 +25,12 @@ class TabsBottomSheetFragment : BottomSheetDialogFragment() {
     private val binding get() = _binding!!
 
     private lateinit var browsingModeManager: BrowsingModeManager
-    private lateinit var tabGroupManager: TabGroupManager
-    private lateinit var unifiedGroupManager: UnifiedTabGroupManager
-    private lateinit var tabsAdapter: TabsWithGroupsAdapter
-    private lateinit var dragHelper: TabGroupDragHelper
+    private lateinit var tabsAdapter: TabsAdapter
     private var isInitializing = true
 
     companion object {
         const val TAG = "TabsBottomSheet"
         fun newInstance() = TabsBottomSheetFragment()
-        
-        private val COLORS = arrayOf("blue", "red", "green", "orange", "purple", "pink", "teal", "yellow")
     }
 
     override fun onCreateView(
@@ -58,17 +45,12 @@ class TabsBottomSheetFragment : BottomSheetDialogFragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        val activity = (activity as BrowserActivity)
-        browsingModeManager = activity.browsingModeManager
-        tabGroupManager = activity.tabGroupManager
-        unifiedGroupManager = UnifiedTabGroupManager.getInstance(requireContext())
+        browsingModeManager = (activity as BrowserActivity).browsingModeManager
 
         setupUI()
         setupTabsAdapter()
-        setupDragAndDrop()
         setupProfileChips()
         setupStoreObserver()
-        setupUnifiedGroupObserver()
         
         isInitializing = false
     }
@@ -101,33 +83,20 @@ class TabsBottomSheetFragment : BottomSheetDialogFragment() {
     }
 
     private fun setupUI() {
+        // FAB click listener
         binding.newTabFab.setOnClickListener {
             addNewTab()
         }
     }
 
     private fun setupTabsAdapter() {
-        tabsAdapter = TabsWithGroupsAdapter(
+        tabsAdapter = TabsAdapter(
             onTabClick = { tabId ->
                 requireContext().components.tabsUseCases.selectTab(tabId)
                 dismiss()
             },
             onTabClose = { tabId ->
                 requireContext().components.tabsUseCases.removeTab(tabId)
-            },
-            onGroupClick = { groupId ->
-                tabsAdapter.toggleGroup(groupId)
-            },
-            onGroupMoreClick = { groupId, view ->
-                showGroupOptionsMenu(groupId, view)
-            },
-            onTabLongPress = { tabId, view ->
-                showTabOptionsMenu(tabId, view)
-                true
-            },
-            onGroupTabLongPress = { tabId, groupId, view ->
-                showGroupTabOptionsMenu(tabId, groupId, view)
-                true
             }
         )
 
@@ -135,16 +104,6 @@ class TabsBottomSheetFragment : BottomSheetDialogFragment() {
             layoutManager = LinearLayoutManager(requireContext())
             adapter = tabsAdapter
         }
-    }
-
-    private fun setupDragAndDrop() {
-        dragHelper = TabGroupDragHelper(
-            adapter = tabsAdapter,
-            groupManager = unifiedGroupManager,
-            scope = lifecycleScope,
-            onUpdate = { updateTabsDisplay() }
-        )
-        dragHelper.attachToRecyclerView(binding.tabsRecyclerView)
     }
 
     private fun setupProfileChips() {
@@ -159,6 +118,7 @@ class TabsBottomSheetFragment : BottomSheetDialogFragment() {
         var chipToCheck: com.google.android.material.chip.Chip? = null
         val profileIdMap = mutableMapOf<Int, String>()
 
+        // Add profile chips
         profiles.forEach { profile ->
             val chip = LayoutInflater.from(requireContext())
                 .inflate(R.layout.item_profile_chip, binding.profileChipGroup, false) as com.google.android.material.chip.Chip
@@ -182,6 +142,7 @@ class TabsBottomSheetFragment : BottomSheetDialogFragment() {
             }
         }
 
+        // Add Private chip
         val privateChip = LayoutInflater.from(requireContext())
             .inflate(R.layout.item_profile_chip, binding.profileChipGroup, false) as com.google.android.material.chip.Chip
         privateChip.text = "🕵️ Private"
@@ -194,6 +155,7 @@ class TabsBottomSheetFragment : BottomSheetDialogFragment() {
             chipToCheck = privateChip
         }
 
+        // Add + chip
         val addChip = LayoutInflater.from(requireContext())
             .inflate(R.layout.item_profile_chip, binding.profileChipGroup, false) as com.google.android.material.chip.Chip
         addChip.text = "+"
@@ -208,6 +170,7 @@ class TabsBottomSheetFragment : BottomSheetDialogFragment() {
             binding.profileChipGroup.check(it.id)
         }
 
+        // Set up listener
         binding.profileChipGroup.setOnCheckedStateChangeListener { _, checkedIds ->
             if (isInitializing || checkedIds.isEmpty()) return@setOnCheckedStateChangeListener
 
@@ -241,253 +204,40 @@ class TabsBottomSheetFragment : BottomSheetDialogFragment() {
             flow.map { state -> state.tabs to state.selectedTabId }
                 .distinctUntilChanged()
                 .collect { (_, _) ->
-                    if (isAdded && context != null) {
-                        updateTabsDisplay()
-                    }
-                }
-        }
-    }
-
-    private fun setupUnifiedGroupObserver() {
-        // Listen to group state changes from UnifiedTabGroupManager
-        lifecycleScope.launch {
-            unifiedGroupManager.groupsState.collect { _ ->
-                if (isAdded && context != null) {
                     updateTabsDisplay()
                 }
-            }
-        }
-        
-        // Also listen to group events for fine-grained updates
-        lifecycleScope.launch {
-            unifiedGroupManager.groupEvents.collect { event ->
-                if (isAdded && context != null) {
-                    updateTabsDisplay()
-                }
-            }
         }
     }
 
     private fun updateTabsDisplay() {
-        if (!isAdded || context == null) return
-        
-        lifecycleScope.launch {
-            val store = requireContext().components.store.state
-            val isPrivateMode = browsingModeManager.mode.isPrivate
-            val currentProfile = browsingModeManager.currentProfile
+        val store = requireContext().components.store.state
+        val isPrivateMode = browsingModeManager.mode.isPrivate
+        val currentProfile = browsingModeManager.currentProfile
 
-            val filteredTabs = store.tabs.filter { tab ->
-                val tabIsPrivate = tab.content.private
+        // Filter tabs by profile and mode
+        val filteredTabs = store.tabs.filter { tab ->
+            val tabIsPrivate = tab.content.private
 
-                if (tabIsPrivate != isPrivateMode) {
-                    false
-                } else if (isPrivateMode) {
-                    tab.contextId == "private"
-                } else {
-                    val expectedContextId = "profile_${currentProfile.id}"
-                    tab.contextId == expectedContextId
-                }
-            }
-
-            // Use UnifiedTabGroupManager instead of old managers
-            val allGroups = unifiedGroupManager.getAllGroups()
-            
-            val tabItems = mutableListOf<TabItem>()
-            
-            for (group in allGroups) {
-                val groupTabs = filteredTabs.filter { it.id in group.tabIds }
-                
-                if (groupTabs.isNotEmpty()) {
-                    tabItems.add(TabItem.Group(
-                        groupId = group.id,
-                        name = group.name.ifBlank { "" },
-                        color = group.color,
-                        tabs = groupTabs
-                    ))
-                }
-            }
-            
-            val groupedTabIds = allGroups.flatMap { it.tabIds }.toSet()
-            
-            filteredTabs.filter { it.id !in groupedTabIds }.forEach { tab ->
-                tabItems.add(TabItem.SingleTab(tab))
-            }
-
-            tabsAdapter.updateItems(tabItems, store.selectedTabId)
-
-            if (filteredTabs.isEmpty()) {
-                binding.tabsRecyclerView.visibility = View.GONE
-                binding.emptyStateLayout.visibility = View.VISIBLE
+            if (tabIsPrivate != isPrivateMode) {
+                false
+            } else if (isPrivateMode) {
+                tab.contextId == "private"
             } else {
-                binding.tabsRecyclerView.visibility = View.VISIBLE
-                binding.emptyStateLayout.visibility = View.GONE
+                val expectedContextId = "profile_${currentProfile.id}"
+                tab.contextId == expectedContextId
             }
         }
-    }
 
-    private fun parseColor(colorString: String): Int {
-        return try {
-            when (colorString.lowercase()) {
-                "blue" -> Color.parseColor("#2196F3")
-                "red" -> Color.parseColor("#F44336")
-                "green" -> Color.parseColor("#4CAF50")
-                "orange" -> Color.parseColor("#FF9800")
-                "purple" -> Color.parseColor("#9C27B0")
-                "pink" -> Color.parseColor("#E91E63")
-                "teal" -> Color.parseColor("#009688")
-                "yellow" -> Color.parseColor("#FFC107")
-                else -> Color.parseColor("#2196F3")
-            }
-        } catch (e: Exception) {
-            Color.parseColor("#2196F3")
-        }
-    }
+        // Update adapter
+        tabsAdapter.updateTabs(filteredTabs, store.selectedTabId)
 
-    private fun showTabOptionsMenu(tabId: String, view: View) {
-        val popup = androidx.appcompat.widget.PopupMenu(requireContext(), view)
-        popup.inflate(R.menu.tab_options_menu)
-        
-        popup.setOnMenuItemClickListener { item ->
-            when (item.itemId) {
-                R.id.action_add_to_group -> {
-                    showAddToGroupDialog(tabId)
-                    true
-                }
-                R.id.action_create_group -> {
-                    lifecycleScope.launch {
-                        unifiedGroupManager.createGroup(
-                            tabIds = listOf(tabId),
-                            name = "Group ${System.currentTimeMillis() % 1000}"
-                        )
-                        updateTabsDisplay()
-                    }
-                    true
-                }
-                else -> false
-            }
-        }
-        
-        popup.show()
-    }
-
-    private fun showGroupTabOptionsMenu(tabId: String, groupId: String, view: View) {
-        val popup = androidx.appcompat.widget.PopupMenu(requireContext(), view)
-        popup.menu.add(0, 1, 0, "Remove from group")
-        
-        popup.setOnMenuItemClickListener { item ->
-            when (item.itemId) {
-                1 -> {
-                    lifecycleScope.launch {
-                        unifiedGroupManager.removeTabFromGroup(tabId)
-                    }
-                    true
-                }
-                else -> false
-            }
-        }
-        
-        popup.show()
-    }
-
-    private fun showGroupOptionsMenu(groupId: String, view: View) {
-        val popup = androidx.appcompat.widget.PopupMenu(requireContext(), view)
-        popup.inflate(R.menu.group_options_menu)
-        
-        popup.setOnMenuItemClickListener { item ->
-            when (item.itemId) {
-                R.id.action_rename_group -> {
-                    showRenameGroupDialog(groupId)
-                    true
-                }
-                R.id.action_change_color -> {
-                    showChangeGroupColorDialog(groupId)
-                    true
-                }
-                R.id.action_ungroup -> {
-                    lifecycleScope.launch {
-                        unifiedGroupManager.deleteGroup(groupId)
-                        updateTabsDisplay()
-                    }
-                    true
-                }
-                else -> false
-            }
-        }
-        
-        popup.show()
-    }
-
-    private fun showAddToGroupDialog(tabId: String) {
-        lifecycleScope.launch {
-            val groups = unifiedGroupManager.getAllGroups()
-            if (groups.isEmpty()) {
-                return@launch
-            }
-            
-            val groupNames = groups.map { it.name.ifBlank { "Group ${it.id.take(8)}" } }.toTypedArray()
-            
-            MaterialAlertDialogBuilder(requireContext())
-                .setTitle("Add to Group")
-                .setItems(groupNames) { _, which ->
-                    lifecycleScope.launch {
-                        unifiedGroupManager.addTabToGroup(tabId, groups[which].id)
-                        updateTabsDisplay()
-                    }
-                }
-                .setNegativeButton("Cancel", null)
-                .show()
-        }
-    }
-
-    private fun showRenameGroupDialog(groupId: String) {
-        lifecycleScope.launch {
-            val group = unifiedGroupManager.getGroup(groupId) ?: return@launch
-            
-            val input = android.widget.EditText(requireContext())
-            input.setText(group.name)
-            input.hint = "Group name"
-            
-            MaterialAlertDialogBuilder(requireContext())
-                .setTitle("Rename Group")
-                .setView(input)
-                .setPositiveButton("Rename") { _, _ ->
-                    lifecycleScope.launch {
-                        unifiedGroupManager.renameGroup(groupId, input.text.toString())
-                        updateTabsDisplay()
-                    }
-                }
-                .setNegativeButton("Cancel", null)
-                .show()
-        }
-    }
-
-    private fun showChangeGroupColorDialog(groupId: String) {
-        val colorNames = COLORS.map { it.replaceFirstChar { c -> c.uppercase() } }.toTypedArray()
-        
-        MaterialAlertDialogBuilder(requireContext())
-            .setTitle("Choose Color")
-            .setItems(colorNames) { _, which ->
-                lifecycleScope.launch {
-                    val colorInt = getColorInt(COLORS[which])
-                    unifiedGroupManager.changeGroupColor(groupId, colorInt)
-                    updateTabsDisplay()
-                }
-            }
-            .setNegativeButton("Cancel", null)
-            .show()
-    }
-    
-    private fun getColorInt(colorName: String): Int {
-        return when (colorName) {
-            "blue" -> 0xFF2196F3.toInt()
-            "green" -> 0xFF4CAF50.toInt()
-            "red" -> 0xFFF44336.toInt()
-            "orange" -> 0xFFFF9800.toInt()
-            "purple" -> 0xFF9C27B0.toInt()
-            "pink" -> 0xFFE91E63.toInt()
-            "cyan" -> 0xFF00BCD4.toInt()
-            "yellow" -> 0xFFFFEB3B.toInt()
-            else -> 0xFF2196F3.toInt()
+        // Show/hide empty state
+        if (filteredTabs.isEmpty()) {
+            binding.tabsRecyclerView.visibility = View.GONE
+            binding.emptyStateLayout.visibility = View.VISIBLE
+        } else {
+            binding.tabsRecyclerView.visibility = View.VISIBLE
+            binding.emptyStateLayout.visibility = View.GONE
         }
     }
 
