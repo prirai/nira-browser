@@ -337,7 +337,6 @@ class ModernTabPillAdapter(
                 when (event.action) {
                     android.view.MotionEvent.ACTION_DOWN -> {
                         startY = event.rawY
-                        isDragging = false
                         false
                     }
 
@@ -378,7 +377,6 @@ class ModernTabPillAdapter(
                                     .setDuration(200)
                                     .start()
                             }
-                            isDragging = false
                             true
                         } else {
                             v.performClick()
@@ -1005,7 +1003,6 @@ class ModernTabPillAdapter(
                             } else {
                                 resetTabVisualState(tabView)
                             }
-                            isDragging = false
                             true
                         } else {
                             v.performClick()

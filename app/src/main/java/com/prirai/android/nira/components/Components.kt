@@ -123,7 +123,7 @@ open class Components(private val applicationContext: Context) {
         
         // Check per-site override first
         if (url != null) {
-            val siteDarkMode = applicationContext.getSharedPreferences("site_dark_mode_override", android.content.Context.MODE_PRIVATE)
+            val siteDarkMode = applicationContext.getSharedPreferences("site_dark_mode_override", Context.MODE_PRIVATE)
             if (siteDarkMode.contains(url)) {
                 val override = siteDarkMode.getString(url, "")
                 return when (override) {

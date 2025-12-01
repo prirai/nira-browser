@@ -116,7 +116,7 @@
     <string name="paste_and_go">粘贴并转到</string>
     <string name="copied">已复制到剪切板</string>
     <string name="loading_addons">正在加载附加组件…</string>
-    <string name="loading">正在加载...</string>
+    <string name="loading">正在加载…</string>
     <string name="tabs_cleared">标签已清除！</string>
     <string name="history_cleared">历史记录已被清除！</string>
     <string name="cookies_cleared">Cookies 已清除</string>

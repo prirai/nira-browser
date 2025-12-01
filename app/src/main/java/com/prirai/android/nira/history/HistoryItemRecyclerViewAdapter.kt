@@ -79,7 +79,7 @@ open class HistoryItemRecyclerViewAdapter(
 
     override fun getItemCount(): Int = values.size
 
-    inner class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
+    class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         val titleView: TextView = view.findViewById(R.id.historyTitle)
         val urlView: TextView = view.findViewById(R.id.historyUrl)
         val timeView: TextView = view.findViewById(R.id.historyTime)

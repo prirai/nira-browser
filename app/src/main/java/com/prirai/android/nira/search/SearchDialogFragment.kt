@@ -278,14 +278,6 @@ class SearchDialogFragment : AppCompatDialogFragment(), UserInteractionHandler {
         return components.historyStorage
     }
 
-    override fun onRequestPermissionsResult(
-        requestCode: Int,
-        permissions: Array<String>,
-        grantResults: IntArray
-    ) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-    }
-
     private fun setupConstraints(view: View) {
         if (UserPreferences(view.context).toolbarPosition == OldToolbarPosition.BOTTOM.ordinal) {
             ConstraintSet().apply {

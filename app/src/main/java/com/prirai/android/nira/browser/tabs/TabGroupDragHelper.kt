@@ -155,7 +155,7 @@ class TabGroupDragHelper(
             // Check if we're currently over a valid drop target
             val currentY = viewHolder.itemView.y + dY
             var isOverValidTarget = false
-            var currentTargetPosition = -1
+            -1
             
             // Check each item in the adapter to see if we're hovering over it
             for (i in 0 until adapter.itemCount) {
@@ -169,7 +169,6 @@ class TabGroupDragHelper(
                         val targetItem = adapter.currentList.getOrNull(i)
                         if (targetItem != null) {
                             isOverValidTarget = true
-                            currentTargetPosition = i
                             lastTargetPosition = i
                         }
                         break
@@ -276,9 +275,7 @@ class TabGroupDragHelper(
             return
         }
 
-        val targetItem = adapter.currentList[targetPosition]
-        
-        when (targetItem) {
+        when (val targetItem = adapter.currentList[targetPosition]) {
             is TabItem.SingleTab -> {
                 // Dropped on another single tab - create group or add to existing group
                 val draggedGroup = groupManager.getGroupForTab(draggedTab.id)

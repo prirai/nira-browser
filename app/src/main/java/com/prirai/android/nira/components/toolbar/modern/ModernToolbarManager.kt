@@ -184,7 +184,7 @@ class ModernToolbarManager(
             oldParent?.removeView(toolbar)
 
             // Hide the old toolbar container to prevent black bar at top when using bottom toolbar
-            if (toolbarPosition == com.prirai.android.nira.components.toolbar.ToolbarPosition.BOTTOM) {
+            if (toolbarPosition == ToolbarPosition.BOTTOM) {
                 oldParent?.visibility = android.view.View.GONE
                 oldParent?.layoutParams?.height = 0
             }

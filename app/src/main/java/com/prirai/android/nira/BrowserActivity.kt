@@ -67,7 +67,7 @@ open class BrowserActivity : LocaleAwareAppCompatActivity(), ComponentCallbacks2
     lateinit var binding: ActivityMainBinding
 
     lateinit var browsingModeManager: BrowsingModeManager
-    lateinit private var currentTheme: BrowsingMode
+    private lateinit var currentTheme: BrowsingMode
     
     lateinit var tabGroupManager: com.prirai.android.nira.browser.tabgroups.TabGroupManager
 
@@ -320,8 +320,8 @@ open class BrowserActivity : LocaleAwareAppCompatActivity(), ComponentCallbacks2
             // Return a dummy action bar to satisfy the interface
             // The bottom toolbar doesn't need an ActionBar
             return object : ActionBar() {
-                override fun setCustomView(view: android.view.View?) {}
-                override fun setCustomView(view: android.view.View?, layoutParams: LayoutParams?) {}
+                override fun setCustomView(view: View?) {}
+                override fun setCustomView(view: View?, layoutParams: LayoutParams?) {}
                 override fun setCustomView(resId: Int) {}
                 override fun setIcon(resId: Int) {}
                 override fun setIcon(icon: android.graphics.drawable.Drawable?) {}
@@ -348,8 +348,8 @@ open class BrowserActivity : LocaleAwareAppCompatActivity(), ComponentCallbacks2
                 override fun setDisplayShowTitleEnabled(showTitle: Boolean) {}
                 override fun setDisplayShowCustomEnabled(showCustom: Boolean) {}
                 override fun setBackgroundDrawable(d: android.graphics.drawable.Drawable?) {}
-                override fun getThemedContext(): android.content.Context = this@BrowserActivity
-                override fun getCustomView(): android.view.View? = null
+                override fun getThemedContext(): Context = this@BrowserActivity
+                override fun getCustomView(): View? = null
                 override fun getTitle(): CharSequence? = null
                 override fun getSubtitle(): CharSequence? = null
                 override fun getNavigationMode(): Int = 0
@@ -397,7 +397,7 @@ open class BrowserActivity : LocaleAwareAppCompatActivity(), ComponentCallbacks2
             isToolbarInflated = true
         }
 
-        navigationToolbar.visibility = android.view.View.VISIBLE
+        navigationToolbar.visibility = View.VISIBLE
         navigationToolbar.layoutParams?.apply {
             height = resources.getDimensionPixelSize(R.dimen.browser_toolbar_height)
             width = android.view.ViewGroup.LayoutParams.MATCH_PARENT
@@ -572,7 +572,7 @@ open class BrowserActivity : LocaleAwareAppCompatActivity(), ComponentCallbacks2
      */
     private fun hideNavigationToolbarForBottomMode() {
         // Hide the ViewStub itself to prevent any space reservation
-        binding.navigationToolbarStub.visibility = android.view.View.GONE
+        binding.navigationToolbarStub.visibility = View.GONE
         binding.navigationToolbarStub.layoutParams?.apply {
             height = 0
             width = 0
@@ -580,7 +580,7 @@ open class BrowserActivity : LocaleAwareAppCompatActivity(), ComponentCallbacks2
 
         // If already inflated, hide the toolbar completely
         if (isToolbarInflated) {
-            navigationToolbar.visibility = android.view.View.GONE
+            navigationToolbar.visibility = View.GONE
             navigationToolbar.layoutParams?.apply {
                 height = 0
                 width = 0

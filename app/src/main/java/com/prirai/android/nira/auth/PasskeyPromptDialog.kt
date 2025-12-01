@@ -32,13 +32,6 @@ class PasskeyPromptDialog : DialogFragment() {
         return inflater.inflate(R.layout.dialog_edittext, container, false)
     }
 
-    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        super.onViewCreated(view, savedInstanceState)
-        
-        // This is a placeholder - in a real implementation, you'd create a custom layout
-        // for passkey prompts with proper UI elements
-    }
-
     companion object {
         private const val TAG = "PasskeyPromptDialog"
         

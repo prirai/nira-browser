@@ -212,9 +212,7 @@ class TabsBottomSheetFragment : BottomSheetDialogFragment() {
             if (isInitializing || checkedIds.isEmpty()) return@setOnCheckedStateChangeListener
 
             val selectedChipId = checkedIds.first()
-            val selectedProfileId = profileIdMap[selectedChipId]
-
-            when (selectedProfileId) {
+            when (val selectedProfileId = profileIdMap[selectedChipId]) {
                 "private" -> {
                     if (!browsingModeManager.mode.isPrivate) {
                         browsingModeManager.mode = BrowsingMode.Private

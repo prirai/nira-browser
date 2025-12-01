@@ -278,7 +278,7 @@ class TabsTrayFragment : Fragment() {
                         if (tab.content.private && !browsingModeManager.mode.isPrivate) {
                             browsingModeManager.mode = BrowsingMode.Private
                         } else if (!tab.content.private && browsingModeManager.mode.isPrivate) {
-                            val profileManager = com.prirai.android.nira.browser.profile.ProfileManager.getInstance(requireContext())
+                            com.prirai.android.nira.browser.profile.ProfileManager.getInstance(requireContext())
                             browsingModeManager.mode = BrowsingMode.Normal
                         }
                         requireContext().components.sessionUseCases.reload(tab.id)

@@ -40,7 +40,7 @@ class CredentialManagerHelper(context: Context) {
         requestJson: JSONObject
     ): CreatePublicKeyCredentialResponse? {
         return try {
-            Log.d(TAG, "Creating passkey with request: ${requestJson.toString()}")
+            Log.d(TAG, "Creating passkey with request: $requestJson")
             
             val request = CreatePublicKeyCredentialRequest(requestJson.toString())
             
@@ -73,7 +73,7 @@ class CredentialManagerHelper(context: Context) {
         requestJson: JSONObject
     ): GetCredentialResponse? {
         return try {
-            Log.d(TAG, "Getting passkey with request: ${requestJson.toString()}")
+            Log.d(TAG, "Getting passkey with request: $requestJson")
             
             val getPublicKeyCredentialOption = GetPublicKeyCredentialOption(
                 requestJson = requestJson.toString(),
