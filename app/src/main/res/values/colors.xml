@@ -72,4 +72,6 @@
     <color name="tab_card_background">#FFFFFF</color>
     <color name="tab_card_stroke">#E0E0E0</color>
     <color name="tab_sheet_background">#F5F5F5</color>
+    <color name="tab_group_background">#F8F9FA</color>
+    <color name="tab_group_stroke">#D0D0D0</color>
 </resources>
