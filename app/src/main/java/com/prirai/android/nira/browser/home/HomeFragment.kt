@@ -91,12 +91,6 @@ class HomeFragment : Fragment() {
     @VisibleForTesting
     internal var getMenuButton: () -> MenuButton? = { binding.menuButton }
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-
-        // bundleArgs = args.toBundle() // Removed - HomeFragment no longer used
-    }
-
     @Suppress("LongMethod")
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -706,7 +700,7 @@ class HomeFragment : Fragment() {
                     val bottomMenuButton = binding.contextualBottomToolbar.findViewById<View>(R.id.menu_button)
 
                     // Create home menu directly and show it
-                    val homeMenu = HomeMenu(
+                    HomeMenu(
                         lifecycleOwner = viewLifecycleOwner,
                         context = context,
                         onItemTapped = { item ->
@@ -790,8 +784,8 @@ class HomeFragment : Fragment() {
                             val menu = menuBuilder.build(context)
 
                             // Create a temporary view above the button for better positioning
-                            val tempView = android.view.View(context)
-                            tempView.layoutParams = android.view.ViewGroup.LayoutParams(1, 1)
+                            val tempView = View(context)
+                            tempView.layoutParams = ViewGroup.LayoutParams(1, 1)
 
                             // Add the temp view to the parent layout
                             val parent = binding.contextualBottomToolbar

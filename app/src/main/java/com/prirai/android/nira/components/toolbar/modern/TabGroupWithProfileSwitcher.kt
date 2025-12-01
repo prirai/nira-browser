@@ -109,7 +109,7 @@ class TabGroupWithProfileSwitcher @JvmOverloads constructor(
                 // Hidden profile name (kept for updateProfileIcon compatibility)
                 profileNameText = TextView(context).apply {
                     text = ""
-                    visibility = View.GONE
+                    visibility = GONE
                 }
                 
                 // No dropdown icon needed since it's just the emoji

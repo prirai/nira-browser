@@ -33,7 +33,7 @@
         android:paddingHorizontal="8dp"
         android:paddingVertical="2dp"
         android:textColor="?attr/colorOnPrimaryContainer"
-        android:textSize="10sp"
+        android:textSize="11sp"
         android:textStyle="bold"
         android:visibility="gone"
         app:layout_constraintStart_toEndOf="@+id/mozac_browser_tabstray_icon"

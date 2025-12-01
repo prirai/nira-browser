@@ -29,7 +29,7 @@ open class ExternalAppBrowserActivity : BrowserActivity() {
         hasCalledOnCreate = true
         
         // Create a custom tab session from the intent
-        val safeIntent = mozilla.components.support.utils.SafeIntent(intent)
+        val safeIntent = SafeIntent(intent)
         val url = safeIntent.dataString
         
         if (url != null && savedInstanceState == null) {

@@ -63,7 +63,7 @@ class TabGroupBar @JvmOverloads constructor(
                 Triple(state.tabs.map { it.id }, selectedTab?.id, selectedTab?.content?.private)
             }
             .distinctUntilChanged()
-            .collect { (allTabIds, selectedTabId, isPrivate) ->
+            .collect { (allTabIds, selectedTabId, _) ->
                 lifecycleOwner.lifecycleScope.launch {
                     
                     // Get browsing mode from BrowserActivity

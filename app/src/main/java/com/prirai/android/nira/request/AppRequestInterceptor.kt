@@ -86,12 +86,12 @@ class AppRequestInterceptor(val context: Context) : RequestInterceptor {
             }
             uri.startsWith("nira://delete-shortcut?") -> {
                 // Parse URL parameter
-                val params = android.net.Uri.parse(uri)
+                val params = Uri.parse(uri)
                 val shortcutId = params.getQueryParameter("id")?.toIntOrNull()
                 
                 if (shortcutId != null) {
                     // Delete shortcut from database
-                    kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+                    CoroutineScope(Dispatchers.IO).launch {
                         try {
                             val database = androidx.room.Room.databaseBuilder(
                                 context,
@@ -107,7 +107,7 @@ class AppRequestInterceptor(val context: Context) : RequestInterceptor {
                             database.close()
                             
                             // Reload the page to reflect changes
-                            kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main).launch {
+                            CoroutineScope(Dispatchers.Main).launch {
                                 context.components.sessionUseCases.reload()
                             }
                         } catch (e: Exception) {
@@ -118,13 +118,13 @@ class AppRequestInterceptor(val context: Context) : RequestInterceptor {
             }
             uri.startsWith("nira://add-shortcut?") -> {
                 // Parse URL parameters
-                val params = android.net.Uri.parse(uri)
+                val params = Uri.parse(uri)
                 val url = params.getQueryParameter("url")
                 val title = params.getQueryParameter("title")
                 
                 if (url != null && title != null) {
                     // Save shortcut to database
-                    kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+                    CoroutineScope(Dispatchers.IO).launch {
                         try {
                             val database = androidx.room.Room.databaseBuilder(
                                 context,

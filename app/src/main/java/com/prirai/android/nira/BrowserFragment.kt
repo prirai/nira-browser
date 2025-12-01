@@ -291,12 +291,12 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
                         val contextualToolbar =
                             findContextualToolbarInModernSystem(modernToolbarSystem)
                         val menuButton =
-                            contextualToolbar?.findViewById<android.view.View>(R.id.menu_button)
+                            contextualToolbar?.findViewById<View>(R.id.menu_button)
 
                         if (menuButton != null) {
                             // Use the same positioning approach as the working implementation
                             // Create a temporary view above the button for better positioning
-                            val tempView = android.view.View(context)
+                            val tempView = View(context)
                             tempView.layoutParams = android.view.ViewGroup.LayoutParams(1, 1)
 
                             // Add the temp view to the contextual toolbar parent
@@ -335,7 +335,7 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
                     )
                     // Final fallback: try the original button click approach
                     try {
-                        val menuButton = browserToolbarView.view.findViewById<android.view.View>(
+                        val menuButton = browserToolbarView.view.findViewById<View>(
                             mozilla.components.browser.toolbar.R.id.mozac_browser_toolbar_menu
                         )
                         menuButton?.performClick()
@@ -495,8 +495,8 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
     private fun hideOldToolbarComponents(toolbarPosition: Int) {
 
         // Hide old separate toolbar components that are no longer needed
-        binding.tabGroupBar.visibility = android.view.View.GONE
-        binding.contextualBottomToolbar.visibility = android.view.View.GONE
+        binding.tabGroupBar.visibility = View.GONE
+        binding.contextualBottomToolbar.visibility = View.GONE
 
         // Hide any duplicate or conflicting toolbar components in the coordinator layout
         try {
@@ -506,7 +506,7 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
 
                 // Look for any remaining BrowserToolbar or toolbar-related views that aren't the modern system
                 if (child is mozilla.components.browser.toolbar.BrowserToolbar && child != browserToolbarView.view) {
-                    child.visibility = android.view.View.GONE
+                    child.visibility = View.GONE
                 }
 
                 // Check for views with the opposite gravity that might conflict
@@ -519,7 +519,7 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
                         if (toolbarPosition == com.prirai.android.nira.components.toolbar.ToolbarPosition.BOTTOM.ordinal) {
                             // Hide old bottom components
                             if ((layoutParams.gravity and android.view.Gravity.BOTTOM) == android.view.Gravity.BOTTOM) {
-                                child.visibility = android.view.View.GONE
+                                child.visibility = View.GONE
                             }
                         } else {
                             // Hide old top components
@@ -529,7 +529,7 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
                                         "Tab"
                                     )
                                 ) {
-                                    child.visibility = android.view.View.GONE
+                                    child.visibility = View.GONE
                                 }
                             }
                         }
@@ -546,7 +546,7 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
         // Search through the modern toolbar system's children to find the contextual toolbar
         for (i in 0 until modernToolbarSystem.childCount) {
             val child = modernToolbarSystem.getChildAt(i)
-            if (child is com.prirai.android.nira.toolbar.ContextualBottomToolbar) {
+            if (child is ContextualBottomToolbar) {
                 return child
             }
         }

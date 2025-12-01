@@ -327,7 +327,7 @@ class TabIslandsVerticalAdapter(
     }
 
     // Island Bottom Cap ViewHolder
-    inner class IslandBottomCapViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+    class IslandBottomCapViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         fun bind() {
             // Nothing to bind, just visual element
         }
@@ -450,7 +450,7 @@ class TabIslandsVerticalAdapter(
     }
 
     // Ungrouped Header ViewHolder
-    inner class UngroupedHeaderViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+    class UngroupedHeaderViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         private val titleText: TextView = itemView.findViewById(R.id.header_title)
 
         fun bind() {

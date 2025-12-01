@@ -72,9 +72,9 @@ class EnhancedTabGroupView @JvmOverloads constructor(
 
         // Set theme-aware background color
         val backgroundColor = if (isDarkMode()) {
-            androidx.core.content.ContextCompat.getColor(context, android.R.color.background_dark)
+            ContextCompat.getColor(context, android.R.color.background_dark)
         } else {
-            androidx.core.content.ContextCompat.getColor(context, android.R.color.background_light)
+            ContextCompat.getColor(context, android.R.color.background_light)
         }
         setBackgroundColor(backgroundColor)
 
@@ -122,17 +122,17 @@ class EnhancedTabGroupView @JvmOverloads constructor(
 
             override fun onMove(
                 recyclerView: RecyclerView,
-                viewHolder: RecyclerView.ViewHolder,
-                target: RecyclerView.ViewHolder
+                viewHolder: ViewHolder,
+                target: ViewHolder
             ): Boolean {
                 // Don't allow reordering - we only want grouping
                 return false
             }
 
             override fun onChildDraw(
-                c: android.graphics.Canvas,
+                c: Canvas,
                 recyclerView: RecyclerView,
-                viewHolder: RecyclerView.ViewHolder,
+                viewHolder: ViewHolder,
                 dX: Float,
                 dY: Float,
                 actionState: Int,
@@ -251,7 +251,7 @@ class EnhancedTabGroupView @JvmOverloads constructor(
                 }
             }
 
-            override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {
+            override fun onSwiped(viewHolder: ViewHolder, direction: Int) {
                 if (direction == ItemTouchHelper.UP) {
                     if (viewHolder is ModernTabPillAdapter.TabPillViewHolder) {
                         val displayItems = islandManager.createDisplayItems(currentTabs)
@@ -269,7 +269,7 @@ class EnhancedTabGroupView @JvmOverloads constructor(
             override fun isLongPressDragEnabled(): Boolean = true
             override fun isItemViewSwipeEnabled(): Boolean = true
 
-            override fun onSelectedChanged(viewHolder: RecyclerView.ViewHolder?, actionState: Int) {
+            override fun onSelectedChanged(viewHolder: ViewHolder?, actionState: Int) {
                 super.onSelectedChanged(viewHolder, actionState)
 
                 when (actionState) {
@@ -315,7 +315,7 @@ class EnhancedTabGroupView @JvmOverloads constructor(
                 }
             }
 
-            override fun clearView(recyclerView: RecyclerView, viewHolder: RecyclerView.ViewHolder) {
+            override fun clearView(recyclerView: RecyclerView, viewHolder: ViewHolder) {
                 super.clearView(recyclerView, viewHolder)
 
                 // Reset all visual states
@@ -424,7 +424,7 @@ class EnhancedTabGroupView @JvmOverloads constructor(
                 }
             }
 
-            override fun getMovementFlags(recyclerView: RecyclerView, viewHolder: RecyclerView.ViewHolder): Int {
+            override fun getMovementFlags(recyclerView: RecyclerView, viewHolder: ViewHolder): Int {
                 // Only allow dragging tab pills, not island headers or collapsed islands
                 val dragFlags = if (viewHolder is ModernTabPillAdapter.TabPillViewHolder) {
                     ItemTouchHelper.LEFT or ItemTouchHelper.RIGHT or ItemTouchHelper.UP or ItemTouchHelper.DOWN
@@ -457,7 +457,7 @@ class EnhancedTabGroupView @JvmOverloads constructor(
         val pos2 = currentTabs.indexOfFirst { it.id == tabId2 }
 
         // Determine the insert position (where the target tab is)
-        val insertPosition = minOf(pos1, pos2)
+        minOf(pos1, pos2)
 
         when {
             island1 != null && island2 == null -> {
@@ -526,7 +526,7 @@ class EnhancedTabGroupView @JvmOverloads constructor(
         // Check if tab content (title, URL, icon) has changed
         val hasContentChanged = tabs.any { newTab ->
             val oldTab = currentTabs.find { it.id == newTab.id }
-            val titleChanged = oldTab?.content?.title != newTab.content.title
+            oldTab?.content?.title != newTab.content.title
             oldTab == null ||
                     oldTab.content.title != newTab.content.title ||
                     oldTab.content.url != newTab.content.url ||
@@ -631,7 +631,7 @@ class EnhancedTabGroupView @JvmOverloads constructor(
         } else {
             // Parent is not in an island, create a new island for both
             // This implements feature #3: auto-group new tabs with parent
-            val newIsland = islandManager.createIsland(
+            islandManager.createIsland(
                 tabIds = listOf(parentTabId, newTabId),
                 name = null
             )
@@ -769,7 +769,7 @@ class EnhancedTabGroupView @JvmOverloads constructor(
     }
 
     private fun showChangeColorDialog(islandId: String) {
-        val island = islandManager.getIsland(islandId) ?: return
+        islandManager.getIsland(islandId) ?: return
 
         val colors = TabIsland.DEFAULT_COLORS
         val colorNames = arrayOf(
@@ -785,9 +785,9 @@ class EnhancedTabGroupView @JvmOverloads constructor(
         ) {
             override fun getView(
                 position: Int,
-                convertView: android.view.View?,
+                convertView: View?,
                 parent: android.view.ViewGroup
-            ): android.view.View {
+            ): View {
                 val view = super.getView(position, convertView, parent)
                 val textView = view.findViewById<android.widget.TextView>(android.R.id.text1)
 

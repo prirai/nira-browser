@@ -35,7 +35,7 @@ class OnboardingThemeFragment : Fragment() {
         val systemCard: MaterialCardView = view.findViewById(R.id.systemThemeCard)
         
         // Web theme section and cards
-        val webThemeSection: LinearLayout = view.findViewById(R.id.webThemeSection)
+        view.findViewById(R.id.webThemeSection)
         val webLightCard: MaterialCardView = view.findViewById(R.id.webLightCard)
         val webDarkCard: MaterialCardView = view.findViewById(R.id.webDarkCard)
         val webSystemCard: MaterialCardView = view.findViewById(R.id.webSystemCard)

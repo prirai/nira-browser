@@ -142,7 +142,7 @@ class ImportExportSettingsFragment : BaseSettingsFragment() {
             val folderElements = doc.select("H3")
 
             val folderArray = mutableListOf<String>()
-            val folderItemArray = mutableListOf<BookmarkFolderItem>()
+            mutableListOf<BookmarkFolderItem>()
             val folderMap = mutableMapOf<String, BookmarkFolderItem>()
 
             // First, identify all folders and create them

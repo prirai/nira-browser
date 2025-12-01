@@ -51,7 +51,7 @@
     <string name="settings_advanced">Ustawienia zaawansowane</string>
     <string name="settings_advanced_explain">Kolekcja rozszerzeń…</string>
     <string name="settings_addons">Ustawienia rozszerzeń</string>
-    <string name="settings_addons_explain">Włączanie dodatków, usuwanie dodatków...</string>
+    <string name="settings_addons_explain">Włączanie dodatków, usuwanie dodatków…</string>
     <string name="settings_about">O aplikacji</string>
     <string name="settings_about_explain">Wersja aplikacji, licencje open source…</string>
     <string name="dark_mode">Tryb ciemny strony internetowej</string>

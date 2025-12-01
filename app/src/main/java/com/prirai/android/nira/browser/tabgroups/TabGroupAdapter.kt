@@ -124,7 +124,7 @@ class TabGroupAdapter(
             // Close button click listener
             closeButton.setOnClickListener {
                 // Handle close tab
-                val store = context.components.store
+                context.components.store
                 val tabsUseCases = context.components.tabsUseCases
                 tabsUseCases.removeTab(tab.id)
             }

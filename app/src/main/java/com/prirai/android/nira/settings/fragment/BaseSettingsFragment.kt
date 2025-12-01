@@ -71,7 +71,7 @@ abstract class BaseSettingsFragment : PreferenceFragmentCompat() {
         summary?.let {
             this.summary = summary
         }
-        val summaryUpdate = SummaryUpdater(this)
+        SummaryUpdater(this)
         onPreferenceChangeListener = OnPreferenceChangeListener { preference: Preference, newValue: Any ->
             onStateChanged(newValue as Int)
             true

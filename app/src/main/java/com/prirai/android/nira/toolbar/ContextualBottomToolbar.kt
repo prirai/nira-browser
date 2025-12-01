@@ -122,7 +122,7 @@ class ContextualBottomToolbar @JvmOverloads constructor(
         val showContextualToolbar = userPrefs.getBoolean("show_contextual_toolbar", true)
         
         if (!showContextualToolbar) {
-            this.visibility = View.GONE
+            this.visibility = GONE
             return
         }
         
@@ -137,107 +137,107 @@ class ContextualBottomToolbar @JvmOverloads constructor(
     }
 
     private fun showHomepageContext(tabCount: Int, canGoForward: Boolean = false) {
-        this.visibility = View.VISIBLE
+        this.visibility = VISIBLE
         
-        backButton.visibility = View.VISIBLE
+        backButton.visibility = VISIBLE
         backButton.setImageResource(R.drawable.ic_baseline_bookmark)
         backButton.isEnabled = true
         backButton.alpha = 1.0f
         
         isShowingBookmarkIcon = true
         
-        forwardButton.visibility = View.VISIBLE
+        forwardButton.visibility = VISIBLE
         forwardButton.setImageResource(R.drawable.ic_ios_forward)
         forwardButton.isEnabled = canGoForward
         forwardButton.alpha = if (canGoForward) 1.0f else 0.4f
         
-        shareButton.visibility = View.GONE
+        shareButton.visibility = GONE
         
-        searchButton.visibility = View.VISIBLE
+        searchButton.visibility = VISIBLE
         searchButton.isEnabled = true
         searchButton.alpha = 1.0f
         
-        newTabButton.visibility = View.GONE
+        newTabButton.visibility = GONE
         
-        tabCountButton.visibility = View.VISIBLE
-        menuButton.visibility = View.VISIBLE
+        tabCountButton.visibility = VISIBLE
+        menuButton.visibility = VISIBLE
         
         updateTabCount(tabCount)
     }
 
     private fun showWebsiteContext(canGoBack: Boolean, tabCount: Int) {
-        backButton.visibility = View.VISIBLE
+        backButton.visibility = VISIBLE
         backButton.setImageResource(R.drawable.ic_ios_back)
         backButton.isEnabled = canGoBack
         backButton.alpha = if (canGoBack) 1.0f else 0.4f
         
         isShowingBookmarkIcon = false
         
-        forwardButton.visibility = View.GONE
+        forwardButton.visibility = GONE
         
-        shareButton.visibility = View.VISIBLE
+        shareButton.visibility = VISIBLE
         shareButton.isEnabled = true
         shareButton.alpha = 1.0f
         
-        searchButton.visibility = View.GONE
+        searchButton.visibility = GONE
         
-        newTabButton.visibility = View.VISIBLE
+        newTabButton.visibility = VISIBLE
         newTabButton.isEnabled = true
         newTabButton.alpha = 1.0f
         
-        tabCountButton.visibility = View.VISIBLE
-        menuButton.visibility = View.VISIBLE
+        tabCountButton.visibility = VISIBLE
+        menuButton.visibility = VISIBLE
         
         updateTabCount(tabCount)
     }
 
     private fun showFullNavigationContext(tabCount: Int) {
-        backButton.visibility = View.VISIBLE
+        backButton.visibility = VISIBLE
         backButton.setImageResource(R.drawable.ic_ios_back)
         backButton.isEnabled = true
         backButton.alpha = 1.0f
         
         isShowingBookmarkIcon = false
         
-        forwardButton.visibility = View.VISIBLE
+        forwardButton.visibility = VISIBLE
         forwardButton.setImageResource(R.drawable.ic_ios_forward)
         forwardButton.isEnabled = true
         forwardButton.alpha = 1.0f
         
-        shareButton.visibility = View.GONE
+        shareButton.visibility = GONE
         
-        searchButton.visibility = View.GONE
+        searchButton.visibility = GONE
         
-        newTabButton.visibility = View.VISIBLE
+        newTabButton.visibility = VISIBLE
         newTabButton.isEnabled = true
         newTabButton.alpha = 1.0f
         
-        tabCountButton.visibility = View.VISIBLE
-        menuButton.visibility = View.VISIBLE
+        tabCountButton.visibility = VISIBLE
+        menuButton.visibility = VISIBLE
         
         updateTabCount(tabCount)
     }
 
     private fun showDefaultContext(tabCount: Int) {
-        backButton.visibility = View.VISIBLE
+        backButton.visibility = VISIBLE
         backButton.setImageResource(R.drawable.ic_ios_back)
         backButton.isEnabled = true
         backButton.alpha = 1.0f
         
         isShowingBookmarkIcon = false
         
-        forwardButton.visibility = View.GONE
+        forwardButton.visibility = GONE
         
-        shareButton.visibility = View.VISIBLE
+        shareButton.visibility = VISIBLE
         shareButton.isEnabled = true
         shareButton.alpha = 1.0f
         
-        searchButton.visibility = View.GONE
+        searchButton.visibility = GONE
         
-        newTabButton.visibility = View.VISIBLE
+        newTabButton.visibility = VISIBLE
         
-        tabCountButton.visibility = View.VISIBLE
-        menuButton.visibility = View.VISIBLE
+        tabCountButton.visibility = VISIBLE
+        menuButton.visibility = VISIBLE
         
         updateTabCount(tabCount)
     }
