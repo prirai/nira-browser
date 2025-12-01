@@ -122,8 +122,8 @@ class TabsBottomSheetFragment : BottomSheetDialogFragment() {
                 showGroupOptionsMenu(groupId, view)
             },
             onTabLongPress = { tabId, view ->
-                showTabOptionsMenu(tabId, view)
-                true
+                // No menu for ungrouped tabs
+                false
             },
             onGroupTabLongPress = { tabId, groupId, view ->
                 showGroupTabOptionsMenu(tabId, groupId, view)
@@ -354,33 +354,6 @@ class TabsBottomSheetFragment : BottomSheetDialogFragment() {
         }
     }
 
-    private fun showTabOptionsMenu(tabId: String, view: View) {
-        val popup = androidx.appcompat.widget.PopupMenu(requireContext(), view)
-        popup.inflate(R.menu.tab_options_menu)
-        
-        popup.setOnMenuItemClickListener { item ->
-            when (item.itemId) {
-                R.id.action_add_to_group -> {
-                    showAddToGroupDialog(tabId)
-                    true
-                }
-                R.id.action_create_group -> {
-                    lifecycleScope.launch {
-                        unifiedGroupManager.createGroup(
-                            tabIds = listOf(tabId),
-                            name = "Group ${System.currentTimeMillis() % 1000}"
-                        )
-                        updateTabsDisplay()
-                    }
-                    true
-                }
-                else -> false
-            }
-        }
-        
-        popup.show()
-    }
-
     private fun showGroupTabOptionsMenu(tabId: String, groupId: String, view: View) {
         val popup = androidx.appcompat.widget.PopupMenu(requireContext(), view)
         popup.menu.add(0, 1, 0, "Remove from group")
@@ -442,28 +415,6 @@ class TabsBottomSheetFragment : BottomSheetDialogFragment() {
         }
         
         popup.show()
-    }
-
-    private fun showAddToGroupDialog(tabId: String) {
-        lifecycleScope.launch {
-            val groups = unifiedGroupManager.getAllGroups()
-            if (groups.isEmpty()) {
-                return@launch
-            }
-            
-            val groupNames = groups.map { it.name.ifBlank { "Group ${it.id.take(8)}" } }.toTypedArray()
-            
-            MaterialAlertDialogBuilder(requireContext())
-                .setTitle("Add to Group")
-                .setItems(groupNames) { _, which ->
-                    lifecycleScope.launch {
-                        unifiedGroupManager.addTabToGroup(tabId, groups[which].id)
-                        updateTabsDisplay()
-                    }
-                }
-                .setNegativeButton("Cancel", null)
-                .show()
-        }
     }
 
     private fun showRenameGroupDialog(groupId: String) {
