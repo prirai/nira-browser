@@ -1,5 +1,6 @@
 package com.prirai.android.nira.utils
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -20,6 +21,7 @@ class FaviconCache private constructor(private val context: Context) {
     private val cacheDir: File
     
     companion object {
+        @SuppressLint("StaticFieldLeak")
         @Volatile
         private var INSTANCE: FaviconCache? = null
         

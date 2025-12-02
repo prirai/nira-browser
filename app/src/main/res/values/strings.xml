@@ -131,16 +131,17 @@
   <string name="more">More Info</string>
   <string name="version">Application version</string>
   <string name="licenses">Open Source Licenses</string>
-  <string name="mpl_license">Mozilla Public License 2.0</string>
-  <string name="apache">Apache License 2.0</string>
+  <string name="mpl_license" translatable="false">Mozilla Public License 2.0</string>
+  <string name="apache" translatable="false">Apache License 2.0</string>
   <string name="freeware">Freeware</string>
-  <string name="mozac">Mozilla Android Components</string>
+  <string name="mozac" translatable="false">Mozilla Android Components</string>
   <string
         name="android_open_source_project"
+        translatable="false"
     >Android Open Source Project</string>
-  <string name="geckoview">GeckoView</string>
-  <string name="license_gnu">GNU Lesser General Public License</string>
-  <string name="license_gpl">GNU General Public License</string>
+  <string name="geckoview" translatable="false">GeckoView</string>
+  <string name="license_gnu" translatable="false">GNU Lesser General Public License</string>
+  <string name="license_gpl" translatable="false">GNU General Public License</string>
 
   <string name="no_ads">No ads or trackers</string>
 

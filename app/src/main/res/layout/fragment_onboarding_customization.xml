@@ -181,6 +181,7 @@
                     android:layout_height="24dp"
                     android:src="@drawable/ic_tabs"
                     android:layout_margin="8dp"
+                    android:contentDescription="@string/tabs"
                     app:tint="?attr/colorOnSurface" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>

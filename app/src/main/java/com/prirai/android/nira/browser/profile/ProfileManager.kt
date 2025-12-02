@@ -1,5 +1,6 @@
 package com.prirai.android.nira.browser.profile
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.content.SharedPreferences
 import com.squareup.moshi.Moshi
@@ -25,6 +26,7 @@ class ProfileManager(private val context: Context) {
         private const val KEY_ACTIVE_PROFILE_ID = "active_profile_id"
         private const val KEY_LAST_PRIVATE_PROFILE = "last_private_profile"
         
+        @SuppressLint("StaticFieldLeak")
         @Volatile
         private var instance: ProfileManager? = null
         
