@@ -741,4 +741,117 @@
   <string name="add_to_group">Add to group</string>
   <string name="create_new_group">Create new group</string>
 
+  <!-- PWA Management Strings -->
+  <string name="web_app_settings_title">Web Apps</string>
+  <string name="no_web_apps_installed">No web apps installed</string>
+  <string name="no_web_apps_installed_description">Install progressive web apps from websites to manage them here</string>
+  <string name="web_app_icon">Web app icon</string>
+  <string name="uninstall_web_app">Uninstall Web App</string>
+  <string name="uninstall_web_app_confirmation">Are you sure you want to uninstall \"%1$s\"? This will remove the app from your device.</string>
+  <string name="uninstall">Uninstall</string>
+  <string name="clear_web_app_data">Clear App Data</string>
+  <string name="clear_web_app_data_confirmation">Are you sure you want to clear all data for \"%1$s\"? This will remove cached files, databases, and other stored data.</string>
+  <string name="clear_data">Clear Data</string>
+  <string name="web_app_data_cleared">Web app data cleared successfully</string>
+  <string name="pwa_cache_updated">Cache updated for \"%1$s\". This app can now work better offline.</string>
+  <string name="offline_available">Offline available</string>
+  <string name="offline_not_available">Offline not available</string>
+  <string name="update_cache">Update Cache</string>
+  <string name="pwa_offline_status">Offline: %1$s</string>
+
+  <!-- PWA Notification Strings -->
+  <string name="pwa_notifications">Notifications</string>
+  <string name="pwa_notification_settings">Notification Settings</string>
+  <string name="enable_notifications">Enable Notifications</string>
+  <string name="notification_permission_request">\"%1$s\" would like to send you notifications</string>
+  <string name="allow_notifications">Allow</string>
+  <string name="deny_notifications">Don\'t Allow</string>
+  <string name="notification_settings_saved">Notification settings saved</string>
+  <string name="show_badges">Show Badges</string>
+  <string name="play_sounds">Play Sounds</string>
+  <string name="vibrate">Vibrate</string>
+  <string name="notification_priority">Priority</string>
+
+  <!-- Enhanced PWA Installation Strings -->
+  <string name="pwa_install_excellent">\"%1$s\" is an excellent progressive web app with full offline support</string>
+  <string name="pwa_install_good">\"%1$s\" is a good progressive web app with basic offline features</string>
+  <string name="pwa_install_basic">\"%1$s\" can be installed as a basic web app</string>
+  <string name="pwa_install_poor">\"%1$s\" has limited web app capabilities</string>
+  <string name="pwa_benefit_offline">Work offline without internet</string>
+  <string name="pwa_benefit_notifications">Receive notifications</string>
+  <string name="pwa_benefit_homescreen">Quick access from home screen</string>
+  <string name="pwa_benefit_themed">Custom themed experience</string>
+  <string name="install_web_app_prompt">Install Web App</string>
+  <string name="pwa_installation_benefits">Benefits of installing:</string>
+  <string name="pwa_install_now">Install Now</string>
+  <string name="pwa_learn_more">Learn More</string>
+  <string name="pwa_installation_complete">\"%1$s\" installed successfully!</string>
+  <string name="pwa_installation_failed">Failed to install web app</string>
+
+  <!-- PWA Update Strings -->
+  <string name="pwa_updates">Updates</string>
+  <string name="check_for_updates">Check for Updates</string>
+  <string name="updates_available">%1$d updates available</string>
+  <string name="no_updates_available">All web apps are up to date</string>
+  <string name="last_checked">Last checked: %1$s</string>
+  <string name="update_now">Update Now</string>
+  <string name="update_all">Update All</string>
+  <string name="automatic_updates">Automatic Updates</string>
+  <string name="update_frequency">Update Frequency</string>
+  <string name="update_in_progress">Updating \"%1$s\"…</string>
+  <string name="update_complete">\"%1$s\" updated successfully!</string>
+  <string name="update_failed">Failed to update \"%1$s\"</string>
+  <string name="update_size">Update size: %1$s</string>
+  <string name="changelog">What\'s new:</string>
+  <string name="critical_update">Critical update available</string>
+  <string name="optional_update">Optional update available</string>
+  <string name="popular_with_count">Popular • %1$d+ installs</string>
+  <string name="pwa_management_navigation">Opening PWA Management</string>
+  <string name="learn_more">Learn More</string>
+
+  <!-- PWA Suggestion Strings -->
+  <string name="pwa_suggestions">Suggested Web Apps</string>
+  <string name="discover_pwas">Discover high-quality web apps</string>
+  <string name="pwa_suggestion_excellent">\"%1$s\" is an excellent progressive web app with full offline support and notifications</string>
+  <string name="pwa_suggestion_very_good">\"%1$s\" is a very good progressive web app with advanced features</string>
+  <string name="pwa_suggestion_good">\"%1$s\" is a good progressive web app with basic offline capabilities</string>
+  <string name="pwa_suggestion_fair">\"%1$s\" offers fair progressive web app functionality</string>
+  <string name="pwa_suggestion_unknown">\"%1$s\" web app quality is unknown</string>
+  <string name="quality_excellent">Excellent</string>
+  <string name="quality_very_good">Very Good</string>
+  <string name="quality_good">Good</string>
+  <string name="quality_fair">Fair</string>
+  <string name="quality_unknown">Unknown</string>
+  <string name="install_suggested_pwa">Install Suggested App</string>
+  <string name="pwa_categories">Categories</string>
+  <string name="pwa_benefits">Benefits</string>
+  <string name="popular_pwas">Popular Web Apps</string>
+  <string name="all_categories">All Categories</string>
+  <string name="no_suggestions">No suggestions available</string>
+  
+  <!-- Unified Web Apps Strings -->
+  <string name="web_apps_title">Web Apps</string>
+  <string name="installed_apps">Installed</string>
+  <string name="discover_apps">Discover</string>
+  <string name="no_installed_webapps">No web apps installed</string>
+  <string name="no_suggested_webapps">Browse websites to see suggestions</string>
+  <string name="benefits">Benefits</string>
+  <string name="categories">Categories</string>
+  <string name="quality">Quality</string>
+  <string name="launch">Launch</string>
+  <string name="installation_failed">Installation Failed</string>
+  <string name="loading_suggestions">Loading suggestions...</string>
+  <string name="shortcut_added">Shortcut Added</string>
+  <string name="shortcut_added_message">Shortcut for \"%1$s\" has been added to your home screen</string>
+  <string name="shortcut_failed">Shortcut Failed</string>
+  <string name="shortcut_failed_message">Failed to add shortcut to home screen</string>
+  <string name="select_profile">Select Profile</string>
+  <string name="associate_profile">Associate Profile</string>
+  <string name="clone_webapp">Clone Web App</string>
+  <string name="more_options">More Options</string>
+  <string name="current_profile">Profile: %1$s</string>
+  <string name="clone_webapp_dialog_title">Clone Web App</string>
+  <string name="clone_webapp_dialog_message">Create a copy of \"%1$s\" with a different profile?</string>
+  <string name="clone">Clone</string>
+
 </resources>

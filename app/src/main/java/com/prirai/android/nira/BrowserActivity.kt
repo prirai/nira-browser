@@ -629,6 +629,8 @@ open class BrowserActivity : LocaleAwareAppCompatActivity(), ComponentCallbacks2
         // Set status bar icons color
         androidx.core.view.WindowInsetsControllerCompat(window, window.decorView).apply {
             isAppearanceLightStatusBars = !isAppInDarkTheme()
+            // Ensure system bars are always visible
+            show(WindowInsetsCompat.Type.systemBars())
         }
         
         // Make navigation bar transparent and content flows behind it

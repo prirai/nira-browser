@@ -368,6 +368,11 @@ open class Components(private val applicationContext: Context) {
             webAppManifestStorage
     ) }
     val webAppUseCases by lazy { WebAppUseCases(applicationContext, store, webAppShortcutManager) }
+    val webAppManager by lazy { com.prirai.android.nira.webapp.WebAppManager(applicationContext) }
+    val webAppNotificationManager by lazy { com.prirai.android.nira.webapp.WebAppNotificationManager(applicationContext) }
+    val webAppInstallationManager by lazy { com.prirai.android.nira.webapp.WebAppInstallationManager(applicationContext) }
+    val webAppUpdateManager by lazy { com.prirai.android.nira.webapp.WebAppUpdateManager(applicationContext) }
+    val pwaSuggestionManager by lazy { com.prirai.android.nira.webapp.PwaSuggestionManager(applicationContext) }
 
     val tabsUseCases: TabsUseCases by lazy { TabsUseCases(store) }
     val downloadsUseCases: DownloadsUseCases by lazy { DownloadsUseCases(store) }

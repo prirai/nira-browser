@@ -18,23 +18,37 @@ object WebAppInstaller {
     /**
      * Install a PWA that opens in fullscreen WebAppActivity
      */
-    fun installPwa(
+    suspend fun installPwa(
         context: Context,
         session: SessionState,
         manifest: WebAppManifest?,
         icon: Bitmap?
     ) {
         val url = session.content.url
-        val title = manifest?.name ?: manifest?.shortName ?: session.content.title ?: url
-        
+        // Ensure we always have a non-empty title
+        val title = (manifest?.name ?: manifest?.shortName ?: session.content.title)?.takeIf { it.isNotBlank() } ?: url
+
+        // Store PWA in database using WebAppManager
+        val webAppManager = com.prirai.android.nira.components.Components(context).webAppManager
+        webAppManager.installWebApp(
+            url = url,
+            name = title,
+            manifestUrl = manifest?.startUrl?.toString(),
+            icon = icon,
+            themeColor = manifest?.themeColor?.toString(),
+            backgroundColor = manifest?.backgroundColor?.toString()
+        )
+
         // Create intent that launches WebAppActivity
         val intent = Intent(context, WebAppActivity::class.java).apply {
             action = Intent.ACTION_VIEW
             data = url.toUri()
             putExtra(WebAppActivity.EXTRA_WEB_APP_URL, url)
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or 
+                    Intent.FLAG_ACTIVITY_NEW_DOCUMENT or 
+                    Intent.FLAG_ACTIVITY_MULTIPLE_TASK
         }
-        
+
         // Create shortcut
         val shortcut = ShortcutInfoCompat.Builder(context, url)
             .setShortLabel(title)
@@ -49,7 +63,7 @@ object WebAppInstaller {
                 }
             }
             .build()
-        
+
         // Add shortcut to launcher
         ShortcutManagerCompat.requestPinShortcut(context, shortcut, null)
     }
@@ -63,7 +77,8 @@ object WebAppInstaller {
         icon: Bitmap?
     ) {
         val url = session.content.url
-        val title = session.content.title ?: url
+        // Ensure we always have a non-empty title
+        val title = session.content.title?.takeIf { it.isNotBlank() } ?: url
         
         // Create intent that launches main BrowserActivity
         val intent = Intent(context, com.prirai.android.nira.BrowserActivity::class.java).apply {

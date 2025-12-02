@@ -11,6 +11,7 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import com.prirai.android.nira.R
 import mozilla.components.feature.pwa.ext.getWebAppManifest
+import kotlinx.coroutines.runBlocking
 
 /**
  * Activity for Progressive Web Apps (PWAs) - Fullscreen, no browser chrome
@@ -26,13 +27,14 @@ class WebAppActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
-        // Enable edge-to-edge display
-        WindowCompat.setDecorFitsSystemWindows(window, false)
-        
         setContentView(R.layout.activity_webapp)
         
-        // Hide system UI for fullscreen experience
-        hideSystemUI()
+        // Show system bars normally
+        WindowCompat.setDecorFitsSystemWindows(window, true)
+        
+        // Ensure system bars are visible
+        val windowInsetsController = WindowCompat.getInsetsController(window, window.decorView)
+        windowInsetsController?.show(WindowInsetsCompat.Type.systemBars())
         
         // Extract URL from intent
         val url = extractUrlFromIntent(intent)
@@ -43,13 +45,37 @@ class WebAppActivity : AppCompatActivity() {
             return
         }
         
+        // Get profile ID for this webapp (from database)
+        val profileId = getProfileIdForUrl(url)
+        
         // Load the web app fragment if not already added
         if (savedInstanceState == null) {
-            val fragment = WebAppFragment.newInstance(url)
+            val fragment = WebAppFragment.newInstance(url, profileId)
             supportFragmentManager.beginTransaction()
                 .replace(R.id.webapp_container, fragment)
                 .commit()
         }
+        
+        // Handle back button
+        onBackPressedDispatcher.addCallback(this, object : androidx.activity.OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                val fragment = supportFragmentManager.findFragmentById(R.id.webapp_container) as? WebAppFragment
+                if (fragment?.handleBackPressed() != true) {
+                    // If can't go back in history, finish and remove from recents
+                    finishAndRemoveTask()
+                }
+            }
+        })
+    }
+    
+    private fun getProfileIdForUrl(url: String): String {
+        // Lookup webapp by URL to get its profile
+        var profileId = "default"
+        runBlocking {
+            val webApp = com.prirai.android.nira.components.Components(this@WebAppActivity).webAppManager.getWebAppByUrl(url)
+            profileId = webApp?.profileId ?: "default"
+        }
+        return profileId
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -59,10 +85,13 @@ class WebAppActivity : AppCompatActivity() {
         // Handle new URL when activity is reused
         val url = extractUrlFromIntent(intent)
         if (!url.isNullOrEmpty()) {
+            // Get the correct profile for this URL
+            val profileId = getProfileIdForUrl(url)
+            
             val fragment = supportFragmentManager.findFragmentById(R.id.webapp_container) as? WebAppFragment
             if (fragment != null) {
-                // Update existing fragment with new URL
-                val newFragment = WebAppFragment.newInstance(url)
+                // Update existing fragment with new URL and profile
+                val newFragment = WebAppFragment.newInstance(url, profileId)
                 supportFragmentManager.beginTransaction()
                     .replace(R.id.webapp_container, newFragment)
                     .commit()
@@ -92,48 +121,4 @@ class WebAppActivity : AppCompatActivity() {
         return null
     }
 
-    private fun hideSystemUI() {
-        val windowInsetsController = WindowCompat.getInsetsController(window, window.decorView)
-        
-        // Configure behavior
-        windowInsetsController.systemBarsBehavior = 
-            WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-        
-        // Hide both status and navigation bars
-        windowInsetsController.hide(WindowInsetsCompat.Type.systemBars())
-        
-        // For older Android versions
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
-            @Suppress("DEPRECATION")
-            window.decorView.systemUiVisibility = (
-                View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
-                or View.SYSTEM_UI_FLAG_FULLSCREEN
-                or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
-                or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-                or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
-                or View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-            )
-        }
-    }
-
-    override fun onResume() {
-        super.onResume()
-        // Re-hide system UI when returning to the app
-        hideSystemUI()
-    }
-
-    override fun onBackPressed() {
-        val fragment = supportFragmentManager.findFragmentById(R.id.webapp_container) as? WebAppFragment
-        if (fragment?.handleBackPressed() != true) {
-            super.onBackPressed()
-        }
-    }
-
-    override fun onWindowFocusChanged(hasFocus: Boolean) {
-        super.onWindowFocusChanged(hasFocus)
-        if (hasFocus) {
-            // Re-hide system UI when window gains focus
-            hideSystemUI()
-        }
-    }
 }

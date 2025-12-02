@@ -95,16 +95,30 @@ class DefaultBrowserToolbarMenuController(
                                 url = session.content.url
                             )
                         ).await()?.bitmap
-                        
-                        // Install PWA using our custom installer
+
+                         // Install PWA using our custom installer
                         com.prirai.android.nira.webapp.WebAppInstaller.installPwa(
                             activity,
                             session,
                             null, // manifest not needed for basic install
                             icon
                         )
-                        
-                        android.widget.Toast.makeText(
+
+                         // Also update the WebAppManager
+                        try {
+                            activity.components.webAppManager.installWebApp(
+                                url = session.content.url,
+                                name = session.content.title ?: session.content.url,
+                                manifestUrl = null,
+                                icon = icon,
+                                themeColor = null,
+                                backgroundColor = null
+                            )
+                        } catch (e: Exception) {
+                            // Handle error
+                        }
+
+                         android.widget.Toast.makeText(
                             activity,
                             activity.getString(R.string.app_installed),
                             android.widget.Toast.LENGTH_SHORT

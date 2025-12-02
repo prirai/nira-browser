@@ -26,6 +26,13 @@
         android:title="@string/settings_customization"
         android:singleLineTitle="false"
         android:summary="@string/settings_customization_explain"/>
+
+    <androidx.preference.Preference
+        android:fragment="com.prirai.android.nira.settings.fragment.UnifiedWebAppFragment"
+        android:icon="@drawable/ic_language"
+        android:title="@string/web_apps_title"
+        android:singleLineTitle="false"
+        android:summary="Manage and discover progressive web apps"/>
     
     <!-- Extensions -->
     <androidx.preference.Preference

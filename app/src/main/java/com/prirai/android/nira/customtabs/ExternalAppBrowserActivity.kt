@@ -71,6 +71,9 @@ open class ExternalAppBrowserActivity : BrowserActivity() {
             if (tabId != null && customTab != null) {
                 components.tabsUseCases.removeTab(tabId)
             }
+            
+            // Remove from recents when custom tab is closed
+            finishAndRemoveTask()
         }
         
         super.onDestroy()

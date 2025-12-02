@@ -61,7 +61,7 @@
     <!-- Custom Tabs Activity for external apps -->
     <activity
         android:name=".customtabs.ExternalAppBrowserActivity"
-        android:autoRemoveFromRecents="false"
+        android:autoRemoveFromRecents="true"
         android:configChanges="keyboard|keyboardHidden|mcc|mnc|orientation|screenSize|layoutDirection|smallestScreenSize|screenLayout"
         android:exported="false"
         android:persistableMode="persistNever"
@@ -209,10 +209,10 @@
         android:name=".webapp.WebAppActivity"
         android:configChanges="orientation|screenSize|keyboard|keyboardHidden"
         android:exported="true"
-        android:launchMode="singleTask"
+        android:launchMode="singleTop"
         android:excludeFromRecents="false"
-        android:theme="@style/WebAppTheme"
-        android:taskAffinity=".webapp.WebAppActivity">
+        android:documentLaunchMode="intoExisting"
+        android:theme="@style/WebAppTheme">
       
       <!-- Handle PWA shortcuts created by webAppUseCases.addToHomescreen() -->
       <intent-filter>
