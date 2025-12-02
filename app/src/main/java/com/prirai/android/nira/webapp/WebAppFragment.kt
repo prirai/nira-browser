@@ -35,8 +35,9 @@ class WebAppFragment : Fragment(), EngineSession.Observer {
 
     private lateinit var engineView: GeckoEngineView
     private var engineSession: EngineSession? = null
-    private var canGoBack: Boolean = false
     private var profileId: String = "default"
+    private var startUrl: String? = null
+    private var navigationHistorySize: Int = 0
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -54,6 +55,7 @@ class WebAppFragment : Fragment(), EngineSession.Observer {
         // Get URL and profile from arguments
         val url = arguments?.getString(ARG_WEB_APP_URL)
         profileId = arguments?.getString(ARG_PROFILE_ID) ?: "default"
+        startUrl = url
         
         if (url.isNullOrEmpty()) {
             activity?.finish()
@@ -84,7 +86,7 @@ class WebAppFragment : Fragment(), EngineSession.Observer {
                     profileId
                 )
                 
-                // Register as observer to track navigation state
+                // Register as observer to track navigation state and history
                 engineSession?.register(this@WebAppFragment)
                 
                 // Link the engine session to the view
@@ -117,9 +119,17 @@ class WebAppFragment : Fragment(), EngineSession.Observer {
         engineSession?.close()
         engineSession = null
     }
-
-    override fun onNavigationStateChange(canGoBack: Boolean?, canGoForward: Boolean?) {
-        this.canGoBack = canGoBack ?: false
+    
+    override fun onLoadRequest(
+        url: String,
+        triggeredByRedirect: Boolean,
+        triggeredByWebContent: Boolean
+    ) {
+        // Track navigation events - when a new page is being loaded
+        if (triggeredByWebContent && !triggeredByRedirect) {
+            // User clicked a link or navigated within the webapp
+            navigationHistorySize++
+        }
     }
     
     override fun onWindowRequest(windowRequest: WindowRequest) {
@@ -139,11 +149,18 @@ class WebAppFragment : Fragment(), EngineSession.Observer {
     }
 
     fun handleBackPressed(): Boolean {
-        // Handle back button - go back in web history
-        if (canGoBack) {
-            engineSession?.goBack()
+        // Handle back button - go back in web history if we have navigated within the app
+        // Only close if we're at the initial start URL (no history to go back to)
+        val session = engineSession ?: return false
+        
+        // If we have navigation history (navigated away from start URL), go back
+        if (navigationHistorySize > 0) {
+            session.goBack()
+            navigationHistorySize = maxOf(0, navigationHistorySize - 1)
             return true
         }
+        
+        // No history to go back to - let the activity close the webapp
         return false
     }
     
