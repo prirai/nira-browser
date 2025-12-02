@@ -40,6 +40,7 @@ import mozilla.components.feature.addons.ui.translateSummary
 import mozilla.components.support.ktx.android.content.appName
 import mozilla.components.support.ktx.android.content.appVersionName
 import kotlin.math.roundToInt
+import androidx.core.graphics.drawable.toDrawable
 
 
 private const val VIEW_HOLDER_TYPE_SECTION = 0
@@ -483,7 +484,7 @@ class AddonsAdapter(
 
     internal fun setWithAnimation(image: ImageView, bitmap: Bitmap, duration: Int = 1500) {
         with(image) {
-            val bitmapDrawable = BitmapDrawable(context.resources, bitmap)
+            val bitmapDrawable = bitmap.toDrawable(context.resources)
             val animation = TransitionDrawable(arrayOf(drawable, bitmapDrawable))
             animation.isCrossFadeEnabled = true
             setImageDrawable(animation)

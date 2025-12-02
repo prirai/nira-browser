@@ -118,12 +118,8 @@ fun View.getRectWithScreenLocation(): Rect {
  * if the view is not attached.
  */
 fun View.getWindowInsets(): WindowInsetsCompat? {
-    return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-        rootWindowInsets?.let {
-            WindowInsetsCompat.toWindowInsetsCompat(it)
-        }
-    } else {
-        null
+    return rootWindowInsets?.let {
+        WindowInsetsCompat.toWindowInsetsCompat(it)
     }
 }
 
@@ -136,13 +132,7 @@ fun View.getWindowInsets(): WindowInsetsCompat? {
  */
 fun View.isKeyboardVisible(): Boolean {
     // Since we have insets in M and above, we don't need to guess what the keyboard height is.
-    // Otherwise, we make a guess at the minimum height of the keyboard to account for the
-    // navigation bar.
-    val minimumKeyboardHeight = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-        0
-    } else {
-        MINIMUM_KEYBOARD_HEIGHT
-    }
+    val minimumKeyboardHeight = 0
     return getKeyboardHeight() > minimumKeyboardHeight
 }
 

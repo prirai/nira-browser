@@ -20,6 +20,7 @@
             android:layout_width="54dp"
             android:layout_height="54dp"
             android:layout_marginBottom="8dp"
+            android:contentDescription="@string/mozac_feature_addons_settings"
             tools:srcCompat="@drawable/ic_settings_addons_layers" />
 
         <TextView

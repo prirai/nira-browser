@@ -699,4 +699,45 @@
   <string name="interface_font_scale_preview">Preview Text Size</string>
   <string name="preview">Preview</string>
 
+  <!-- ContentDescription strings for accessibility -->
+  <string name="folder_icon">Folder icon</string>
+  <string name="bookmark_icon">Bookmark icon</string>
+  <string name="browser_action_icon">Browser action icon</string>
+  <string name="tab_count_background">Tab count background</string>
+  <string name="reader_view_appearance">Reader view appearance</string>
+  <string name="security_icon">Security icon</string>
+  <string name="shortcut_icon">Shortcut icon</string>
+  <string name="tab_favicon">Tab favicon</string>
+  <string name="tab_close_button">Close tab</string>
+  
+  <!-- HardcodedText fixes -->
+  <string name="add">Add</string>
+  <string name="find_in_page">Find in page</string>
+  <string name="previous">Previous</string>
+  <string name="select_time_range">Select time range</string>
+  <string name="issued_by">Issued by</string>
+  <string name="issued_to">Issued to</string>
+  <string name="folder_name">Folder Name</string>
+  <string name="connection_is_secure">Connection is secure</string>
+  <string name="website_title">Website Title</string>
+  <string name="example_url"><![CDATA[<a href="https://example.com">https://example.com</a>]]></string>
+  <string name="certificate_information">Certificate Information</string>
+  <string name="certificate_authority">Certificate Authority</string>
+  <string name="example_domain">example.com</string>
+  <string name="privacy_and_security">Privacy &amp; Security</string>
+  <string name="enhanced_tracking_protection">Enhanced Tracking Protection</string>
+  <string name="blocks_trackers">Blocks trackers</string>
+  <string name="clear_cookies_and_site_data">Clear cookies and site data</string>
+  <string name="tab_title">Tab Title</string>
+  <string name="island">Island</string>
+  <string name="island_icon">Island icon</string>
+  <string name="collapse_or_expand_island">Collapse or expand island</string>
+  <string name="add_new_tab_to_island">Add new tab to island</string>
+  <string name="island_name">Island Name</string>
+  <string name="rename">Rename</string>
+  <string name="change_color">Change color</string>
+  <string name="ungroup_tabs">Ungroup tabs</string>
+  <string name="add_to_group">Add to group</string>
+  <string name="create_new_group">Create new group</string>
+
 </resources>

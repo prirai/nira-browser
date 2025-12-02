@@ -31,7 +31,7 @@
             android:layout_marginEnd="6dp"
             android:src="@drawable/ic_tab"
             android:tint="@android:color/white"
-            android:contentDescription="Island icon"
+            android:contentDescription="@string/island_icon"
             android:scaleType="centerInside"
         />
 
@@ -41,7 +41,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginEnd="6dp"
-            android:text="Island"
+            android:text="@string/island"
             android:textSize="14sp"
             android:textStyle="bold"
             android:textColor="@android:color/white"
@@ -58,7 +58,6 @@
             android:layout_height="20dp"
             android:gravity="center"
             android:background="@drawable/badge_background"
-            android:text="5"
             android:textSize="11sp"
             android:textStyle="bold"
             android:textColor="@android:color/white"

@@ -15,6 +15,7 @@ import com.prirai.android.nira.preferences.UserPreferences
 import com.prirai.android.nira.utils.Utils
 import mozilla.components.browser.icons.IconRequest
 import mozilla.components.support.ktx.android.net.hostWithoutCommonPrefixes
+import androidx.core.net.toUri
 
 internal class ShortcutGridAdapter(
         private val context: Context,
@@ -76,7 +77,7 @@ internal class ShortcutGridAdapter(
     }
 
     private fun getUrlHost(url: String): String {
-        val uri = Uri.parse(url)
+        val uri = url.toUri()
 
         val host = uri.hostWithoutCommonPrefixes
         if (!host.isNullOrEmpty()) {

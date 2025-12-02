@@ -366,6 +366,7 @@ class ModernTabPillAdapter(
                             val deltaY = startY - event.rawY
                             if (deltaY > 100) {
                                 // Trigger delete animation
+                                v.performClick()
                                 animateStandaloneTabDelete()
                             } else {
                                 // Spring back
@@ -377,6 +378,7 @@ class ModernTabPillAdapter(
                                     .setDuration(200)
                                     .start()
                             }
+                            isDragging = false
                             true
                         } else {
                             v.performClick()

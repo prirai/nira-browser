@@ -143,6 +143,7 @@
                     android:id="@+id/previewIcon1"
                     android:layout_width="24dp"
                     android:layout_height="24dp"
+                    android:contentDescription="@string/back"
                     android:src="@drawable/mozac_ic_back_24"
                     android:layout_margin="8dp"
                     app:tint="?attr/colorOnSurface" />
@@ -151,6 +152,7 @@
                     android:id="@+id/previewIcon2"
                     android:layout_width="24dp"
                     android:layout_height="24dp"
+                    android:contentDescription="@string/forward"
                     android:src="@drawable/mozac_ic_forward_24"
                     android:layout_margin="8dp"
                     app:tint="?attr/colorOnSurface" />
@@ -159,6 +161,7 @@
                     android:id="@+id/previewIcon3"
                     android:layout_width="24dp"
                     android:layout_height="24dp"
+                    android:contentDescription="@string/search"
                     android:src="@drawable/ic_round_search"
                     android:layout_margin="8dp"
                     app:tint="?attr/colorOnSurface" />
@@ -167,6 +170,7 @@
                     android:id="@+id/previewIcon4"
                     android:layout_width="24dp"
                     android:layout_height="24dp"
+                    android:contentDescription="@string/menu"
                     android:src="@drawable/ic_menu_rounded"
                     android:layout_margin="8dp"
                     app:tint="?attr/colorOnSurface" />

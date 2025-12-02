@@ -18,6 +18,7 @@
             android:id="@+id/security_icon"
             android:layout_width="32dp"
             android:layout_height="32dp"
+            android:contentDescription="@string/security_icon"
             android:src="@drawable/ic_baseline_lock"
             app:tint="?android:attr/textColorPrimary" />
 
@@ -27,7 +28,7 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:layout_marginStart="12dp"
-            android:text="Connection is secure"
+            android:text="@string/connection_is_secure"
             android:textSize="18sp"
             android:textStyle="bold"
             android:textColor="?android:attr/textColorPrimary" />
@@ -39,7 +40,7 @@
         android:id="@+id/website_title"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Website Title"
+        android:text="@string/website_title"
         android:textSize="16sp"
         android:textStyle="bold"
         android:textColor="?android:attr/textColorPrimary"
@@ -52,7 +53,7 @@
         android:id="@+id/website_url"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="https://example.com"
+        android:text="@string/example_url"
         android:textSize="14sp"
         android:textColor="?android:attr/textColorSecondary"
         android:layout_marginBottom="20dp"
@@ -76,7 +77,7 @@
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Certificate Information"
+            android:text="@string/certificate_information"
             android:textSize="14sp"
             android:textStyle="bold"
             android:textColor="?android:attr/textColorPrimary"
@@ -92,7 +93,7 @@
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Issued by"
+                android:text="@string/issued_by"
                 android:textSize="12sp"
                 android:textColor="?android:attr/textColorSecondary"
                 android:layout_marginBottom="4dp" />
@@ -101,7 +102,7 @@
                 android:id="@+id/certificate_issuer"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Certificate Authority"
+                android:text="@string/certificate_authority"
                 android:textSize="14sp"
                 android:textColor="?android:attr/textColorPrimary" />
 
@@ -117,7 +118,7 @@
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Issued to"
+                android:text="@string/issued_to"
                 android:textSize="12sp"
                 android:textColor="?android:attr/textColorSecondary"
                 android:layout_marginBottom="4dp" />
@@ -126,7 +127,7 @@
                 android:id="@+id/certificate_holder"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="example.com"
+                android:text="@string/example_domain"
                 android:textSize="14sp"
                 android:textColor="?android:attr/textColorPrimary" />
 
@@ -151,7 +152,7 @@
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Privacy &amp; Security"
+            android:text="@string/privacy_and_security"
             android:textSize="14sp"
             android:textStyle="bold"
             android:textColor="?android:attr/textColorPrimary"
@@ -175,7 +176,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Enhanced Tracking Protection"
+                    android:text="@string/enhanced_tracking_protection"
                     android:textSize="14sp"
                     android:textColor="?android:attr/textColorPrimary"
                     android:layout_marginBottom="2dp" />
@@ -184,7 +185,7 @@
                     android:id="@+id/tracking_protection_subtitle"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Blocks trackers"
+                    android:text="@string/blocks_trackers"
                     android:textSize="12sp"
                     android:textColor="?android:attr/textColorSecondary" />
 
@@ -202,7 +203,7 @@
             android:id="@+id/clear_cookies_button"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Clear cookies and site data"
+            android:text="@string/clear_cookies_and_site_data"
             android:textAllCaps="false"
             style="@style/Widget.Material3.Button.OutlinedButton"
             android:layout_marginBottom="12dp"
@@ -216,7 +217,7 @@
         android:id="@+id/close_button"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Close"
+        android:text="@string/close"
         style="@style/Widget.Material3.Button.TextButton" />
 
 </LinearLayout>

@@ -1,6 +1,7 @@
 package com.prirai.android.nira.browser.profile
 
 import android.graphics.Color
+import androidx.core.graphics.toColorInt
 import java.util.UUID
 
 /**
@@ -23,7 +24,7 @@ data class BrowserProfile(
         fun getDefaultProfile() = BrowserProfile(
             id = "default",
             name = "Default",
-            color = Color.parseColor("#6200EE"),
+            color = "#6200EE".toColorInt(),
             emoji = "👤",
             isDefault = true
         )
@@ -32,14 +33,14 @@ data class BrowserProfile(
          * Predefined colors for new profiles
          */
         val PROFILE_COLORS = listOf(
-            Color.parseColor("#6200EE"), // Purple
-            Color.parseColor("#03DAC5"), // Teal
-            Color.parseColor("#FF6F00"), // Orange
-            Color.parseColor("#C51162"), // Pink
-            Color.parseColor("#00C853"), // Green
-            Color.parseColor("#2979FF"), // Blue
-            Color.parseColor("#D50000"), // Red
-            Color.parseColor("#FFD600"), // Yellow
+            "#6200EE".toColorInt(), // Purple
+            "#03DAC5".toColorInt(), // Teal
+            "#FF6F00".toColorInt(), // Orange
+            "#C51162".toColorInt(), // Pink
+            "#00C853".toColorInt(), // Green
+            "#2979FF".toColorInt(), // Blue
+            "#D50000".toColorInt(), // Red
+            "#FFD600".toColorInt(), // Yellow
         )
         
         /**

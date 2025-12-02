@@ -6,6 +6,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
+import androidx.core.graphics.drawable.toDrawable
 import com.prirai.android.nira.R
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
@@ -68,7 +69,7 @@ open class WebExtensionToolbarAction(
                 val icon = action.loadIcon?.invoke(imageView.measuredHeight)
                 icon?.let {
                     MainScope().launch {
-                        imageView.setImageDrawable(BitmapDrawable(view.context.resources, it))
+                        imageView.setImageDrawable(it.toDrawable(view.context.resources))
                     }
                 }
             } catch (throwable: Throwable) {

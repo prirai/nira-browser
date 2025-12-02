@@ -9,6 +9,7 @@ import mozilla.components.browser.state.action.TabListAction
 import mozilla.components.browser.state.state.BrowserState
 import mozilla.components.lib.state.Middleware
 import mozilla.components.lib.state.MiddlewareContext
+import androidx.core.net.toUri
 
 /**
  * Middleware that monitors tab creation and applies cross-domain grouping logic.
@@ -129,7 +130,7 @@ class TabGroupMiddleware(
      */
     private fun extractDomain(url: String): String {
         return try {
-            Uri.parse(url).host?.replace("www.", "") ?: "unknown"
+            url.toUri().host?.replace("www.", "") ?: "unknown"
         } catch (e: Exception) {
             "unknown"
         }

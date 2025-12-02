@@ -19,6 +19,7 @@ import mozilla.components.concept.engine.EngineSession
 import mozilla.components.concept.engine.request.RequestInterceptor
 import mozilla.components.concept.engine.request.RequestInterceptor.InterceptionResponse
 import java.lang.ref.WeakReference
+import androidx.core.net.toUri
 
 
 class AppRequestInterceptor(val context: Context) : RequestInterceptor {
@@ -86,7 +87,7 @@ class AppRequestInterceptor(val context: Context) : RequestInterceptor {
             }
             uri.startsWith("nira://delete-shortcut?") -> {
                 // Parse URL parameter
-                val params = Uri.parse(uri)
+                val params = uri.toUri()
                 val shortcutId = params.getQueryParameter("id")?.toIntOrNull()
                 
                 if (shortcutId != null) {
@@ -118,7 +119,7 @@ class AppRequestInterceptor(val context: Context) : RequestInterceptor {
             }
             uri.startsWith("nira://add-shortcut?") -> {
                 // Parse URL parameters
-                val params = Uri.parse(uri)
+                val params = uri.toUri()
                 val url = params.getQueryParameter("url")
                 val title = params.getQueryParameter("title")
                 
@@ -395,7 +396,7 @@ class AppRequestInterceptor(val context: Context) : RequestInterceptor {
      */
     private fun extractDomain(url: String): String {
         return try {
-            Uri.parse(url).host?.replace("www.", "") ?: "unknown"
+            url.toUri().host?.replace("www.", "") ?: "unknown"
         } catch (e: Exception) {
             "unknown"
         }

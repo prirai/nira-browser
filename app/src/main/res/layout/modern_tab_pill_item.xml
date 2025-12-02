@@ -40,7 +40,7 @@
             android:layout_centerVertical="true"
             android:layout_toEndOf="@id/selectionIndicator"
             android:layout_marginStart="6dp"
-            android:contentDescription="Tab favicon"
+            android:contentDescription="@string/tab_favicon"
             android:scaleType="centerCrop"
         />
 
@@ -57,7 +57,7 @@
             android:fontFamily="sans-serif-medium"
             android:maxLength="15"
             android:maxLines="1"
-            android:text="Tab Title"
+            android:text="@string/tab_title"
             android:textColor="?android:attr/textColorPrimary"
             android:textSize="13sp"
             android:visibility="visible"

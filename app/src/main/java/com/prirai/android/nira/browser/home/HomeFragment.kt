@@ -25,6 +25,9 @@ import androidx.constraintlayout.widget.ConstraintSet.PARENT_ID
 import androidx.constraintlayout.widget.ConstraintSet.TOP
 import androidx.coordinatorlayout.widget.CoordinatorLayout
 import androidx.core.content.ContextCompat
+import androidx.core.graphics.drawable.toDrawable
+import androidx.core.net.toUri
+import androidx.core.view.isVisible
 import androidx.core.view.updateLayoutParams
 import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
@@ -175,7 +178,7 @@ class HomeFragment : Fragment() {
                     if (activity != null) {
                         val contentResolver = requireContext().contentResolver
                         val bitmap = try {
-                            MediaStore.Images.Media.getBitmap(contentResolver, Uri.parse(uri))
+                            MediaStore.Images.Media.getBitmap(contentResolver, uri.toUri())
                         } catch (e: Exception) {
                             null
                         }
@@ -482,8 +485,7 @@ class HomeFragment : Fragment() {
                     if (searchEngine != null) {
                         val iconSize =
                             requireContext().resources.getDimensionPixelSize(R.dimen.icon_width)
-                        val searchIcon =
-                            BitmapDrawable(requireContext().resources, searchEngine.icon)
+                        val searchIcon = searchEngine.icon.toDrawable(requireContext().resources)
                         searchIcon.setBounds(0, 0, iconSize, iconSize)
                         binding.searchEngineIcon.setImageDrawable(searchIcon)
                     } else {
@@ -818,7 +820,7 @@ class HomeFragment : Fragment() {
 
     private fun updateContextualToolbarForHomepage() {
         val toolbar = binding.contextualBottomToolbar
-        if (toolbar.visibility == View.VISIBLE) {
+        if (toolbar.isVisible) {
             val store = requireContext().components.store.state
             val tabCount = if (browsingModeManager.mode.isPrivate) {
                 store.privateTabs.size

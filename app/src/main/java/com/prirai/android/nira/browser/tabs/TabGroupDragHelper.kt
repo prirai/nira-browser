@@ -13,6 +13,7 @@ import com.prirai.android.nira.browser.tabgroups.UnifiedTabGroupManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import mozilla.components.browser.state.state.TabSessionState
+import androidx.core.graphics.toColorInt
 
 /**
  * Enhanced drag & drop helper for tab grouping in the tab sheet.
@@ -215,7 +216,7 @@ class TabGroupDragHelper(
             if (dragDown) recyclerView.height.toFloat() else zoneHeight
         )
         
-        dropZonePaint.color = Color.parseColor("#FF5722") // Orange-red for ungroup
+        dropZonePaint.color = "#FF5722".toColorInt() // Orange-red for ungroup
         canvas.drawRect(rect, dropZonePaint)
         
         // Draw text hint
@@ -242,7 +243,7 @@ class TabGroupDragHelper(
             targetView.bottom.toFloat()
         )
         
-        dropZonePaint.color = Color.parseColor("#4CAF50") // Green for valid drop
+        dropZonePaint.color = "#4CAF50".toColorInt() // Green for valid drop
         canvas.drawRect(rect, dropZonePaint)
     }
 

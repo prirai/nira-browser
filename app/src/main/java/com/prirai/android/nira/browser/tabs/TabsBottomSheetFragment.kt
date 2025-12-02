@@ -26,6 +26,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import mozilla.components.lib.state.ext.flowScoped
 import kotlin.random.Random
+import androidx.core.graphics.toColorInt
 
 class TabsBottomSheetFragment : BottomSheetDialogFragment() {
 
@@ -337,18 +338,18 @@ class TabsBottomSheetFragment : BottomSheetDialogFragment() {
     private fun parseColor(colorString: String): Int {
         return try {
             when (colorString.lowercase()) {
-                "blue" -> Color.parseColor("#2196F3")
-                "red" -> Color.parseColor("#F44336")
-                "green" -> Color.parseColor("#4CAF50")
-                "orange" -> Color.parseColor("#FF9800")
-                "purple" -> Color.parseColor("#9C27B0")
-                "pink" -> Color.parseColor("#E91E63")
-                "teal" -> Color.parseColor("#009688")
-                "yellow" -> Color.parseColor("#FFC107")
-                else -> Color.parseColor("#2196F3")
+                "blue" -> "#2196F3".toColorInt()
+                "red" -> "#F44336".toColorInt()
+                "green" -> "#4CAF50".toColorInt()
+                "orange" -> "#FF9800".toColorInt()
+                "purple" -> "#9C27B0".toColorInt()
+                "pink" -> "#E91E63".toColorInt()
+                "teal" -> "#009688".toColorInt()
+                "yellow" -> "#FFC107".toColorInt()
+                else -> "#2196F3".toColorInt()
             }
         } catch (e: Exception) {
-            Color.parseColor("#2196F3")
+            "#2196F3".toColorInt()
         }
     }
 

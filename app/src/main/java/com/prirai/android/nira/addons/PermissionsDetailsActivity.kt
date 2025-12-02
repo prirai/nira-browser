@@ -19,6 +19,7 @@ import com.prirai.android.nira.theme.applyAppTheme
 import mozilla.components.feature.addons.Addon
 import mozilla.components.feature.addons.ui.AddonPermissionsAdapter
 import mozilla.components.feature.addons.ui.translateName
+import androidx.core.net.toUri
 
 private const val LEARN_MORE_URL =
     "https://smartcookieweb.com/help-biscuit/extensions/#permission-requests"
@@ -65,7 +66,7 @@ class PermissionsDetailsActivity : AppCompatActivity(), View.OnClickListener {
 
     override fun onClick(v: View?) {
         val intent =
-            Intent(Intent.ACTION_VIEW).setData(Uri.parse(LEARN_MORE_URL))
+            Intent(Intent.ACTION_VIEW).setData(LEARN_MORE_URL.toUri())
         startActivity(intent)
     }
 

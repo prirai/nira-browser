@@ -1,6 +1,7 @@
 package com.prirai.android.nira
 
 import android.view.View
+import androidx.core.view.isVisible
 import com.prirai.android.nira.browser.toolbar.ToolbarGestureHandler
 import com.prirai.android.nira.browser.toolbar.WebExtensionToolbarFeature
 import com.prirai.android.nira.toolbar.ContextualBottomToolbar
@@ -102,7 +103,7 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
 
         try {
             val toolbar = binding.contextualBottomToolbar
-            if (toolbar.visibility == View.VISIBLE) {
+            if (toolbar.isVisible) {
                 val store = requireContext().components.store.state
                 val currentTab = store.tabs.find { it.id == store.selectedTabId }
 

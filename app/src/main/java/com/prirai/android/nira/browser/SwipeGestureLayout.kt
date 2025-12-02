@@ -101,4 +101,9 @@ class SwipeGestureLayout @JvmOverloads constructor(
             else -> gestureDetector.onTouchEvent(event)
         }
     }
+
+    override fun performClick(): Boolean {
+        super.performClick()
+        return true
+    }
 }

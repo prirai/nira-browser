@@ -14,6 +14,7 @@ import mozilla.components.support.ktx.android.content.getColorFromAttr
 import mozilla.components.support.ktx.android.content.res.resolveAttribute
 import mozilla.components.support.ktx.android.view.hideKeyboard
 import com.prirai.android.nira.search.SearchFragmentState
+import androidx.core.graphics.drawable.toDrawable
 
 interface ToolbarInteractor {
     fun onUrlCommitted(url: String)
@@ -116,7 +117,7 @@ class ToolbarView(
                 true
             )
 
-            val icon = BitmapDrawable(context.resources, scaledIcon)
+            val icon = scaledIcon.toDrawable(context.resources)
 
             view.edit.setIcon(icon, searchEngine.name)
         }

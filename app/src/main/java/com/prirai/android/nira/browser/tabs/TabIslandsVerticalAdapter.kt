@@ -436,6 +436,7 @@ class TabIslandsVerticalAdapter(
 
                             // Only trigger long press if held long enough without significant movement
                             if (duration >= longPressThreshold && deltaX < moveThreshold && deltaY < moveThreshold) {
+                                view.performClick()
                                 onUngroupedTabLongPress(tab.id)
                                 return@setOnTouchListener true
                             }

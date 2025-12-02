@@ -32,6 +32,7 @@ import com.prirai.android.nira.BrowserActivity
 import com.prirai.android.nira.R
 import com.prirai.android.nira.components.FindInPageComponent
 import com.prirai.android.nira.ext.components
+import androidx.core.net.toUri
 
 /**
  * Fragment used for browsing the web within external apps (custom tabs).
@@ -212,7 +213,7 @@ class ExternalAppBrowserFragment : CustomTabBrowserFragment() {
                 // Create intent to open in main browser
                 val intent = Intent(requireContext(), BrowserActivity::class.java).apply {
                     action = Intent.ACTION_VIEW
-                    data = android.net.Uri.parse(tab.content.url)
+                    data = tab.content.url.toUri()
                     flags = Intent.FLAG_ACTIVITY_NEW_TASK
                 }
                 

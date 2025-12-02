@@ -24,7 +24,7 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:hint="Find in page"
+            android:hint="@string/find_in_page"
             android:imeOptions="actionSearch"
             android:inputType="text"
             android:singleLine="true"
@@ -46,7 +46,7 @@
             style="@style/Widget.Material3.Button.IconButton"
             android:layout_width="48dp"
             android:layout_height="48dp"
-            android:contentDescription="Previous"
+            android:contentDescription="@string/previous"
             app:icon="@drawable/ic_baseline_chevron_up"
             app:iconGravity="textStart"
             app:iconPadding="0dp" />
@@ -57,7 +57,7 @@
             style="@style/Widget.Material3.Button.IconButton"
             android:layout_width="48dp"
             android:layout_height="48dp"
-            android:contentDescription="Next"
+            android:contentDescription="@string/next"
             app:icon="@drawable/ic_baseline_chevron_down"
             app:iconGravity="textStart"
             app:iconPadding="0dp" />
@@ -68,7 +68,7 @@
             style="@style/Widget.Material3.Button.IconButton"
             android:layout_width="48dp"
             android:layout_height="48dp"
-            android:contentDescription="Close"
+            android:contentDescription="@string/close"
             app:icon="@drawable/ic_round_close"
             app:iconGravity="textStart"
             app:iconPadding="0dp" />

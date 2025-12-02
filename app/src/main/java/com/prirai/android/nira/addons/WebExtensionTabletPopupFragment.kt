@@ -53,7 +53,7 @@ class WebExtensionTabletPopupFragment : DialogFragment(), UserInteractionHandler
         }
 
         dialog?.window?.setGravity(Gravity.END or Gravity.TOP)
-        if(android.os.Build.VERSION.SDK_INT <= android.os.Build.VERSION_CODES.M) dialog?.window?.setDimAmount(0F)
+        dialog?.window?.setDimAmount(0F)
         dialog?.window?.attributes?.windowAnimations = R.style.ExtensionPopupTabletStyle
         dialog?.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
 

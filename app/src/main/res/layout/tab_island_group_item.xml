@@ -51,7 +51,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginEnd="4dp"
-                android:text="Island"
+                android:text="@string/island"
                 android:textSize="13sp"
                 android:textStyle="bold"
                 android:textColor="?android:attr/textColorPrimary"
@@ -67,7 +67,7 @@
                 android:layout_width="20dp"
                 android:layout_height="20dp"
                 android:src="@drawable/ic_expand_less"
-                android:contentDescription="Collapse or expand island"
+                android:contentDescription="@string/collapse_or_expand_island"
                 android:scaleType="centerInside"
                 app:tint="?android:attr/textColorSecondary" />
 
@@ -100,7 +100,7 @@
             android:layout_height="match_parent"
             android:paddingHorizontal="8dp"
             android:src="@android:drawable/ic_input_add"
-            android:contentDescription="Add new tab to island"
+            android:contentDescription="@string/add_new_tab_to_island"
             android:tint="?android:attr/textColorSecondary"
             android:scaleType="centerInside"
             android:clickable="true"

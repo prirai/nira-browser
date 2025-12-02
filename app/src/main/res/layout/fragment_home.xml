@@ -41,6 +41,7 @@
                         android:layout_gravity="center_horizontal"
                         android:layout_weight="1"
                         android:adjustViewBounds="false"
+                        android:contentDescription="@string/app_name"
                         android:cropToPadding="false"
                         android:scaleType="centerCrop"
                         app:srcCompat="@mipmap/ic_launcher_foreground" />
@@ -92,6 +93,7 @@
                     android:id="@+id/add_shortcut"
                     android:layout_width="64dp"
                     android:layout_height="wrap_content"
+                    android:contentDescription="@string/add_shortcut"
                     android:layout_weight="1"
                     app:srcCompat="@drawable/ic_round_add" />
 

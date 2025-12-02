@@ -27,6 +27,7 @@ import mozilla.components.ui.widgets.behavior.EngineViewScrollingBehavior
 import mozilla.components.support.ktx.android.content.res.resolveAttribute
 import java.lang.ref.WeakReference
 import mozilla.components.ui.widgets.behavior.ViewPosition as MozacToolbarPosition
+import androidx.core.net.toUri
 
 interface BrowserToolbarViewInteractor {
     fun onBrowserToolbarPaste(text: String)

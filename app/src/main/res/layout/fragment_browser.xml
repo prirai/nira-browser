@@ -105,6 +105,7 @@
         android:layout_gravity="end|center_vertical"
         android:layout_marginLeft="16dp"
         android:layout_marginRight="16dp"
+        android:contentDescription="@string/reader_view_appearance"
         android:src="@drawable/mozac_ic_font"
         android:visibility="gone"
     />

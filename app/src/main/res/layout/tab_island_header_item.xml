@@ -39,7 +39,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginEnd="6dp"
-            android:text="Island Name"
+            android:text="@string/island_name"
             android:textSize="13sp"
             android:textStyle="bold"
             android:textColor="?android:attr/textColorPrimary"
@@ -55,7 +55,7 @@
             android:layout_width="24dp"
             android:layout_height="24dp"
             android:src="@drawable/ic_expand_less"
-            android:contentDescription="Collapse or expand island"
+            android:contentDescription="@string/collapse_or_expand_island"
             android:tint="?android:attr/textColorSecondary"
             android:scaleType="centerInside"
         />

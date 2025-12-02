@@ -18,6 +18,7 @@
         android:paddingTop="12dp"
         android:paddingBottom="12dp"
         android:background="?attr/selectableItemBackgroundBorderless"
+        android:contentDescription="@string/bookmark_icon"
         android:scaleType="fitCenter"
         android:src="@drawable/ic_baseline_bookmark"
         app:layout_constraintBottom_toBottomOf="parent"

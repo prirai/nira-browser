@@ -171,6 +171,7 @@ class GroupTabsAdapter(
                             val deltaY = kotlin.math.abs(startY - event.rawY)
                             if (deltaY > 150) {
                                 // Trigger ungroup - call long press to show menu
+                                v.performClick()
                                 cardView.performLongClick()
                             } else {
                                 // Spring back

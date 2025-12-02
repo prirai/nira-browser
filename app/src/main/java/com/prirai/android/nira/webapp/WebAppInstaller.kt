@@ -8,6 +8,7 @@ import androidx.core.content.pm.ShortcutManagerCompat
 import androidx.core.graphics.drawable.IconCompat
 import mozilla.components.browser.state.state.SessionState
 import mozilla.components.concept.engine.manifest.WebAppManifest
+import androidx.core.net.toUri
 
 /**
  * Helper for installing PWAs as shortcuts that launch in WebAppActivity
@@ -29,7 +30,7 @@ object WebAppInstaller {
         // Create intent that launches WebAppActivity
         val intent = Intent(context, WebAppActivity::class.java).apply {
             action = Intent.ACTION_VIEW
-            data = android.net.Uri.parse(url)
+            data = url.toUri()
             putExtra(WebAppActivity.EXTRA_WEB_APP_URL, url)
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
         }
@@ -67,7 +68,7 @@ object WebAppInstaller {
         // Create intent that launches main BrowserActivity
         val intent = Intent(context, com.prirai.android.nira.BrowserActivity::class.java).apply {
             action = Intent.ACTION_VIEW
-            data = android.net.Uri.parse(url)
+            data = url.toUri()
             flags = Intent.FLAG_ACTIVITY_NEW_TASK
         }
         

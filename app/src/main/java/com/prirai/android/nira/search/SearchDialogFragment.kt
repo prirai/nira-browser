@@ -144,7 +144,8 @@ class SearchDialogFragment : AppCompatDialogFragment(), UserInteractionHandler {
             awesomeBar
         )
 
-        binding.awesomeBar.setOnTouchListener { _, _ ->
+        binding.awesomeBar.setOnTouchListener { v, _ ->
+            v.performClick()
             view.hideKeyboard()
             false
         }
@@ -160,7 +161,8 @@ class SearchDialogFragment : AppCompatDialogFragment(), UserInteractionHandler {
         if (findNavController().previousBackStackEntry?.destination?.id == R.id.homeFragment) {
             // When displayed above home, dispatches the touch events to scrim area to the HomeFragment
             binding.searchWrapper.background = ColorDrawable(Color.TRANSPARENT)
-            dialog?.window?.decorView?.setOnTouchListener { _, event ->
+            dialog?.window?.decorView?.setOnTouchListener { v, event ->
+                v.performClick()
                 requireActivity().dispatchTouchEvent(event)
                 false
             }

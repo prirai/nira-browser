@@ -14,6 +14,7 @@ import androidx.credentials.GetPublicKeyCredentialOption
 import androidx.credentials.PublicKeyCredential
 import androidx.credentials.exceptions.CreateCredentialException
 import androidx.credentials.exceptions.GetCredentialException
+import androidx.credentials.exceptions.NoCredentialException
 import org.json.JSONObject
 
 /**
@@ -104,6 +105,9 @@ class CredentialManagerHelper(context: Context) {
             }
             
             result
+        } catch (e: NoCredentialException) {
+            Log.d(TAG, "No credentials available", e)
+            null
         } catch (e: GetCredentialException) {
             Log.e(TAG, "Error getting passkey", e)
             handleGetCredentialException(e)

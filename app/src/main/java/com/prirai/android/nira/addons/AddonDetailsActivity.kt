@@ -10,6 +10,7 @@ import android.widget.ImageView
 import android.widget.RatingBar
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.net.toUri
 import androidx.core.text.HtmlCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
@@ -108,7 +109,7 @@ class AddonDetailsActivity : AppCompatActivity() {
 
         findViewById<View>(R.id.home_page_text).setOnClickListener {
             val intent =
-                Intent(Intent.ACTION_VIEW).setData(Uri.parse(addon.homepageUrl))
+                Intent(Intent.ACTION_VIEW).setData(addon.homepageUrl.toUri())
             startActivity(intent)
         }
 

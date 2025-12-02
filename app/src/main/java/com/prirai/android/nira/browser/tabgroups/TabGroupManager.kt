@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import com.prirai.android.nira.ext.components
+import androidx.core.net.toUri
 
 /**
  * Manages tab groups functionality based on Mozilla's architecture.
@@ -366,7 +367,7 @@ class TabGroupManager(private val context: Context) {
 
     private fun extractDomain(url: String): String {
         return try {
-            Uri.parse(url).host?.replace("www.", "") ?: "unknown"
+            url.toUri().host?.replace("www.", "") ?: "unknown"
         } catch (e: Exception) {
             "unknown"
         }
