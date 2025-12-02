@@ -1,6 +1,8 @@
 <div align="center">
 
-# 🌊 Nira Browser
+# Nira Browser
+
+Nira (निरा) means pure — शुद्ध / absolute — पूर्ण / the only one - एकमात्र.
 
 ### A Privacy-Focused Android Browser Built on Mozilla's GeckoView
 
@@ -11,97 +13,117 @@
 
 *Experience the web with power, privacy, and performance*
 
-[Features](#-features) • [Installation](#-installation) • [Screenshots](#-screenshots) • [Contributing](#-contributing)
+[Features](#features) • [Installation](#installation) • [Screenshots](#screenshots) • [Contributing](#contributing)
 
 </div>
 
 ---
 
-## ✨ Features
+## Features
 
-### 🎯 Core Browsing Experience
+### Core Browsing Experience
 
-- **🦎 GeckoView Engine** - Powered by Mozilla's Gecko engine, the same technology behind Firefox
-- **🎨 Material 3 Design** - Modern, beautiful UI that follows the latest Android design guidelines
-- **🌓 Dark Mode** - Full dark theme support with web content darkening for comfortable night browsing
-- **🔒 Private Browsing** - Built-in private browsing mode with no history or cookie tracking
+- **GeckoView Engine** - Powered by Mozilla's Gecko engine, the same technology behind Firefox
+- **Material 3 Design** - Modern, beautiful UI that follows the latest Android design guidelines
+- **Dark Mode** - Full dark theme support with web content darkening for comfortable night browsing
+- **Private Browsing** - Built-in private browsing mode with no history or cookie tracking
+- **Multi-Profile System** - Create multiple browser profiles with isolated cookies, sessions, and browsing data
+- **Progressive Web Apps** - Full PWA support with installation, offline capabilities, and app management
 
-### 🛡️ Privacy & Security
+### Privacy & Security
 
-- **🚫 Ad Blocking** - Built-in ad and tracker blocking to keep your browsing clean and fast
-- **🔐 Enhanced Tracking Protection** - Comprehensive protection against cross-site tracking
-- **🛡️ Safe Browsing** - Protection against malicious websites and phishing attempts
-- **🔓 SSL Certificate Info** - View detailed connection security information with one tap
+- **Ad Blocking** - Built-in ad and tracker blocking to keep your browsing clean and fast
+- **Enhanced Tracking Protection** - Comprehensive protection against cross-site tracking
+- **Safe Browsing** - Protection against malicious websites and phishing attempts
 
-### 📑 Tab Management
+### Tab Management
 
-- **🏝️ Tab Groups** (Opera-style) - Organize tabs into groups with beautiful tab islands
-- **🎴 Modern Tab Pills** - Sleek, modern tab interface with smooth animations
-- **📊 Tab Tray** - Multiple view modes: grid, list, and islands with groups
-- **🔄 Tab Islands** - Visual grouping of tabs for better organization
+- **Tab Groups** - Organize tabs into groups with beautiful tab islands
+- **Modern Tab Pills** - Sleek, modern tab interface with smooth animations
+- **Tab Tray** - Multiple view modes: grid, list, and islands with groups
+- **Tab Islands** - Visual grouping of tabs for better organization
 
-### 🔖 Bookmarks & History
+### Bookmarks & History
 
-- **📚 Advanced Bookmark Management** - Create folders, organize hierarchically, and sort by multiple criteria
-- **🔍 Bookmark Search** - Quickly find bookmarks with instant search
-- **📁 Folder Organization** - Nested folder support with visual path navigation
-- **📜 Comprehensive History** - Full browsing history with search and filtering
-- **💾 Import/Export** - Backup and restore bookmarks easily
-- **⭐ Quick Bookmarking** - Add bookmarks with a single tap
+- **Advanced Bookmark Management** - Create folders, organize hierarchically, and sort by multiple criteria
+- **Bookmark Search** - Quickly find bookmarks with instant search
+- **Folder Organization** - Nested folder support with visual path navigation
+- **Comprehensive History** - Full browsing history with search and filtering
+- **Import/Export** - Backup and restore bookmarks easily
+- **Quick Bookmarking** - Add bookmarks with a single tap
 
-### 🧩 Extensions & Add-ons
+### Extensions & Add-ons
 
-- **🧩 WebExtension Support** - Full support for Firefox-compatible extensions
-- **📦 Sideloading** - Install extensions from URLs or files (XPI support)
-- **🔧 Extension Management** - Enable, disable, configure, and update extensions
-- **⚙️ Extension Settings** - Per-extension settings and permissions management
-- **🎯 Extension Toolbar Actions** - Quick access to extension actions from the toolbar
-- **🔄 Auto-Updates** - Automatic extension updates to keep you secure
+- **WebExtension Support** - Full support for Firefox-compatible extensions
+- **Sideloading** - Install extensions from URLs or files (XPI support)
+- **Extension Management** - Enable, disable, configure, and update extensions
+- **Extension Settings** - Per-extension settings and permissions management
+- **Extension Toolbar Actions** - Quick access to extension actions from the toolbar
+- **Auto-Updates** - Automatic extension updates to keep you secure
 
-### 🎯 Customization
+### Customization
 
-- **🎨 Theme Options** - Light, dark, and system-following themes
-- **📱 Toolbar Positioning** - Choose top or bottom toolbar placement
-- **🎭 Contextual Bottom Toolbar** - Smart toolbar that adapts based on context
-- **🌈 Status Bar Effects** - Beautiful blur effects on Android 12+ devices
-- **🔤 Custom Font Sizing** - Adjust text size for comfortable reading
-- **🏠 Customizable Homepage** - Configure your perfect start page with shortcuts and feeds
-- **🎯 Toolbar Customization** - Show/hide URL bar while scrolling
+- **Theme Options** - Light, dark, and system-following themes
+- **Toolbar Positioning** - Choose top or bottom toolbar placement
+- **Contextual Bottom Toolbar** - Smart toolbar that adapts based on context
+- **Status Bar Effects** - Beautiful blur effects on Android 12+ devices
+- **Custom Font Sizing** - Adjust text size for comfortable reading
+- **Customizable Homepage** - Configure your perfect start page with shortcuts and feeds
+- **Toolbar Customization** - Show/hide URL bar while scrolling
 
-### 🔍 Search
+### Search
 
-- **🔍 Multiple Search Engines** - Google, DuckDuckGo, Bing, Baidu, Brave, Naver, Qwant, Startpage, Yandex
-- **🎯 Custom Search Engines** - Add your own search engines with custom URLs
-- **💡 Search Suggestions** - Real-time search suggestions as you type
-- **🚀 Awesome Bar** - Unified search and URL bar with shortcuts suggestions
-- **🔐 Private Search** - Option to disable search suggestions in private mode
+- **Multiple Search Engines** - Google, DuckDuckGo, Bing, Baidu, Brave, Naver, Qwant, Startpage, Yandex
+- **Custom Search Engines** - Add your own search engines with custom URLs
+- **Search Suggestions** - Real-time search suggestions as you type
 
-### 🎪 Advanced Features
+### Advanced Features
 
-- **📖 Reader Mode** - Distraction-free reading with customizable fonts and colors
-- **🔎 Find in Page** - Powerful in-page search with keyboard-aware positioning
-- **📄 Save as PDF** - Convert any webpage to PDF with one tap
-- **🔗 Custom Tabs** - Seamless integration when opening links from other apps
-- **📱 PWA Support** - Install Progressive Web Apps as standalone applications
-- **📥 Download Management** - Built-in download manager with external downloader support
-- **📋 Smart Clipboard** - Intelligent clipboard handling for URLs and text
-- **🎵 Media Playback** - Background audio/video with media session controls
-- **🖼️ Favicon Cache** - Smart favicon caching for faster page loading
+- **Reader Mode** - Distraction-free reading with customizable fonts and colors
+- **Find in Page** - Powerful in-page search with keyboard-aware positioning
+- **Save as PDF** - Convert any webpage to PDF with one tap
+- **Custom Tabs** - Seamless integration when opening links from other apps
+- **Download Management** - Built-in download manager with external downloader support
+- **Smart Clipboard** - Intelligent clipboard handling for URLs and text
+- **Media Playback** - Background audio/video with media session controls
+- **Favicon Cache** - Smart favicon caching for faster page loading
 
-### 🌍 Internationalization
+### Internationalization
 
-- **🌐 Multiple Languages** - Support for Arabic, French, Italian, Japanese, Polish, Portuguese (BR & PT), Russian, Turkish, Vietnamese, Chinese (CN)
-- **🔄 RTL Support** - Full right-to-left language support
+- **Multiple Languages** - Support for Arabic, French, Italian, Japanese, Polish, Portuguese (BR & PT), Russian, Turkish, Vietnamese, Chinese (CN)
+- **RTL Support** - Full right-to-left language support
+
+### Multi-Profile System
+
+- **Isolated Profiles** - Create separate profiles for work, personal, shopping, or any use case
+- **Cookie Isolation** - Each profile maintains its own cookies and session data completely isolated from other profiles
+- **Profile Customization** - Assign unique colors and emoji to easily identify profiles
+- **Quick Switching** - Switch between profiles seamlessly without losing your tabs
+- **Separate Storage** - Each profile has its own bookmarks, history, and settings
+- **Private Mode** - Separate private browsing mode that doesn't persist any data
+
+### Progressive Web Apps
+
+- **PWA Installation** - Install web apps as standalone applications with one tap
+- **Smart Suggestions** - Automatic detection and suggestions for 40+ popular PWAs including Twitter, WhatsApp, Discord, YouTube, Spotify, Notion, Figma, and many more
+- **Custom Theming** - PWAs adopt the site's theme colors for a native app experience
+- **Usage Tracking** - Monitor launch counts and last used dates for installed apps
+- **Notification Support** - PWAs can send notifications with customizable settings per app
+- **Offline Support** - Use installed PWAs even without an internet connection where supported
+- **Homescreen Icons** - Add PWAs to your homescreen with custom icons
+- **Standalone Mode** - Run PWAs in their own window without browser UI
+- **App Management** - Enable/disable, update, or uninstall PWAs from settings
+- **Profile Integration** - PWAs are associated with specific profiles keeping data separate
 
 ---
 
-## 📸 Screenshots
+## Screenshots
 
 *Screenshots will be updated here.*
 
 ---
 
-## 🚀 Installation
+## Installation
 
 ### From Releases
 
@@ -134,7 +156,7 @@ Download the latest APK from the [Releases page](https://github.com/prirai/nira-
 
 ---
 
-## 🎯 Why Nira Browser?
+## Why Nira Browser?
 
 ### For Privacy Enthusiasts
 - No telemetry or data collection
@@ -143,10 +165,12 @@ Download the latest APK from the [Releases page](https://github.com/prirai/nira-
 - Private browsing mode
 
 ### For Power Users
+- Multi-profile system with isolated browsing data
 - Tab groups for organization
 - Extensive customization options
 - WebExtension support
 - Advanced bookmark management
+- PWA installation and management
 
 ### For Everyone
 - Fast and lightweight
@@ -156,17 +180,17 @@ Download the latest APK from the [Releases page](https://github.com/prirai/nira-
 
 ---
 
-## 🤝 Contributing
+## Contributing
 
 We welcome contributions! Here's how you can help:
 
 ### Ways to Contribute
 
-- 🐛 **Report Bugs** - Found an issue? [Open an issue](https://github.com/prirai/nira-browser/issues/new)
-- ✨ **Suggest Features** - Have an idea? We'd love to hear it!
-- 🌍 **Translate** - Help translate Nira into your language
-- 💻 **Code** - Submit pull requests to improve the browser
-- 📖 **Documentation** - Improve docs and help others
+- **Report Bugs** - Found an issue? [Open an issue](https://github.com/prirai/nira-browser/issues/new)
+- **Suggest Features** - Have an idea? We'd love to hear it!
+- **Translate** - Help translate Nira into your language
+- **Code** - Submit pull requests to improve the browser
+- **Documentation** - Improve docs and help others
 
 ### Development Guidelines
 
@@ -181,25 +205,29 @@ For detailed development guidelines, see our [AI Agent Development Prompts](prom
 
 ---
 
-## 🏗️ Architecture
+## Architecture
 
 Nira Browser is built on:
 - **Mozilla GeckoView** - Powerful rendering engine
 - **Mozilla Android Components** - Modular browser components
 - **Kotlin** - Modern, safe programming language
 - **Material 3** - Latest Android design system
-- **Room Database** - For bookmarks, tab groups, and shortcuts
-- **Kotlin Coroutines** - Asynchronous operations
+- **Room Database** - For bookmarks, tab groups, shortcuts, and PWA management
 
 ---
 
-## 📋 Roadmap
+## Roadmap
+
+### Recently Added
+- [x] Multi-profile system with cookie isolation
+- [x] Progressive Web App (PWA) support
+- [x] PWA suggestion system with 40+ popular apps
+- [x] PWA management and settings interface
 
 ### Coming Soon
 - [ ] Sync across devices
-- [ ] Enhanced PWA capabilities
+- [ ] Profile import/export
 - [ ] More customization options
-- [ ] Additional language support
 
 ### In Progress
 - [ ] UI/UX refinements
@@ -208,31 +236,31 @@ Nira Browser is built on:
 
 ---
 
-## 💬 Support
+## Support
 
 Need help? Have questions?
 
-- 📝 [Open an Issue](https://github.com/prirai/nira-browser/issues)
-- 💬 Social links will be updated
+- [Open an Issue](https://github.com/prirai/nira-browser/issues)
+- Social links will be updated
 
 ---
 
-## ⚖️ License
+## License
 
 This project is licensed under the **Mozilla Public License Version 2.0**.
 
 See [LICENSE](LICENSE) file for details.
 
 ### What this means:
-- ✅ Use for personal or commercial purposes
-- ✅ Modify and distribute
-- ✅ Patent grant included
-- ⚠️ Must disclose source for modifications
-- ⚠️ License and copyright notice required
+- Use for personal or commercial purposes
+- Modify and distribute
+- Patent grant included
+- Must disclose source for modifications
+- License and copyright notice required
 
 ---
 
-## ⚠️ Disclaimer
+## Disclaimer
 
 This is an open-source project intended to provide freedom of web browser configuration on mobile. It is worked on in free time and there are **no guarantees of stability or updates**.
 
@@ -265,7 +293,7 @@ SUCH DAMAGES.
 
 ---
 
-## 🙏 Acknowledgments
+## Acknowledgments
 
 - **Mozilla** - For the incredible GeckoView engine and Android Components
 - **All Contributors** - Thank you for making Nira better
@@ -275,10 +303,10 @@ SUCH DAMAGES.
 
 <div align="center">
 
-**Built with ❤️ for privacy and freedom**
+**Built with care for privacy and freedom**
 
 Copyright © prirai
 
-[⬆ Back to Top](#-nira-browser)
+[Back to Top](#nira-browser)
 
 </div>
