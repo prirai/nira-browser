@@ -25,9 +25,18 @@ import androidx.core.net.toUri
 class AppRequestInterceptor(val context: Context) : RequestInterceptor {
 
     private var navController: WeakReference<NavController>? = null
+    private val webappSessions = mutableMapOf<EngineSession, Pair<String, String>>() // session -> (domain, profileId)
 
     fun setNavController(navController: NavController) {
         this.navController = WeakReference(navController)
+    }
+    
+    fun registerWebAppSession(session: EngineSession, domain: String, profileId: String) {
+        webappSessions[session] = domain to profileId
+    }
+    
+    fun unregisterWebAppSession(session: EngineSession) {
+        webappSessions.remove(session)
     }
 
     override fun onLoadRequest(
@@ -40,6 +49,24 @@ class AppRequestInterceptor(val context: Context) : RequestInterceptor {
         isDirectNavigation: Boolean,
         isSubframeRequest: Boolean
     ): InterceptionResponse? {
+        // Check if this is a webapp session
+        webappSessions[engineSession]?.let { (webappDomain, profileId) ->
+            // Handle webapp external navigation
+            // Only block if it's NOT a subframe (like iframes, ads, etc)
+            if (!isSubframeRequest) {
+                val newDomain = try {
+                    java.net.URL(uri).host
+                } catch (e: Exception) {
+                    null
+                }
+                
+                // If navigating to different domain, open in browser
+                if (newDomain != null && newDomain != webappDomain) {
+                    openInBrowser(uri, profileId)
+                    return InterceptionResponse.Deny
+                }
+            }
+        }
         
         // Handle custom nira:// scheme for homepage interactions
         if (uri.startsWith("nira://")) {
@@ -170,6 +197,24 @@ class AppRequestInterceptor(val context: Context) : RequestInterceptor {
         )
 
         return RequestInterceptor.ErrorResponse(errorPageUri)
+    }
+    
+    private fun openInBrowser(url: String, profileId: String) {
+        try {
+            // Open URL in a new tab in the main browser
+            // Profile switching needs to be done through the BrowserActivity's browsingModeManager
+            CoroutineScope(Dispatchers.Main).launch {
+                context.components.tabsUseCases.addTab(url, selectTab = true, contextId = "profile_$profileId")
+                
+                // Bring the main browser to foreground
+                val intent = Intent(context, com.prirai.android.nira.BrowserActivity::class.java).apply {
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
+                }
+                context.startActivity(intent)
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
     
     private fun generateHomepageWithData(): String {

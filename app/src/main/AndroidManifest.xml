@@ -215,9 +215,9 @@
         android:theme="@style/WebAppTheme">
       
       <!-- Handle PWA shortcuts created by webAppUseCases.addToHomescreen() -->
+      <!-- Removed LAUNCHER category to prevent showing in app drawer -->
       <intent-filter>
         <action android:name="android.intent.action.MAIN" />
-        <category android:name="android.intent.category.LAUNCHER" />
       </intent-filter>
       
       <intent-filter>

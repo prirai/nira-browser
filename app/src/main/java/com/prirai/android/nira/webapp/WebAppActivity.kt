@@ -29,12 +29,8 @@ class WebAppActivity : AppCompatActivity() {
         
         setContentView(R.layout.activity_webapp)
         
-        // Show system bars normally
-        WindowCompat.setDecorFitsSystemWindows(window, true)
-        
-        // Ensure system bars are visible
-        val windowInsetsController = WindowCompat.getInsetsController(window, window.decorView)
-        windowInsetsController?.show(WindowInsetsCompat.Type.systemBars())
+        // Configure system bars
+        setupSystemBars()
         
         // Extract URL from intent
         val url = extractUrlFromIntent(intent)
@@ -119,6 +115,37 @@ class WebAppActivity : AppCompatActivity() {
         }
         
         return null
+    }
+    
+    private fun setupSystemBars() {
+        // Show system bars normally
+        WindowCompat.setDecorFitsSystemWindows(window, true)
+        
+        // Set status bar color based on theme
+        window.statusBarColor = if (resources.configuration.uiMode and 
+            android.content.res.Configuration.UI_MODE_NIGHT_MASK == 
+            android.content.res.Configuration.UI_MODE_NIGHT_YES) {
+            android.graphics.Color.parseColor("#1C1C1C") // Dark theme
+        } else {
+            android.graphics.Color.WHITE // Light theme
+        }
+        
+        // Ensure system bars are visible and configure appearance
+        val windowInsetsController = WindowCompat.getInsetsController(window, window.decorView)
+        windowInsetsController?.apply {
+            show(WindowInsetsCompat.Type.systemBars())
+            // Set status bar icons to dark in light theme, light in dark theme
+            isAppearanceLightStatusBars = resources.configuration.uiMode and 
+                android.content.res.Configuration.UI_MODE_NIGHT_MASK != 
+                android.content.res.Configuration.UI_MODE_NIGHT_YES
+            // Set navigation bar icons
+            isAppearanceLightNavigationBars = resources.configuration.uiMode and 
+                android.content.res.Configuration.UI_MODE_NIGHT_MASK != 
+                android.content.res.Configuration.UI_MODE_NIGHT_YES
+        }
+        
+        // Make navigation bar match status bar
+        window.navigationBarColor = window.statusBarColor
     }
 
 }
