@@ -118,6 +118,11 @@ class PwaSuggestionManager(private val context: Context) {
             description = "Document editing"
         ),
         PwaSuggestion(
+            url = "https://classroom.google.com/",
+            name = "Google Classroom",
+            description = "Online learning platform"
+        ),
+        PwaSuggestion(
             url = "https://sheets.google.com/",
             name = "Google Sheets",
             description = "Spreadsheet editing"
@@ -131,11 +136,6 @@ class PwaSuggestionManager(private val context: Context) {
             url = "https://keep.google.com/",
             name = "Google Keep",
             description = "Note-taking service"
-        ),
-        PwaSuggestion(
-            url = "https://mail.google.com/",
-            name = "Gmail",
-            description = "Email service"
         ),
         PwaSuggestion(
             url = "https://outlook.live.com/",
@@ -315,7 +315,7 @@ class PwaSuggestionManager(private val context: Context) {
                     _suggestedPwas.value = highQualityPwas
                     _detectionState.value = DetectionState.SuggestionsReady(highQualityPwas.size)
                 }
-                
+
                 // Preload favicons in background
                 preloadFavicons()
             } catch (e: Exception) {
@@ -325,7 +325,7 @@ class PwaSuggestionManager(private val context: Context) {
             }
         }
     }
-    
+
     /**
      * Preload favicons for all suggestions
      */
@@ -341,7 +341,7 @@ class PwaSuggestionManager(private val context: Context) {
                     } catch (e: Exception) {
                         pwa.url
                     }
-                    
+
                     // Try Google's favicon service first (fastest and most reliable)
                     try {
                         val faviconUrl = "https://www.google.com/s2/favicons?domain=$domain&sz=128"
@@ -351,7 +351,7 @@ class PwaSuggestionManager(private val context: Context) {
                         val inputStream = connection.getInputStream()
                         val bitmap = android.graphics.BitmapFactory.decodeStream(inputStream)
                         inputStream.close()
-                        
+
                         if (bitmap != null) {
                             FaviconCache.getInstance(context).saveFavicon(pwa.url, bitmap)
                         }
