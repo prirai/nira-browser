@@ -1,9 +1,9 @@
 package com.prirai.android.nira.auth
 
+import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.Context
 import android.util.Log
-import androidx.credentials.CreateCredentialResponse
 import androidx.credentials.CreatePublicKeyCredentialRequest
 import androidx.credentials.CreatePublicKeyCredentialResponse
 import androidx.credentials.CredentialManager
@@ -35,6 +35,7 @@ class CredentialManagerHelper(context: Context) {
      * @param requestJson The JSON object containing PublicKeyCredentialCreationOptions from server
      * @return CreatePublicKeyCredentialResponse on success, null on failure
      */
+    @SuppressLint("PublicKeyCredential")
     suspend fun createPasskey(
         activity: Activity,
         requestJson: JSONObject

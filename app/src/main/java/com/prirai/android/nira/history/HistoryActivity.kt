@@ -5,6 +5,7 @@ import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
+import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.SearchView
 import androidx.core.content.ContextCompat
@@ -53,13 +54,21 @@ class HistoryActivity : AppCompatActivity(), SearchView.OnQueryTextListener {
         }
 
         val recyclerView = findViewById<RecyclerView>(R.id.list)
+        val emptyView = findViewById<TextView>(R.id.emptyView)
         recyclerView.layoutManager = LinearLayoutManager(this)
         GlobalScope.launch {
             history = components.historyStorage.getDetailedVisits(0).reversed()
             runOnUiThread {
-                recyclerView.adapter = HistoryItemRecyclerViewAdapter(
-                    history!!
-                )
+                if (history!!.isEmpty()) {
+                    emptyView.visibility = View.VISIBLE
+                    recyclerView.visibility = View.GONE
+                } else {
+                    emptyView.visibility = View.GONE
+                    recyclerView.visibility = View.VISIBLE
+                    recyclerView.adapter = HistoryItemRecyclerViewAdapter(
+                        history!!
+                    )
+                }
             }
         }
 
@@ -155,13 +164,18 @@ class HistoryActivity : AppCompatActivity(), SearchView.OnQueryTextListener {
                                             history = components.historyStorage.getDetailedVisits(0)
                                                 .reversed()
                                             runOnUiThread {
-                                                recyclerView.adapter =
-                                                    HistoryItemRecyclerViewAdapter(
-                                                        history!!
+                                                if (history!!.isEmpty()) {
+                                                    emptyView.visibility = View.VISIBLE
+                                                    recyclerView.visibility = View.GONE
+                                                } else {
+                                                    recyclerView.adapter =
+                                                        HistoryItemRecyclerViewAdapter(
+                                                            history!!
+                                                        )
+                                                    (recyclerView.adapter as HistoryItemRecyclerViewAdapter).notifyItemRemoved(
+                                                        position
                                                     )
-                                                (recyclerView.adapter as HistoryItemRecyclerViewAdapter).notifyItemRemoved(
-                                                    position
-                                                )
+                                                }
                                             }
                                         }
                                     }

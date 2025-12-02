@@ -162,6 +162,7 @@
   <string name="action_print">Print</string>
   <string name="action_add_to_homescreen">Add to home screen</string>
   <string name="action_history">History</string>
+  <string name="no_history">No browsing history yet</string>
   <string name="action_bookmarks">Bookmarks</string>
   <string name="action_downloads">Downloads</string>
   <string name="action_add_bookmark">Add bookmark</string>
