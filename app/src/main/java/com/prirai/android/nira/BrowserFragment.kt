@@ -355,8 +355,13 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
             }
 
             com.prirai.android.nira.components.toolbar.modern.ModernToolbarManager.NavigationAction.NEW_TAB -> {
-                // Open new tab with homepage URL like the working implementation
-                requireContext().components.tabsUseCases.addTab("about:homepage")
+                // Navigate to Compose home fragment instead of loading about:homepage
+                try {
+                    androidx.navigation.fragment.NavHostFragment.findNavController(this).navigate(R.id.homeFragment)
+                } catch (e: Exception) {
+                    // Fallback to old behavior
+                    requireContext().components.tabsUseCases.addTab("about:homepage")
+                }
             }
 
             com.prirai.android.nira.components.toolbar.modern.ModernToolbarManager.NavigationAction.BOOKMARKS -> {
@@ -372,23 +377,28 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
     }
 
     private fun handleNewTabInIsland(islandId: String) {
-        // Create a new tab and automatically add it to the specified island
-        val store = requireContext().components.store
-        val state = store.state
-        val selectedTab = state.tabs.find { it.id == state.selectedTabId }
+        // Navigate to Compose home fragment
+        try {
+            androidx.navigation.fragment.NavHostFragment.findNavController(this).navigate(R.id.homeFragment)
+        } catch (e: Exception) {
+            // Fallback: Create a new tab and automatically add it to the specified island
+            val store = requireContext().components.store
+            val state = store.state
+            val selectedTab = state.tabs.find { it.id == state.selectedTabId }
 
-        // Create new tab with current tab as parent to enable auto-grouping
-        val newTabId = requireContext().components.tabsUseCases.addTab.invoke(
-            url = "about:homepage",
-            selectTab = true,
-            parentId = selectedTab?.id
-        )
+            // Create new tab with current tab as parent to enable auto-grouping
+            val newTabId = requireContext().components.tabsUseCases.addTab.invoke(
+                url = "about:homepage",
+                selectTab = true,
+                parentId = selectedTab?.id
+            )
 
-        // Manually add to island since we're creating from plus button
-        if (newTabId != null) {
-            val islandManager =
-                com.prirai.android.nira.components.toolbar.modern.TabIslandManager.getInstance(requireContext())
-            islandManager.addTabToIsland(newTabId, islandId)
+            // Manually add to island since we're creating from plus button
+            if (newTabId != null) {
+                val islandManager =
+                    com.prirai.android.nira.components.toolbar.modern.TabIslandManager.getInstance(requireContext())
+                islandManager.addTabToIsland(newTabId, islandId)
+            }
         }
     }
 

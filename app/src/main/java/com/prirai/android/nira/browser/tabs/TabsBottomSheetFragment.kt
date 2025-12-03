@@ -7,10 +7,12 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.lifecycle.lifecycleScope
+import androidx.navigation.fragment.NavHostFragment
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.prirai.android.nira.BrowserActivity
+import com.prirai.android.nira.NavGraphDirections
 import com.prirai.android.nira.R
 import com.prirai.android.nira.browser.BrowsingMode
 import com.prirai.android.nira.browser.BrowsingModeManager
@@ -118,6 +120,21 @@ class TabsBottomSheetFragment : BottomSheetDialogFragment() {
         tabsAdapter = TabsWithGroupsAdapter(
             onTabClick = { tabId ->
                 requireContext().components.tabsUseCases.selectTab(tabId)
+                
+                // Navigate to browser if we're currently on home
+                try {
+                    val navController = NavHostFragment.findNavController(this)
+                    if (navController.currentDestination?.id == R.id.homeFragment) {
+                        // Navigate using activity's openToBrowser method for proper handling
+                        (requireActivity() as BrowserActivity).openToBrowser(
+                            from = com.prirai.android.nira.BrowserDirection.FromHome,
+                            customTabSessionId = tabId
+                        )
+                    }
+                } catch (e: Exception) {
+                    // Ignore navigation errors
+                }
+                
                 dismiss()
             },
             onTabClose = { tabId ->
@@ -476,11 +493,19 @@ class TabsBottomSheetFragment : BottomSheetDialogFragment() {
     }
 
     private fun addNewTab() {
-        val isPrivate = browsingModeManager.mode.isPrivate
-        requireContext().components.tabsUseCases.addTab(
-            url = "about:homepage",
-            private = isPrivate
-        )
+        // Navigate to homeFragment instead of loading about:homepage
+        try {
+            androidx.navigation.fragment.NavHostFragment.findNavController(this)
+                .navigate(R.id.homeFragment)
+            dismiss()
+        } catch (e: Exception) {
+            // Fallback to old behavior if navigation fails
+            val isPrivate = browsingModeManager.mode.isPrivate
+            requireContext().components.tabsUseCases.addTab(
+                url = "about:homepage",
+                private = isPrivate
+            )
+        }
     }
 
     private fun showProfileCreateDialog() {

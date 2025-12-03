@@ -182,11 +182,9 @@ class AppRequestInterceptor(val context: Context) : RequestInterceptor {
     ): RequestInterceptor.ErrorResponse {
         val riskLevel = getErrorCategory(errorType)
 
+        // Skip interception for about:homepage - just return the default error page
         if (uri == "about:homepage") {
-            /* Load HTML-based homepage with injected data
-            * This provides consistent toolbar behavior across all pages
-            */
-            return RequestInterceptor.ErrorResponse(generateHomepageWithData())
+            return RequestInterceptor.ErrorResponse(uri)
         }
 
         val errorPageUri = ErrorPages.createUrlEncodedErrorPage(
@@ -214,80 +212,6 @@ class AppRequestInterceptor(val context: Context) : RequestInterceptor {
             }
         } catch (e: Exception) {
             e.printStackTrace()
-        }
-    }
-    
-    private fun generateHomepageWithData(): String {
-        val shortcutsJson = getShortcutsJson()
-        val bookmarksJson = getBookmarksJson()
-        
-        // Detect private browsing mode
-        val isPrivateMode = try {
-            val components = context.components
-            val selectedTab = components.store.state.selectedTab
-            selectedTab?.content?.private ?: false
-        } catch (e: Exception) {
-            false
-        }
-        
-        // Read the homepage HTML template
-        val htmlTemplate = try {
-            context.assets.open("homepage.html").bufferedReader().use { it.readText() }
-        } catch (e: Exception) {
-            return "resource://android/assets/homepage.html"
-        }
-        
-        // Inject data by replacing the script section
-        // Use JSON.parse to avoid escaping issues with quotes
-        val injectedScript = """
-            <script>
-                // Injected data from Android
-                window.NiraShortcuts = {
-                    getShortcuts: function() {
-                        return JSON.stringify($shortcutsJson);
-                    }
-                };
-                
-                window.NiraBookmarks = {
-                    getBookmarks: function() {
-                        return JSON.stringify($bookmarksJson);
-                    }
-                };
-                
-                // Private browsing mode flag
-                window.NiraPrivateMode = $isPrivateMode;
-                
-                // Apply private mode styling if needed
-                if (window.NiraPrivateMode) {
-                    document.documentElement.classList.add('private-mode');
-                }
-            </script>
-        """.trimIndent()
-        
-        // Insert the injected script before the existing script tag
-        val modifiedHtml = htmlTemplate.replace("<script>", "$injectedScript\n    <script>")
-        
-        return "data:text/html;charset=utf-8;base64," + android.util.Base64.encodeToString(
-            modifiedHtml.toByteArray(),
-            android.util.Base64.NO_WRAP
-        )
-    }
-    
-    private fun getShortcutsJson(): String {
-        return try {
-            val interface_ = com.prirai.android.nira.browser.home.HomepageJavaScriptInterface(context)
-            interface_.getShortcuts()
-        } catch (e: Exception) {
-            "[]"
-        }
-    }
-    
-    private fun getBookmarksJson(): String {
-        return try {
-            val interface_ = com.prirai.android.nira.browser.home.HomepageJavaScriptInterface(context)
-            interface_.getBookmarks()
-        } catch (e: Exception) {
-            "[]"
         }
     }
 

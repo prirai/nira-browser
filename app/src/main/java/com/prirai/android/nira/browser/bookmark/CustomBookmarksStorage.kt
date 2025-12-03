@@ -31,11 +31,22 @@ class CustomBookmarksStorage(context: Context): BookmarksStorage {
     }
 
     override fun cleanup() {
-        TODO("Not yet implemented")
+        // No-op: Bookmark cleanup handled by BookmarkManager save/load cycle
     }
 
     override suspend fun countBookmarksInTrees(guids: List<String>): UInt {
-        TODO("Not yet implemented")
+        // Count all bookmarks recursively
+        var count = 0u
+        fun countInFolder(folder: com.prirai.android.nira.browser.bookmark.items.BookmarkFolderItem) {
+            folder.list.forEach { item ->
+                when (item) {
+                    is BookmarkSiteItem -> count++
+                    is com.prirai.android.nira.browser.bookmark.items.BookmarkFolderItem -> countInFolder(item)
+                }
+            }
+        }
+        countInFolder(manager.root)
+        return count
     }
 
     override suspend fun deleteNode(guid: String): Result<Boolean> {
@@ -63,7 +74,8 @@ class CustomBookmarksStorage(context: Context): BookmarksStorage {
     }
 
     override suspend fun runMaintenance(dbSizeLimit: UInt) {
-        TODO("Not yet implemented")
+        // Perform basic maintenance: save bookmarks to ensure data persistence
+        manager.save()
     }
 
     override suspend fun searchBookmarks(query: String, limit: Int): Result<List<BookmarkNode>> {
@@ -88,6 +100,7 @@ class CustomBookmarksStorage(context: Context): BookmarksStorage {
     }
 
     override suspend fun warmUp() {
-        TODO("Not yet implemented")
+        // Pre-load bookmark data by ensuring manager is initialized
+        manager.initialize()
     }
 }
