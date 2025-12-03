@@ -118,6 +118,7 @@ class TabsBottomSheetFragment : BottomSheetDialogFragment() {
 
     private fun setupTabsAdapter() {
         tabsAdapter = TabsWithGroupsAdapter(
+            context = requireContext(),
             onTabClick = { tabId ->
                 requireContext().components.tabsUseCases.selectTab(tabId)
                 
@@ -493,18 +494,27 @@ class TabsBottomSheetFragment : BottomSheetDialogFragment() {
     }
 
     private fun addNewTab() {
-        // Navigate to homeFragment instead of loading about:homepage
-        try {
-            androidx.navigation.fragment.NavHostFragment.findNavController(this)
-                .navigate(R.id.homeFragment)
-            dismiss()
-        } catch (e: Exception) {
-            // Fallback to old behavior if navigation fails
+        lifecycleScope.launch {
             val isPrivate = browsingModeManager.mode.isPrivate
+            val currentProfile = browsingModeManager.currentProfile
+            
+            // Create tab with proper contextId
             requireContext().components.tabsUseCases.addTab(
-                url = "about:homepage",
-                private = isPrivate
+                url = "about:blank",
+                private = isPrivate,
+                contextId = if (isPrivate) "private" else "profile_${currentProfile.id}",
+                selectTab = true
             )
+            
+            // Navigate to homeFragment
+            try {
+                androidx.navigation.fragment.NavHostFragment.findNavController(this@TabsBottomSheetFragment)
+                    .navigate(R.id.homeFragment)
+                dismiss()
+            } catch (e: Exception) {
+                // Navigation failed, just dismiss
+                dismiss()
+            }
         }
     }
 

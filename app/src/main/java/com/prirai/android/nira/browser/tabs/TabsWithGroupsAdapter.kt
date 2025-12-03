@@ -221,6 +221,7 @@ class GroupTabsAdapter(
 }
 
 class TabsWithGroupsAdapter(
+    private val context: android.content.Context,
     private val onTabClick: (String) -> Unit,
     private val onTabClose: (String) -> Unit,
     private val onGroupClick: (String) -> Unit,
@@ -230,7 +231,18 @@ class TabsWithGroupsAdapter(
 ) : ListAdapter<TabItem, RecyclerView.ViewHolder>(TabItemDiffCallback()) {
 
     private var selectedTabId: String? = null
-    private val expandedGroups = mutableSetOf<String>()
+    private val collapsedGroups = mutableSetOf<String>()
+    private val prefs = context.getSharedPreferences("tab_groups_prefs", android.content.Context.MODE_PRIVATE)
+    
+    init {
+        // Load collapsed groups from preferences
+        val savedCollapsed = prefs.getStringSet("collapsed_groups", emptySet()) ?: emptySet()
+        collapsedGroups.addAll(savedCollapsed)
+    }
+    
+    private fun saveCollapsedState() {
+        prefs.edit().putStringSet("collapsed_groups", collapsedGroups).apply()
+    }
 
     companion object {
         private const val VIEW_TYPE_GROUP = 0
@@ -243,24 +255,27 @@ class TabsWithGroupsAdapter(
     }
 
     fun toggleGroup(groupId: String) {
-        if (expandedGroups.contains(groupId)) {
-            expandedGroups.remove(groupId)
+        if (collapsedGroups.contains(groupId)) {
+            collapsedGroups.remove(groupId)
         } else {
-            expandedGroups.add(groupId)
+            collapsedGroups.add(groupId)
         }
+        saveCollapsedState()
         notifyDataSetChanged()
     }
 
     fun expandGroup(groupId: String) {
-        if (!expandedGroups.contains(groupId)) {
-            expandedGroups.add(groupId)
+        if (collapsedGroups.contains(groupId)) {
+            collapsedGroups.remove(groupId)
+            saveCollapsedState()
             notifyDataSetChanged()
         }
     }
 
     fun collapseGroup(groupId: String) {
-        if (expandedGroups.contains(groupId)) {
-            expandedGroups.remove(groupId)
+        if (!collapsedGroups.contains(groupId)) {
+            collapsedGroups.add(groupId)
+            saveCollapsedState()
             notifyDataSetChanged()
         }
     }
@@ -292,7 +307,7 @@ class TabsWithGroupsAdapter(
             is TabItem.Group -> {
                 (holder as GroupViewHolder).bind(
                     item,
-                    expandedGroups.contains(item.groupId),
+                    !collapsedGroups.contains(item.groupId),
                     selectedTabId
                 )
             }

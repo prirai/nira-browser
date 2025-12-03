@@ -162,17 +162,9 @@ class ComposeHomeFragment : Fragment() {
                             viewModel.toggleBookmarkSection()
                         },
                         onSearchClick = {
-                            // Create a temporary tab in the current mode first, then open search
-                            val isPrivate = browsingModeManager.mode.isPrivate
-                            val newTabId = components.tabsUseCases.addTab.invoke(
-                                url = "about:blank",
-                                private = isPrivate,
-                                selectTab = true
-                            )
-                            
-                            // Now navigate to search dialog - it will use the newly created tab
+                            // Open search dialog - it will handle tab creation if needed
                             val directions = NavGraphDirections.actionGlobalSearchDialog(
-                                sessionId = newTabId
+                                sessionId = null
                             )
                             findNavController().navigate(directions)
                         },
@@ -249,9 +241,15 @@ class ComposeHomeFragment : Fragment() {
                     profileManager.setActiveProfile(selectedProfile)
                     saveLastMode(isPrivate = false, profileId = selectedProfile.id)
                 }
-                // Refresh the view
-                viewModel.loadShortcuts()
-                viewModel.loadBookmarks()
+                
+                // Navigate to new home fragment to show the new profile
+                try {
+                    findNavController().navigate(R.id.homeFragment)
+                } catch (e: Exception) {
+                    // Already on homeFragment, just reload
+                    viewModel.loadShortcuts()
+                    viewModel.loadBookmarks()
+                }
             }
             .show()
     }
