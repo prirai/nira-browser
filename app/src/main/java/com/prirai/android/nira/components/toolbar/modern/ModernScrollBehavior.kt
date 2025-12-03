@@ -66,6 +66,13 @@ class ModernScrollBehavior(
         // Track scroll direction changes
         val currentDirection = if (dy > 0) 1 else if (dy < 0) -1 else 0
         
+        // Reset totalScrolled when direction changes from down to up while toolbar is visible
+        if (currentDirection == -1 && lastScrollDirection == 1 && !isToolbarHidden) {
+            // User scrolled down then immediately up while toolbar still visible
+            // Reset to current position to prevent toolbar from reappearing from bottom
+            totalScrolled = child.getCurrentOffset()
+        }
+        
         // Count consecutive downward scrolls to prevent toolbar flashing
         if (currentDirection == 1) {
             consecutiveDownwardScrolls++

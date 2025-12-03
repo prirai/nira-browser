@@ -163,7 +163,7 @@ class ModernToolbarSystem @JvmOverloads constructor(
 
         hideAnimator.apply {
             setIntValues(currentOffset, targetOffset)
-            duration = 800
+            duration = 200
             addUpdateListener { animation ->
                 val offset = animation.animatedValue as Int
                 setToolbarOffset(offset)
