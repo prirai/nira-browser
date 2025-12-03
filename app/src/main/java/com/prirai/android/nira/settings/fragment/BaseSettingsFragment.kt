@@ -13,6 +13,10 @@ abstract class BaseSettingsFragment : PreferenceFragmentCompat() {
         // Set the correct SharedPreferences file name to match UserPreferences
         preferenceManager.sharedPreferencesName = "scw_preferences"
     }
+    
+    override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
+        // Override in subclasses
+    }
 
     protected fun switchPreference(
         preference: String,
@@ -20,8 +24,23 @@ abstract class BaseSettingsFragment : PreferenceFragmentCompat() {
         isEnabled: Boolean = true,
         summary: String? = null,
         onCheckChange: (Boolean) -> Unit
-    ) = findPreference<androidx.preference.SwitchPreferenceCompat>(preference)?.apply {
+    ) = findPreference<com.prirai.android.nira.settings.MaterialSwitchPreference>(preference)?.apply {
+        // Force the preference to match the actual stored value from UserPreferences
+        // This handles cases where the preference might not have been saved yet
+        // or where there's computed/inverted logic
+        val prefs = preferenceManager.sharedPreferences
+        if (prefs != null) {
+            val currentValue = prefs.getBoolean(preference, !isChecked) // Use opposite as default to detect mismatch
+            if (currentValue != isChecked) {
+                // Value doesn't match, update SharedPreferences
+                prefs.edit().putBoolean(preference, isChecked).apply()
+            }
+        }
+        
+        // The preference will now read the correct value from SharedPreferences
+        // Force a refresh by re-reading from persistent storage
         this.isChecked = isChecked
+        
         this.isEnabled = isEnabled
         summary?.let {
             this.summary = summary

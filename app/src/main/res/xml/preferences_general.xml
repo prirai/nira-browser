@@ -12,7 +12,7 @@
             app:icon="@drawable/ic_search"
             app:singleLineTitle="false"/>
 
-        <SwitchPreferenceCompat
+        <com.prirai.android.nira.settings.MaterialSwitchPreference
             app:key="@string/key_search_suggestions_enabled"
             app:title="@string/search_suggestions"
             app:singleLineTitle="false"
@@ -22,14 +22,14 @@
 
     <PreferenceCategory android:title="Privacy &amp; Security">
         
-        <SwitchPreferenceCompat
+        <com.prirai.android.nira.settings.MaterialSwitchPreference
             app:key="@string/key_tracking_protection"
             app:title="@string/tracking_protection"
             app:icon="@drawable/ic_round_shield"
             app:singleLineTitle="false"
             app:defaultValue="true"/>
 
-        <SwitchPreferenceCompat
+        <com.prirai.android.nira.settings.MaterialSwitchPreference
             app:key="@string/key_safe_browsing"
             app:title="@string/safe_browsing"
             app:icon="@drawable/ic_baseline_lock"
@@ -46,7 +46,7 @@
             app:icon="@drawable/ic_home"
             app:singleLineTitle="false"/>
 
-        <SwitchPreferenceCompat
+        <com.prirai.android.nira.settings.MaterialSwitchPreference
             app:key="@string/key_javascript_enabled"
             app:title="@string/javascript_enabled"
             app:singleLineTitle="false"

@@ -139,6 +139,13 @@ class ModernToolbarManager(
     }
 
     private fun createEnhancedTabGroupView() {
+        // Check user preference - only create if enabled
+        val prefs = UserPreferences(container.context)
+        if (!prefs.showTabGroupBar) {
+            // Don't create the tab group bar if user has disabled it
+            return
+        }
+        
         tabGroupWithSwitcher = TabGroupWithProfileSwitcher(container.context).apply {
             setup(
                 onTabSelected = { tabId ->

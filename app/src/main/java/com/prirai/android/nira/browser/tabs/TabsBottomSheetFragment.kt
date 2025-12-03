@@ -95,6 +95,13 @@ class TabsBottomSheetFragment : BottomSheetDialogFragment() {
             val layoutParams = bottomSheet.layoutParams
             layoutParams.height = desiredHeight
             bottomSheet.layoutParams = layoutParams
+            
+            // Apply window insets to handle gesture navigation
+            androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(bottomSheet) { v, insets ->
+                val systemBars = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars())
+                // The profile chip scroll view already has paddingBottom set to handle gesture area
+                insets
+            }
         }
 
         bottomSheetDialog.setCancelable(true)
