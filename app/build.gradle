@@ -26,9 +26,9 @@ android {
         applicationId = "com.prirai.android.nira"
         minSdkVersion 26
         targetSdkVersion 36
-        // Increment by 4 with each update
-        versionCode = 12
-        versionName = "0.3.1"
+        // Increment by 4 with each update, by 1 with each fix
+        versionCode = 13
+        versionName = "0.3.2"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
