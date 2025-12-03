@@ -23,18 +23,12 @@ Nira (निरा) means pure — शुद्ध / absolute — पूर्�
 
 ### Core Browsing Experience
 
-- **GeckoView Engine** - Powered by Mozilla's Gecko engine, the same technology behind Firefox
-- **Material 3 Design** - Modern, beautiful UI that follows the latest Android design guidelines
-- **Dark Mode** - Full dark theme support with web content darkening for comfortable night browsing
+- Uses the GeckoView Engine and features Material 3 Design
 - **Private Browsing** - Built-in private browsing mode with no history or cookie tracking
 - **Multi-Profile System** - Create multiple browser profiles with isolated cookies, sessions, and browsing data
 - **Progressive Web Apps** - Full PWA support with installation, offline capabilities, and app management
-
-### Privacy & Security
-
-- **Ad Blocking** - Built-in ad and tracker blocking to keep your browsing clean and fast
-- **Enhanced Tracking Protection** - Comprehensive protection against cross-site tracking
-- **Safe Browsing** - Protection against malicious websites and phishing attempts
+- **Tab groups and bar** - First of its kind support for tab grouping and quick bar for faster navigation
+- **Privacy & Security** - Built-in ad and tracker blocking, enhanced tracking protection and safe browsing
 
 ### Tab Management
 
