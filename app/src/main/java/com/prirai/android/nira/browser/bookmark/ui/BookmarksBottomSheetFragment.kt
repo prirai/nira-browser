@@ -45,7 +45,28 @@ class BookmarksBottomSheetFragment : BottomSheetDialogFragment(), BookmarkAdapte
 
     private fun setupBookmarkManager() {
         manager = BookmarkManager.getInstance(requireActivity())
-        currentFolder = manager.root
+        
+        // Get folderId from arguments if passed
+        val folderId = arguments?.getLong(ARG_FOLDER_ID, -1L) ?: -1L
+        
+        // Find the folder if folderId is valid
+        currentFolder = if (folderId != -1L) {
+            findFolderById(manager.root, folderId) ?: manager.root
+        } else {
+            manager.root
+        }
+    }
+    
+    private fun findFolderById(folder: BookmarkFolderItem, targetId: Long): BookmarkFolderItem? {
+        if (folder.id == targetId) return folder
+        
+        for (item in folder.list) {
+            if (item is BookmarkFolderItem) {
+                val found = findFolderById(item, targetId)
+                if (found != null) return found
+            }
+        }
+        return null
     }
 
     private fun setupRecyclerView() {
@@ -411,8 +432,14 @@ class BookmarksBottomSheetFragment : BottomSheetDialogFragment(), BookmarkAdapte
     }
 
     companion object {
-        fun newInstance(): BookmarksBottomSheetFragment {
-            return BookmarksBottomSheetFragment()
+        private const val ARG_FOLDER_ID = "folder_id"
+        
+        fun newInstance(folderId: Long = -1L): BookmarksBottomSheetFragment {
+            return BookmarksBottomSheetFragment().apply {
+                arguments = Bundle().apply {
+                    putLong(ARG_FOLDER_ID, folderId)
+                }
+            }
         }
     }
 }

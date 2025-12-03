@@ -35,6 +35,7 @@ import androidx.navigation.fragment.navArgs
 import androidx.room.Room
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
+import androidx.lifecycle.lifecycleScope
 import com.prirai.android.nira.BrowserActivity
 import com.prirai.android.nira.NavGraphDirections
 import com.prirai.android.nira.R
@@ -55,10 +56,11 @@ import com.prirai.android.nira.settings.HomepageChoice
 import com.prirai.android.nira.settings.activity.SettingsActivity
 import com.google.android.material.appbar.AppBarLayout
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.Dispatchers
 import mozilla.components.browser.menu.view.MenuButton
 import mozilla.components.browser.state.selector.normalTabs
 import mozilla.components.browser.state.selector.privateTabs
@@ -131,42 +133,40 @@ class HomeFragment : Fragment() {
                     val request = Request(fullUrl)
                     val client = HttpURLConnectionClient()
 
-                    GlobalScope.launch {
-                        val response = client.fetch(request)
+                    viewLifecycleOwner.lifecycleScope.launch {
+                        val response = withContext(Dispatchers.IO) {
+                            client.fetch(request)
+                        }
                         response.use {
                             val bitmap = it.body.useStream { stream -> BitmapFactory.decodeStream(stream) }
-                            ThreadUtils.runOnUiThread {
-                                if (activity != null) {
-                                    val customBackground = object : BitmapDrawable(resources, bitmap) {
-                                        override fun draw(canvas: Canvas) {
-                                            val width = bounds.width()
-                                            val height = bounds.height()
-                                            val bitmapWidth = bitmap.width
-                                            val bitmapHeight = bitmap.height
+                            val customBackground = object : BitmapDrawable(resources, bitmap) {
+                                override fun draw(canvas: Canvas) {
+                                    val width = bounds.width()
+                                    val height = bounds.height()
+                                    val bitmapWidth = bitmap.width
+                                    val bitmapHeight = bitmap.height
 
-                                            val scale = maxOf(
-                                                width.toFloat() / bitmapWidth.toFloat(),
-                                                height.toFloat() / bitmapHeight.toFloat()
-                                            )
+                                    val scale = maxOf(
+                                        width.toFloat() / bitmapWidth.toFloat(),
+                                        height.toFloat() / bitmapHeight.toFloat()
+                                    )
 
-                                            val scaledWidth = (bitmapWidth * scale).toInt()
-                                            val scaledHeight = (bitmapHeight * scale).toInt()
+                                    val scaledWidth = (bitmapWidth * scale).toInt()
+                                    val scaledHeight = (bitmapHeight * scale).toInt()
 
-                                            val left = (width - scaledWidth) / 2
-                                            val top = (height - scaledHeight) / 2
+                                    val left = (width - scaledWidth) / 2
+                                    val top = (height - scaledHeight) / 2
 
-                                            val src = Rect(0, 0, bitmapWidth, bitmapHeight)
-                                            val dst = Rect(left, top, left + scaledWidth, top + scaledHeight)
+                                    val src = Rect(0, 0, bitmapWidth, bitmapHeight)
+                                    val dst = Rect(left, top, left + scaledWidth, top + scaledHeight)
 
-                                            canvas.drawBitmap(bitmap, src, dst, paint)
-                                        }
-                                    }
-
-                                    customBackground.gravity = Gravity.CENTER
-
-                                    binding.homeLayout.background = customBackground
+                                    canvas.drawBitmap(bitmap, src, dst, paint)
                                 }
                             }
+
+                            customBackground.gravity = Gravity.CENTER
+
+                            binding.homeLayout.background = customBackground
                         }
                     }
                 }
@@ -241,7 +241,7 @@ class HomeFragment : Fragment() {
             }
         }
 
-        GlobalScope.launch {
+        viewLifecycleOwner.lifecycleScope.launch {
             // Update shortcut database to hold name
             val MIGRATION_1_2: Migration = object : Migration(1, 2) {
                 override fun migrate(db: SupportSQLiteDatabase) {
@@ -263,19 +263,21 @@ class HomeFragment : Fragment() {
                 }
             }
 
-            database = Room.databaseBuilder(
-                requireContext(),
-                ShortcutDatabase::class.java, "shortcut-database"
-            ).addMigrations(MIGRATION_1_2, MIGRATION_2_3).build()
+            database = withContext(Dispatchers.IO) {
+                Room.databaseBuilder(
+                    requireContext(),
+                    ShortcutDatabase::class.java, "shortcut-database"
+                ).addMigrations(MIGRATION_1_2, MIGRATION_2_3).build()
+            }
 
             val shortcutDao = database?.shortcutDao()
-            val shortcuts: MutableList<ShortcutEntity> = shortcutDao?.getAll() as MutableList
+            val shortcuts: MutableList<ShortcutEntity> = withContext(Dispatchers.IO) {
+                shortcutDao?.getAll() as? MutableList ?: mutableListOf()
+            }
 
             val adapter = ShortcutGridAdapter(requireContext(), shortcuts)
 
-            ThreadUtils.runOnUiThread {
-                binding.shortcutGrid.adapter = adapter
-            }
+            binding.shortcutGrid.adapter = adapter
         }
 
         binding.shortcutGrid.setOnItemClickListener { _, _, position, _ ->
@@ -347,8 +349,10 @@ class HomeFragment : Fragment() {
             item.title = name.text.toString()
             adapter.notifyDataSetChanged()
 
-            GlobalScope.launch {
-                database?.shortcutDao()?.update(item)
+            viewLifecycleOwner.lifecycleScope.launch {
+                withContext(Dispatchers.IO) {
+                    database?.shortcutDao()?.update(item)
+                }
             }
         }
         builder.setNegativeButton(android.R.string.cancel) { dialog, _ -> dialog.cancel() }
@@ -372,9 +376,11 @@ class HomeFragment : Fragment() {
             adapter.list = list
             adapter.notifyDataSetChanged()
 
-            GlobalScope.launch {
-                database?.shortcutDao()
-                    ?.insertAll(ShortcutEntity(url = url.text.toString(), title = name.text.toString()))
+            viewLifecycleOwner.lifecycleScope.launch {
+                withContext(Dispatchers.IO) {
+                    database?.shortcutDao()
+                        ?.insertAll(ShortcutEntity(url = url.text.toString(), title = name.text.toString()))
+                }
             }
         }
         builder.setNegativeButton(android.R.string.cancel) { dialog, _ -> dialog.cancel() }
@@ -388,8 +394,10 @@ class HomeFragment : Fragment() {
         adapter.list = list
         adapter.notifyDataSetChanged()
 
-        GlobalScope.launch {
-            database?.shortcutDao()?.delete(shortcutEntity)
+        viewLifecycleOwner.lifecycleScope.launch {
+            withContext(Dispatchers.IO) {
+                database?.shortcutDao()?.delete(shortcutEntity)
+            }
         }
     }
 

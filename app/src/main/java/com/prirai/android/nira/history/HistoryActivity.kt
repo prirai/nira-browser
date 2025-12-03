@@ -14,7 +14,6 @@ import androidx.recyclerview.widget.RecyclerView
 import com.prirai.android.nira.R
 import com.prirai.android.nira.ext.components
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
-import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import mozilla.components.concept.storage.VisitInfo
 
@@ -26,6 +25,7 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updatePadding
 import com.prirai.android.nira.ext.isAppInDarkTheme
+import androidx.lifecycle.lifecycleScope
 
 
 class HistoryActivity : AppCompatActivity(), SearchView.OnQueryTextListener {
@@ -56,19 +56,17 @@ class HistoryActivity : AppCompatActivity(), SearchView.OnQueryTextListener {
         val recyclerView = findViewById<RecyclerView>(R.id.list)
         val emptyView = findViewById<TextView>(R.id.emptyView)
         recyclerView.layoutManager = LinearLayoutManager(this)
-        GlobalScope.launch {
+        lifecycleScope.launch {
             history = components.historyStorage.getDetailedVisits(0).reversed()
-            runOnUiThread {
-                if (history!!.isEmpty()) {
-                    emptyView.visibility = View.VISIBLE
-                    recyclerView.visibility = View.GONE
-                } else {
-                    emptyView.visibility = View.GONE
-                    recyclerView.visibility = View.VISIBLE
-                    recyclerView.adapter = HistoryItemRecyclerViewAdapter(
-                        history!!
-                    )
-                }
+            if (history!!.isEmpty()) {
+                emptyView.visibility = View.VISIBLE
+                recyclerView.visibility = View.GONE
+            } else {
+                emptyView.visibility = View.GONE
+                recyclerView.visibility = View.VISIBLE
+                recyclerView.adapter = HistoryItemRecyclerViewAdapter(
+                    history!!
+                )
             }
         }
 
@@ -79,13 +77,11 @@ class HistoryActivity : AppCompatActivity(), SearchView.OnQueryTextListener {
                 object : HistoryRecyclerViewItemTouchListener.OnItemClickListener {
                     override fun onItemClick(view: View?, position: Int) {
                         onBackPressedDispatcher.onBackPressed()
-                        GlobalScope.launch {
-                            components.sessionUseCases.loadUrl(
-                                (recyclerView.adapter as HistoryItemRecyclerViewAdapter).getItem(
-                                    position
-                                ).url
-                            )
-                        }
+                        components.sessionUseCases.loadUrl(
+                            (recyclerView.adapter as HistoryItemRecyclerViewAdapter).getItem(
+                                position
+                            ).url
+                        )
                     }
 
                     override fun onLongItemClick(view: View?, position: Int) {
@@ -152,7 +148,7 @@ class HistoryActivity : AppCompatActivity(), SearchView.OnQueryTextListener {
                                         clipboard?.setPrimaryClip(clip)
                                     }
                                     4 -> {
-                                        GlobalScope.launch {
+                                        lifecycleScope.launch {
                                             components.historyStorage.deleteVisit(
                                                 (recyclerView.adapter as HistoryItemRecyclerViewAdapter).getItem(
                                                     position
@@ -163,19 +159,17 @@ class HistoryActivity : AppCompatActivity(), SearchView.OnQueryTextListener {
                                             )
                                             history = components.historyStorage.getDetailedVisits(0)
                                                 .reversed()
-                                            runOnUiThread {
-                                                if (history!!.isEmpty()) {
-                                                    emptyView.visibility = View.VISIBLE
-                                                    recyclerView.visibility = View.GONE
-                                                } else {
-                                                    recyclerView.adapter =
-                                                        HistoryItemRecyclerViewAdapter(
-                                                            history!!
-                                                        )
-                                                    (recyclerView.adapter as HistoryItemRecyclerViewAdapter).notifyItemRemoved(
-                                                        position
+                                            if (history!!.isEmpty()) {
+                                                emptyView.visibility = View.VISIBLE
+                                                recyclerView.visibility = View.GONE
+                                            } else {
+                                                recyclerView.adapter =
+                                                    HistoryItemRecyclerViewAdapter(
+                                                        history!!
                                                     )
-                                                }
+                                                (recyclerView.adapter as HistoryItemRecyclerViewAdapter).notifyItemRemoved(
+                                                    position
+                                                )
                                             }
                                         }
                                     }

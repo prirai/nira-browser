@@ -58,3 +58,4 @@ out
 
 *.iml
 /.kotlin/sessions/*
+/fixes.md
