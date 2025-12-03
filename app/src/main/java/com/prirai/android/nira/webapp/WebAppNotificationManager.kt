@@ -6,9 +6,9 @@ import android.app.NotificationManager
 import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
-import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
+import androidx.core.content.ContextCompat
 import com.prirai.android.nira.R
 
 /**
@@ -55,16 +55,44 @@ class WebAppNotificationManager(private val context: Context) {
     }
 
     /**
+     * Check if the app has POST_NOTIFICATIONS permission (Android 13+)
+     */
+    fun hasNotificationPermission(): Boolean {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.POST_NOTIFICATIONS
+            ) == PackageManager.PERMISSION_GRANTED
+        } else {
+            // Pre-Android 13, notification permission is granted by default
+            notificationManager.areNotificationsEnabled()
+        }
+    }
+
+    /**
      * Request notification permission for a PWA
+     * Note: This method should be called from an Activity or Fragment
+     * that implements the permission request handling via Activity Result API.
+     * 
+     * For WebAppActivity/WebAppFragment usage:
+     * - Call hasNotificationPermission() first to check if permission is already granted
+     * - If not granted, use Activity's requestPermissions() or registerForActivityResult()
+     * - Pass the result to the callback
      */
     fun requestNotificationPermission(webAppId: String, callback: (Boolean) -> Unit) {
-        // This would show a permission dialog to the user
-        // For now, we'll just call the callback with true
-        callback(true)
+        if (hasNotificationPermission()) {
+            callback(true)
+        } else {
+            // Permission needs to be requested by the calling Activity/Fragment
+            // This manager cannot directly request permissions as it's not a UI component
+            callback(false)
+        }
     }
 
     /**
      * Show a notification from a PWA
+     * 
+     * @return true if notification was shown, false if permission is missing
      */
     fun showPwaNotification(
         webAppId: String,
@@ -72,7 +100,13 @@ class WebAppNotificationManager(private val context: Context) {
         title: String,
         message: String,
         notificationId: Int
-    ) {
+    ): Boolean {
+        // Check if we have permission to post notifications
+        if (!hasNotificationPermission()) {
+            // Permission not granted - caller should request permission first
+            return false
+        }
+
         val builder = NotificationCompat.Builder(context, PWA_NOTIFICATION_CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_dialog_info)
             .setContentTitle(title)
@@ -81,21 +115,8 @@ class WebAppNotificationManager(private val context: Context) {
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .setAutoCancel(true)
 
-        if (ActivityCompat.checkSelfPermission(
-                this,
-                Manifest.permission.POST_NOTIFICATIONS
-            ) != PackageManager.PERMISSION_GRANTED
-        ) {
-            // TODO: Consider calling
-            //    ActivityCompat#requestPermissions
-            // here to request the missing permissions, and then overriding
-            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
-            //                                          int[] grantResults)
-            // to handle the case where the user grants the permission. See the documentation
-            // for ActivityCompat#requestPermissions for more details.
-            return
-        }
         notificationManager.notify(notificationId, builder.build())
+        return true
     }
 
     /**
@@ -107,11 +128,19 @@ class WebAppNotificationManager(private val context: Context) {
 
     /**
      * Check if PWA has notification permission
+     * This checks both system-level permission and PWA-specific settings
      */
     fun hasNotificationPermission(webAppId: String): Boolean {
-        // Check if this specific PWA has notification permission
-        // Would need to integrate with GeckoView's permission system
-        return true // Placeholder
+        // First check system-level notification permission
+        if (!hasNotificationPermission()) {
+            return false
+        }
+        
+        // Check if this specific PWA has notification permission granted
+        // This would integrate with GeckoView's permission system or
+        // a custom permission storage for PWAs
+        // For now, return true if system permission is granted
+        return true
     }
 
     /**

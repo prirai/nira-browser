@@ -198,4 +198,48 @@ class WebAppFragment : Fragment(), EngineSession.Observer {
             }
         }
     }
+
+    /**
+     * Request notification permission for this PWA
+     * This is a helper method that can be called when the PWA needs to show notifications
+     * 
+     * Example usage:
+     * ```
+     * requestNotificationPermissionIfNeeded { granted ->
+     *     if (granted) {
+     *         // Show notification
+     *         val notificationManager = WebAppNotificationManager(requireContext())
+     *         notificationManager.showPwaNotification(
+     *             webAppId = "example_pwa",
+     *             webAppName = "Example PWA",
+     *             title = "Hello",
+     *             message = "This is a test notification",
+     *             notificationId = 1
+     *         )
+     *     } else {
+     *         // Handle permission denied
+     *     }
+     * }
+     * ```
+     */
+    fun requestNotificationPermissionIfNeeded(callback: (Boolean) -> Unit) {
+        val notificationManager = WebAppNotificationManager(requireContext())
+        
+        // Check if permission is already granted
+        if (notificationManager.hasNotificationPermission()) {
+            callback(true)
+            return
+        }
+        
+        // Request permission from the activity
+        val webAppActivity = activity as? WebAppActivity
+        if (webAppActivity != null) {
+            webAppActivity.requestNotificationPermission { granted ->
+                callback(granted)
+            }
+        } else {
+            // Not running in WebAppActivity, cannot request permission
+            callback(false)
+        }
+    }
 }

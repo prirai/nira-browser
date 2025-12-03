@@ -1,10 +1,13 @@
 package com.prirai.android.nira.webapp
 
+import android.Manifest
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.view.View
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
@@ -23,6 +26,14 @@ class WebAppActivity : AppCompatActivity() {
         const val EXTRA_WEB_APP_URL = "extra_web_app_url"
         const val EXTRA_WEB_APP_MANIFEST = "extra_web_app_manifest"
     }
+
+    private var notificationPermissionCallback: ((Boolean) -> Unit)? = null
+    
+    private val requestNotificationPermissionLauncher: ActivityResultLauncher<String> =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
+            notificationPermissionCallback?.invoke(isGranted)
+            notificationPermissionCallback = null
+        }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -146,6 +157,21 @@ class WebAppActivity : AppCompatActivity() {
         
         // Make navigation bar match status bar
         window.navigationBarColor = window.statusBarColor
+    }
+
+    /**
+     * Request notification permission for PWA notifications (Android 13+)
+     * 
+     * @param callback Called with true if permission granted, false if denied
+     */
+    fun requestNotificationPermission(callback: (Boolean) -> Unit) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            notificationPermissionCallback = callback
+            requestNotificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        } else {
+            // Pre-Android 13, notification permission is granted by default
+            callback(true)
+        }
     }
 
 }
