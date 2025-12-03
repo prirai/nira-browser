@@ -303,11 +303,23 @@ class BookmarksBottomSheetFragment : BottomSheetDialogFragment(), BookmarkAdapte
     override fun onRecyclerItemClicked(v: View, position: Int) {
         when (val item = currentFolder[position]) {
             is BookmarkSiteItem -> {
-                // Open bookmark URL and dismiss bottom sheet
+                // Open bookmark URL and navigate to browser
                 requireContext().components.tabsUseCases.addTab.invoke(
                     url = item.url,
                     selectTab = true
                 )
+                
+                // Navigate to browser if on home
+                try {
+                    val navController = androidx.navigation.fragment.NavHostFragment.findNavController(this)
+                    if (navController.currentDestination?.id == R.id.homeFragment) {
+                        val directions = com.prirai.android.nira.NavGraphDirections.actionGlobalBrowser(null)
+                        navController.navigate(directions)
+                    }
+                } catch (e: Exception) {
+                    // Ignore navigation errors
+                }
+                
                 dismiss()
             }
             is BookmarkFolderItem -> {

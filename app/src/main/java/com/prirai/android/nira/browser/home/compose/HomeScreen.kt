@@ -77,45 +77,58 @@ fun HomeScreen(
     val backgroundColor = MaterialTheme.colorScheme.background
     
     Box(modifier = modifier.fillMaxSize()) {
-        Column(
+        LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .background(backgroundColor)
-                .padding(horizontal = 16.dp, vertical = 32.dp),
+                .background(backgroundColor),
+            contentPadding = PaddingValues(
+                start = 16.dp,
+                top = 16.dp,
+                end = 16.dp,
+                bottom = 100.dp
+            ),
             verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
-            // Profile selector at top
-            ProfileSelector(
-                currentProfile = currentProfile,
-                onClick = onProfileClick
-            )
-            
-            // Logo section
-            LogoSection(isPrivateMode = isPrivateMode)
+            // Logo section with profile selector
+            item {
+                LogoSection(
+                    isPrivateMode = isPrivateMode,
+                    currentProfile = currentProfile,
+                    onProfileClick = onProfileClick
+                )
+            }
             
             // Centered search bar
-            SearchBar(onSearchClick = onSearchClick)
+            item {
+                SearchBar(onSearchClick = onSearchClick)
+            }
             
             // Only show shortcuts and bookmarks in normal mode
             if (!isPrivateMode) {
                 // Shortcuts section
-                ShortcutsSection(
-                    shortcuts = shortcuts,
-                    onShortcutClick = onShortcutClick,
-                    onShortcutDelete = onShortcutDelete,
-                    onAddClick = onShortcutAdd
-                )
+                item {
+                    ShortcutsSection(
+                        shortcuts = shortcuts,
+                        onShortcutClick = onShortcutClick,
+                        onShortcutDelete = onShortcutDelete,
+                        onAddClick = onShortcutAdd
+                    )
+                }
                 
                 // Bookmarks section
-                BookmarksSection(
-                    bookmarks = bookmarks,
-                    isExpanded = isBookmarkExpanded,
-                    onBookmarkClick = onBookmarkClick,
-                    onToggle = onBookmarkToggle
-                )
+                item {
+                    BookmarksSection(
+                        bookmarks = bookmarks,
+                        isExpanded = isBookmarkExpanded,
+                        onBookmarkClick = onBookmarkClick,
+                        onToggle = onBookmarkToggle
+                    )
+                }
             } else {
                 // Private browsing info
-                PrivateBrowsingInfo()
+                item {
+                    PrivateBrowsingInfo()
+                }
             }
         }
         
@@ -133,7 +146,12 @@ fun HomeScreen(
 }
 
 @Composable
-fun LogoSection(isPrivateMode: Boolean, modifier: Modifier = Modifier) {
+fun LogoSection(
+    isPrivateMode: Boolean,
+    currentProfile: ProfileInfo,
+    onProfileClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
     Column(
         modifier = modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -158,6 +176,23 @@ fun LogoSection(isPrivateMode: Boolean, modifier: Modifier = Modifier) {
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onBackground
             )
+            
+            // Profile emoji selector (clickable)
+            Surface(
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.primaryContainer,
+                modifier = Modifier
+                    .size(40.dp)
+                    .clickable(onClick = onProfileClick)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Text(
+                        text = currentProfile.emoji,
+                        style = MaterialTheme.typography.titleLarge,
+                        fontSize = 24.sp
+                    )
+                }
+            }
         }
         
         // Private badge
@@ -419,17 +454,30 @@ fun BookmarksSection(
                     )
                 }
             } else {
-                LazyVerticalGrid(
-                    columns = GridCells.Adaptive(minSize = 80.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                    modifier = Modifier.heightIn(max = 400.dp)
+                // Use a FlowRow or simple grid layout for non-scrollable bookmarks
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    items(bookmarks) { bookmark ->
-                        BookmarkItem(
-                            bookmark = bookmark,
-                            onClick = { onBookmarkClick(bookmark) }
-                        )
+                    // Group bookmarks into rows of 4
+                    bookmarks.chunked(4).forEach { rowBookmarks ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            rowBookmarks.forEach { bookmark ->
+                                Box(modifier = Modifier.weight(1f)) {
+                                    BookmarkItem(
+                                        bookmark = bookmark,
+                                        onClick = { onBookmarkClick(bookmark) }
+                                    )
+                                }
+                            }
+                            // Add empty boxes to fill the row if needed
+                            repeat(4 - rowBookmarks.size) {
+                                Spacer(modifier = Modifier.weight(1f))
+                            }
+                        }
                     }
                 }
             }

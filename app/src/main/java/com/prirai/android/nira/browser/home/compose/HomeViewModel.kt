@@ -94,7 +94,8 @@ class HomeViewModel(
                     }
                 }
                 
-                _bookmarks.value = firstLevelBookmarks.take(20)
+                // Get all first-level bookmarks (no limit)
+                _bookmarks.value = firstLevelBookmarks
             } catch (e: Exception) {
                 _bookmarks.value = emptyList()
             }
