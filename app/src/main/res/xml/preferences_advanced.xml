@@ -5,7 +5,7 @@
 
     <PreferenceCategory android:title="Developer Options">
         
-        <SwitchPreferenceCompat
+        <com.prirai.android.nira.settings.MaterialSwitchPreference
             app:key="@string/key_remote_debugging"
             app:title="@string/remote_debugging"
             app:singleLineTitle="false"
@@ -15,7 +15,7 @@
 
     <PreferenceCategory android:title="Security">
         
-        <SwitchPreferenceCompat
+        <com.prirai.android.nira.settings.MaterialSwitchPreference
             app:key="@string/key_trust_third_party_certs"
             app:title="@string/trust_third_party_certs"
             app:singleLineTitle="false"
@@ -25,7 +25,7 @@
 
     <PreferenceCategory android:title="Downloads">
         
-        <SwitchPreferenceCompat
+        <com.prirai.android.nira.settings.MaterialSwitchPreference
             app:key="@string/key_prompt_external_downloader"
             app:title="@string/prompt_external_downloader"
             app:singleLineTitle="false"
@@ -49,7 +49,7 @@
             app:singleLineTitle="false"
             app:enabled="true" />
 
-        <SwitchPreferenceCompat
+        <com.prirai.android.nira.settings.MaterialSwitchPreference
             app:key="@string/key_use_custom_collection"
             app:title="@string/use_custom_collection"
             app:singleLineTitle="false"

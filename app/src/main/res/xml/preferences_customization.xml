@@ -28,22 +28,29 @@
 
     <PreferenceCategory android:title="Toolbar &amp; Navigation">
         
-        <SwitchPreferenceCompat
+        <com.prirai.android.nira.settings.MaterialSwitchPreference
             app:key="@string/key_move_navbar"
             app:title="@string/move_navbar"
             app:singleLineTitle="false"
             app:defaultValue="false" />
 
-        <SwitchPreferenceCompat
+        <com.prirai.android.nira.settings.MaterialSwitchPreference
             app:key="@string/key_hide_url_bar"
             app:title="@string/hide_url_bar"
             app:singleLineTitle="false"
             app:defaultValue="true" />
 
-        <SwitchPreferenceCompat
+        <com.prirai.android.nira.settings.MaterialSwitchPreference
             app:key="@string/key_show_contextual_toolbar"
             app:title="@string/show_contextual_toolbar"
             app:summary="@string/show_contextual_toolbar_desc"
+            app:singleLineTitle="false"
+            app:defaultValue="true" />
+
+        <com.prirai.android.nira.settings.MaterialSwitchPreference
+            app:key="@string/key_show_tab_group_bar"
+            app:title="@string/show_tab_group_bar"
+            app:summary="@string/show_tab_group_bar_desc"
             app:singleLineTitle="false"
             app:defaultValue="true" />
 
@@ -62,19 +69,19 @@
 
     <PreferenceCategory android:title="Tabs &amp; Layout">
         
-        <SwitchPreferenceCompat
+        <com.prirai.android.nira.settings.MaterialSwitchPreference
             app:key="@string/key_show_tabs_in_grid"
             app:title="@string/tab_grid"
             app:singleLineTitle="false"
             app:defaultValue="true" />
 
-        <SwitchPreferenceCompat
+        <com.prirai.android.nira.settings.MaterialSwitchPreference
             app:key="@string/key_swap_drawers"
             app:title="@string/swap_bookmarks_and_tabs"
             app:singleLineTitle="false"
             app:defaultValue="true" />
 
-        <SwitchPreferenceCompat
+        <com.prirai.android.nira.settings.MaterialSwitchPreference
             app:key="@string/key_stack_from_bottom"
             app:title="@string/stack_items_reverse"
             app:singleLineTitle="false"
@@ -84,13 +91,13 @@
 
     <PreferenceCategory android:title="Homepage">
         
-        <SwitchPreferenceCompat
+        <com.prirai.android.nira.settings.MaterialSwitchPreference
             app:key="@string/key_shortcuts_visible"
             app:title="@string/show_shortcuts"
             app:singleLineTitle="false"
             app:defaultValue="true" />
 
-        <SwitchPreferenceCompat
+        <com.prirai.android.nira.settings.MaterialSwitchPreference
             app:key="@string/key_load_shortcut_icons"
             app:title="@string/load_shortcut_icons"
             app:singleLineTitle="false"
@@ -100,13 +107,13 @@
 
     <PreferenceCategory android:title="Text &amp; Display">
         
-        <SwitchPreferenceCompat
+        <com.prirai.android.nira.settings.MaterialSwitchPreference
             app:key="@string/key_show_protocol"
             app:title="@string/show_protocol_in_url"
             app:singleLineTitle="false"
             app:defaultValue="false" />
 
-        <SwitchPreferenceCompat
+        <com.prirai.android.nira.settings.MaterialSwitchPreference
             app:key="@string/key_auto_font_size"
             app:title="@string/auto_font"
             app:singleLineTitle="false"
@@ -131,7 +138,7 @@
 
     <PreferenceCategory android:title="Gestures">
         
-        <SwitchPreferenceCompat
+        <com.prirai.android.nira.settings.MaterialSwitchPreference
             app:key="@string/key_swipe_refresh"
             app:title="@string/swipe_to_refresh"
             app:singleLineTitle="false"
