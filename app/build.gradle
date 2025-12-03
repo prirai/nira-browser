@@ -27,8 +27,8 @@ android {
         minSdkVersion 26
         targetSdkVersion 36
         // Increment by 4 with each update
-        versionCode = 8
-        versionName = "0.3"
+        versionCode = 12
+        versionName = "0.3.1"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
