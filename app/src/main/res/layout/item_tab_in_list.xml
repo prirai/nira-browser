@@ -8,7 +8,7 @@
     android:layout_height="wrap_content"
     android:layout_marginHorizontal="8dp"
     android:layout_marginVertical="4dp"
-    app:cardCornerRadius="12dp"
+    app:cardCornerRadius="@dimen/search_result_corner_radius"
     app:cardElevation="1dp"
     app:cardBackgroundColor="?attr/colorSurface"
 >
