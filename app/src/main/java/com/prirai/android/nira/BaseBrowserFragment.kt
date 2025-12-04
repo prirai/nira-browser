@@ -15,6 +15,8 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.coordinatorlayout.widget.CoordinatorLayout
 import androidx.core.content.ContextCompat
 import androidx.core.view.OnApplyWindowInsetsListener
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
@@ -208,6 +210,9 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
         val context = requireContext()
         val store = context.components.store
         val activity = requireActivity() as BrowserActivity
+
+        // Setup edge-to-edge for fragment - don't apply padding to browserLayout
+        setupEdgeToEdgeForFragment()
 
         val toolbarHeight = resources.getDimensionPixelSize(R.dimen.browser_toolbar_height)
 
@@ -881,7 +886,7 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
     }
 
     @VisibleForTesting
-    internal fun fullScreenChanged(inFullScreen: Boolean) {
+    internal open fun fullScreenChanged(inFullScreen: Boolean) {
         if (inFullScreen) {
             // Close find in page bar if opened
             findInPageComponent?.onBackPressed()
@@ -893,17 +898,27 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
             )
             (view as? SwipeGestureLayout)?.isSwipeEnabled = false
 
+            // Completely hide and collapse toolbar
             browserToolbarView.collapse()
             browserToolbarView.view.isVisible = false
+            
+            // Reset engine view layout - remove all margins and behaviors
             val browserEngine = binding.swipeRefresh.layoutParams as CoordinatorLayout.LayoutParams
             browserEngine.bottomMargin = 0
             browserEngine.topMargin = 0
             browserEngine.behavior = null
-            binding.swipeRefresh.layoutParams = browserEngine
             binding.swipeRefresh.translationY = 0f
+            binding.swipeRefresh.layoutParams = browserEngine
+            
+            // Remove padding from swipeRefresh for true fullscreen
+            binding.swipeRefresh.setPadding(0, 0, 0, 0)
 
+            // Disable dynamic toolbar
             binding.engineView.setDynamicToolbarMaxHeight(0)
             binding.engineView.setVerticalClipping(0)
+            
+            // Notify subclasses about fullscreen change (for modern toolbar system)
+            onFullScreenModeChanged(true)
         } else {
             requireActivity().exitImmersiveMode(
                 unregisterOnApplyWindowInsetsListener = binding.engineView::removeWindowInsetsListener,
@@ -916,9 +931,59 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
                 initializeEngineView(toolbarHeight)
                 browserToolbarView.expand()
             }
+            
+            // Restore window insets padding to swipeRefresh
+            binding.swipeRefresh.requestApplyInsets()
+            
+            // Notify subclasses about fullscreen change (for modern toolbar system)
+            onFullScreenModeChanged(false)
         }
 
         binding.swipeRefresh.isEnabled = shouldPullToRefreshBeEnabled()
+    }
+    
+    /**
+     * Hook for subclasses to handle fullscreen mode changes
+     * (e.g., BrowserFragment can hide/show modern toolbar system)
+     */
+    protected open fun onFullScreenModeChanged(inFullScreen: Boolean) {
+        // Default: do nothing, subclasses can override
+    }
+    
+    /**
+     * Setup edge-to-edge for the fragment.
+     * Ensures proper inset handling for web content while allowing toolbars to handle their own insets.
+     */
+    private fun setupEdgeToEdgeForFragment() {
+        // Setup insets for the swipeRefresh (web content container)
+        // This ensures web content doesn't render behind system bars
+        ViewCompat.setOnApplyWindowInsetsListener(binding.swipeRefresh) { view, insets ->
+            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            
+            // Apply padding to prevent web content from going behind system bars
+            // Top padding: Always add status bar height
+            // Bottom padding: Add navigation bar height (toolbar is on top of this via CoordinatorLayout)
+            view.setPadding(
+                0,
+                systemBars.top,  // Status bar
+                0,
+                systemBars.bottom  // Navigation bar
+            )
+            
+            // Pass insets through for other views (toolbars) to consume
+            insets
+        }
+        
+        // Make browserLayout pass insets through to children
+        ViewCompat.setOnApplyWindowInsetsListener(binding.browserLayout) { _, insets ->
+            insets
+        }
+        
+        // CRITICAL: Request insets to be applied immediately
+        // This ensures the listener is triggered even on first load
+        binding.swipeRefresh.post {
+            ViewCompat.requestApplyInsets(binding.swipeRefresh)
+        }
     }
 
     /*

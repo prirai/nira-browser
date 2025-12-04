@@ -54,6 +54,13 @@
             app:singleLineTitle="false"
             app:defaultValue="true" />
 
+        <com.prirai.android.nira.settings.MaterialSwitchPreference
+            app:key="@string/key_show_profile_switcher"
+            app:title="@string/show_profile_switcher"
+            app:summary="@string/show_profile_switcher_desc"
+            app:singleLineTitle="false"
+            app:defaultValue="true" />
+
         <Preference
             app:key="toolbar_icon_size"
             app:title="@string/toolbar_icon_size"

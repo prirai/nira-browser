@@ -5,6 +5,8 @@ import android.content.Context
 import android.util.AttributeSet
 import android.view.View
 import android.widget.LinearLayout
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isVisible
 import mozilla.components.concept.toolbar.ScrollableToolbar
 import mozilla.components.concept.engine.EngineView
@@ -105,6 +107,29 @@ class ModernToolbarSystem @JvmOverloads constructor(
 
     fun setToolbarPosition(position: ToolbarPosition) {
         toolbarPosition = position
+        
+        // Setup window insets handling for edge-to-edge
+        // This allows toolbars to add padding for system bars without affecting fullscreen
+        ViewCompat.setOnApplyWindowInsetsListener(this) { view, insets ->
+            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            
+            // Only apply padding when visible (not in fullscreen)
+            if (view.isVisible && view.alpha > 0f) {
+                when (toolbarPosition) {
+                    ToolbarPosition.BOTTOM -> {
+                        view.setPadding(0, 0, 0, systemBars.bottom)
+                    }
+                    ToolbarPosition.TOP -> {
+                        view.setPadding(0, systemBars.top, 0, 0)
+                    }
+                }
+            } else {
+                // In fullscreen or hidden - no padding
+                view.setPadding(0, 0, 0, 0)
+            }
+            
+            insets
+        }
     }
 
     private fun updateDynamicToolbarHeight() {

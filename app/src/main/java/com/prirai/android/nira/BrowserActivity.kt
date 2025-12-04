@@ -170,45 +170,11 @@ open class BrowserActivity : LocaleAwareAppCompatActivity(), ComponentCallbacks2
         // Setup auto-tagging of new tabs with current profile
         setupTabProfileTagging()
         
-        // Make navigation bar transparent globally to prevent black bar with gesture navigation
-        window.navigationBarColor = android.graphics.Color.TRANSPARENT
+        // Enable edge-to-edge display
+        enableEdgeToEdge()
         
-        // Remove navigation bar contrast enforcement (removes the white pill/scrim on Android 10+)
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
-            window.isNavigationBarContrastEnforced = false
-        }
-
-        ViewCompat.setOnApplyWindowInsetsListener(view) { v, insets ->
-            val bars = insets.getInsets(
-                WindowInsetsCompat.Type.systemBars()
-                        or WindowInsetsCompat.Type.displayCutout()
-            )
-            val userPrefs = UserPreferences(this)
-            val isBottomToolbar = userPrefs.shouldUseBottomToolbar
-            
-            // Always respect status bar padding to prevent content overlap
-            val topPadding = bars.top
-
-            // Dynamic status bar based on toolbar position
-            if (isBottomToolbar) {
-                setupStatusBarForBottomToolbar(userPrefs)
-                // CRITICAL: Hide navigation toolbar stub to prevent any space
-                hideNavigationToolbarForBottomMode()
-            } else {
-                window.statusBarColor = getColor(R.color.statusbar_background)
-                androidx.core.view.WindowInsetsControllerCompat(window, view).isAppearanceLightStatusBars = true
-            }
-
-            v.updatePadding(
-                left = bars.left,
-                top = topPadding,
-                right = bars.right,
-                bottom = 0
-            )
-            val insetsController = WindowCompat.getInsetsController(window, v)
-            insetsController.isAppearanceLightStatusBars = !isAppInDarkTheme()
-            WindowInsetsCompat.CONSUMED
-        }
+        // Setup window insets handling for edge-to-edge
+        setupEdgeToEdgeInsets(view)
 
         // OPTIMIZATION: Components that need lifecycle registration must be initialized in onCreate
         // These still trigger lazy component init but are required for proper lifecycle
@@ -666,6 +632,44 @@ open class BrowserActivity : LocaleAwareAppCompatActivity(), ComponentCallbacks2
             
             theme.resolveAttribute(com.google.android.material.R.attr.colorSurface, typedValue, true)
             window.navigationBarColor = typedValue.data
+        }
+    }
+    
+    /**
+     * Enable true edge-to-edge display following Mozilla's approach.
+     * Makes the app draw behind system bars (status bar and navigation bar).
+     */
+    private fun enableEdgeToEdge() {
+        // Enable edge-to-edge mode
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+        
+        // Make navigation bar transparent
+        window.navigationBarColor = android.graphics.Color.TRANSPARENT
+        
+        // Make status bar transparent for true edge-to-edge
+        window.statusBarColor = android.graphics.Color.TRANSPARENT
+        
+        // Remove navigation bar contrast enforcement (removes the white pill/scrim on Android 10+)
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+            window.isNavigationBarContrastEnforced = false
+        }
+        
+        // Setup status bar appearance
+        val insetsController = WindowCompat.getInsetsController(window, window.decorView)
+        insetsController.isAppearanceLightStatusBars = !isAppInDarkTheme()
+    }
+    
+    /**
+     * Setup window insets for edge-to-edge without applying padding to root view.
+     * Individual components (toolbars) will handle their own insets.
+     */
+    private fun setupEdgeToEdgeInsets(view: View) {
+        ViewCompat.setOnApplyWindowInsetsListener(view) { v, insets ->
+            // Don't apply any padding to root view - let it truly be edge-to-edge
+            // Fragments and their toolbars will handle insets individually
+            
+            // Just return insets for children to consume
+            insets
         }
     }
 

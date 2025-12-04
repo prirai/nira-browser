@@ -57,6 +57,7 @@
   <string name="key_hide_url_bar" translatable="false">hide_url_bar</string>
   <string name="key_show_contextual_toolbar" translatable="false">show_contextual_toolbar</string>
   <string name="key_show_tab_group_bar" translatable="false">show_tab_group_bar</string>
+  <string name="key_show_profile_switcher" translatable="false">show_profile_switcher</string>
   <string name="key_status_bar_blur" translatable="false">status_bar_blur</string>
   <string name="key_swap_drawers" translatable="false">swap_drawers</string>
   <string
@@ -260,6 +261,8 @@
   <string name="show_contextual_toolbar_desc">Display bottom toolbar with navigation buttons</string>
   <string name="show_tab_group_bar">Show tab group bar</string>
   <string name="show_tab_group_bar_desc">Display tab island bar above address bar</string>
+  <string name="show_profile_switcher">Show profile switcher</string>
+  <string name="show_profile_switcher_desc">Display profile switcher button in tab bar</string>
   <string name="status_bar_blur">Enable status bar blur effect</string>
   <string name="status_bar_blur_explain">Blur content behind status bar (Android 12+)</string>
 

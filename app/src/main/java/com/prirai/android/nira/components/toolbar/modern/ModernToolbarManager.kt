@@ -23,6 +23,8 @@ class ModernToolbarManager(
 
     var modernToolbarSystem: ModernToolbarSystem? = null
         private set
+    var topToolbarSystem: ModernToolbarSystem? = null
+        private set
     private var tabGroupWithSwitcher: TabGroupWithProfileSwitcher? = null
     private var modernContextualToolbar: com.prirai.android.nira.toolbar.ContextualBottomToolbar? =
         null
@@ -60,7 +62,7 @@ class ModernToolbarManager(
         // 2. Bottom system: Tab bar + contextual toolbar
 
         // TOP SYSTEM: Address bar only
-        val topToolbarSystem = ModernToolbarSystem(container.context).apply {
+        topToolbarSystem = ModernToolbarSystem(container.context).apply {
             id = generateViewId()
             setToolbarPosition(ModernToolbarSystem.ToolbarPosition.TOP)
         }
@@ -78,12 +80,12 @@ class ModernToolbarManager(
         // Add only browser toolbar to top
         browserToolbar?.let { toolbar ->
             (toolbar.parent as? ViewGroup)?.removeView(toolbar)
-            topToolbarSystem.addComponent(toolbar, ModernToolbarSystem.ComponentType.ADDRESS_BAR)
+            topToolbarSystem!!.addComponent(toolbar, ModernToolbarSystem.ComponentType.ADDRESS_BAR)
         }
 
         // Connect engine view to top system for proper scroll behavior
         findEngineView(container)?.let { engineView ->
-            topToolbarSystem.setEngineView(engineView)
+            topToolbarSystem!!.setEngineView(engineView)
         }
 
         // BOTTOM SYSTEM: Tab group + contextual toolbar
