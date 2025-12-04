@@ -39,22 +39,22 @@ import com.prirai.android.nira.browser.home.HomeMenu
 import mozilla.components.browser.menu.view.MenuButton
 
 class ComposeHomeFragment : Fragment() {
-    
+
     private val browsingModeManager get() = (activity as BrowserActivity).browsingModeManager
     private val components get() = requireContext().components
-    
+
     private lateinit var viewModel: HomeViewModel
-    
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        
+
         // Initialize database with migrations
         val MIGRATION_1_2: Migration = object : Migration(1, 2) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE shortcutentity ADD COLUMN title TEXT")
             }
         }
-        
+
         val MIGRATION_2_3: Migration = object : Migration(2, 3) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("CREATE TABLE shortcutentity_new (uid INTEGER NOT NULL, url TEXT, title TEXT, PRIMARY KEY(uid))")
@@ -63,22 +63,22 @@ class ComposeHomeFragment : Fragment() {
                 db.execSQL("ALTER TABLE shortcutentity_new RENAME TO shortcutentity")
             }
         }
-        
+
         val database = Room.databaseBuilder(
             requireContext(),
             ShortcutDatabase::class.java,
             "shortcut-database"
         ).addMigrations(MIGRATION_1_2, MIGRATION_2_3).build()
-        
+
         val factory = HomeViewModelFactory(
             context = requireContext(),
             bookmarkManager = BookmarkManager.getInstance(requireContext()),
             shortcutDao = database.shortcutDao()
         )
-        
+
         viewModel = ViewModelProvider(this, factory)[HomeViewModel::class.java]
     }
-    
+
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -89,48 +89,51 @@ class ComposeHomeFragment : Fragment() {
             setContent {
                 // Get the store
                 val store = requireContext().components.store
-                
+
                 // Observe the selected tab - read from state directly in composition
                 val selectedTab = store.state.selectedTabId?.let { id ->
                     store.state.tabs.find { it.id == id }
                 }
-                
+
                 // Determine private mode from the selected tab
                 val isPrivateMode = selectedTab?.content?.private ?: browsingModeManager.mode.isPrivate
-                
+
                 val shortcuts by viewModel.shortcuts.collectAsState()
                 val bookmarks by viewModel.bookmarks.collectAsState()
                 val showAddDialog by viewModel.showAddShortcutDialog.collectAsState()
                 val isBookmarkExpanded by viewModel.isBookmarkSectionExpanded.collectAsState()
-                
+
                 // Get tab count
                 val tabCount = if (isPrivateMode) {
                     store.state.privateTabs.size
                 } else {
                     store.state.normalTabs.size
                 }
-                
+
                 // Get current profile based on tab's contextId
-                val profileManager = com.prirai.android.nira.browser.profile.ProfileManager.getInstance(requireContext())
+                val profileManager =
+                    com.prirai.android.nira.browser.profile.ProfileManager.getInstance(requireContext())
                 val currentProfile = run {
                     val tabContextId = selectedTab?.contextId
                     when {
                         tabContextId == "private" || isPrivateMode -> {
                             ProfileInfo("private", "Private", "🕵️", true)
                         }
+
                         tabContextId != null && tabContextId.startsWith("profile_") -> {
                             val profileId = tabContextId.removePrefix("profile_")
                             val profile = profileManager.getAllProfiles().find { it.id == profileId }
                                 ?: profileManager.getActiveProfile()
                             ProfileInfo(profile.id, profile.name, profile.emoji, false)
                         }
+
                         else -> {
                             val profile = profileManager.getActiveProfile()
                             ProfileInfo(profile.id, profile.name, profile.emoji, false)
                         }
                     }
                 }
-                
+
                 NiraTheme(
                     isPrivateMode = isPrivateMode
                 ) {
@@ -188,21 +191,28 @@ class ComposeHomeFragment : Fragment() {
                         },
                         onExtensionsClick = {
                             // Open extensions
-                            val intent = android.content.Intent(requireContext(), com.prirai.android.nira.addons.AddonsActivity::class.java)
+                            val intent = android.content.Intent(
+                                requireContext(),
+                                com.prirai.android.nira.addons.AddonsActivity::class.java
+                            )
                             intent.flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
                             startActivity(intent)
                         },
                         onTabCountClick = {
                             // Open tabs bottom sheet
-                            val tabsBottomSheet = com.prirai.android.nira.browser.tabs.TabsBottomSheetFragment.newInstance()
-                            tabsBottomSheet.show(parentFragmentManager, com.prirai.android.nira.browser.tabs.TabsBottomSheetFragment.TAG)
+                            val tabsBottomSheet =
+                                com.prirai.android.nira.browser.tabs.TabsBottomSheetFragment.newInstance()
+                            tabsBottomSheet.show(
+                                parentFragmentManager,
+                                com.prirai.android.nira.browser.tabs.TabsBottomSheetFragment.TAG
+                            )
                         },
                         onMenuClick = {
                             // Instead of showing compose menu, use the native browser menu
                             showNativeMenu()
                         }
                     )
-                    
+
                     // Add shortcut dialog
                     if (showAddDialog) {
                         AddShortcutDialog(
@@ -216,17 +226,17 @@ class ComposeHomeFragment : Fragment() {
             }
         }
     }
-    
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        
+
         // Update toolbar styling for private mode
         updateToolbarStyling()
-        
+
         // Restore last mode on view creation
         restoreLastMode()
     }
-    
+
     override fun onResume() {
         super.onResume()
         // Reload data when fragment resumes
@@ -235,16 +245,16 @@ class ComposeHomeFragment : Fragment() {
         // Update styling when resuming
         updateToolbarStyling()
     }
-    
+
     private fun updateToolbarStyling() {
         // Only apply purple styling if we're actually on this homepage AND in private mode
         // Check if this fragment is currently visible and resumed
         if (!isResumed || !isVisible) {
             return
         }
-        
+
         val isPrivate = browsingModeManager.mode.isPrivate
-        
+
         if (isPrivate) {
             // Purple background for private mode
             requireActivity().window.statusBarColor = android.graphics.Color.parseColor("#6A1B9A")
@@ -253,56 +263,56 @@ class ComposeHomeFragment : Fragment() {
             // Default theme color - use the actual theme attributes
             val typedValue = android.util.TypedValue()
             val theme = requireContext().theme
-            
+
             // For status bar - use surface or primary variant
             if (theme.resolveAttribute(com.google.android.material.R.attr.colorSurfaceVariant, typedValue, true)) {
                 requireActivity().window.statusBarColor = typedValue.data
             }
-            
+
             // For navigation bar - use surface
             if (theme.resolveAttribute(com.google.android.material.R.attr.colorSurface, typedValue, true)) {
                 requireActivity().window.navigationBarColor = typedValue.data
             }
         }
     }
-    
+
     override fun onPause() {
         super.onPause()
         // Restore default styling when leaving the homepage
         restoreDefaultStyling()
     }
-    
+
     override fun onDestroyView() {
         super.onDestroyView()
         // Restore default styling when view is destroyed
         restoreDefaultStyling()
     }
-    
+
     private fun restoreDefaultStyling() {
         // Restore default system bar colors
         val typedValue = android.util.TypedValue()
         val theme = requireContext().theme
-        
+
         // Restore status bar
         if (theme.resolveAttribute(com.google.android.material.R.attr.colorSurfaceVariant, typedValue, true)) {
             requireActivity().window.statusBarColor = typedValue.data
         }
-        
+
         // Restore navigation bar
         if (theme.resolveAttribute(com.google.android.material.R.attr.colorSurface, typedValue, true)) {
             requireActivity().window.navigationBarColor = typedValue.data
         }
     }
-    
+
     private fun showProfileSwitcher() {
         val profileManager = com.prirai.android.nira.browser.profile.ProfileManager.getInstance(requireContext())
         val allProfiles = profileManager.getAllProfiles()
         val privateProfile = "🕵️ Private"
-        
+
         // Build items list
         val items = allProfiles.map { "${it.emoji} ${it.name}" }.toMutableList()
         items.add(privateProfile)
-        
+
         MaterialAlertDialogBuilder(requireContext())
             .setTitle("Switch Profile")
             .setItems(items.toTypedArray()) { _, which ->
@@ -310,11 +320,11 @@ class ComposeHomeFragment : Fragment() {
                     // Switch to private mode
                     browsingModeManager.mode = BrowsingMode.Private
                     saveLastMode(isPrivate = true, profileId = null)
-                    
+
                     // Find or create a private tab
                     val store = components.store
                     val privateTabs = store.state.tabs.filter { it.content.private }
-                    
+
                     if (privateTabs.isEmpty()) {
                         // Create a new private tab
                         components.tabsUseCases.addTab(
@@ -332,14 +342,14 @@ class ComposeHomeFragment : Fragment() {
                     browsingModeManager.mode = BrowsingMode.Normal
                     profileManager.setActiveProfile(selectedProfile)
                     saveLastMode(isPrivate = false, profileId = selectedProfile.id)
-                    
+
                     // Find or create a tab with this profile's contextId
                     val store = components.store
                     val contextId = "profile_${selectedProfile.id}"
-                    val profileTabs = store.state.tabs.filter { 
-                        it.contextId == contextId && !it.content.private 
+                    val profileTabs = store.state.tabs.filter {
+                        it.contextId == contextId && !it.content.private
                     }
-                    
+
                     if (profileTabs.isEmpty()) {
                         // Create a new tab for this profile
                         components.tabsUseCases.addTab(
@@ -352,7 +362,7 @@ class ComposeHomeFragment : Fragment() {
                         components.tabsUseCases.selectTab(profileTabs.first().id)
                     }
                 }
-                
+
                 // Navigate to new home fragment to show the new profile
                 try {
                     findNavController().navigate(R.id.homeFragment)
@@ -364,7 +374,7 @@ class ComposeHomeFragment : Fragment() {
             }
             .show()
     }
-    
+
     private fun saveLastMode(isPrivate: Boolean, profileId: String?) {
         val prefs = requireContext().getSharedPreferences("home_prefs", android.content.Context.MODE_PRIVATE)
         prefs.edit().apply {
@@ -373,12 +383,12 @@ class ComposeHomeFragment : Fragment() {
             apply()
         }
     }
-    
+
     private fun restoreLastMode() {
         val prefs = requireContext().getSharedPreferences("home_prefs", android.content.Context.MODE_PRIVATE)
         val wasPrivate = prefs.getBoolean("last_was_private", false)
         val lastProfileId = prefs.getString("last_profile_id", "default")
-        
+
         if (wasPrivate) {
             browsingModeManager.mode = BrowsingMode.Private
         } else {
@@ -389,13 +399,13 @@ class ComposeHomeFragment : Fragment() {
             profileManager.setActiveProfile(profile)
         }
     }
-    
+
     private fun showNativeMenu() {
         // Create HomeMenu using Mozilla Components
         try {
             val components = requireContext().components
             var menuBuilder: mozilla.components.browser.menu.BrowserMenuBuilder? = null
-            
+
             // Create menu with home-specific items
             val homeMenu = com.prirai.android.nira.browser.home.HomeMenu(
                 context = requireContext(),
@@ -406,28 +416,42 @@ class ComposeHomeFragment : Fragment() {
                             androidx.navigation.fragment.NavHostFragment.findNavController(this)
                                 .navigate(R.id.homeFragment)
                         }
+
                         is com.prirai.android.nira.browser.home.HomeMenu.Item.NewPrivateTab -> {
                             val browsingModeManager = (requireActivity() as BrowserActivity).browsingModeManager
                             browsingModeManager.mode = BrowsingMode.Private
                             androidx.navigation.fragment.NavHostFragment.findNavController(this)
                                 .navigate(R.id.homeFragment)
                         }
+
                         is com.prirai.android.nira.browser.home.HomeMenu.Item.Bookmarks -> {
                             val bookmarksBottomSheet = BookmarksBottomSheetFragment.newInstance()
                             bookmarksBottomSheet.show(parentFragmentManager, "BookmarksBottomSheet")
                         }
+
                         is com.prirai.android.nira.browser.home.HomeMenu.Item.History -> {
-                            val intent = android.content.Intent(requireContext(), com.prirai.android.nira.history.HistoryActivity::class.java)
+                            val intent = android.content.Intent(
+                                requireContext(),
+                                com.prirai.android.nira.history.HistoryActivity::class.java
+                            )
                             intent.flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
                             startActivity(intent)
                         }
+
                         is com.prirai.android.nira.browser.home.HomeMenu.Item.AddonsManager -> {
-                            val intent = android.content.Intent(requireContext(), com.prirai.android.nira.addons.AddonsActivity::class.java)
+                            val intent = android.content.Intent(
+                                requireContext(),
+                                com.prirai.android.nira.addons.AddonsActivity::class.java
+                            )
                             intent.flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
                             startActivity(intent)
                         }
+
                         is com.prirai.android.nira.browser.home.HomeMenu.Item.Settings -> {
-                            val intent = android.content.Intent(requireContext(), com.prirai.android.nira.settings.activity.SettingsActivity::class.java)
+                            val intent = android.content.Intent(
+                                requireContext(),
+                                com.prirai.android.nira.settings.activity.SettingsActivity::class.java
+                            )
                             intent.flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
                             startActivity(intent)
                         }
@@ -437,45 +461,46 @@ class ComposeHomeFragment : Fragment() {
                     menuBuilder = builder
                 }
             )
-            
+
             // Build and show the menu
             menuBuilder?.let { builder ->
                 val menu = builder.build(requireContext())
-                
+
                 // Get toolbar position preference
                 val prefs = com.prirai.android.nira.preferences.UserPreferences(requireContext())
-                val isBottomToolbar = prefs.toolbarPosition == com.prirai.android.nira.components.toolbar.ToolbarPosition.BOTTOM.ordinal
-                
+                val isBottomToolbar =
+                    prefs.toolbarPosition == com.prirai.android.nira.components.toolbar.ToolbarPosition.BOTTOM.ordinal
+
                 // Get the DecorView which is always available and stable
                 val decorView = requireActivity().window.decorView as? android.view.ViewGroup
-                
+
                 if (decorView != null) {
                     // Create persistent anchor view
                     val anchorView = android.view.View(requireContext())
                     anchorView.id = android.view.View.generateViewId()
                     val params = android.widget.FrameLayout.LayoutParams(10, 10) // Small but visible
-                    
+
                     if (isBottomToolbar) {
                         // Position at bottom right
                         params.gravity = android.view.Gravity.BOTTOM or android.view.Gravity.END
-                        params.bottomMargin = 80
+                        params.bottomMargin = 200
                         params.rightMargin = 20
                     } else {
-                        // Position at top right  
+                        // Position at top right
                         params.gravity = android.view.Gravity.TOP or android.view.Gravity.END
-                        params.topMargin = 80
+                        params.topMargin = 200
                         params.rightMargin = 20
                     }
-                    
+
                     anchorView.layoutParams = params
                     decorView.addView(anchorView)
-                    
+
                     // Post to ensure view is attached
                     anchorView.post {
                         try {
                             // Show menu
                             menu.show(anchor = anchorView)
-                            
+
                             // Clean up anchor after a reasonable timeout (menu auto-dismisses on selection)
                             anchorView.postDelayed({
                                 try {
@@ -501,7 +526,7 @@ class ComposeHomeFragment : Fragment() {
             showSimpleMenu()
         }
     }
-    
+
     private fun showSimpleMenu() {
         val menuItems = arrayOf(
             "New Tab",
@@ -511,7 +536,7 @@ class ComposeHomeFragment : Fragment() {
             "Extensions",
             "Settings"
         )
-        
+
         MaterialAlertDialogBuilder(requireContext())
             .setTitle("Menu")
             .setItems(menuItems) { _, which ->
@@ -519,41 +544,53 @@ class ComposeHomeFragment : Fragment() {
             }
             .show()
     }
-    
+
     private fun handleMenuItem(item: String) {
         when (item) {
             "New Tab" -> {
                 androidx.navigation.fragment.NavHostFragment.findNavController(this)
                     .navigate(R.id.homeFragment)
             }
+
             "New Private Tab" -> {
                 val browsingModeManager = (requireActivity() as BrowserActivity).browsingModeManager
                 browsingModeManager.mode = BrowsingMode.Private
                 androidx.navigation.fragment.NavHostFragment.findNavController(this)
                     .navigate(R.id.homeFragment)
             }
+
             "Bookmarks" -> {
                 val bookmarksBottomSheet = BookmarksBottomSheetFragment.newInstance()
                 bookmarksBottomSheet.show(parentFragmentManager, "BookmarksBottomSheet")
             }
+
             "History" -> {
-                val intent = android.content.Intent(requireContext(), com.prirai.android.nira.history.HistoryActivity::class.java)
+                val intent = android.content.Intent(
+                    requireContext(),
+                    com.prirai.android.nira.history.HistoryActivity::class.java
+                )
                 intent.flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
                 startActivity(intent)
             }
+
             "Extensions" -> {
-                val intent = android.content.Intent(requireContext(), com.prirai.android.nira.addons.AddonsActivity::class.java)
+                val intent =
+                    android.content.Intent(requireContext(), com.prirai.android.nira.addons.AddonsActivity::class.java)
                 intent.flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
                 startActivity(intent)
             }
+
             "Settings" -> {
-                val intent = android.content.Intent(requireContext(), com.prirai.android.nira.settings.activity.SettingsActivity::class.java)
+                val intent = android.content.Intent(
+                    requireContext(),
+                    com.prirai.android.nira.settings.activity.SettingsActivity::class.java
+                )
                 intent.flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
                 startActivity(intent)
             }
         }
     }
-    
+
     companion object {
         fun newInstance(): ComposeHomeFragment {
             return ComposeHomeFragment()

@@ -106,18 +106,19 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
                 val currentTab = store.tabs.find { it.id == store.selectedTabId }
 
                 val isHomepage = currentTab?.content?.url == "about:homepage"
-                
+
                 // Apply same filtering logic for tab count
                 val activity = activity as? BrowserActivity
                 val isPrivateMode = activity?.browsingModeManager?.mode?.isPrivate ?: false
-                val profileManager = com.prirai.android.nira.browser.profile.ProfileManager.getInstance(requireContext())
+                val profileManager =
+                    com.prirai.android.nira.browser.profile.ProfileManager.getInstance(requireContext())
                 val currentProfile = profileManager.getActiveProfile()
                 val currentProfileContextId = if (isPrivateMode) {
                     "private"
                 } else {
                     "profile_${currentProfile.id}"
                 }
-                
+
                 val filteredTabsCount = store.tabs.count { tab ->
                     if (tab.content.private != isPrivateMode) {
                         false
@@ -322,7 +323,7 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
 
                             // Position the temp view above the menu button (same as working implementation)
                             tempView.x = menuButton.x
-                            tempView.y = menuButton.y - 60 // 60px above the button
+                            tempView.y = menuButton.y
 
                             // Show menu anchored to temp view
                             menu.show(anchor = tempView)
@@ -334,7 +335,7 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
                                 } catch (e: Exception) {
                                     // Ignore if view was already removed
                                 }
-                            }, 12000) // 12 seconds cleanup delay
+                            }, 36000)
 
                         } else {
                             // Fallback: show menu anchored to the modern toolbar system itself
@@ -377,14 +378,14 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
                 val isPrivate = activity.browsingModeManager.mode.isPrivate
                 val currentProfile = activity.browsingModeManager.currentProfile
                 val contextId = if (isPrivate) "private" else "profile_${currentProfile.id}"
-                
+
                 requireContext().components.tabsUseCases.addTab(
                     url = "about:homepage",
                     private = isPrivate,
                     contextId = contextId,
                     selectTab = true
                 )
-                
+
                 // Navigate to Compose home fragment
                 try {
                     androidx.navigation.fragment.NavHostFragment.findNavController(this).navigate(R.id.homeFragment)
@@ -438,22 +439,23 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
         // Use proper flow-based observation instead of polling
         viewLifecycleOwner.lifecycleScope.launch {
             val store = requireContext().components.store
-            
+
             store.flowScoped(viewLifecycleOwner) { flow ->
                 flow.mapNotNull { state ->
                     // Check if fragment is still attached before proceeding
                     if (!isAdded) return@mapNotNull null
-                    
+
                     val activity = activity as? BrowserActivity ?: return@mapNotNull null
                     val isPrivateMode = activity.browsingModeManager.mode.isPrivate
-                    val profileManager = com.prirai.android.nira.browser.profile.ProfileManager.getInstance(requireContext())
+                    val profileManager =
+                        com.prirai.android.nira.browser.profile.ProfileManager.getInstance(requireContext())
                     val currentProfile = profileManager.getActiveProfile()
                     val currentProfileContextId = if (isPrivateMode) {
                         "private"
                     } else {
                         "profile_${currentProfile.id}"
                     }
-                    
+
                     val filteredTabs = state.tabs.filter { tab ->
                         // Match private mode first
                         if (tab.content.private != isPrivateMode) {
@@ -463,7 +465,7 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
                             (tab.contextId == currentProfileContextId) || (tab.contextId == null)
                         }
                     }
-                    
+
                     // Return state data for change detection
                     state to filteredTabs
                 }.distinctUntilChangedBy { (state, filteredTabs) ->
@@ -481,7 +483,7 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
                     )
                 }.collect { (state, filteredTabs) ->
                     if (!isAdded) return@collect
-                    
+
                     // Detect new tabs for auto-grouping
                     val currentTabIds = state.tabs.map { it.id }.toSet()
                     val newTabIds = currentTabIds - lastTabIds
@@ -533,7 +535,7 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
     private fun initializeModernToolbarWithCurrentState() {
         // Initialize the modern toolbar with the current tab state immediately
         val state = requireContext().components.store.state
-        
+
         // Apply same filtering logic as in observeTabChangesForModernToolbar
         val activity = activity as? BrowserActivity
         val isPrivateMode = activity?.browsingModeManager?.mode?.isPrivate ?: false
@@ -544,7 +546,7 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
         } else {
             "profile_${currentProfile.id}"
         }
-        
+
         val filteredTabs = state.tabs.filter { tab ->
             // Match private mode first
             if (tab.content.private != isPrivateMode) {
@@ -554,7 +556,7 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
                 (tab.contextId == currentProfileContextId) || (tab.contextId == null)
             }
         }
-        
+
         val selectedTab = state.tabs.find { it.id == state.selectedTabId }
         val currentUrl = selectedTab?.content?.url ?: ""
         // Properly detect homepage - both empty URL and about:homepage
@@ -645,7 +647,7 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
     /**
      * Override fullscreen handling to properly hide/show modern toolbar system.
      * Based on Mozilla's implementation in Fenix BaseBrowserFragment.
-     * 
+     *
      * Note: Swipe-to-fullscreen gestures are handled by the web content (e.g., YouTube player).
      * If swipe gestures don't work consistently, it's typically due to the video player's
      * internal state management, not the browser. The browser correctly responds to fullscreen
@@ -660,7 +662,7 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
             collapseBrowserViewFromFullscreen()
         }
     }
-    
+
     /**
      * Expands the browser view to full screen by hiding all toolbar elements.
      * Follows Mozilla's pattern from Fenix.
@@ -671,22 +673,22 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
             collapse()
             isVisible = false
         }
-        
+
         modernToolbarManager?.topToolbarSystem?.apply {
             collapse()
             isVisible = false
         }
-        
+
         // No need to touch swipeRefresh layout params - BaseBrowserFragment handles it
     }
-    
+
     /**
      * Collapses the browser view from fullscreen by restoring toolbar elements.
      * Follows Mozilla's pattern from Fenix.
      */
     private fun collapseBrowserViewFromFullscreen() {
         if (!webAppToolbarShouldBeVisible) return
-        
+
         // Show and expand modern toolbar systems
         modernToolbarManager?.modernToolbarSystem?.apply {
             isVisible = true
@@ -696,7 +698,7 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
                 requestLayout()
             }
         }
-        
+
         modernToolbarManager?.topToolbarSystem?.apply {
             isVisible = true
             post {
@@ -705,7 +707,7 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
                 requestLayout()
             }
         }
-        
+
         // BaseBrowserFragment will call initializeEngineView automatically
     }
 
