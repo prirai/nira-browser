@@ -43,18 +43,13 @@ class PwaSuggestionManager(private val context: Context) {
             description = "Fast and secure messaging"
         ),
         PwaSuggestion(
-            url = "https://web.whatsapp.com/",
-            name = "WhatsApp",
-            description = "Simple, reliable messaging"
-        ),
-        PwaSuggestion(
             url = "https://discord.com/app",
             name = "Discord",
             description = "Chat, voice, and video"
         ),
         PwaSuggestion(
-            url = "https://twitter.com/",
-            name = "Twitter",
+            url = "https://x.com/",
+            name = "X - Formerly Twitter",
             description = "Social networking"
         ),
         PwaSuggestion(
@@ -66,11 +61,6 @@ class PwaSuggestionManager(private val context: Context) {
             url = "https://www.instagram.com/",
             name = "Instagram",
             description = "Photo and video sharing"
-        ),
-        PwaSuggestion(
-            url = "https://www.youtube.com/",
-            name = "YouTube",
-            description = "Video streaming platform"
         ),
         PwaSuggestion(
             url = "https://music.youtube.com/",

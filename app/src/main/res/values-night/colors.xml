@@ -23,4 +23,8 @@
     <color name="tab_sheet_background">#1E1E1E</color>
     <color name="tab_group_background">#242424</color>
     <color name="tab_group_stroke">#383838</color>
+    
+    <!-- Search result chips (dark mode) -->
+    <color name="chip_stroke_color_themed">#00BCD4</color>
+    <color name="chip_text_color_themed">#00BCD4</color>
 </resources>

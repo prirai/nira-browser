@@ -78,4 +78,8 @@
     <color name="tab_sheet_background">#F5F5F5</color>
     <color name="tab_group_background">#F8F9FA</color>
     <color name="tab_group_stroke">#D0D0D0</color>
+    
+    <!-- Search result chips -->
+    <color name="chip_stroke_color_themed">@color/colorPrimary</color>
+    <color name="chip_text_color_themed">@color/colorPrimary</color>
 </resources>

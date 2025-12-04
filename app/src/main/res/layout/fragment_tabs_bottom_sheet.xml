@@ -99,6 +99,19 @@
 
     </RelativeLayout>
 
+    <!-- FAB for search -->
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/searchTabFab"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|end"
+        android:layout_marginEnd="88dp"
+        android:layout_marginBottom="76dp"
+        android:src="@drawable/ic_search"
+        android:contentDescription="@string/search_tabs"
+        app:fabSize="normal"
+        app:elevation="6dp" />
+
     <!-- FAB for new tab -->
     <com.google.android.material.floatingactionbutton.FloatingActionButton
         android:id="@+id/newTabFab"

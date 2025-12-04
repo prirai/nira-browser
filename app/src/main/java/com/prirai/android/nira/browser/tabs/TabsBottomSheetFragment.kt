@@ -114,6 +114,15 @@ class TabsBottomSheetFragment : BottomSheetDialogFragment() {
         binding.newTabFab.setOnClickListener {
             addNewTab()
         }
+        
+        binding.searchTabFab.setOnClickListener {
+            showTabSearch()
+        }
+    }
+    
+    private fun showTabSearch() {
+        val searchFragment = TabSearchFragment.newInstance()
+        searchFragment.show(parentFragmentManager, TabSearchFragment.TAG)
     }
 
     private fun setupTabsAdapter() {

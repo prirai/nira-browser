@@ -860,4 +860,9 @@
   <string name="clone_webapp_dialog_message">Create a copy of \"%1$s\" with a different profile?</string>
   <string name="clone">Clone</string>
 
+  <!-- Tab Search Strings -->
+  <string name="search_tabs">Search tabs</string>
+  <string name="search_tabs_bookmarks_history">Search tabs, bookmarks, and history</string>
+  <string name="search_tabs_description">Type to search across all your tabs, bookmarks, and browsing history</string>
+
 </resources>
