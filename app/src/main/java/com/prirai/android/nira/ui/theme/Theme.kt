@@ -74,7 +74,12 @@ fun NiraTheme(
     if (!view.isInEditMode) {
         SideEffect {
             val window = (view.context as Activity).window
-            window.statusBarColor = colorScheme.background.toArgb()
+            // Only set purple for private mode, otherwise use transparent/default
+            if (isPrivateMode) {
+                window.statusBarColor = colorScheme.primary.toArgb()
+                window.navigationBarColor = colorScheme.primary.toArgb()
+            }
+            // Don't modify status bar for non-private mode - let activity handle it
             WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme && !isPrivateMode
         }
     }

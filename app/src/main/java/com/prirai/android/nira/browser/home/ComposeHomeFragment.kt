@@ -8,6 +8,8 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.fragment.app.Fragment
@@ -185,8 +187,8 @@ class ComposeHomeFragment : Fragment() {
                             tabsBottomSheet.show(parentFragmentManager, com.prirai.android.nira.browser.tabs.TabsBottomSheetFragment.TAG)
                         },
                         onMenuClick = {
-                            // Show home menu
-                            showHomeMenu()
+                            // Instead of showing compose menu, use the native browser menu
+                            showNativeMenu()
                         }
                     )
                     
@@ -207,6 +209,9 @@ class ComposeHomeFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         
+        // Update toolbar styling for private mode
+        updateToolbarStyling()
+        
         // Restore last mode on view creation
         restoreLastMode()
     }
@@ -216,6 +221,66 @@ class ComposeHomeFragment : Fragment() {
         // Reload data when fragment resumes
         viewModel.loadShortcuts()
         viewModel.loadBookmarks()
+        // Update styling when resuming
+        updateToolbarStyling()
+    }
+    
+    private fun updateToolbarStyling() {
+        // Only apply purple styling if we're actually on this homepage AND in private mode
+        // Check if this fragment is currently visible and resumed
+        if (!isResumed || !isVisible) {
+            return
+        }
+        
+        val isPrivate = browsingModeManager.mode.isPrivate
+        
+        if (isPrivate) {
+            // Purple background for private mode
+            requireActivity().window.statusBarColor = android.graphics.Color.parseColor("#6A1B9A")
+            requireActivity().window.navigationBarColor = android.graphics.Color.parseColor("#6A1B9A")
+        } else {
+            // Default theme color - use the actual theme attributes
+            val typedValue = android.util.TypedValue()
+            val theme = requireContext().theme
+            
+            // For status bar - use surface or primary variant
+            if (theme.resolveAttribute(com.google.android.material.R.attr.colorSurfaceVariant, typedValue, true)) {
+                requireActivity().window.statusBarColor = typedValue.data
+            }
+            
+            // For navigation bar - use surface
+            if (theme.resolveAttribute(com.google.android.material.R.attr.colorSurface, typedValue, true)) {
+                requireActivity().window.navigationBarColor = typedValue.data
+            }
+        }
+    }
+    
+    override fun onPause() {
+        super.onPause()
+        // Restore default styling when leaving the homepage
+        restoreDefaultStyling()
+    }
+    
+    override fun onDestroyView() {
+        super.onDestroyView()
+        // Restore default styling when view is destroyed
+        restoreDefaultStyling()
+    }
+    
+    private fun restoreDefaultStyling() {
+        // Restore default system bar colors
+        val typedValue = android.util.TypedValue()
+        val theme = requireContext().theme
+        
+        // Restore status bar
+        if (theme.resolveAttribute(com.google.android.material.R.attr.colorSurfaceVariant, typedValue, true)) {
+            requireActivity().window.statusBarColor = typedValue.data
+        }
+        
+        // Restore navigation bar
+        if (theme.resolveAttribute(com.google.android.material.R.attr.colorSurface, typedValue, true)) {
+            requireActivity().window.navigationBarColor = typedValue.data
+        }
     }
     
     private fun showProfileSwitcher() {
@@ -279,57 +344,118 @@ class ComposeHomeFragment : Fragment() {
         }
     }
     
-    private fun showHomeMenu() {
-        val menuButton = MenuButton(requireContext())
-        val homeMenu = HomeMenu(
-            lifecycleOwner = viewLifecycleOwner,
-            context = requireContext(),
-            onItemTapped = { item: HomeMenu.Item ->
-                when (item) {
-                    HomeMenu.Item.NewTab -> {
-                        androidx.navigation.fragment.NavHostFragment.findNavController(this)
-                            .navigate(R.id.homeFragment)
-                    }
-                    HomeMenu.Item.NewPrivateTab -> {
-                        val browsingModeManager = (requireActivity() as BrowserActivity).browsingModeManager
-                        browsingModeManager.mode = BrowsingMode.Private
-                        androidx.navigation.fragment.NavHostFragment.findNavController(this)
-                            .navigate(R.id.homeFragment)
-                    }
-                    HomeMenu.Item.Bookmarks -> {
-                        val bookmarksBottomSheet = BookmarksBottomSheetFragment.newInstance()
-                        bookmarksBottomSheet.show(parentFragmentManager, "BookmarksBottomSheet")
-                    }
-                    HomeMenu.Item.History -> {
-                        val intent = android.content.Intent(requireContext(), com.prirai.android.nira.history.HistoryActivity::class.java)
-                        intent.flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
-                        startActivity(intent)
-                    }
-                    HomeMenu.Item.AddonsManager -> {
-                        val intent = android.content.Intent(requireContext(), com.prirai.android.nira.addons.AddonsActivity::class.java)
-                        intent.flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
-                        startActivity(intent)
-                    }
-                    HomeMenu.Item.Settings -> {
-                        val intent = android.content.Intent(requireContext(), com.prirai.android.nira.settings.activity.SettingsActivity::class.java)
-                        intent.flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
-                        startActivity(intent)
-                    }
-                }
-            },
-            onMenuBuilderChanged = { builder ->
-                menuButton.menuBuilder = builder
+    private fun showNativeMenu() {
+        // Create a wrapper for showing menu at the bottom right corner
+        val rootView = requireView()
+        
+        // Create a temporary anchor view positioned at bottom-right
+        val anchorView = View(requireContext()).apply {
+            layoutParams = android.view.ViewGroup.LayoutParams(1, 1)
+        }
+        
+        // Add anchor to root temporarily
+        if (rootView is android.view.ViewGroup) {
+            rootView.addView(anchorView)
+            anchorView.post {
+                // Position at bottom right
+                anchorView.x = rootView.width.toFloat()
+                anchorView.y = rootView.height.toFloat() - 200 // Above the bottom toolbar
             }
+        }
+        
+        // Create native menu using PopupMenu
+        val popupMenu = android.widget.PopupMenu(
+            requireContext(), 
+            anchorView,
+            android.view.Gravity.BOTTOM or android.view.Gravity.END
         )
         
-        // Show menu anchored to the bottom of the screen
-        view?.let { v -> 
-            // Create an anchor view at the bottom
-            val anchorView = v.findViewById<android.view.View>(android.R.id.content) ?: v
-            menuButton.menuBuilder?.build(requireContext())?.show(
-                anchor = anchorView,
-                orientation = mozilla.components.browser.menu.BrowserMenu.Orientation.UP
-            )
+        popupMenu.menu.add(0, 1, 0, "New Tab").setIcon(R.drawable.mozac_ic_tab_new_24)
+        popupMenu.menu.add(0, 2, 0, "New Private Tab").setIcon(R.drawable.ic_incognito)
+        popupMenu.menu.add(0, 3, 0, "Bookmarks").setIcon(R.drawable.ic_baseline_bookmark)
+        popupMenu.menu.add(0, 4, 0, "History").setIcon(R.drawable.ic_baseline_history)
+        popupMenu.menu.add(0, 5, 0, "Extensions").setIcon(R.drawable.mozac_ic_extension_24)
+        popupMenu.menu.add(0, 6, 0, "Settings").setIcon(R.drawable.ic_round_settings)
+        
+        popupMenu.setOnMenuItemClickListener { item ->
+            when (item.itemId) {
+                1 -> {
+                    findNavController().navigate(R.id.homeFragment)
+                    true
+                }
+                2 -> {
+                    browsingModeManager.mode = BrowsingMode.Private
+                    findNavController().navigate(R.id.homeFragment)
+                    true
+                }
+                3 -> {
+                    val bookmarksBottomSheet = BookmarksBottomSheetFragment.newInstance()
+                    bookmarksBottomSheet.show(parentFragmentManager, "BookmarksBottomSheet")
+                    true
+                }
+                4 -> {
+                    val intent = android.content.Intent(requireContext(), com.prirai.android.nira.history.HistoryActivity::class.java)
+                    intent.flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
+                    startActivity(intent)
+                    true
+                }
+                5 -> {
+                    val intent = android.content.Intent(requireContext(), com.prirai.android.nira.addons.AddonsActivity::class.java)
+                    intent.flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
+                    startActivity(intent)
+                    true
+                }
+                6 -> {
+                    val intent = android.content.Intent(requireContext(), com.prirai.android.nira.settings.activity.SettingsActivity::class.java)
+                    intent.flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
+                    startActivity(intent)
+                    true
+                }
+                else -> false
+            }
+        }
+        
+        popupMenu.setOnDismissListener {
+            // Remove anchor view after menu is dismissed
+            if (rootView is android.view.ViewGroup && anchorView.parent != null) {
+                rootView.removeView(anchorView)
+            }
+        }
+        
+        popupMenu.show()
+    }
+    
+    private fun handleMenuItem(item: String) {
+        when (item) {
+            "New Tab" -> {
+                androidx.navigation.fragment.NavHostFragment.findNavController(this)
+                    .navigate(R.id.homeFragment)
+            }
+            "New Private Tab" -> {
+                val browsingModeManager = (requireActivity() as BrowserActivity).browsingModeManager
+                browsingModeManager.mode = BrowsingMode.Private
+                androidx.navigation.fragment.NavHostFragment.findNavController(this)
+                    .navigate(R.id.homeFragment)
+            }
+            "Bookmarks" -> {
+                val bookmarksBottomSheet = BookmarksBottomSheetFragment.newInstance()
+                bookmarksBottomSheet.show(parentFragmentManager, "BookmarksBottomSheet")
+            }
+            "History" -> {
+                val intent = android.content.Intent(requireContext(), com.prirai.android.nira.history.HistoryActivity::class.java)
+                intent.flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
+                startActivity(intent)
+            }
+            "Extensions" -> {
+                val intent = android.content.Intent(requireContext(), com.prirai.android.nira.addons.AddonsActivity::class.java)
+                intent.flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
+                startActivity(intent)
+            }
+            "Settings" -> {
+                val intent = android.content.Intent(requireContext(), com.prirai.android.nira.settings.activity.SettingsActivity::class.java)
+                intent.flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
+                startActivity(intent)
+            }
         }
     }
     

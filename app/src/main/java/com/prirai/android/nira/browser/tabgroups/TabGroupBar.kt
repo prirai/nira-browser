@@ -63,7 +63,7 @@ class TabGroupBar @JvmOverloads constructor(
                 Triple(state.tabs.map { it.id }, selectedTab?.id, selectedTab?.content?.private)
             }
             .distinctUntilChanged()
-            .collect { (allTabIds, selectedTabId, _) ->
+            .collect { (allTabIds, selectedTabId, isPrivate) ->
                 lifecycleOwner.lifecycleScope.launch {
                     
                     // Get browsing mode from BrowserActivity
@@ -71,6 +71,8 @@ class TabGroupBar @JvmOverloads constructor(
                     val currentBrowsingMode = activity?.browsingModeManager?.mode?.isPrivate ?: false
                     val currentProfile = activity?.browsingModeManager?.currentProfile
                     
+                    // Show/hide private indicator
+                    binding.privateIndicator.isVisible = isPrivate == true
                     
                     // Filter tabs by current profile and privacy mode
                     val store = context.components.store.state

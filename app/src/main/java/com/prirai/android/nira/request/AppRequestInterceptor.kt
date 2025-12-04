@@ -49,6 +49,11 @@ class AppRequestInterceptor(val context: Context) : RequestInterceptor {
         isDirectNavigation: Boolean,
         isSubframeRequest: Boolean
     ): InterceptionResponse? {
+        // Redirect about:blank to compose homepage
+        if (uri == "about:blank") {
+            return InterceptionResponse.Url("about:homepage")
+        }
+        
         // Check if this is a webapp session
         webappSessions[engineSession]?.let { (webappDomain, profileId) ->
             // Handle webapp external navigation

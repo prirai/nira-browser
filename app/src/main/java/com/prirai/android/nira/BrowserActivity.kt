@@ -229,6 +229,7 @@ open class BrowserActivity : LocaleAwareAppCompatActivity(), ComponentCallbacks2
 
     override fun onResume() {
         super.onResume()
+        
         val currentPosition = UserPreferences(this).toolbarPosition
         if (currentPosition != lastToolbarPosition) {
             lastToolbarPosition = currentPosition
@@ -639,6 +640,32 @@ open class BrowserActivity : LocaleAwareAppCompatActivity(), ComponentCallbacks2
         // Remove navigation bar contrast enforcement (removes the white pill/scrim on Android 10+)
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
             window.isNavigationBarContrastEnforced = false
+        }
+    }
+    
+    private fun updateToolbarStyling() {
+        val selectedTab = components.store.state.tabs.find { it.id == components.store.state.selectedTabId }
+        val isPrivate = selectedTab?.content?.private == true
+        
+        // Find the toolbar view
+        val toolbar = findViewById<View>(R.id.toolbar)
+        
+        if (isPrivate) {
+            // Purple background for private mode
+            toolbar?.setBackgroundColor(android.graphics.Color.parseColor("#6A1B9A"))
+            window.statusBarColor = android.graphics.Color.parseColor("#6A1B9A")
+            window.navigationBarColor = android.graphics.Color.parseColor("#6A1B9A")
+        } else {
+            // Default theme color
+            val typedValue = android.util.TypedValue()
+            theme.resolveAttribute(com.google.android.material.R.attr.colorSurface, typedValue, true)
+            toolbar?.setBackgroundColor(typedValue.data)
+            
+            theme.resolveAttribute(com.google.android.material.R.attr.colorPrimaryVariant, typedValue, true)
+            window.statusBarColor = typedValue.data
+            
+            theme.resolveAttribute(com.google.android.material.R.attr.colorSurface, typedValue, true)
+            window.navigationBarColor = typedValue.data
         }
     }
 

@@ -32,6 +32,7 @@ class TabGroupWithProfileSwitcher @JvmOverloads constructor(
     private val profileNameText: TextView
     
     private var onProfileSelected: ((BrowserProfile) -> Unit)? = null
+    private var onPrivateModeSelected: (() -> Unit)? = null
 
     init {
         clipToPadding = false
@@ -148,15 +149,22 @@ class TabGroupWithProfileSwitcher @JvmOverloads constructor(
         onTabClosed: (String) -> Unit,
         onIslandRenamed: ((String, String) -> Unit)? = null,
         onNewTabInIsland: ((String) -> Unit)? = null,
-        onProfileSelected: (BrowserProfile) -> Unit
+        onProfileSelected: (BrowserProfile) -> Unit,
+        onPrivateModeSelected: (() -> Unit)? = null
     ) {
         tabGroupView.setup(onTabSelected, onTabClosed, onIslandRenamed, onNewTabInIsland)
         this.onProfileSelected = onProfileSelected
+        this.onPrivateModeSelected = onPrivateModeSelected
         
-        // Initialize with current profile
+        // Initialize with current mode
         val profileManager = ProfileManager.getInstance(context)
-        val currentProfile = profileManager.getActiveProfile()
-        updateProfileIcon(currentProfile)
+        val isPrivate = profileManager.isPrivateMode()
+        if (isPrivate) {
+            updateToPrivateMode()
+        } else {
+            val currentProfile = profileManager.getActiveProfile()
+            updateProfileIcon(currentProfile)
+        }
     }
 
     fun updateTabs(tabs: List<SessionState>, selectedId: String?) {
@@ -179,6 +187,22 @@ class TabGroupWithProfileSwitcher @JvmOverloads constructor(
         val tintedColor = blendColors(backgroundColor, profile.color, 0.15f)
         profilePillCard.setCardBackgroundColor(tintedColor)
     }
+    
+    fun updateToPrivateMode() {
+        profileEmojiText.text = "🕵️"
+        profileNameText.text = "Private"
+        
+        // Purple tint for private mode
+        val isDark = isDarkMode()
+        val backgroundColor = if (isDark) {
+            0xFF1E1E1E.toInt()
+        } else {
+            0xFFF5F5F5.toInt()
+        }
+        val purpleColor = 0xFF6F42C1.toInt()
+        val tintedColor = blendColors(backgroundColor, purpleColor, 0.2f)
+        profilePillCard.setCardBackgroundColor(tintedColor)
+    }
 
     private fun blendColors(color1: Int, color2: Int, ratio: Float): Int {
         val inverseRatio = 1f - ratio
@@ -197,9 +221,15 @@ class TabGroupWithProfileSwitcher @JvmOverloads constructor(
         // Create popup menu with Gravity.TOP to appear above the pill
         val popup = PopupMenu(context, profilePillCard, Gravity.TOP or Gravity.END)
         
-        // Add profile options (only regular profiles, NOT private mode)
+        // Add Private mode as first option
+        val privateItem = popup.menu.add(0, -1, 0, "🕵️ Private")
+        if (isPrivate) {
+            privateItem.isChecked = true
+        }
+        
+        // Add profile options
         profiles.forEachIndexed { index, profile ->
-            val item = popup.menu.add(0, index, index, "${profile.emoji} ${profile.name}")
+            val item = popup.menu.add(0, index, index + 1, "${profile.emoji} ${profile.name}")
             
             // Mark current profile
             if (profile.id == currentProfile.id && !isPrivate) {
@@ -213,7 +243,13 @@ class TabGroupWithProfileSwitcher @JvmOverloads constructor(
         popup.setOnMenuItemClickListener { item ->
             val itemId = item.itemId
             
-            if (itemId < profiles.size) {
+            if (itemId == -1) {
+                // Private mode selected
+                profileManager.setPrivateMode(true)
+                updateToPrivateMode()
+                onPrivateModeSelected?.invoke()
+                true
+            } else if (itemId < profiles.size) {
                 // Profile selected
                 val profile = profiles[itemId]
                 profileManager.setActiveProfile(profile)

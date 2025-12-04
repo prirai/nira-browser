@@ -170,12 +170,28 @@ class ModernToolbarManager(
                             browserActivity.browsingModeManager.mode = com.prirai.android.nira.browser.BrowsingMode.Normal
                         }
                     }
+                },
+                onPrivateModeSelected = {
+                    // Switch to private mode
+                    val profileManager = com.prirai.android.nira.browser.profile.ProfileManager.getInstance(container.context)
+                    profileManager.setPrivateMode(true)
+                    
+                    // Update browsing mode manager
+                    (container.context as? android.app.Activity)?.let { activity ->
+                        (activity as? com.prirai.android.nira.BrowserActivity)?.let { browserActivity ->
+                            browserActivity.browsingModeManager.mode = com.prirai.android.nira.browser.BrowsingMode.Private
+                        }
+                    }
                 }
             )
             
-            // Update profile icon
+            // Update profile icon or private mode
             val profileManager = com.prirai.android.nira.browser.profile.ProfileManager.getInstance(container.context)
-            updateProfileIcon(profileManager.getActiveProfile())
+            if (profileManager.isPrivateMode()) {
+                updateToPrivateMode()
+            } else {
+                updateProfileIcon(profileManager.getActiveProfile())
+            }
         }
 
         modernToolbarSystem?.addComponent(
@@ -259,6 +275,18 @@ class ModernToolbarManager(
 
     fun updateTabs(tabs: List<SessionState>, selectedTabId: String?) {
         tabGroupWithSwitcher?.updateTabs(tabs, selectedTabId)
+        
+        // Update profile switcher icon based on selected tab
+        val selectedTab = tabs.find { it.id == selectedTabId }
+        val profileManager = com.prirai.android.nira.browser.profile.ProfileManager.getInstance(container.context)
+        
+        if (selectedTab?.content?.private == true) {
+            // Private tab is selected - show lock icon
+            tabGroupWithSwitcher?.updateToPrivateMode()
+        } else {
+            // Regular tab - show profile emoji
+            tabGroupWithSwitcher?.updateProfileIcon(profileManager.getActiveProfile())
+        }
     }
 
     fun recordTabParent(childTabId: String, parentTabId: String) {

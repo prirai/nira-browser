@@ -547,7 +547,7 @@ class EnhancedTabGroupView @JvmOverloads constructor(
             expandIslandIfTabInside(selectedId)
         }
 
-        val shouldShow = tabs.size > 1
+        val shouldShow = tabs.isNotEmpty()
 
         if (shouldShow) {
             // Update if tabs changed, content changed, or selection changed
