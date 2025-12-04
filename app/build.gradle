@@ -27,8 +27,8 @@ android {
         minSdkVersion 26
         targetSdkVersion 36
         // Increment by 4 with each update, by 1 with each fix
-        versionCode = 16
-        versionName = "0.3.3"
+        versionCode = 20
+        versionName = "0.3.4"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -220,7 +220,7 @@ dependencies {
     implementation "androidx.compose.material3:material3:1.4.0"
     implementation "androidx.compose.runtime:runtime:1.10.0"
     implementation "androidx.compose.ui:ui-tooling-preview:1.10.0"
-    implementation "androidx.activity:activity-compose:1.12.0"
+    implementation "androidx.activity:activity-compose:1.12.1"
     implementation "androidx.lifecycle:lifecycle-viewmodel-compose:2.10.0"
     implementation "io.coil-kt:coil-compose:2.7.0"
 

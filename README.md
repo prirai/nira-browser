@@ -225,7 +225,8 @@ Nira Browser is built on:
 
 ### In Progress
 - [ ] UI/UX refinements
-- [ ] Extension ecosystem expansion
+- [ ] Tab/Bookmark/History search
+- [ ] Sending tabs and groups to other profiles
 - [ ] Accessibility improvements
 
 ---
