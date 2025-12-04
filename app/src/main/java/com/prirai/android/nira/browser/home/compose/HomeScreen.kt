@@ -32,6 +32,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -76,6 +77,11 @@ fun HomeScreen(
     val isDark = isSystemInDarkTheme()
     val backgroundColor = MaterialTheme.colorScheme.background
     
+    // Get window insets for edge-to-edge support
+    val windowInsets = WindowInsets.systemBars
+    val topPadding = with(LocalDensity.current) { windowInsets.getTop(this).toDp() }
+    val bottomPadding = with(LocalDensity.current) { windowInsets.getBottom(this).toDp() }
+    
     Box(modifier = modifier.fillMaxSize()) {
         LazyColumn(
             modifier = Modifier
@@ -83,9 +89,9 @@ fun HomeScreen(
                 .background(backgroundColor),
             contentPadding = PaddingValues(
                 start = 16.dp,
-                top = 16.dp,
+                top = topPadding + 16.dp,  // Add system bar padding
                 end = 16.dp,
-                bottom = 100.dp
+                bottom = bottomPadding + 100.dp  // Add navigation bar padding + toolbar space
             ),
             verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
@@ -748,6 +754,10 @@ fun HomeBottomToolbar(
     tabCount: Int,
     modifier: Modifier = Modifier
 ) {
+    // Get navigation bar inset for proper padding
+    val windowInsets = WindowInsets.systemBars
+    val bottomPadding = with(LocalDensity.current) { windowInsets.getBottom(this).toDp() }
+    
     Surface(
         modifier = modifier.fillMaxWidth(),
         color = MaterialTheme.colorScheme.surface,
@@ -757,7 +767,8 @@ fun HomeBottomToolbar(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 4.dp, vertical = 8.dp),
+                .padding(horizontal = 4.dp)
+                .padding(top = 8.dp, bottom = bottomPadding + 8.dp),
             horizontalArrangement = Arrangement.SpaceEvenly,
             verticalAlignment = Alignment.CenterVertically
         ) {

@@ -57,6 +57,7 @@ class UserPreferences(appContext: Context) : mozilla.components.support.ktx.andr
     var showContextualToolbar by booleanPreference(SHOW_CONTEXTUAL_TOOLBAR, true)
     var showTabGroupBar by booleanPreference(SHOW_TAB_GROUP_BAR, true)
     var swipeToRefresh by booleanPreference(SWIPE_TO_REFRESH, true)
+    var showProfileSwitcher by booleanPreference(SHOW_PROFILE_SWITCHER, true)
 
     // SECURITY: Remote debugging disabled for production security
     // var remoteDebugging by booleanPreference(REMOTE_DEBUGGING, false)
@@ -139,5 +140,6 @@ class UserPreferences(appContext: Context) : mozilla.components.support.ktx.andr
         const val STATUS_BAR_BLUR = "status_bar_blur"
         const val TOOLBAR_ICON_SIZE = "toolbar_icon_size"
         const val INTERFACE_FONT_SCALE = "interface_font_scale"
+        const val SHOW_PROFILE_SWITCHER = "show_profile_switcher"
     }
 }

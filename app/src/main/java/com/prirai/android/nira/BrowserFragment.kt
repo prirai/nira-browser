@@ -575,5 +575,72 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
         }
     }
 
+    /**
+     * Override fullscreen handling to properly hide/show modern toolbar system.
+     * Based on Mozilla's implementation in Fenix BaseBrowserFragment.
+     * 
+     * Note: Swipe-to-fullscreen gestures are handled by the web content (e.g., YouTube player).
+     * If swipe gestures don't work consistently, it's typically due to the video player's
+     * internal state management, not the browser. The browser correctly responds to fullscreen
+     * API calls from the web content.
+     */
+    override fun onFullScreenModeChanged(inFullScreen: Boolean) {
+        if (inFullScreen) {
+            // Entering fullscreen - completely hide and collapse all toolbars
+            expandBrowserViewForFullscreen()
+        } else {
+            // Exiting fullscreen - restore toolbars
+            collapseBrowserViewFromFullscreen()
+        }
+    }
+    
+    /**
+     * Expands the browser view to full screen by hiding all toolbar elements.
+     * Follows Mozilla's pattern from Fenix.
+     */
+    private fun expandBrowserViewForFullscreen() {
+        // Hide modern toolbar systems
+        modernToolbarManager?.modernToolbarSystem?.apply {
+            collapse()
+            isVisible = false
+        }
+        
+        modernToolbarManager?.topToolbarSystem?.apply {
+            collapse()
+            isVisible = false
+        }
+        
+        // No need to touch swipeRefresh layout params - BaseBrowserFragment handles it
+    }
+    
+    /**
+     * Collapses the browser view from fullscreen by restoring toolbar elements.
+     * Follows Mozilla's pattern from Fenix.
+     */
+    private fun collapseBrowserViewFromFullscreen() {
+        if (!webAppToolbarShouldBeVisible) return
+        
+        // Show and expand modern toolbar systems
+        modernToolbarManager?.modernToolbarSystem?.apply {
+            isVisible = true
+            post {
+                requestApplyInsets()
+                expand()
+                requestLayout()
+            }
+        }
+        
+        modernToolbarManager?.topToolbarSystem?.apply {
+            isVisible = true
+            post {
+                requestApplyInsets()
+                expand()
+                requestLayout()
+            }
+        }
+        
+        // BaseBrowserFragment will call initializeEngineView automatically
+    }
+
 
 }

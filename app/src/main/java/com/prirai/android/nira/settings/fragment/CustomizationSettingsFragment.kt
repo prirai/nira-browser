@@ -217,6 +217,19 @@ class CustomizationSettingsFragment : BaseSettingsFragment() {
             }
         )
 
+        switchPreference(
+            preference = requireContext().resources.getString(R.string.key_show_profile_switcher),
+            isChecked = UserPreferences(requireContext()).showProfileSwitcher,
+            onCheckChange = {
+                UserPreferences(requireContext()).showProfileSwitcher = it
+                Toast.makeText(
+                    context,
+                    requireContext().resources.getText(R.string.app_restart),
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+        )
+
     }
 
     private fun pickBarAddonList() {

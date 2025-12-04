@@ -165,6 +165,22 @@ class TabGroupWithProfileSwitcher @JvmOverloads constructor(
             val currentProfile = profileManager.getActiveProfile()
             updateProfileIcon(currentProfile)
         }
+        
+        // Check user preference for profile switcher visibility
+        val prefs = com.prirai.android.nira.preferences.UserPreferences(context)
+        setProfileSwitcherVisible(prefs.showProfileSwitcher)
+    }
+    
+    fun setProfileSwitcherVisible(visible: Boolean) {
+        profilePillCard.visibility = if (visible) VISIBLE else GONE
+        
+        // Adjust tab group padding based on visibility
+        val endPadding = if (visible) {
+            (40 * resources.displayMetrics.density).toInt()
+        } else {
+            0
+        }
+        tabGroupView.setPadding(tabGroupView.paddingLeft, tabGroupView.paddingTop, endPadding, tabGroupView.paddingBottom)
     }
 
     fun updateTabs(tabs: List<SessionState>, selectedId: String?) {
