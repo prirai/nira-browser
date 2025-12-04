@@ -60,14 +60,15 @@ class GroupTabsAdapter(
             tabTitle.text = title
             tabUrl.text = tab.content.url
             
-            // Highlight selected tab with thicker border
+            // Highlight selected tab with theme-respectful stroke (not fill)
             if (isSelected) {
-                val strokeWidth = (3 * cardView.context.resources.displayMetrics.density).toInt()
+                val strokeWidth = (2 * cardView.context.resources.displayMetrics.density).toInt()
                 cardView.strokeWidth = strokeWidth
                 cardView.strokeColor = groupColor
-                cardView.cardElevation = 4f * cardView.context.resources.displayMetrics.density
+                cardView.cardElevation = 2f * cardView.context.resources.displayMetrics.density
             } else {
-                cardView.strokeWidth = (1 * cardView.context.resources.displayMetrics.density).toInt()
+                val strokeWidth = (1 * cardView.context.resources.displayMetrics.density).toInt()
+                cardView.strokeWidth = strokeWidth
                 cardView.strokeColor = androidx.core.content.ContextCompat.getColor(
                     cardView.context,
                     R.color.tab_card_stroke
@@ -75,38 +76,14 @@ class GroupTabsAdapter(
                 cardView.cardElevation = 2f * cardView.context.resources.displayMetrics.density
             }
             
-            // Apply corner radius based on position
-            val cornerRadius = 12f * cardView.context.resources.displayMetrics.density
-            when {
-                isFirst && isLast -> {
-                    // Single item - all corners rounded
-                    cardView.radius = cornerRadius
-                }
-                isFirst -> {
-                    // First item - only top corners rounded
-                    cardView.radius = 0f
-                    cardView.shapeAppearanceModel = cardView.shapeAppearanceModel.toBuilder()
-                        .setTopLeftCornerSize(cornerRadius)
-                        .setTopRightCornerSize(cornerRadius)
-                        .setBottomLeftCornerSize(0f)
-                        .setBottomRightCornerSize(0f)
-                        .build()
-                }
-                isLast -> {
-                    // Last item - only bottom corners rounded
-                    cardView.radius = 0f
-                    cardView.shapeAppearanceModel = cardView.shapeAppearanceModel.toBuilder()
-                        .setTopLeftCornerSize(0f)
-                        .setTopRightCornerSize(0f)
-                        .setBottomLeftCornerSize(cornerRadius)
-                        .setBottomRightCornerSize(cornerRadius)
-                        .build()
-                }
-                else -> {
-                    // Middle items - no corners rounded
-                    cardView.radius = 0f
-                }
-            }
+            // Apply corner radius based on position - using dimen resource for consistency
+            val cornerRadius = cardView.context.resources.getDimension(R.dimen.search_result_corner_radius)
+            cardView.shapeAppearanceModel = cardView.shapeAppearanceModel.toBuilder()
+                .setTopLeftCornerSize(if (isFirst) cornerRadius else 0f)
+                .setTopRightCornerSize(if (isFirst) cornerRadius else 0f)
+                .setBottomLeftCornerSize(if (isLast) cornerRadius else 0f)
+                .setBottomRightCornerSize(if (isLast) cornerRadius else 0f)
+                .build()
             
             // Remove margins between items in a group
             val layoutParams = cardView.layoutParams as? ViewGroup.MarginLayoutParams
@@ -331,8 +308,28 @@ class TabsWithGroupsAdapter(
             tabCount.text = "${group.tabs.size}" // Just the number
             
             colorStripe.setBackgroundColor(group.color)
+            
+            // Apply subtle fill color like in tab pill bar
+            val isDark = isDarkMode()
+            val backgroundColor = if (isDark) {
+                adjustColorForDarkMode(group.color)
+            } else {
+                adjustColorForLightMode(group.color)
+            }
+            
+            cardView.setCardBackgroundColor(backgroundColor)
+            
+            // Adjust text colors based on background
+            val textColor = if (isDark) {
+                0xFFE0E0E0.toInt()
+            } else {
+                0xFF424242.toInt()
+            }
+            groupName.setTextColor(textColor)
+            tabCount.setTextColor(textColor)
 
             expandIcon.animate().rotation(if (isExpanded) 180f else 0f).setDuration(200).start()
+            expandIcon.setColorFilter(textColor)
 
             if (isExpanded) {
                 tabsRecyclerView.visibility = View.VISIBLE
@@ -348,6 +345,37 @@ class TabsWithGroupsAdapter(
             moreButton.setOnClickListener {
                 onGroupMoreClick(group.groupId, it)
             }
+        }
+        
+        private fun isDarkMode(): Boolean {
+            return when (cardView.resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) {
+                android.content.res.Configuration.UI_MODE_NIGHT_YES -> true
+                else -> false
+            }
+        }
+        
+        private fun adjustColorForDarkMode(color: Int): Int {
+            val hsv = FloatArray(3)
+            android.graphics.Color.colorToHSV(color, hsv)
+            
+            // Reduce brightness significantly for dark mode
+            hsv[2] = (hsv[2] * 0.3f).coerceIn(0.2f, 0.4f)
+            // Increase saturation slightly
+            hsv[1] = (hsv[1] * 1.2f).coerceAtMost(1f)
+            
+            return android.graphics.Color.HSVToColor(hsv)
+        }
+        
+        private fun adjustColorForLightMode(color: Int): Int {
+            val hsv = FloatArray(3)
+            android.graphics.Color.colorToHSV(color, hsv)
+            
+            // Increase brightness for light mode (pastel colors)
+            hsv[2] = (hsv[2] * 1.2f).coerceIn(0.85f, 0.95f)
+            // Decrease saturation for softer appearance
+            hsv[1] = (hsv[1] * 0.6f).coerceIn(0.3f, 0.7f)
+            
+            return android.graphics.Color.HSVToColor(hsv)
         }
 
         private fun setupGroupTabs(recyclerView: RecyclerView, tabs: List<TabSessionState>, groupId: String, groupColor: Int, selectedId: String?) {
@@ -377,17 +405,18 @@ class TabsWithGroupsAdapter(
             tabTitle.text = title
             tabUrl.text = tab.content.url
             
-            // Highlight selected tab with thicker border - use purple for ungrouped tabs
+            // Highlight selected tab with theme-respectful stroke - use primary color for ungrouped tabs
             if (isSelected) {
-                val strokeWidth = (3 * cardView.context.resources.displayMetrics.density).toInt()
+                val strokeWidth = (2 * cardView.context.resources.displayMetrics.density).toInt()
                 cardView.strokeWidth = strokeWidth
                 cardView.strokeColor = androidx.core.content.ContextCompat.getColor(
                     cardView.context,
-                    R.color.ungrouped_tab_color
+                    R.color.chip_stroke_color_themed
                 )
-                cardView.cardElevation = 4f * cardView.context.resources.displayMetrics.density
+                cardView.cardElevation = 2f * cardView.context.resources.displayMetrics.density
             } else {
-                cardView.strokeWidth = (1 * cardView.context.resources.displayMetrics.density).toInt()
+                val strokeWidth = (1 * cardView.context.resources.displayMetrics.density).toInt()
+                cardView.strokeWidth = strokeWidth
                 cardView.strokeColor = androidx.core.content.ContextCompat.getColor(
                     cardView.context,
                     R.color.tab_card_stroke
