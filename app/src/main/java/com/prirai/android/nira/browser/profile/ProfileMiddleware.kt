@@ -9,10 +9,17 @@ import mozilla.components.lib.state.MiddlewareContext
 /**
  * Middleware that tracks profile IDs for tabs
  * Adds profile metadata to tabs when they are created
+ * Respects explicitly null contextId for guest tabs (from custom tab migration)
  */
 class ProfileMiddleware(
     private val profileManager: ProfileManager
 ) : Middleware<BrowserState, BrowserAction> {
+    
+    private val guestTabIds = mutableSetOf<String>()
+    
+    fun markAsGuestTab(tabId: String) {
+        guestTabIds.add(tabId)
+    }
     
     override fun invoke(
         context: MiddlewareContext<BrowserState, BrowserAction>,
@@ -21,33 +28,34 @@ class ProfileMiddleware(
     ) {
         when (action) {
             is TabListAction.AddTabAction -> {
-                // Store profile ID in tab's contextId field
-                // This is a Gecko-native field for cookie isolation
-                val currentProfile = profileManager.getActiveProfile()
-                val isPrivate = profileManager.isPrivateMode()
+                if (guestTabIds.contains(action.tab.id)) {
+                    // Guest tab - keep contextId as null
+                    guestTabIds.remove(action.tab.id)
+                    next(action)
+                    return
+                }
                 
-                // Use contextId for profile isolation (Gecko native)
-                // Private tabs always use contextId = "private"
+                // If tab already has a contextId, respect it (explicitly set by caller)
+                if (action.tab.contextId != null) {
+                    next(action)
+                    return
+                }
+                
+                // Tab has no contextId - assign based on private flag or profile manager
+                val isPrivate = action.tab.content.private || profileManager.isPrivateMode()
+                val currentProfile = profileManager.getActiveProfile()
+                
                 val contextId = if (isPrivate) {
                     "private"
                 } else {
                     "profile_${currentProfile.id}"
                 }
                 
-                android.util.Log.d("ProfileMiddleware", "Adding tab with contextId=$contextId, profile=${currentProfile.name}, isPrivate=$isPrivate")
-                
-                // Update the tab with contextId before adding
-                val updatedTab = action.tab.copy(
-                    contextId = contextId
-                )
-                
+                val updatedTab = action.tab.copy(contextId = contextId)
                 next(TabListAction.AddTabAction(updatedTab, action.select))
                 return
             }
-            else -> {
-                // Pass through all other actions
-                next(action)
-            }
+            else -> next(action)
         }
     }
 }

@@ -503,6 +503,7 @@ class ModernTabPillAdapter(
 
         private fun applyPillStyling(isSelected: Boolean, item: TabPillItem.Tab) {
             val islandColor = item.islandColor
+            val isGuestTab = item.session.contextId == null
             
             // Get default background color
             val backgroundColor = if (isDarkMode()) {
@@ -510,14 +511,21 @@ class ModernTabPillAdapter(
             } else {
                 ContextCompat.getColor(itemView.context, android.R.color.background_light)
             }
+            
+            // Guest tab color: distinctive orange/amber
+            val guestTabColor = 0xFFFF6B35.toInt()
 
             if (isSelected) {
-                // Selected: Show prominent border with island color or default
-                val borderColor = islandColor ?: 0xFF6200EE.toInt()
+                // Selected: Show prominent border with island/guest color
+                val borderColor = when {
+                    isGuestTab -> guestTabColor
+                    islandColor != null -> islandColor
+                    else -> 0xFF6200EE.toInt()
+                }
                 val gradient = GradientDrawable().apply {
                     cornerRadius = 20f
                     setColor(backgroundColor)
-                    // Prominent border for selected state (3dp)
+                    // Consistent border width for all selected tabs (3dp)
                     val strokeWidth = (3 * itemView.resources.displayMetrics.density).toInt()
                     setStroke(strokeWidth, borderColor)
                 }
@@ -538,18 +546,26 @@ class ModernTabPillAdapter(
                 cardView.clipToOutline = true
 
             } else {
-                // Unselected: Subtle pill with island color hint or subtle border
+                // Unselected: Subtle pill with guest/island color hint
                 val gradient = GradientDrawable().apply {
                     cornerRadius = 20f
                     setColor(backgroundColor)
-                    if (islandColor != null) {
-                        // Show subtle colored border for island tabs (2dp)
-                        val strokeWidth = (2 * itemView.resources.displayMetrics.density).toInt()
-                        setStroke(strokeWidth, islandColor)
-                    } else {
-                        // Very subtle border for unselected regular tabs (1dp)
-                        val strokeWidth = (1 * itemView.resources.displayMetrics.density).toInt()
-                        setStroke(strokeWidth, 0x30FFFFFF)
+                    when {
+                        isGuestTab -> {
+                            // Guest tabs: orange border (2dp, same as island tabs)
+                            val strokeWidth = (2 * itemView.resources.displayMetrics.density).toInt()
+                            setStroke(strokeWidth, guestTabColor)
+                        }
+                        islandColor != null -> {
+                            // Island tabs: subtle colored border (2dp)
+                            val strokeWidth = (2 * itemView.resources.displayMetrics.density).toInt()
+                            setStroke(strokeWidth, islandColor)
+                        }
+                        else -> {
+                            // Regular tabs: very subtle border (1dp)
+                            val strokeWidth = (1 * itemView.resources.displayMetrics.density).toInt()
+                            setStroke(strokeWidth, 0x30FFFFFF)
+                        }
                     }
                 }
                 cardView.background = gradient

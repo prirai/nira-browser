@@ -66,8 +66,41 @@ class ExternalAppBrowserFragment : CustomTabBrowserFragment() {
         // Add custom minimal header
         addCustomHeader(view, tab)
         
+        // Adjust swipeRefresh padding to account for custom header
+        // The parent class already applies status bar padding, we need to add header height on top
+        setupCustomTabContentPadding(view)
+        
         // Set up custom Find in Page
         setupCustomFindInPage(view)
+    }
+    
+    /**
+     * Setup content padding for custom tabs to account for the custom header.
+     * This adds extra top padding on top of the status bar padding.
+     */
+    private fun setupCustomTabContentPadding(view: View) {
+        val swipeRefresh = view.findViewById<View>(R.id.swipeRefresh) ?: return
+        val headerHeight = resources.getDimensionPixelSize(R.dimen.custom_tab_header_height)
+        
+        // Listen for insets and add header height to the top padding
+        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(swipeRefresh) { v, insets ->
+            val systemBars = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars())
+            
+            // Apply padding: status bar + header height at top, nav bar at bottom
+            v.setPadding(
+                0,
+                systemBars.top + headerHeight,  // Status bar + custom header
+                0,
+                systemBars.bottom               // Navigation bar
+            )
+            
+            insets
+        }
+        
+        // Force apply insets
+        swipeRefresh.post {
+            androidx.core.view.ViewCompat.requestApplyInsets(swipeRefresh)
+        }
     }
     
     private fun setupCustomFindInPage(view: View) {
@@ -111,9 +144,25 @@ class ExternalAppBrowserFragment : CustomTabBrowserFragment() {
         val insertIndex = if (browserLayout.childCount > 0) 0 else 0
         browserLayout.addView(headerView, insertIndex)
         
-        // Add top padding to EngineView to avoid content being hidden under header
-        val swipeRefresh = view.findViewById<View>(R.id.swipeRefresh)
-        swipeRefresh?.setPadding(0, resources.getDimensionPixelSize(R.dimen.custom_tab_header_height), 0, 0)
+        // Setup window insets for the header to account for status bar
+        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(headerView) { v, insets ->
+            val systemBars = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars())
+            
+            // Apply top padding for status bar
+            v.setPadding(
+                v.paddingLeft,
+                systemBars.top,  // Status bar height
+                v.paddingRight,
+                v.paddingBottom
+            )
+            
+            insets
+        }
+        
+        // Force apply insets immediately
+        headerView.post {
+            androidx.core.view.ViewCompat.requestApplyInsets(headerView)
+        }
         
         // Initialize header views
         customTabHeader = headerView.findViewById(R.id.customTabHeader)
@@ -204,23 +253,41 @@ class ExternalAppBrowserFragment : CustomTabBrowserFragment() {
     }
 
     /**
-     * Attempts to open the current session in the main browser.
+     * Opens the current custom tab in the main browser by creating a new tab without profile context.
+     * This creates a "guest" tab that is isolated from all profiles, shown with distinct borders.
      */
     fun openInBrowser() {
         customTabSessionId?.let { sessionId ->
             val customTab = requireContext().components.store.state.findCustomTab(sessionId)
             customTab?.let { tab ->
-                // Create intent to open in main browser
-                val intent = Intent(requireContext(), BrowserActivity::class.java).apply {
-                    action = Intent.ACTION_VIEW
-                    data = tab.content.url.toUri()
-                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                }
+                // Create tab using TabSessionState directly
+                val newTab = mozilla.components.browser.state.state.TabSessionState(
+                    id = java.util.UUID.randomUUID().toString(),
+                    content = mozilla.components.browser.state.state.ContentState(
+                        url = tab.content.url,
+                        private = false
+                    ),
+                    contextId = null,  // Critical: null for guest tab
+                    source = mozilla.components.browser.state.state.SessionState.Source.Internal.NewTab
+                )
+                
+                // Mark this tab as a guest tab in ProfileMiddleware BEFORE dispatching
+                requireContext().components.profileMiddleware.markAsGuestTab(newTab.id)
+                
+                // Add the tab via store dispatch
+                requireContext().components.store.dispatch(
+                    mozilla.components.browser.state.action.TabListAction.AddTabAction(newTab, select = true)
+                )
                 
                 // Remove the custom tab
                 requireContext().components.tabsUseCases.removeTab(sessionId)
                 
-                // Start the browser activity
+                // Start the main browser activity
+                val intent = Intent(requireContext(), BrowserActivity::class.java).apply {
+                    action = Intent.ACTION_MAIN
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                    putExtra("activeSessionId", newTab.id)
+                }
                 startActivity(intent)
                 
                 // Finish the custom tab activity

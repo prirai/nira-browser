@@ -44,8 +44,42 @@ abstract class CustomTabBrowserFragment : Fragment(), mozilla.components.support
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         
+        // Setup edge-to-edge for custom tabs
+        setupEdgeToEdgeForCustomTab()
+        
         // Initialize custom tab session
         initializeCustomTab()
+    }
+    
+    /**
+     * Setup edge-to-edge for custom tab fragment.
+     * Same as BaseBrowserFragment but for custom tabs.
+     */
+    private fun setupEdgeToEdgeForCustomTab() {
+        // Setup insets for the swipeRefresh (web content container)
+        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(binding.swipeRefresh) { view, insets ->
+            val systemBars = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars())
+            
+            // Apply padding to prevent web content from going behind system bars
+            view.setPadding(
+                0,
+                systemBars.top,      // Status bar
+                0,
+                systemBars.bottom    // Navigation bar
+            )
+            
+            insets
+        }
+        
+        // Make browserLayout pass insets through to children
+        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(binding.browserLayout) { _, insets ->
+            insets
+        }
+        
+        // Request insets to be applied immediately
+        binding.swipeRefresh.post {
+            androidx.core.view.ViewCompat.requestApplyInsets(binding.swipeRefresh)
+        }
     }
     
     private fun initializeCustomTab() {

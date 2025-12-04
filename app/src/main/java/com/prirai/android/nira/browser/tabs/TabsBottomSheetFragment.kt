@@ -497,22 +497,20 @@ class TabsBottomSheetFragment : BottomSheetDialogFragment() {
         lifecycleScope.launch {
             val isPrivate = browsingModeManager.mode.isPrivate
             val currentProfile = browsingModeManager.currentProfile
+            val contextId = if (isPrivate) "private" else "profile_${currentProfile.id}"
             
-            // Create tab with proper contextId
             requireContext().components.tabsUseCases.addTab(
-                url = "about:blank",
+                url = "about:homepage",
                 private = isPrivate,
-                contextId = if (isPrivate) "private" else "profile_${currentProfile.id}",
+                contextId = contextId,
                 selectTab = true
             )
             
-            // Navigate to homeFragment
             try {
                 androidx.navigation.fragment.NavHostFragment.findNavController(this@TabsBottomSheetFragment)
                     .navigate(R.id.homeFragment)
                 dismiss()
             } catch (e: Exception) {
-                // Navigation failed, just dismiss
                 dismiss()
             }
         }

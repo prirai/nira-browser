@@ -95,8 +95,6 @@ class ContextualBottomToolbar @JvmOverloads constructor(
 
     private fun setupClickListeners() {
         backButton.setOnClickListener { 
-            // Simple approach: Use the same pattern as BrowserMenu
-            // Check context state instead of drawable comparison
             if (isShowingBookmarkIcon) {
                 listener?.onBookmarksClicked()
             } else {
