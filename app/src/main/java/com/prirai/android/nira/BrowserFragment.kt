@@ -87,10 +87,8 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
 
         // Tab groups are now handled by the modern toolbar system
 
-        // Observe tab changes for real-time toolbar updates
         observeTabChangesForToolbar()
 
-        // Initialize the Revolutionary Modern Toolbar System
         initializeModernToolbarSystem()
     }
 
@@ -108,12 +106,31 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
                 val currentTab = store.tabs.find { it.id == store.selectedTabId }
 
                 val isHomepage = currentTab?.content?.url == "about:homepage"
+                
+                // Apply same filtering logic for tab count
+                val activity = activity as? BrowserActivity
+                val isPrivateMode = activity?.browsingModeManager?.mode?.isPrivate ?: false
+                val profileManager = com.prirai.android.nira.browser.profile.ProfileManager.getInstance(requireContext())
+                val currentProfile = profileManager.getActiveProfile()
+                val currentProfileContextId = if (isPrivateMode) {
+                    "private"
+                } else {
+                    "profile_${currentProfile.id}"
+                }
+                
+                val filteredTabsCount = store.tabs.count { tab ->
+                    if (tab.content.private != isPrivateMode) {
+                        false
+                    } else {
+                        (tab.contextId == currentProfileContextId) || (tab.contextId == null)
+                    }
+                }
 
                 toolbar.updateForContext(
                     tab = currentTab,
                     canGoBack = currentTab?.content?.canGoBack ?: false,
                     canGoForward = currentTab?.content?.canGoForward ?: false,
-                    tabCount = store.tabs.size,
+                    tabCount = filteredTabsCount,
                     isHomepage = isHomepage
                 )
             }
@@ -355,12 +372,24 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
             }
 
             com.prirai.android.nira.components.toolbar.modern.ModernToolbarManager.NavigationAction.NEW_TAB -> {
-                // Navigate to Compose home fragment instead of loading about:homepage
+                // Create a new tab with the correct private mode and contextId
+                val activity = (requireActivity() as BrowserActivity)
+                val isPrivate = activity.browsingModeManager.mode.isPrivate
+                val currentProfile = activity.browsingModeManager.currentProfile
+                val contextId = if (isPrivate) "private" else "profile_${currentProfile.id}"
+                
+                requireContext().components.tabsUseCases.addTab(
+                    url = "about:homepage",
+                    private = isPrivate,
+                    contextId = contextId,
+                    selectTab = true
+                )
+                
+                // Navigate to Compose home fragment
                 try {
                     androidx.navigation.fragment.NavHostFragment.findNavController(this).navigate(R.id.homeFragment)
                 } catch (e: Exception) {
-                    // Fallback to old behavior
-                    requireContext().components.tabsUseCases.addTab("about:homepage")
+                    android.util.Log.e("BrowserFragment", "Failed to navigate to home", e)
                 }
             }
 
@@ -413,6 +442,11 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
             // Simple polling approach
             while (true) {
                 try {
+                    // Check if fragment is still attached before proceeding
+                    if (!isAdded) {
+                        break // Exit loop if fragment is detached
+                    }
+                    
                     val state = store.state
 
                     // Detect new tabs for auto-grouping
@@ -433,7 +467,7 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
                     lastTabIds = currentTabIds
 
                     // Filter tabs by browsing mode AND profile before passing to toolbar
-                    val activity = requireActivity() as? BrowserActivity
+                    val activity = activity as? BrowserActivity
                     val isPrivateMode = activity?.browsingModeManager?.mode?.isPrivate ?: false
                     val profileManager = com.prirai.android.nira.browser.profile.ProfileManager.getInstance(requireContext())
                     val currentProfile = profileManager.getActiveProfile()
@@ -444,8 +478,13 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
                     }
                     
                     val filteredTabs = state.tabs.filter { tab ->
-                        // Match both private mode AND profile context
-                        (tab.content.private == isPrivateMode) && (tab.contextId == currentProfileContextId)
+                        // Match private mode first
+                        if (tab.content.private != isPrivateMode) {
+                            false
+                        } else {
+                            // Include tabs with matching contextId OR guest tabs (null contextId)
+                            (tab.contextId == currentProfileContextId) || (tab.contextId == null)
+                        }
                     }
 
                     modernToolbarManager?.updateTabs(filteredTabs, state.selectedTabId)
@@ -472,7 +511,7 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
                         tab = currentSelectedTab,
                         canGoBack = currentSelectedTab?.content?.canGoBack ?: false,
                         canGoForward = currentSelectedTab?.content?.canGoForward ?: false,
-                        tabCount = currentState.tabs.size,
+                        tabCount = filteredTabs.size,  // Use filtered tabs count
                         isHomepage = currentIsHomepage
                     )
 
@@ -488,6 +527,28 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
     private fun initializeModernToolbarWithCurrentState() {
         // Initialize the modern toolbar with the current tab state immediately
         val state = requireContext().components.store.state
+        
+        // Apply same filtering logic as in observeTabChangesForModernToolbar
+        val activity = activity as? BrowserActivity
+        val isPrivateMode = activity?.browsingModeManager?.mode?.isPrivate ?: false
+        val profileManager = com.prirai.android.nira.browser.profile.ProfileManager.getInstance(requireContext())
+        val currentProfile = profileManager.getActiveProfile()
+        val currentProfileContextId = if (isPrivateMode) {
+            "private"
+        } else {
+            "profile_${currentProfile.id}"
+        }
+        
+        val filteredTabs = state.tabs.filter { tab ->
+            // Match private mode first
+            if (tab.content.private != isPrivateMode) {
+                false
+            } else {
+                // Include tabs with matching contextId OR guest tabs (null contextId)
+                (tab.contextId == currentProfileContextId) || (tab.contextId == null)
+            }
+        }
+        
         val selectedTab = state.tabs.find { it.id == state.selectedTabId }
         val currentUrl = selectedTab?.content?.url ?: ""
         // Properly detect homepage - both empty URL and about:homepage
@@ -497,7 +558,7 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
             tab = selectedTab,
             canGoBack = selectedTab?.content?.canGoBack ?: false,
             canGoForward = selectedTab?.content?.canGoForward ?: false,
-            tabCount = state.tabs.size,
+            tabCount = filteredTabs.size,  // Use filtered tabs count
             isHomepage = isHomepage
         )
 

@@ -454,7 +454,10 @@ open class BrowserActivity : LocaleAwareAppCompatActivity(), ComponentCallbacks2
         forceSearch: Boolean,
         flags: EngineSession.LoadUrlFlags = EngineSession.LoadUrlFlags.none()
     ) {
-        val isPrivateMode = browsingModeManager.mode.isPrivate
+        val selectedTab = components.store.state.selectedTabId?.let { id ->
+            components.store.state.tabs.find { it.id == id }
+        }
+        val isPrivateMode = selectedTab?.content?.private ?: browsingModeManager.mode.isPrivate
         
         if ((!forceSearch && searchTermOrURL.isUrl()) || engine == null) {
             if (newTab) {

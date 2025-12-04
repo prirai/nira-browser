@@ -86,34 +86,44 @@ class ComposeHomeFragment : Fragment() {
         return ComposeView(requireContext()).apply {
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
             setContent {
-                // Use remember and derivedStateOf to make isPrivateMode reactive
-                val isPrivateMode by remember {
-                    derivedStateOf { browsingModeManager.mode.isPrivate }
+                // Get the store
+                val store = requireContext().components.store
+                
+                // Observe the selected tab - read from state directly in composition
+                val selectedTab = store.state.selectedTabId?.let { id ->
+                    store.state.tabs.find { it.id == id }
                 }
+                
+                // Determine private mode from the selected tab
+                val isPrivateMode = selectedTab?.content?.private ?: browsingModeManager.mode.isPrivate
+                
                 val shortcuts by viewModel.shortcuts.collectAsState()
                 val bookmarks by viewModel.bookmarks.collectAsState()
                 val showAddDialog by viewModel.showAddShortcutDialog.collectAsState()
                 val isBookmarkExpanded by viewModel.isBookmarkSectionExpanded.collectAsState()
                 
-                // Get tab count - also make it reactive
-                val tabCount by remember {
-                    derivedStateOf {
-                        val store = requireContext().components.store.state
-                        if (browsingModeManager.mode.isPrivate) {
-                            store.privateTabs.size
-                        } else {
-                            store.normalTabs.size
-                        }
-                    }
+                // Get tab count
+                val tabCount = if (isPrivateMode) {
+                    store.state.privateTabs.size
+                } else {
+                    store.state.normalTabs.size
                 }
                 
-                // Get current profile
+                // Get current profile based on tab's contextId
                 val profileManager = com.prirai.android.nira.browser.profile.ProfileManager.getInstance(requireContext())
-                val currentProfile by remember {
-                    derivedStateOf {
-                        if (browsingModeManager.mode.isPrivate) {
+                val currentProfile = run {
+                    val tabContextId = selectedTab?.contextId
+                    when {
+                        tabContextId == "private" || isPrivateMode -> {
                             ProfileInfo("private", "Private", "🕵️", true)
-                        } else {
+                        }
+                        tabContextId != null && tabContextId.startsWith("profile_") -> {
+                            val profileId = tabContextId.removePrefix("profile_")
+                            val profile = profileManager.getAllProfiles().find { it.id == profileId }
+                                ?: profileManager.getActiveProfile()
+                            ProfileInfo(profile.id, profile.name, profile.emoji, false)
+                        }
+                        else -> {
                             val profile = profileManager.getActiveProfile()
                             ProfileInfo(profile.id, profile.name, profile.emoji, false)
                         }

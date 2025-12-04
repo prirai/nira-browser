@@ -198,6 +198,10 @@ open class Components(private val applicationContext: Context) {
     val profileManager by lazy { 
         com.prirai.android.nira.browser.profile.ProfileManager.getInstance(applicationContext)
     }
+    
+    val profileMiddleware by lazy {
+        com.prirai.android.nira.browser.profile.ProfileMiddleware(profileManager)
+    }
 
     val store by lazy {
         BrowserStore(
@@ -217,7 +221,7 @@ open class Components(private val applicationContext: Context) {
                         LastAccessMiddleware(),
                         SaveToPDFMiddleware(applicationContext),
                         com.prirai.android.nira.browser.tabgroups.TabGroupMiddleware(tabGroupManager),
-                        com.prirai.android.nira.browser.profile.ProfileMiddleware(profileManager),
+                        profileMiddleware,  // Use the exposed instance
                         SessionPrioritizationMiddleware(),
                         EnhancedStateCaptureMiddleware(
                             scope = CoroutineScope(SupervisorJob() + Dispatchers.Main),
