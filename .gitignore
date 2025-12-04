@@ -9,6 +9,7 @@ working.md
 .prompts/
 prompts/
 inspection_xml/
+bm/
 # Crowdin
 crowdin.properties
 

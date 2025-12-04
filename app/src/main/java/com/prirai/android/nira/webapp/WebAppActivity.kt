@@ -12,9 +12,12 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import androidx.lifecycle.lifecycleScope
 import com.prirai.android.nira.R
 import mozilla.components.feature.pwa.ext.getWebAppManifest
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 /**
  * Activity for Progressive Web Apps (PWAs) - Fullscreen, no browser chrome
@@ -52,15 +55,17 @@ class WebAppActivity : AppCompatActivity() {
             return
         }
         
-        // Get profile ID for this webapp (from database)
-        val profileId = getProfileIdForUrl(url)
-        
-        // Load the web app fragment if not already added
-        if (savedInstanceState == null) {
-            val fragment = WebAppFragment.newInstance(url, profileId)
-            supportFragmentManager.beginTransaction()
-                .replace(R.id.webapp_container, fragment)
-                .commit()
+        // Load profile ID asynchronously to avoid blocking main thread
+        lifecycleScope.launch {
+            val profileId = getProfileIdForUrl(url)
+            
+            // Load the web app fragment if not already added
+            if (savedInstanceState == null) {
+                val fragment = WebAppFragment.newInstance(url, profileId)
+                supportFragmentManager.beginTransaction()
+                    .replace(R.id.webapp_container, fragment)
+                    .commit()
+            }
         }
         
         // Handle back button
@@ -75,14 +80,11 @@ class WebAppActivity : AppCompatActivity() {
         })
     }
     
-    private fun getProfileIdForUrl(url: String): String {
+    private suspend fun getProfileIdForUrl(url: String): String = withContext(Dispatchers.IO) {
         // Lookup webapp by URL to get its profile
-        var profileId = "default"
-        runBlocking {
-            val webApp = com.prirai.android.nira.components.Components(this@WebAppActivity).webAppManager.getWebAppByUrl(url)
-            profileId = webApp?.profileId ?: "default"
-        }
-        return profileId
+        val webApp = com.prirai.android.nira.components.Components(this@WebAppActivity)
+            .webAppManager.getWebAppByUrl(url)
+        webApp?.profileId ?: "default"
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -92,16 +94,18 @@ class WebAppActivity : AppCompatActivity() {
         // Handle new URL when activity is reused
         val url = extractUrlFromIntent(intent)
         if (!url.isNullOrEmpty()) {
-            // Get the correct profile for this URL
-            val profileId = getProfileIdForUrl(url)
-            
-            val fragment = supportFragmentManager.findFragmentById(R.id.webapp_container) as? WebAppFragment
-            if (fragment != null) {
-                // Update existing fragment with new URL and profile
-                val newFragment = WebAppFragment.newInstance(url, profileId)
-                supportFragmentManager.beginTransaction()
-                    .replace(R.id.webapp_container, newFragment)
-                    .commit()
+            // Get the correct profile for this URL asynchronously
+            lifecycleScope.launch {
+                val profileId = getProfileIdForUrl(url)
+                
+                val fragment = supportFragmentManager.findFragmentById(R.id.webapp_container) as? WebAppFragment
+                if (fragment != null) {
+                    // Update existing fragment with new URL and profile
+                    val newFragment = WebAppFragment.newInstance(url, profileId)
+                    supportFragmentManager.beginTransaction()
+                        .replace(R.id.webapp_container, newFragment)
+                        .commit()
+                }
             }
         }
     }

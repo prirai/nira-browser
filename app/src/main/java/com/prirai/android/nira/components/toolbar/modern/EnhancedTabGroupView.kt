@@ -38,6 +38,15 @@ class EnhancedTabGroupView @JvmOverloads constructor(
 
     // Track parent-child relationships for automatic grouping
     private val pendingAutoGroups = mutableMapOf<String, String>()
+    
+    // Cache Paint and colors for onDraw to avoid allocation on every frame
+    private val backgroundPaint by lazy {
+        Paint().apply {
+            alpha = 50
+        }
+    }
+    private var cachedGradient: LinearGradient? = null
+    private var lastDrawWidth = 0
 
     init {
         setupRecyclerView()
@@ -964,20 +973,19 @@ class EnhancedTabGroupView @JvmOverloads constructor(
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
 
-        // Draw subtle background gradient
-        val gradient = LinearGradient(
-            0f, 0f, width.toFloat(), 0f,
-            intArrayOf(
-                ContextCompat.getColor(context, android.R.color.background_light),
-                ContextCompat.getColor(context, android.R.color.background_light)
-            ),
-            null,
-            Shader.TileMode.CLAMP
-        )
-        val paint = Paint().apply {
-            shader = gradient
-            alpha = 50
+        // Only recreate gradient if width changed
+        if (cachedGradient == null || lastDrawWidth != width) {
+            val bgColor = ContextCompat.getColor(context, android.R.color.background_light)
+            cachedGradient = LinearGradient(
+                0f, 0f, width.toFloat(), 0f,
+                intArrayOf(bgColor, bgColor),
+                null,
+                Shader.TileMode.CLAMP
+            )
+            lastDrawWidth = width
         }
-        canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), paint)
+        
+        backgroundPaint.shader = cachedGradient
+        canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), backgroundPaint)
     }
 }
