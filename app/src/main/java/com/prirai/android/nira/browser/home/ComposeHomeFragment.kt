@@ -31,6 +31,7 @@ import com.prirai.android.nira.ext.components
 import com.prirai.android.nira.preferences.UserPreferences
 import com.prirai.android.nira.settings.HomepageChoice
 import com.prirai.android.nira.ui.theme.NiraTheme
+import com.prirai.android.nira.components.toolbar.ToolbarMenu
 import mozilla.components.browser.state.selector.normalTabs
 import mozilla.components.browser.state.selector.privateTabs
 
@@ -390,7 +391,118 @@ class ComposeHomeFragment : Fragment() {
     }
     
     private fun showNativeMenu() {
-        // Show menu items using MaterialAlertDialog
+        // Create HomeMenu using Mozilla Components
+        try {
+            val components = requireContext().components
+            var menuBuilder: mozilla.components.browser.menu.BrowserMenuBuilder? = null
+            
+            // Create menu with home-specific items
+            val homeMenu = com.prirai.android.nira.browser.home.HomeMenu(
+                context = requireContext(),
+                lifecycleOwner = viewLifecycleOwner,
+                onItemTapped = { item ->
+                    when (item) {
+                        is com.prirai.android.nira.browser.home.HomeMenu.Item.NewTab -> {
+                            androidx.navigation.fragment.NavHostFragment.findNavController(this)
+                                .navigate(R.id.homeFragment)
+                        }
+                        is com.prirai.android.nira.browser.home.HomeMenu.Item.NewPrivateTab -> {
+                            val browsingModeManager = (requireActivity() as BrowserActivity).browsingModeManager
+                            browsingModeManager.mode = BrowsingMode.Private
+                            androidx.navigation.fragment.NavHostFragment.findNavController(this)
+                                .navigate(R.id.homeFragment)
+                        }
+                        is com.prirai.android.nira.browser.home.HomeMenu.Item.Bookmarks -> {
+                            val bookmarksBottomSheet = BookmarksBottomSheetFragment.newInstance()
+                            bookmarksBottomSheet.show(parentFragmentManager, "BookmarksBottomSheet")
+                        }
+                        is com.prirai.android.nira.browser.home.HomeMenu.Item.History -> {
+                            val intent = android.content.Intent(requireContext(), com.prirai.android.nira.history.HistoryActivity::class.java)
+                            intent.flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
+                            startActivity(intent)
+                        }
+                        is com.prirai.android.nira.browser.home.HomeMenu.Item.AddonsManager -> {
+                            val intent = android.content.Intent(requireContext(), com.prirai.android.nira.addons.AddonsActivity::class.java)
+                            intent.flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
+                            startActivity(intent)
+                        }
+                        is com.prirai.android.nira.browser.home.HomeMenu.Item.Settings -> {
+                            val intent = android.content.Intent(requireContext(), com.prirai.android.nira.settings.activity.SettingsActivity::class.java)
+                            intent.flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
+                            startActivity(intent)
+                        }
+                    }
+                },
+                onMenuBuilderChanged = { builder ->
+                    menuBuilder = builder
+                }
+            )
+            
+            // Build and show the menu
+            menuBuilder?.let { builder ->
+                val menu = builder.build(requireContext())
+                
+                // Get toolbar position preference
+                val prefs = com.prirai.android.nira.preferences.UserPreferences(requireContext())
+                val isBottomToolbar = prefs.toolbarPosition == com.prirai.android.nira.components.toolbar.ToolbarPosition.BOTTOM.ordinal
+                
+                // Get the DecorView which is always available and stable
+                val decorView = requireActivity().window.decorView as? android.view.ViewGroup
+                
+                if (decorView != null) {
+                    // Create persistent anchor view
+                    val anchorView = android.view.View(requireContext())
+                    anchorView.id = android.view.View.generateViewId()
+                    val params = android.widget.FrameLayout.LayoutParams(10, 10) // Small but visible
+                    
+                    if (isBottomToolbar) {
+                        // Position at bottom right
+                        params.gravity = android.view.Gravity.BOTTOM or android.view.Gravity.END
+                        params.bottomMargin = 80
+                        params.rightMargin = 20
+                    } else {
+                        // Position at top right  
+                        params.gravity = android.view.Gravity.TOP or android.view.Gravity.END
+                        params.topMargin = 80
+                        params.rightMargin = 20
+                    }
+                    
+                    anchorView.layoutParams = params
+                    decorView.addView(anchorView)
+                    
+                    // Post to ensure view is attached
+                    anchorView.post {
+                        try {
+                            // Show menu
+                            menu.show(anchor = anchorView)
+                            
+                            // Clean up anchor after a reasonable timeout (menu auto-dismisses on selection)
+                            anchorView.postDelayed({
+                                try {
+                                    decorView.removeView(anchorView)
+                                } catch (e: Exception) {
+                                    // Already removed
+                                }
+                            }, 30000) // 30 seconds max
+                        } catch (e: Exception) {
+                            android.util.Log.e("ComposeHomeFragment", "Error showing menu", e)
+                            try {
+                                decorView.removeView(anchorView)
+                            } catch (ex: Exception) {
+                                // Ignore
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("ComposeHomeFragment", "Failed to show menu", e)
+            // Fallback to simple dialog
+            showSimpleMenu()
+        }
+    }
+    
+    private fun showSimpleMenu() {
         val menuItems = arrayOf(
             "New Tab",
             "New Private Tab",

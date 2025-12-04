@@ -684,14 +684,39 @@ class ModernTabPillAdapter(
             nameText.text = island.name
             tabCountText.text = "$tabCount"
 
-            // Apply island color
+            // Apply island color with proper dark mode support
+            val isDark = isDarkMode()
+            val backgroundColor = if (isDark) {
+                // In dark mode, use darker, more muted versions
+                adjustColorForDarkMode(island.color)
+            } else {
+                // In light mode, use lighter, pastel versions
+                adjustColorForLightMode(island.color)
+            }
+            
+            // Use the original brighter color for the stroke
+            val strokeColor = island.color
+            
             val gradient = GradientDrawable().apply {
                 cornerRadius = 20f
-                setColor(island.color)
+                setColor(backgroundColor)
+                // Add stroke with original color for better definition
+                setStroke(3, strokeColor)
                 alpha = 255
             }
             containerCard.background = gradient
             containerCard.elevation = 8f
+            
+            // Adjust text colors based on background
+            val textColor = if (isDark) {
+                // Light text on dark background
+                0xFFE0E0E0.toInt()
+            } else {
+                // Dark text on light background
+                0xFF424242.toInt()
+            }
+            nameText.setTextColor(textColor)
+            tabCountText.setTextColor(textColor)
 
             // Click to expand
             containerCard.setOnClickListener {
@@ -720,6 +745,13 @@ class ModernTabPillAdapter(
                         .start()
                 }
                 .start()
+        }
+        
+        private fun isDarkMode(): Boolean {
+            return when (itemView.resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) {
+                android.content.res.Configuration.UI_MODE_NIGHT_YES -> true
+                else -> false
+            }
         }
     }
 
@@ -1237,5 +1269,35 @@ class ModernTabPillAdapter(
         )
 
         return bitmap
+    }
+    
+    /**
+     * Adjusts island color for dark mode - makes it darker and more saturated
+     */
+    private fun adjustColorForDarkMode(color: Int): Int {
+        val hsv = FloatArray(3)
+        Color.colorToHSV(color, hsv)
+        
+        // Reduce brightness significantly for dark mode
+        hsv[2] = (hsv[2] * 0.3f).coerceIn(0.2f, 0.4f)
+        // Increase saturation slightly
+        hsv[1] = (hsv[1] * 1.2f).coerceAtMost(1f)
+        
+        return Color.HSVToColor(hsv)
+    }
+    
+    /**
+     * Adjusts island color for light mode - makes it lighter and more pastel
+     */
+    private fun adjustColorForLightMode(color: Int): Int {
+        val hsv = FloatArray(3)
+        Color.colorToHSV(color, hsv)
+        
+        // Increase brightness for light mode (pastel colors)
+        hsv[2] = (hsv[2] * 1.2f).coerceIn(0.85f, 0.95f)
+        // Reduce saturation for softer colors
+        hsv[1] = (hsv[1] * 0.5f).coerceIn(0.3f, 0.6f)
+        
+        return Color.HSVToColor(hsv)
     }
 }
