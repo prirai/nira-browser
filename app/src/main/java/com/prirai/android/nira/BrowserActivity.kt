@@ -649,14 +649,20 @@ open class BrowserActivity : LocaleAwareAppCompatActivity(), ComponentCallbacks2
         // Make status bar transparent for true edge-to-edge
         window.statusBarColor = android.graphics.Color.TRANSPARENT
         
-        // Remove navigation bar contrast enforcement (removes the white pill/scrim on Android 10+)
+        // Handle navigation bar contrast for Android 10+
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
-            window.isNavigationBarContrastEnforced = false
+            // Enable contrast enforcement so system adds scrim when needed
+            window.isNavigationBarContrastEnforced = true
         }
         
-        // Setup status bar appearance
+        // Setup system bar appearance
         val insetsController = WindowCompat.getInsetsController(window, window.decorView)
         insetsController.isAppearanceLightStatusBars = !isAppInDarkTheme()
+        
+        // Set navigation bar to dark/light mode
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+            insetsController.isAppearanceLightNavigationBars = !isAppInDarkTheme()
+        }
     }
     
     /**
