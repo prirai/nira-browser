@@ -27,8 +27,8 @@ android {
         minSdkVersion 26
         targetSdkVersion 36
         // Increment by 4 with each update, by 1 with each fix
-        versionCode = 13
-        versionName = "0.3.2"
+        versionCode = 16
+        versionName = "0.3.3"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -213,15 +213,15 @@ dependencies {
     // OkHTTP
     implementation "com.squareup.okhttp3:okhttp:5.3.2"
 
-    implementation "androidx.compose.ui:ui:1.9.5"
-    implementation "androidx.compose.foundation:foundation:1.9.5"
-    implementation "androidx.compose.material:material:1.9.5"
-    implementation "androidx.compose.material:material-icons-extended:1.7.7"
+    implementation "androidx.compose.ui:ui:1.10.0"
+    implementation "androidx.compose.foundation:foundation:1.10.0"
+    implementation "androidx.compose.material:material:1.10.0"
+    implementation "androidx.compose.material:material-icons-extended:1.7.8"
     implementation "androidx.compose.material3:material3:1.4.0"
-    implementation "androidx.compose.runtime:runtime:1.9.5"
-    implementation "androidx.compose.ui:ui-tooling-preview:1.9.5"
-    implementation "androidx.activity:activity-compose:1.10.0"
-    implementation "androidx.lifecycle:lifecycle-viewmodel-compose:2.8.8"
+    implementation "androidx.compose.runtime:runtime:1.10.0"
+    implementation "androidx.compose.ui:ui-tooling-preview:1.10.0"
+    implementation "androidx.activity:activity-compose:1.12.0"
+    implementation "androidx.lifecycle:lifecycle-viewmodel-compose:2.10.0"
     implementation "io.coil-kt:coil-compose:2.7.0"
 
     implementation 'org.jsoup:jsoup:1.21.2'
