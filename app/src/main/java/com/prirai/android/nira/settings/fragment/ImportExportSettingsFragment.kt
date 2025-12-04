@@ -136,62 +136,92 @@ class ImportExportSettingsFragment : BaseSettingsFragment() {
             bookmarkFile.delete()
             manager.initialize()
 
-            val doc = Jsoup.parse(content ?: "")
+            val lines = content?.split("\n") ?: listOf()
 
-            val bookmarkElements = doc.select("A")
-            val folderElements = doc.select("H3")
+            val folderStack = mutableListOf<BookmarkFolderItem>()
+            folderStack.add(manager.root)
 
-            val folderArray = mutableListOf<String>()
-            mutableListOf<BookmarkFolderItem>()
-            val folderMap = mutableMapOf<String, BookmarkFolderItem>()
+            var lastFolder: BookmarkFolderItem? = null
+            var lastFolderName = ""
 
-            // First, identify all folders and create them
-            for (folderElement in folderElements) {
-                val folderName = folderElement.text()
-                if (folderName.isNotEmpty()) {
-                    folderArray.add(folderName)
-                    val newFolder = BookmarkFolderItem(folderName, manager.root, BookmarkUtils.getNewId())
-                    folderMap[folderName] = newFolder
-                    manager.root.add(newFolder)
+            for (line in lines) {
+                val trimmedLine = line.trim()
+
+                // Skip HR tags
+                if (trimmedLine.startsWith("<HR", ignoreCase = true)) {
+                    continue
                 }
-            }
 
-            // Iterate over each anchor element to extract bookmarks and add them to their respective folders
-            for (element in bookmarkElements) {
-                val url = element.attr("HREF")
-                val title = element.text()
-                var folderName = ""
+                // Check for folder (H3 tag)
+                if (trimmedLine.contains("<H3", ignoreCase = true)) {
+                    val startIdx = trimmedLine.indexOf('>', trimmedLine.indexOf("<H3", ignoreCase = true)) + 1
+                    val endIdx = trimmedLine.indexOf("</H3>", ignoreCase = true)
 
-                // Find the closest folder element before this link
-                val parentElements = element.parents()
-                for (parentElement in parentElements) {
-                    if (parentElement.tagName().lowercase() == "dl") {
-                        val previousElement = parentElement.previousElementSibling()
-                        if (previousElement != null && previousElement.tagName().lowercase() == "h3") {
-                            folderName = previousElement.text()
-                            break
+                    if (startIdx > 0 && endIdx > startIdx) {
+                        lastFolderName = trimmedLine.substring(startIdx, endIdx).trim()
+
+                        if (lastFolderName.isNotEmpty()) {
+                            val currentParent = folderStack.lastOrNull() ?: manager.root
+                            lastFolder = BookmarkFolderItem(
+                                lastFolderName,
+                                currentParent,
+                                BookmarkUtils.getNewId()
+                            )
+                            currentParent.add(lastFolder!!)
                         }
                     }
                 }
-
-                // Create a new BookmarkItem and add it to the correct folder
-                val entry: BookmarkItem = BookmarkSiteItem(
-                    title,
-                    url,
-                    BookmarkUtils.getNewId()
-                )
-
-                // If folderName is not empty, find the corresponding folder. Otherwise, add it to root
-                val folder = if (folderName.isNotEmpty()) {
-                    folderMap[folderName] ?: manager.root
-                } else {
-                    manager.root
+                // Check for opening DL tag (start of folder contents)
+                else if (trimmedLine.startsWith("<DL", ignoreCase = true)) {
+                    if (lastFolder != null) {
+                        folderStack.add(lastFolder!!)
+                        lastFolder = null
+                    }
                 }
+                // Check for closing DL tag (end of folder contents)
+                else if (trimmedLine.startsWith("</DL>", ignoreCase = true)) {
+                    if (folderStack.size > 1) {
+                        folderStack.removeAt(folderStack.size - 1)
+                    }
+                }
+                // Check for bookmark (A tag)
+                else if (trimmedLine.contains("<A", ignoreCase = true) &&
+                    trimmedLine.contains("HREF", ignoreCase = true)
+                ) {
 
-                manager.add(folder, entry)
+                    // Extract URL
+                    val hrefStart = trimmedLine.indexOf("HREF=\"", ignoreCase = true)
+                    if (hrefStart >= 0) {
+                        val urlStart = hrefStart + 6
+                        val urlEnd = trimmedLine.indexOf('"', urlStart)
+
+                        if (urlEnd > urlStart) {
+                            val url = trimmedLine.substring(urlStart, urlEnd)
+
+                            // Extract title
+                            val titleStart = trimmedLine.indexOf('>', hrefStart) + 1
+                            val titleEnd = trimmedLine.indexOf("</A>", ignoreCase = true)
+
+                            val title = if (titleEnd > titleStart) {
+                                trimmedLine.substring(titleStart, titleEnd).trim()
+                            } else {
+                                url
+                            }
+
+                            if (url.isNotEmpty()) {
+                                val bookmark = BookmarkSiteItem(
+                                    title,
+                                    url,
+                                    BookmarkUtils.getNewId()
+                                )
+                                val currentParent = folderStack.lastOrNull() ?: manager.root
+                                manager.add(currentParent, bookmark)
+                            }
+                        }
+                    }
+                }
             }
 
-            // Save the manager state
             manager.save()
 
             Toast.makeText(context, R.string.successful, Toast.LENGTH_SHORT).show()

@@ -435,40 +435,17 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
         // Track last known tab IDs for detecting new tabs
         var lastTabIds = emptySet<String>()
 
-        // Simplified observation without complex flows for now
+        // Use proper flow-based observation instead of polling
         viewLifecycleOwner.lifecycleScope.launch {
             val store = requireContext().components.store
-
-            // Simple polling approach
-            while (true) {
-                try {
+            
+            store.flowScoped(viewLifecycleOwner) { flow ->
+                flow.mapNotNull { state ->
                     // Check if fragment is still attached before proceeding
-                    if (!isAdded) {
-                        break // Exit loop if fragment is detached
-                    }
+                    if (!isAdded) return@mapNotNull null
                     
-                    val state = store.state
-
-                    // Detect new tabs for auto-grouping
-                    val currentTabIds = state.tabs.map { it.id }.toSet()
-                    val newTabIds = currentTabIds - lastTabIds
-
-                    // Auto-group new tabs with their parent
-                    newTabIds.forEach { newTabId ->
-                        val newTab = state.tabs.find { it.id == newTabId }
-                        val parentId = newTab?.parentId
-                        if (parentId != null) {
-                            // Record parent-child relationship for island auto-grouping
-                            modernToolbarManager?.recordTabParent(newTabId, parentId)
-                            modernToolbarManager?.autoGroupNewTab(newTabId)
-                        }
-                    }
-
-                    lastTabIds = currentTabIds
-
-                    // Filter tabs by browsing mode AND profile before passing to toolbar
-                    val activity = activity as? BrowserActivity
-                    val isPrivateMode = activity?.browsingModeManager?.mode?.isPrivate ?: false
+                    val activity = activity as? BrowserActivity ?: return@mapNotNull null
+                    val isPrivateMode = activity.browsingModeManager.mode.isPrivate
                     val profileManager = com.prirai.android.nira.browser.profile.ProfileManager.getInstance(requireContext())
                     val currentProfile = profileManager.getActiveProfile()
                     val currentProfileContextId = if (isPrivateMode) {
@@ -486,7 +463,43 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
                             (tab.contextId == currentProfileContextId) || (tab.contextId == null)
                         }
                     }
+                    
+                    // Return state data for change detection
+                    state to filteredTabs
+                }.distinctUntilChangedBy { (state, filteredTabs) ->
+                    // Detect changes in:
+                    // 1. Tab list (additions/removals)
+                    // 2. Selected tab
+                    // 3. Tab content (title, url, icon) for any visible tab
+                    Triple(
+                        filteredTabs.map { it.id },
+                        state.selectedTabId,
+                        filteredTabs.joinToString("|") { tab ->
+                            // Include title, url, icon hash, and loading state
+                            "${tab.id}:${tab.content.title}:${tab.content.url}:${tab.content.icon?.hashCode()}:${tab.content.loading}"
+                        }
+                    )
+                }.collect { (state, filteredTabs) ->
+                    if (!isAdded) return@collect
+                    
+                    // Detect new tabs for auto-grouping
+                    val currentTabIds = state.tabs.map { it.id }.toSet()
+                    val newTabIds = currentTabIds - lastTabIds
 
+                    // Auto-group new tabs with their parent
+                    newTabIds.forEach { newTabId ->
+                        val newTab = state.tabs.find { it.id == newTabId }
+                        val parentId = newTab?.parentId
+                        if (parentId != null) {
+                            // Record parent-child relationship for island auto-grouping
+                            modernToolbarManager?.recordTabParent(newTabId, parentId)
+                            modernToolbarManager?.autoGroupNewTab(newTabId)
+                        }
+                    }
+
+                    lastTabIds = currentTabIds
+
+                    // Update tabs in toolbar
                     modernToolbarManager?.updateTabs(filteredTabs, state.selectedTabId)
 
                     // Update navigation state
@@ -500,9 +513,7 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
                     }
 
                     // Update modern toolbar with current context
-                    val currentState = store.state
-                    val currentSelectedTab =
-                        currentState.tabs.find { it.id == currentState.selectedTabId }
+                    val currentSelectedTab = state.tabs.find { it.id == state.selectedTabId }
                     val currentUrl = currentSelectedTab?.content?.url ?: ""
                     // Properly detect homepage - both empty URL and about:homepage
                     val currentIsHomepage = currentUrl.isEmpty() || currentUrl == "about:homepage"
@@ -514,11 +525,6 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
                         tabCount = filteredTabs.size,  // Use filtered tabs count
                         isHomepage = currentIsHomepage
                     )
-
-                    kotlinx.coroutines.delay(500) // Update every 500ms
-                } catch (e: Exception) {
-                    android.util.Log.e("ModernToolbar", "Error observing tabs", e)
-                    kotlinx.coroutines.delay(1000)
                 }
             }
         }

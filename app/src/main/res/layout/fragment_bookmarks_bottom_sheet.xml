@@ -2,7 +2,7 @@
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="wrap_content">
 
     <!-- Handle indicator for bottom sheet -->
     <View
@@ -101,22 +101,25 @@
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/bookmarksRecyclerView"
         android:layout_width="match_parent"
-        android:layout_height="400dp"
+        android:layout_height="wrap_content"
         android:layout_below="@id/pathView"
         android:layout_marginTop="8dp"
         android:paddingHorizontal="8dp"
         android:paddingBottom="16dp"
         android:clipToPadding="false"
-        android:nestedScrollingEnabled="true" />
+        android:nestedScrollingEnabled="true"
+        android:scrollbars="vertical"
+        android:overScrollMode="ifContentScrolls" />
 
     <!-- Empty state when no bookmarks -->
     <LinearLayout
         android:id="@+id/emptyStateLayout"
         android:layout_width="wrap_content"
-        android:layout_height="400dp"
+        android:layout_height="wrap_content"
         android:layout_below="@id/pathView"
         android:layout_centerHorizontal="true"
         android:layout_marginTop="32dp"
+        android:layout_marginBottom="32dp"
         android:orientation="vertical"
         android:gravity="center"
         android:visibility="gone">

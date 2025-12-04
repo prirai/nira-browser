@@ -37,10 +37,44 @@ class BookmarksBottomSheetFragment : BottomSheetDialogFragment(), BookmarkAdapte
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         
+        // Set bottom sheet to 60% of screen height
+        setupBottomSheetHeight()
+        
         setupBookmarkManager()
         setupRecyclerView()
         setupClickListeners()
         loadBookmarks()
+    }
+
+    private fun setupBottomSheetHeight() {
+        // Get screen height
+        val displayMetrics = resources.displayMetrics
+        val screenHeight = displayMetrics.heightPixels
+        
+        // Set bottom sheet to 60% of screen height
+        val sheetHeight = (screenHeight * 0.6).toInt()
+        
+        // Calculate RecyclerView max height (subtract header/padding)
+        val headerHeight = 200 // Approximate header + margins
+        val recyclerMaxHeight = sheetHeight - headerHeight
+        
+        // Set RecyclerView max height
+        val recyclerLayoutParams = binding.bookmarksRecyclerView.layoutParams
+        recyclerLayoutParams.height = recyclerMaxHeight
+        binding.bookmarksRecyclerView.layoutParams = recyclerLayoutParams
+        
+        // Apply to bottom sheet behavior
+        dialog?.setOnShowListener { dialogInterface ->
+            val bottomSheet = (dialogInterface as? com.google.android.material.bottomsheet.BottomSheetDialog)
+                ?.findViewById<View>(com.google.android.material.R.id.design_bottom_sheet)
+            
+            bottomSheet?.let {
+                val behavior = com.google.android.material.bottomsheet.BottomSheetBehavior.from(it)
+                behavior.peekHeight = sheetHeight
+                behavior.state = com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_COLLAPSED
+                behavior.isDraggable = false // Prevent dragging
+            }
+        }
     }
 
     private fun setupBookmarkManager() {

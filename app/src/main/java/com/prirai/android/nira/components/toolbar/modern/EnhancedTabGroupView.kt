@@ -526,7 +526,6 @@ class EnhancedTabGroupView @JvmOverloads constructor(
         // Check if tab content (title, URL, icon) has changed
         val hasContentChanged = tabs.any { newTab ->
             val oldTab = currentTabs.find { it.id == newTab.id }
-            oldTab?.content?.title != newTab.content.title
             oldTab == null ||
                     oldTab.content.title != newTab.content.title ||
                     oldTab.content.url != newTab.content.url ||

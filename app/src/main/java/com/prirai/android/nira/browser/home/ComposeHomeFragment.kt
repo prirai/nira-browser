@@ -309,12 +309,47 @@ class ComposeHomeFragment : Fragment() {
                     // Switch to private mode
                     browsingModeManager.mode = BrowsingMode.Private
                     saveLastMode(isPrivate = true, profileId = null)
+                    
+                    // Find or create a private tab
+                    val store = components.store
+                    val privateTabs = store.state.tabs.filter { it.content.private }
+                    
+                    if (privateTabs.isEmpty()) {
+                        // Create a new private tab
+                        components.tabsUseCases.addTab(
+                            url = "about:blank",
+                            private = true,
+                            contextId = "private"
+                        )
+                    } else {
+                        // Select the first private tab
+                        components.tabsUseCases.selectTab(privateTabs.first().id)
+                    }
                 } else {
                     // Switch to selected profile
                     val selectedProfile = allProfiles[which]
                     browsingModeManager.mode = BrowsingMode.Normal
                     profileManager.setActiveProfile(selectedProfile)
                     saveLastMode(isPrivate = false, profileId = selectedProfile.id)
+                    
+                    // Find or create a tab with this profile's contextId
+                    val store = components.store
+                    val contextId = "profile_${selectedProfile.id}"
+                    val profileTabs = store.state.tabs.filter { 
+                        it.contextId == contextId && !it.content.private 
+                    }
+                    
+                    if (profileTabs.isEmpty()) {
+                        // Create a new tab for this profile
+                        components.tabsUseCases.addTab(
+                            url = "about:blank",
+                            private = false,
+                            contextId = contextId
+                        )
+                    } else {
+                        // Select the first tab of this profile
+                        components.tabsUseCases.selectTab(profileTabs.first().id)
+                    }
                 }
                 
                 // Navigate to new home fragment to show the new profile
@@ -355,84 +390,22 @@ class ComposeHomeFragment : Fragment() {
     }
     
     private fun showNativeMenu() {
-        // Create a wrapper for showing menu at the bottom right corner
-        val rootView = requireView()
-        
-        // Create a temporary anchor view positioned at bottom-right
-        val anchorView = View(requireContext()).apply {
-            layoutParams = android.view.ViewGroup.LayoutParams(1, 1)
-        }
-        
-        // Add anchor to root temporarily
-        if (rootView is android.view.ViewGroup) {
-            rootView.addView(anchorView)
-            anchorView.post {
-                // Position at bottom right
-                anchorView.x = rootView.width.toFloat()
-                anchorView.y = rootView.height.toFloat() - 200 // Above the bottom toolbar
-            }
-        }
-        
-        // Create native menu using PopupMenu
-        val popupMenu = android.widget.PopupMenu(
-            requireContext(), 
-            anchorView,
-            android.view.Gravity.BOTTOM or android.view.Gravity.END
+        // Show menu items using MaterialAlertDialog
+        val menuItems = arrayOf(
+            "New Tab",
+            "New Private Tab",
+            "Bookmarks",
+            "History",
+            "Extensions",
+            "Settings"
         )
         
-        popupMenu.menu.add(0, 1, 0, "New Tab").setIcon(R.drawable.mozac_ic_tab_new_24)
-        popupMenu.menu.add(0, 2, 0, "New Private Tab").setIcon(R.drawable.ic_incognito)
-        popupMenu.menu.add(0, 3, 0, "Bookmarks").setIcon(R.drawable.ic_baseline_bookmark)
-        popupMenu.menu.add(0, 4, 0, "History").setIcon(R.drawable.ic_baseline_history)
-        popupMenu.menu.add(0, 5, 0, "Extensions").setIcon(R.drawable.mozac_ic_extension_24)
-        popupMenu.menu.add(0, 6, 0, "Settings").setIcon(R.drawable.ic_round_settings)
-        
-        popupMenu.setOnMenuItemClickListener { item ->
-            when (item.itemId) {
-                1 -> {
-                    findNavController().navigate(R.id.homeFragment)
-                    true
-                }
-                2 -> {
-                    browsingModeManager.mode = BrowsingMode.Private
-                    findNavController().navigate(R.id.homeFragment)
-                    true
-                }
-                3 -> {
-                    val bookmarksBottomSheet = BookmarksBottomSheetFragment.newInstance()
-                    bookmarksBottomSheet.show(parentFragmentManager, "BookmarksBottomSheet")
-                    true
-                }
-                4 -> {
-                    val intent = android.content.Intent(requireContext(), com.prirai.android.nira.history.HistoryActivity::class.java)
-                    intent.flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
-                    startActivity(intent)
-                    true
-                }
-                5 -> {
-                    val intent = android.content.Intent(requireContext(), com.prirai.android.nira.addons.AddonsActivity::class.java)
-                    intent.flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
-                    startActivity(intent)
-                    true
-                }
-                6 -> {
-                    val intent = android.content.Intent(requireContext(), com.prirai.android.nira.settings.activity.SettingsActivity::class.java)
-                    intent.flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
-                    startActivity(intent)
-                    true
-                }
-                else -> false
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle("Menu")
+            .setItems(menuItems) { _, which ->
+                handleMenuItem(menuItems[which])
             }
-        }
-        
-        popupMenu.setOnDismissListener {
-            // Remove anchor view after menu is dismissed
-            if (rootView is android.view.ViewGroup && anchorView.parent != null) {
-                rootView.removeView(anchorView)
-            }
-        }
-        
-        popupMenu.show()
+            .show()
     }
     
     private fun handleMenuItem(item: String) {
