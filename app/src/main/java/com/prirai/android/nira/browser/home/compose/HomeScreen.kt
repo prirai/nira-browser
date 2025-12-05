@@ -31,6 +31,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
@@ -72,6 +73,7 @@ fun HomeScreen(
     tabCount: Int,
     currentProfile: ProfileInfo,
     onProfileClick: () -> Unit,
+    backgroundImageUrl: String? = null,
     modifier: Modifier = Modifier
 ) {
     val isDark = isSystemInDarkTheme()
@@ -83,10 +85,35 @@ fun HomeScreen(
     val bottomPadding = with(LocalDensity.current) { windowInsets.getBottom(this).toDp() }
     
     Box(modifier = modifier.fillMaxSize()) {
+        // Background image layer
+        if (backgroundImageUrl != null && backgroundImageUrl.isNotEmpty()) {
+            AsyncImage(
+                model = ImageRequest.Builder(LocalContext.current)
+                    .data(backgroundImageUrl)
+                    .crossfade(true)
+                    .build(),
+                contentDescription = "Homepage background",
+                modifier = Modifier.fillMaxSize(),
+                contentScale = androidx.compose.ui.layout.ContentScale.Crop
+            )
+            // Add semi-transparent overlay for better content readability
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(backgroundColor.copy(alpha = 0.85f))
+            )
+        }
+        
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .background(backgroundColor),
+                .then(
+                    if (backgroundImageUrl == null || backgroundImageUrl.isEmpty()) {
+                        Modifier.background(backgroundColor)
+                    } else {
+                        Modifier
+                    }
+                ),
             contentPadding = PaddingValues(
                 start = 16.dp,
                 top = topPadding + 16.dp,  // Add system bar padding

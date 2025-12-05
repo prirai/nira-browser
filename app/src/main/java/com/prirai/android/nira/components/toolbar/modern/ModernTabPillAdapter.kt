@@ -505,11 +505,19 @@ class ModernTabPillAdapter(
             val islandColor = item.islandColor
             val isGuestTab = item.session.contextId == null
             
-            // Get default background color
-            val backgroundColor = if (isDarkMode()) {
-                ContextCompat.getColor(itemView.context, android.R.color.background_dark)
+            // Get default background color from Material 3 theme
+            val typedValue = android.util.TypedValue()
+            val theme = itemView.context.theme
+            
+            val backgroundColor = if (theme.resolveAttribute(com.google.android.material.R.attr.colorSurfaceVariant, typedValue, true)) {
+                typedValue.data
             } else {
-                ContextCompat.getColor(itemView.context, android.R.color.background_light)
+                // Fallback to default colors
+                if (isDarkMode()) {
+                    ContextCompat.getColor(itemView.context, android.R.color.background_dark)
+                } else {
+                    ContextCompat.getColor(itemView.context, android.R.color.background_light)
+                }
             }
             
             // Guest tab color: distinctive orange/amber

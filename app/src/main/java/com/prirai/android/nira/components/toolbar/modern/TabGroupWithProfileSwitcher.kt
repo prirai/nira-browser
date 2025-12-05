@@ -191,12 +191,15 @@ class TabGroupWithProfileSwitcher @JvmOverloads constructor(
         profileEmojiText.text = profile.emoji
         profileNameText.text = profile.name
         
-        // Update pill background color with profile color (subtle)
-        val isDark = isDarkMode()
-        val backgroundColor = if (isDark) {
-            0xFF1E1E1E.toInt() // Dark surface color
+        // Update pill background color with Material 3 theme colors
+        val typedValue = android.util.TypedValue()
+        val theme = context.theme
+        
+        val backgroundColor = if (theme.resolveAttribute(com.google.android.material.R.attr.colorSurfaceVariant, typedValue, true)) {
+            typedValue.data
         } else {
-            0xFFF5F5F5.toInt() // Light surface color
+            // Fallback
+            if (isDarkMode()) 0xFF1E1E1E.toInt() else 0xFFF5F5F5.toInt()
         }
         
         // Add subtle tint of profile color
@@ -208,12 +211,15 @@ class TabGroupWithProfileSwitcher @JvmOverloads constructor(
         profileEmojiText.text = "🕵️"
         profileNameText.text = "Private"
         
-        // Purple tint for private mode
-        val isDark = isDarkMode()
-        val backgroundColor = if (isDark) {
-            0xFF1E1E1E.toInt()
+        // Use Material 3 purple tint for private mode
+        val typedValue = android.util.TypedValue()
+        val theme = context.theme
+        
+        val backgroundColor = if (theme.resolveAttribute(com.google.android.material.R.attr.colorSurfaceVariant, typedValue, true)) {
+            typedValue.data
         } else {
-            0xFFF5F5F5.toInt()
+            // Fallback
+            if (isDarkMode()) 0xFF1E1E1E.toInt() else 0xFFF5F5F5.toInt()
         }
         val purpleColor = 0xFF6F42C1.toInt()
         val tintedColor = blendColors(backgroundColor, purpleColor, 0.2f)

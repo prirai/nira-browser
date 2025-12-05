@@ -175,10 +175,35 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
         // Also observe tab selection changes
         viewLifecycleOwner.lifecycleScope.launch {
             requireContext().components.store.flowScoped { flow ->
-                flow.distinctUntilChangedBy { it.selectedTabId }.collect {
+                flow.distinctUntilChangedBy { it.selectedTabId }.collect { state ->
                     // Update toolbar when tab selection changes (only if fragment is still attached)
                     if (isAdded && view != null) {
                         updateContextualToolbar()
+                        
+                        // Navigate to ComposeHomeFragment when about:homepage tab is selected
+                        // Only do this when switching TO a homepage tab, not when the current tab's URL changes
+                        val selectedTab = state.tabs.find { it.id == state.selectedTabId }
+                        val navController = try {
+                            androidx.navigation.fragment.NavHostFragment.findNavController(this@BrowserFragment)
+                        } catch (e: Exception) {
+                            null
+                        }
+                        
+                        // Only navigate to home if:
+                        // 1. URL is about:homepage
+                        // 2. Tab is not loading (stable state)
+                        // 3. We're not already on the home fragment
+                        // 4. Navigation controller is available
+                        if (selectedTab?.content?.url == "about:homepage" &&
+                            selectedTab.content.loading == false &&
+                            navController != null &&
+                            navController.currentDestination?.id != R.id.homeFragment) {
+                            try {
+                                navController.navigate(R.id.homeFragment)
+                            } catch (e: Exception) {
+                                // Navigation failed (e.g., already navigating)
+                            }
+                        }
                     }
                 }
             }

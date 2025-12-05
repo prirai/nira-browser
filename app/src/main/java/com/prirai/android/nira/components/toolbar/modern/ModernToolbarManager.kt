@@ -6,6 +6,7 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.LifecycleOwner
 import com.prirai.android.nira.browser.profile.BrowserProfile
 import com.prirai.android.nira.components.toolbar.ToolbarPosition
+import com.prirai.android.nira.ext.components
 import com.prirai.android.nira.preferences.UserPreferences
 import mozilla.components.browser.toolbar.BrowserToolbar
 import mozilla.components.browser.state.state.SessionState
@@ -170,6 +171,26 @@ class ModernToolbarManager(
                         (activity as? com.prirai.android.nira.BrowserActivity)?.let { browserActivity ->
                             browserActivity.browsingModeManager.currentProfile = profile
                             browserActivity.browsingModeManager.mode = com.prirai.android.nira.browser.BrowsingMode.Normal
+                            
+                            // Find or create a tab for this profile
+                            val store = browserActivity.components.store
+                            val contextId = "profile_${profile.id}"
+                            val profileTabs = store.state.tabs.filter {
+                                it.contextId == contextId && !it.content.private
+                            }
+                            
+                            if (profileTabs.isEmpty()) {
+                                // Create a new tab for this profile
+                                browserActivity.components.tabsUseCases.addTab(
+                                    url = "about:homepage",
+                                    private = false,
+                                    contextId = contextId,
+                                    selectTab = true
+                                )
+                            } else {
+                                // Select the first tab of this profile
+                                browserActivity.components.tabsUseCases.selectTab(profileTabs.first().id)
+                            }
                         }
                     }
                 },
@@ -182,6 +203,23 @@ class ModernToolbarManager(
                     (container.context as? android.app.Activity)?.let { activity ->
                         (activity as? com.prirai.android.nira.BrowserActivity)?.let { browserActivity ->
                             browserActivity.browsingModeManager.mode = com.prirai.android.nira.browser.BrowsingMode.Private
+                            
+                            // Find or create a private tab
+                            val store = browserActivity.components.store
+                            val privateTabs = store.state.tabs.filter { it.content.private }
+                            
+                            if (privateTabs.isEmpty()) {
+                                // Create a new private tab
+                                browserActivity.components.tabsUseCases.addTab(
+                                    url = "about:homepage",
+                                    private = true,
+                                    contextId = "private",
+                                    selectTab = true
+                                )
+                            } else {
+                                // Select the first private tab
+                                browserActivity.components.tabsUseCases.selectTab(privateTabs.first().id)
+                            }
                         }
                     }
                 }

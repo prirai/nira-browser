@@ -30,6 +30,7 @@ import com.prirai.android.nira.browser.shortcuts.ShortcutDatabase
 import com.prirai.android.nira.ext.components
 import com.prirai.android.nira.preferences.UserPreferences
 import com.prirai.android.nira.settings.HomepageChoice
+import com.prirai.android.nira.settings.HomepageBackgroundChoice
 import com.prirai.android.nira.ui.theme.NiraTheme
 import com.prirai.android.nira.components.toolbar.ToolbarMenu
 import mozilla.components.browser.state.selector.normalTabs
@@ -134,6 +135,15 @@ class ComposeHomeFragment : Fragment() {
                     }
                 }
 
+                // Get background image URL from preferences
+                val prefs = UserPreferences(requireContext())
+                val backgroundImageUrl = when (prefs.homepageBackgroundChoice) {
+                    HomepageBackgroundChoice.NONE.ordinal -> null
+                    HomepageBackgroundChoice.URL.ordinal, 
+                    HomepageBackgroundChoice.GALLERY.ordinal -> prefs.homepageBackgroundUrl
+                    else -> null
+                }
+
                 NiraTheme(
                     isPrivateMode = isPrivateMode
                 ) {
@@ -144,6 +154,7 @@ class ComposeHomeFragment : Fragment() {
                         isBookmarkExpanded = isBookmarkExpanded,
                         tabCount = tabCount,
                         currentProfile = currentProfile,
+                        backgroundImageUrl = backgroundImageUrl,
                         onProfileClick = {
                             showProfileSwitcher()
                         },
