@@ -787,7 +787,8 @@ fun HomeBottomToolbar(
     
     Surface(
         modifier = modifier.fillMaxWidth(),
-        color = MaterialTheme.colorScheme.surface
+        color = MaterialTheme.colorScheme.surface,
+        tonalElevation = 3.dp
     ) {
         Row(
             modifier = Modifier

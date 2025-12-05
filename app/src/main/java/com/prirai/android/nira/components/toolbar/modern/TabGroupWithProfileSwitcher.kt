@@ -38,12 +38,11 @@ class TabGroupWithProfileSwitcher @JvmOverloads constructor(
         clipToPadding = false
         clipChildren = false
 
-        // Set container background using Material 3 surface color
-        val backgroundColor = com.google.android.material.color.MaterialColors.getColor(
-            this,
-            com.google.android.material.R.attr.colorSurface
-        )
-        setBackgroundColor(backgroundColor)
+        // Set container background using Material 3 surface color with tonal elevation overlay (3dp)
+        val elevationDp = 3f * resources.displayMetrics.density
+        val elevatedColor = com.google.android.material.elevation.ElevationOverlayProvider(context)
+            .compositeOverlayWithThemeSurfaceColorIfNeeded(elevationDp)
+        setBackgroundColor(elevatedColor)
         elevation = 2f
 
         // Create tab group view (below)

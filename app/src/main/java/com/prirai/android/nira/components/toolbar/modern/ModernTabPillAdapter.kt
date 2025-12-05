@@ -830,8 +830,21 @@ class ModernTabPillAdapter(
                     
                     if (isSelected) {
                         // Selected tab: show border with rounded corners on last tab
+                        // Get background color from Material 3 theme
+                        val typedValue = android.util.TypedValue()
+                        val theme = itemView.context.theme
+                        val backgroundColor = if (theme.resolveAttribute(com.google.android.material.R.attr.colorSurfaceVariant, typedValue, true)) {
+                            typedValue.data
+                        } else {
+                            if (isDarkMode()) {
+                                ContextCompat.getColor(itemView.context, android.R.color.background_dark)
+                            } else {
+                                ContextCompat.getColor(itemView.context, android.R.color.background_light)
+                            }
+                        }
+                        
                         val gradient = GradientDrawable().apply {
-                            setColor(Color.TRANSPARENT)
+                            setColor(backgroundColor)
                             // Prominent border for selected state (3dp stroke width)
                             val strokeWidth = (3 * itemView.resources.displayMetrics.density).toInt()
                             setStroke(strokeWidth, island.color)
@@ -856,9 +869,21 @@ class ModernTabPillAdapter(
                         titleView.setTypeface(null, android.graphics.Typeface.BOLD)
                         faviconView.alpha = 1.0f
                     } else {
-                        // Unselected tab: transparent background
+                        // Unselected tab: same background as ungrouped tabs
+                        val typedValue = android.util.TypedValue()
+                        val theme = itemView.context.theme
+                        val backgroundColor = if (theme.resolveAttribute(com.google.android.material.R.attr.colorSurfaceVariant, typedValue, true)) {
+                            typedValue.data
+                        } else {
+                            if (isDarkMode()) {
+                                ContextCompat.getColor(itemView.context, android.R.color.background_dark)
+                            } else {
+                                ContextCompat.getColor(itemView.context, android.R.color.background_light)
+                            }
+                        }
+                        
                         val gradient = GradientDrawable().apply {
-                            setColor(Color.TRANSPARENT)
+                            setColor(backgroundColor)
                             // Only round top-right and bottom-right corners for last tab
                             if (isLastTab) {
                                 val radius = 12f * itemView.resources.displayMetrics.density
@@ -916,8 +941,21 @@ class ModernTabPillAdapter(
             val isSelected = tab.id == selectedTabId
             if (isSelected) {
                 // Selected tab: show border but DON'T round last tab anymore
+                // Get background color from Material 3 theme
+                val typedValue = android.util.TypedValue()
+                val theme = itemView.context.theme
+                val backgroundColor = if (theme.resolveAttribute(com.google.android.material.R.attr.colorSurfaceVariant, typedValue, true)) {
+                    typedValue.data
+                } else {
+                    if (isDarkMode()) {
+                        ContextCompat.getColor(itemView.context, android.R.color.background_dark)
+                    } else {
+                        ContextCompat.getColor(itemView.context, android.R.color.background_light)
+                    }
+                }
+                
                 val gradient = GradientDrawable().apply {
-                    setColor(Color.TRANSPARENT)
+                    setColor(backgroundColor)
                     // Prominent border for selected state (3dp stroke width)
                     val strokeWidth = (3 * itemView.resources.displayMetrics.density).toInt()
                     setStroke(strokeWidth, island.color)
@@ -933,9 +971,21 @@ class ModernTabPillAdapter(
                 titleView.setTypeface(null, android.graphics.Typeface.BOLD)
                 faviconView.alpha = 1.0f
             } else {
-                // Unselected tab: transparent background
+                // Unselected tab: same background as ungrouped tabs
+                val typedValue = android.util.TypedValue()
+                val theme = itemView.context.theme
+                val backgroundColor = if (theme.resolveAttribute(com.google.android.material.R.attr.colorSurfaceVariant, typedValue, true)) {
+                    typedValue.data
+                } else {
+                    if (isDarkMode()) {
+                        ContextCompat.getColor(itemView.context, android.R.color.background_dark)
+                    } else {
+                        ContextCompat.getColor(itemView.context, android.R.color.background_light)
+                    }
+                }
+                
                 val gradient = GradientDrawable().apply {
-                    setColor(Color.TRANSPARENT)
+                    setColor(backgroundColor)
                     // No rounding needed - plus button is now at the end
                 }
                 tabContent.background = gradient

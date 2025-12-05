@@ -12,7 +12,7 @@
     android:clipToPadding="false"
     app:cardCornerRadius="12dp"
     app:cardElevation="4dp"
-    app:cardBackgroundColor="?android:attr/colorBackground"
+    app:cardBackgroundColor="?attr/colorSurfaceVariant"
 >
 
     <LinearLayout

@@ -963,12 +963,11 @@ class EnhancedTabGroupView @JvmOverloads constructor(
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
 
-        // Draw background using Material 3 surface color
-        val bgColor = com.google.android.material.color.MaterialColors.getColor(
-            this,
-            com.google.android.material.R.attr.colorSurface
-        )
-        backgroundPaint.color = bgColor
+        // Draw background using Material 3 surface color with tonal elevation overlay (3dp)
+        val elevationDp = 3f * resources.displayMetrics.density
+        val elevatedColor = com.google.android.material.elevation.ElevationOverlayProvider(context)
+            .compositeOverlayWithThemeSurfaceColorIfNeeded(elevationDp)
+        backgroundPaint.color = elevatedColor
         canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), backgroundPaint)
     }
 }

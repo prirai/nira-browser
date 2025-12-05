@@ -276,10 +276,11 @@ class ComposeHomeFragment : Fragment() {
                 requireActivity().window.statusBarColor = typedValue.data
             }
 
-            // For navigation bar - use surface
-            if (theme.resolveAttribute(com.google.android.material.R.attr.colorSurface, typedValue, true)) {
-                requireActivity().window.navigationBarColor = typedValue.data
-            }
+            // For navigation bar - use elevated surface color to match bottom toolbar
+            val elevationDp = 3f * resources.displayMetrics.density
+            val elevatedColor = com.google.android.material.elevation.ElevationOverlayProvider(requireContext())
+                .compositeOverlayWithThemeSurfaceColorIfNeeded(elevationDp)
+            requireActivity().window.navigationBarColor = elevatedColor
         }
     }
 
@@ -299,10 +300,8 @@ class ComposeHomeFragment : Fragment() {
             requireActivity().window.statusBarColor = typedValue.data
         }
 
-        // Restore navigation bar
-        if (theme.resolveAttribute(com.google.android.material.R.attr.colorSurface, typedValue, true)) {
-            requireActivity().window.navigationBarColor = typedValue.data
-        }
+        // Restore navigation bar to transparent (as set in BrowserActivity)
+        requireActivity().window.navigationBarColor = android.graphics.Color.TRANSPARENT
     }
 
     private fun showProfileSwitcher() {

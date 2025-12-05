@@ -54,12 +54,15 @@ class ContextualBottomToolbar @JvmOverloads constructor(
         // Inflate the layout - this merges the XML's LinearLayout into this view
         LayoutInflater.from(context).inflate(R.layout.contextual_bottom_toolbar, this, true)
         
-        // Apply Material 3 surface color after inflation
-        val backgroundColor = com.google.android.material.color.MaterialColors.getColor(
-            this,
-            com.google.android.material.R.attr.colorSurface
-        )
-        setBackgroundColor(backgroundColor)
+        // Apply Material 3 surface color with tonal elevation overlay (3dp) after inflation
+        val elevationDp = 3f * resources.displayMetrics.density
+        val elevatedColor = com.google.android.material.elevation.ElevationOverlayProvider(context)
+            .compositeOverlayWithThemeSurfaceColorIfNeeded(elevationDp)
+        setBackgroundColor(elevatedColor)
+        
+        // Remove any elevation/shadow that creates gradient effect
+        elevation = 0f
+        outlineProvider = null
         
         backButton = findViewById(R.id.back_button)
         forwardButton = findViewById(R.id.forward_button)
