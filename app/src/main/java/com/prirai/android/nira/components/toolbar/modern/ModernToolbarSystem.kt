@@ -42,6 +42,13 @@ class ModernToolbarSystem @JvmOverloads constructor(
         orientation = VERTICAL
         clipToPadding = false
         clipChildren = false
+        
+        // Use Material 3 surface color for consistent theming
+        val backgroundColor = com.google.android.material.color.MaterialColors.getColor(
+            this,
+            com.google.android.material.R.attr.colorSurface
+        )
+        setBackgroundColor(backgroundColor)
     }
 
     fun addComponent(component: View, type: ComponentType) {

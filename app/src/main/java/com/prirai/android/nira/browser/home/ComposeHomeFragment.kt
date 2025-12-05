@@ -5,11 +5,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.fragment.app.Fragment
@@ -287,12 +283,6 @@ class ComposeHomeFragment : Fragment() {
         }
     }
 
-    override fun onPause() {
-        super.onPause()
-        // Restore default styling when leaving the homepage
-        restoreDefaultStyling()
-    }
-
     override fun onDestroyView() {
         super.onDestroyView()
         // Restore default styling when view is destroyed
@@ -482,12 +472,6 @@ class ComposeHomeFragment : Fragment() {
             anchorView.post {
                 menu.show(anchor = anchorView)
             }
-        }
-    }
-
-    companion object {
-        fun newInstance(): ComposeHomeFragment {
-            return ComposeHomeFragment()
         }
     }
 }

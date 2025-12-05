@@ -131,7 +131,7 @@ class BrowserToolbarView(
                 elevation = resources.getDimension(R.dimen.browser_fragment_toolbar_elevation)
 
                 if (!isCustomTabSession) {
-                    display.setUrlBackground(ContextCompat.getDrawable(context, R.drawable.toolbar_background))
+                    display.setUrlBackground(ContextCompat.getDrawable(context, R.drawable.address_bar_background))
                 }
 
                 display.onUrlClicked = {

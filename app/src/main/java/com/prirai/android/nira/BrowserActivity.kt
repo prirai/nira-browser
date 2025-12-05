@@ -103,6 +103,11 @@ open class BrowserActivity : LocaleAwareAppCompatActivity(), ComponentCallbacks2
     override fun onCreate(savedInstanceState: Bundle?) {
         // Switch from splash theme to regular theme immediately
         setTheme(R.style.AppThemeNotActionBar)
+        
+        // Apply Material 3 dynamic colors (Material You) on Android 12+
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+            com.google.android.material.color.DynamicColors.applyToActivityIfAvailable(this)
+        }
 
         super.onCreate(savedInstanceState)
 

@@ -47,12 +47,19 @@ class ContextualBottomToolbar @JvmOverloads constructor(
     private var isShowingBookmarkIcon = false
 
     init {
-        orientation = HORIZONTAL
         setupView()
     }
 
     private fun setupView() {
+        // Inflate the layout - this merges the XML's LinearLayout into this view
         LayoutInflater.from(context).inflate(R.layout.contextual_bottom_toolbar, this, true)
+        
+        // Apply Material 3 surface color after inflation
+        val backgroundColor = com.google.android.material.color.MaterialColors.getColor(
+            this,
+            com.google.android.material.R.attr.colorSurface
+        )
+        setBackgroundColor(backgroundColor)
         
         backButton = findViewById(R.id.back_button)
         forwardButton = findViewById(R.id.forward_button)
