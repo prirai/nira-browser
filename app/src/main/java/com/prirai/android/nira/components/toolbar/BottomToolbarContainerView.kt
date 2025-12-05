@@ -22,6 +22,14 @@ class BottomToolbarContainerView @JvmOverloads constructor(
 ) : LinearLayout(context, attrs, defStyleAttr), ScrollableToolbar {
     
     init {
+        // Set Material 3 background color
+        val typedArray = context.obtainStyledAttributes(intArrayOf(com.google.android.material.R.attr.colorSurface))
+        val backgroundColor = typedArray.getColor(0, 0)
+        typedArray.recycle()
+        if (backgroundColor != 0) {
+            setBackgroundColor(backgroundColor)
+        }
+        
         // Handle window insets for navigation bar
         ViewCompat.setOnApplyWindowInsetsListener(this) { view, insets ->
             val navigationBars = insets.getInsets(WindowInsetsCompat.Type.navigationBars())

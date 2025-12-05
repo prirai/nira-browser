@@ -39,14 +39,8 @@ class EnhancedTabGroupView @JvmOverloads constructor(
     // Track parent-child relationships for automatic grouping
     private val pendingAutoGroups = mutableMapOf<String, String>()
     
-    // Cache Paint and colors for onDraw to avoid allocation on every frame
-    private val backgroundPaint by lazy {
-        Paint().apply {
-            alpha = 50
-        }
-    }
-    private var cachedGradient: LinearGradient? = null
-    private var lastDrawWidth = 0
+    // Cache Paint for onDraw to avoid allocation on every frame
+    private val backgroundPaint by lazy { Paint() }
 
     init {
         setupRecyclerView()
@@ -79,15 +73,11 @@ class EnhancedTabGroupView @JvmOverloads constructor(
         overScrollMode = OVER_SCROLL_NEVER
         setPadding(4, 2, 4, 2)
 
-        // Set theme-aware background color
-        val backgroundColor = if (isDarkMode()) {
-            ContextCompat.getColor(context, android.R.color.background_dark)
-        } else {
-            ContextCompat.getColor(context, android.R.color.background_light)
-        }
-        setBackgroundColor(backgroundColor)
+        // Background is handled by parent TabGroupWithProfileSwitcher
+        // Make this transparent so parent background shows through
+        setBackgroundColor(android.graphics.Color.TRANSPARENT)
 
-        elevation = 2f
+        elevation = 0f
     }
 
     private fun isDarkMode(): Boolean {
@@ -973,19 +963,12 @@ class EnhancedTabGroupView @JvmOverloads constructor(
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
 
-        // Only recreate gradient if width changed
-        if (cachedGradient == null || lastDrawWidth != width) {
-            val bgColor = ContextCompat.getColor(context, android.R.color.background_light)
-            cachedGradient = LinearGradient(
-                0f, 0f, width.toFloat(), 0f,
-                intArrayOf(bgColor, bgColor),
-                null,
-                Shader.TileMode.CLAMP
-            )
-            lastDrawWidth = width
-        }
-        
-        backgroundPaint.shader = cachedGradient
+        // Draw background using Material 3 surface color
+        val bgColor = com.google.android.material.color.MaterialColors.getColor(
+            this,
+            com.google.android.material.R.attr.colorSurface
+        )
+        backgroundPaint.color = bgColor
         canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), backgroundPaint)
     }
 }
