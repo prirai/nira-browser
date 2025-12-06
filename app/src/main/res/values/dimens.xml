@@ -12,4 +12,9 @@
     <dimen name="find_in_page_margin">16dp</dimen>
     <dimen name="custom_tab_header_height">56dp</dimen>
     <dimen name="search_result_corner_radius">24dp</dimen>
+
+    <!-- Unified Toolbar dimensions -->
+    <dimen name="contextual_toolbar_height">56dp</dimen>
+    <dimen name="tab_group_bar_height">48dp</dimen>
+    <dimen name="toolbar_corner_radius">0dp</dimen>
 </resources>

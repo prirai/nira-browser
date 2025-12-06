@@ -164,17 +164,6 @@ fun HomeScreen(
                 }
             }
         }
-        
-        // Bottom toolbar
-        HomeBottomToolbar(
-            onBookmarksClick = onBookmarksButtonClick,
-            onSearchClick = onSearchClick,
-            onExtensionsClick = onExtensionsClick,
-            onTabCountClick = onTabCountClick,
-            onMenuClick = onMenuClick,
-            tabCount = tabCount,
-            modifier = Modifier.align(Alignment.BottomCenter)
-        )
     }
 }
 
@@ -769,99 +758,6 @@ fun AddShortcutDialog(
             }
         }
     )
-}
-
-@Composable
-fun HomeBottomToolbar(
-    onBookmarksClick: () -> Unit,
-    onSearchClick: () -> Unit,
-    onExtensionsClick: () -> Unit,
-    onTabCountClick: () -> Unit,
-    onMenuClick: () -> Unit,
-    tabCount: Int,
-    modifier: Modifier = Modifier
-) {
-    // Get navigation bar inset for proper padding
-    val windowInsets = WindowInsets.systemBars
-    val bottomPadding = with(LocalDensity.current) { windowInsets.getBottom(this).toDp() }
-    
-    Surface(
-        modifier = modifier.fillMaxWidth(),
-        color = MaterialTheme.colorScheme.surface,
-        tonalElevation = 3.dp
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 4.dp)
-                .padding(top = 8.dp, bottom = bottomPadding + 8.dp),
-            horizontalArrangement = Arrangement.SpaceEvenly,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            // Bookmarks button
-            IconButton(onClick = onBookmarksClick) {
-                Icon(
-                    painter = painterResource(id = R.drawable.ic_baseline_bookmark),
-                    contentDescription = "Bookmarks",
-                    tint = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.size(24.dp)
-                )
-            }
-            
-            // Extensions button
-            IconButton(onClick = onExtensionsClick) {
-                Icon(
-                    painter = painterResource(id = R.drawable.mozac_ic_extension_24),
-                    contentDescription = "Extensions",
-                    tint = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.size(24.dp)
-                )
-            }
-            
-            // Search button (center)
-            IconButton(onClick = onSearchClick) {
-                Icon(
-                    painter = painterResource(id = R.drawable.ic_ios_search),
-                    contentDescription = "Search",
-                    tint = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.size(24.dp)
-                )
-            }
-            
-            // Tab count button
-            IconButton(onClick = onTabCountClick) {
-                Box(
-                    contentAlignment = Alignment.Center,
-                    modifier = Modifier
-                        .size(28.dp)
-                        .border(
-                            width = 2.5.dp,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            shape = RoundedCornerShape(4.dp)
-                        )
-                ) {
-                    // Tab count text
-                    Text(
-                        text = if (tabCount > 99) "∞" else tabCount.toString(),
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        fontSize = 11.sp
-                    )
-                }
-            }
-            
-            // Menu button
-            IconButton(onClick = onMenuClick) {
-                Icon(
-                    painter = painterResource(id = R.drawable.ic_ios_menu),
-                    contentDescription = "Menu",
-                    tint = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.size(24.dp)
-                )
-            }
-        }
-    }
 }
 
 @Composable

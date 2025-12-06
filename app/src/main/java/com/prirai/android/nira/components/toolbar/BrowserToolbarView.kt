@@ -86,16 +86,8 @@ class BrowserToolbarView(
         layout.findViewById(R.id.tabGroupBarIntegrated)
     } else null
     
-    internal val integratedContextualToolbar: View? = if (toolbarLayout == R.layout.component_bottom_browser_toolbar) {
-        layout.findViewById<View>(R.id.contextualBottomToolbarIntegrated)?.also { toolbar ->
-            val showContextualToolbar = settings.showContextualToolbar
-            toolbar.visibility = if (showContextualToolbar) View.VISIBLE else View.GONE
-            
-            if (!showContextualToolbar) {
-                addTabCountAndMenuToToolbar()
-            }
-        }
-    } else null
+    // Legacy integratedContextualToolbar removed - now handled by UnifiedToolbar's ModernContextualToolbar
+    internal val integratedContextualToolbar: View? = null
     
     // Get the actual container for bottom toolbar
     private val toolbarContainer: View? = if (toolbarLayout == R.layout.component_bottom_browser_toolbar) {

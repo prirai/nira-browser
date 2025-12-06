@@ -36,12 +36,6 @@
         app:browserToolbarTrackingProtectionAndSecurityIndicatorSeparatorColor="?android:attr/textColorSecondary"
     />
 
-    <!-- Contextual Bottom Toolbar -->
-    <com.prirai.android.nira.toolbar.ContextualBottomToolbar
-        android:id="@+id/contextualBottomToolbarIntegrated"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:visibility="gone"
-    />
+    <!-- Legacy ContextualBottomToolbar removed - now using ModernContextualToolbar in UnifiedToolbar -->
 
 </com.prirai.android.nira.components.toolbar.BottomToolbarContainerView>

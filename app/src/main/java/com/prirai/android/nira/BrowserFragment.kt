@@ -4,7 +4,7 @@ import android.view.View
 import androidx.core.view.isVisible
 import com.prirai.android.nira.browser.toolbar.ToolbarGestureHandler
 import com.prirai.android.nira.browser.toolbar.WebExtensionToolbarFeature
-import com.prirai.android.nira.toolbar.ContextualBottomToolbar
+import com.prirai.android.nira.components.toolbar.ToolbarMenu
 import com.prirai.android.nira.ext.components
 import com.prirai.android.nira.ext.nav
 import com.prirai.android.nira.preferences.UserPreferences
@@ -31,10 +31,8 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
     private val windowFeature = ViewBoundFeatureWrapper<WindowFeature>()
     private val webExtToolbarFeature = ViewBoundFeatureWrapper<WebExtensionToolbarFeature>()
 
-    // Revolutionary Modern Toolbar System
-    private var modernToolbarManager: com.prirai.android.nira.components.toolbar.modern.ModernToolbarManager? =
-        null
-
+    // Track last tab IDs for auto-grouping detection
+    private var lastTabIds = setOf<String>()
 
     @Suppress("LongMethod")
     override fun initializeUI(view: View, tab: SessionState) {
@@ -82,68 +80,14 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
             ), owner = this, view = view
         )
 
-        // Setup contextual bottom toolbar
-        setupContextualBottomToolbar()
-
-        // Tab groups are now handled by the modern toolbar system
+        // Tab groups and contextual toolbar handled by UnifiedToolbar
 
         observeTabChangesForToolbar()
-
-        initializeModernToolbarSystem()
     }
-
-    private fun setupContextualBottomToolbar() {
-        // Contextual toolbar is managed by ModernToolbarManager
-    }
-
-    private fun updateContextualToolbar() {
-        if (!isAdded || view == null) return
-
-        try {
-            val toolbar = binding.contextualBottomToolbar
-            if (toolbar.isVisible) {
-                val store = requireContext().components.store.state
-                val currentTab = store.tabs.find { it.id == store.selectedTabId }
-
-                val isHomepage = currentTab?.content?.url == "about:homepage"
-
-                // Apply same filtering logic for tab count
-                val activity = activity as? BrowserActivity
-                val isPrivateMode = activity?.browsingModeManager?.mode?.isPrivate ?: false
-                val profileManager =
-                    com.prirai.android.nira.browser.profile.ProfileManager.getInstance(requireContext())
-                val currentProfile = profileManager.getActiveProfile()
-                val currentProfileContextId = if (isPrivateMode) {
-                    "private"
-                } else {
-                    "profile_${currentProfile.id}"
-                }
-
-                val filteredTabsCount = store.tabs.count { tab ->
-                    if (tab.content.private != isPrivateMode) {
-                        false
-                    } else {
-                        (tab.contextId == currentProfileContextId) || (tab.contextId == null)
-                    }
-                }
-
-                toolbar.updateForContext(
-                    tab = currentTab,
-                    canGoBack = currentTab?.content?.canGoBack ?: false,
-                    canGoForward = currentTab?.content?.canGoForward ?: false,
-                    tabCount = filteredTabsCount,
-                    isHomepage = isHomepage
-                )
-            }
-        } catch (e: Exception) {
-            // Ignore errors if fragment is being destroyed
-        }
-    }
-
 
     override fun onResume() {
         super.onResume()
-        updateContextualToolbar()
+        // Contextual toolbar updates handled automatically by UnifiedToolbar
     }
 
     private fun observeTabChangesForToolbar() {
@@ -164,10 +108,7 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
                         tab.id
                     )
                 }.collect { tab ->
-                    // Update toolbar when navigation state changes (only if fragment is still attached)
-                    if (isAdded && view != null) {
-                        updateContextualToolbar()
-                    }
+                    // Toolbar updates handled automatically by UnifiedToolbar
                 }
             }
         }
@@ -176,10 +117,10 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
         viewLifecycleOwner.lifecycleScope.launch {
             requireContext().components.store.flowScoped { flow ->
                 flow.distinctUntilChangedBy { it.selectedTabId }.collect { state ->
-                    // Update toolbar when tab selection changes (only if fragment is still attached)
+                    // Navigate to ComposeHomeFragment when about:homepage tab is selected
                     if (isAdded && view != null) {
-                        updateContextualToolbar()
-                        
+                        // Toolbar updates handled automatically by UnifiedToolbar
+
                         // Navigate to ComposeHomeFragment when about:homepage tab is selected
                         // Only do this when switching TO a homepage tab, not when the current tab's URL changes
                         val selectedTab = state.tabs.find { it.id == state.selectedTabId }
@@ -211,41 +152,95 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
     }
 
 
-    private fun initializeModernToolbarSystem() {
+    override fun initializeUnifiedToolbar(view: View, tab: SessionState) {
         val prefs = UserPreferences(requireContext())
 
         try {
+            // Create UnifiedToolbar using the interactor from base class
+            _unifiedToolbar = com.prirai.android.nira.components.toolbar.unified.UnifiedToolbar.create(
+                context = requireContext(),
+                parent = binding.browserLayout,
+                lifecycleOwner = viewLifecycleOwner,
+                interactor = browserInteractor,
+                customTabSession = null,
+                store = requireContext().components.store
+            )
 
-            modernToolbarManager =
-                com.prirai.android.nira.components.toolbar.modern.ModernToolbarManager(
-                    container = binding.browserLayout,
-                    toolbarPosition = if (prefs.toolbarPosition == com.prirai.android.nira.components.toolbar.ToolbarPosition.BOTTOM.ordinal) {
-                        com.prirai.android.nira.components.toolbar.ToolbarPosition.BOTTOM
-                    } else {
-                        com.prirai.android.nira.components.toolbar.ToolbarPosition.TOP
-                    },
-                    fragment = this,
-                    lifecycleOwner = viewLifecycleOwner
-                )
+            // Set engine view for scroll behavior
+            unifiedToolbar?.setEngineView(binding.engineView)
+            
+            // Set tab selection listener
+            unifiedToolbar?.setOnTabSelectedListener { tabId ->
+                android.util.Log.d("BrowserFragment", "Tab pill clicked: $tabId")
+                requireContext().components.tabsUseCases.selectTab(tabId)
+                android.util.Log.d("BrowserFragment", "Tab selected in store, current selectedTabId: ${requireContext().components.store.state.selectedTabId}")
+                
+                // Navigate to the selected tab if needed
+                val selectedTab = requireContext().components.store.state.tabs.find { it.id == tabId }
+                if (selectedTab?.content?.url != "about:homepage") {
+                    // Already on BrowserFragment, just switch the tab
+                    // The tab content will update automatically via store observation
+                    android.util.Log.d("BrowserFragment", "Tab switched, SessionFeature should update EngineView now")
+                }
+            }
 
-            // Initialize with our existing browser toolbar and callbacks
-            modernToolbarManager?.initialize(
-                browserToolbarInstance = browserToolbarView.view,
-                onTabSelected = { tabId ->
-                    requireContext().components.tabsUseCases.selectTab(tabId)
-                },
-                onTabClosed = { tabId ->
-                    requireContext().components.tabsUseCases.removeTab(tabId)
-                },
-                onNavigationAction = { action ->
-                    handleNavigationAction(action)
-                },
-                onNewTabInIsland = { islandId ->
-                    handleNewTabInIsland(islandId)
-                })
+            // Set contextual toolbar listener
+            val contextualListener = object : com.prirai.android.nira.toolbar.ContextualBottomToolbar.ContextualToolbarListener {
+                override fun onBackClicked() {
+                    requireContext().components.sessionUseCases.goBack()
+                }
 
-            // Hide old separate toolbar components for both top and bottom positions when using modern toolbar
-            hideOldToolbarComponents(prefs.toolbarPosition)
+                override fun onForwardClicked() {
+                    requireContext().components.sessionUseCases.goForward()
+                }
+
+                override fun onBookmarksClicked() {
+                    val bookmarksBottomSheet = com.prirai.android.nira.browser.bookmark.ui.BookmarksBottomSheetFragment.newInstance()
+                    bookmarksBottomSheet.show(parentFragmentManager, "BookmarksBottomSheet")
+                }
+
+                override fun onShareClicked() {
+                    val state = requireContext().components.store.state
+                    val selectedTab = state.tabs.find { it.id == state.selectedTabId }
+                    val currentUrl = selectedTab?.content?.url
+                    if (!currentUrl.isNullOrBlank()) {
+                        val shareIntent = android.content.Intent()
+                        shareIntent.action = android.content.Intent.ACTION_SEND
+                        shareIntent.putExtra(android.content.Intent.EXTRA_TEXT, currentUrl)
+                        shareIntent.type = "text/plain"
+                        startActivity(android.content.Intent.createChooser(shareIntent, "Share"))
+                    }
+                }
+
+                override fun onTabCountClicked() {
+                    try {
+                        val tabsBottomSheet =
+                            com.prirai.android.nira.browser.tabs.TabsBottomSheetFragment.newInstance()
+                        tabsBottomSheet.show(
+                            parentFragmentManager,
+                            com.prirai.android.nira.browser.tabs.TabsBottomSheetFragment.TAG
+                        )
+                    } catch (e: Exception) {
+                        android.util.Log.e("UnifiedToolbar", "Failed to open tabs bottom sheet", e)
+                    }
+                }
+
+                override fun onMenuClicked() {
+                    // Open the browser menu via the toolbar interactor
+                    browserInteractor.onBrowserToolbarMenuItemTapped(ToolbarMenu.Item.Settings)
+                }
+
+                override fun onSearchClicked() {
+                    val directions = NavGraphDirections.actionGlobalSearchDialog(sessionId = null)
+                    nav(R.id.browserFragment, directions)
+                }
+
+                override fun onNewTabClicked() {
+                    requireContext().components.tabsUseCases.addTab.invoke("about:homepage")
+                }
+            }
+
+            unifiedToolbar?.setContextualToolbarListener(contextualListener)
 
             // Start observing tab changes for real-time updates
             observeTabChangesForModernToolbar()
@@ -253,183 +248,16 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
             // Initialize with current tab state
             initializeModernToolbarWithCurrentState()
 
-
         } catch (e: Exception) {
             // Fallback to the simple fix
+            android.util.Log.e("UnifiedToolbar", "Failed to initialize unified toolbar", e)
             applySimpleScrollBehaviorFix()
         }
     }
 
-    private fun handleNavigationAction(action: com.prirai.android.nira.components.toolbar.modern.ModernToolbarManager.NavigationAction) {
-        when (action) {
-            com.prirai.android.nira.components.toolbar.modern.ModernToolbarManager.NavigationAction.BACK -> {
-                requireContext().components.sessionUseCases.goBack()
-            }
+    // Legacy method - no longer used with UnifiedToolbar
+    // Kept for potential backward compatibility
 
-            com.prirai.android.nira.components.toolbar.modern.ModernToolbarManager.NavigationAction.FORWARD -> {
-                requireContext().components.sessionUseCases.goForward()
-            }
-
-            com.prirai.android.nira.components.toolbar.modern.ModernToolbarManager.NavigationAction.REFRESH -> {
-                requireContext().components.sessionUseCases.reload()
-            }
-
-            com.prirai.android.nira.components.toolbar.modern.ModernToolbarManager.NavigationAction.BOOKMARK -> {
-                // TODO: Implement bookmark functionality
-            }
-
-            com.prirai.android.nira.components.toolbar.modern.ModernToolbarManager.NavigationAction.SHARE -> {
-                val state = requireContext().components.store.state
-                val selectedTab = state.tabs.find { it.id == state.selectedTabId }
-                val currentUrl = selectedTab?.content?.url
-                if (!currentUrl.isNullOrBlank()) {
-                    val shareIntent = android.content.Intent()
-                    shareIntent.action = android.content.Intent.ACTION_SEND
-                    shareIntent.putExtra(android.content.Intent.EXTRA_TEXT, currentUrl)
-                    shareIntent.type = "text/plain"
-                    startActivity(android.content.Intent.createChooser(shareIntent, "Share"))
-                }
-            }
-
-            com.prirai.android.nira.components.toolbar.modern.ModernToolbarManager.NavigationAction.TAB_COUNT -> {
-                // Use the existing TabsBottomSheetFragment - exactly like the working implementation
-                try {
-                    val tabsBottomSheet =
-                        com.prirai.android.nira.browser.tabs.TabsBottomSheetFragment.newInstance()
-                    tabsBottomSheet.show(
-                        parentFragmentManager,
-                        com.prirai.android.nira.browser.tabs.TabsBottomSheetFragment.TAG
-                    )
-                } catch (e: Exception) {
-                    android.util.Log.e("ModernToolbar", "Failed to open tabs bottom sheet", e)
-                }
-            }
-
-            com.prirai.android.nira.components.toolbar.modern.ModernToolbarManager.NavigationAction.MENU -> {
-                // Use the EXACT same working approach from the original contextual toolbar
-                try {
-                    val context = requireContext()
-                    val components = context.components
-
-                    // Create a BrowserMenu instance exactly like the working implementation
-                    val browserMenu =
-                        com.prirai.android.nira.components.toolbar.BrowserMenu(
-                            context = context,
-                            store = components.store,
-                            onItemTapped = { item ->
-                                browserInteractor.onBrowserToolbarMenuItemTapped(item)
-                            },
-                            lifecycleOwner = viewLifecycleOwner,
-                            isPinningSupported = components.webAppUseCases.isPinningSupported(),
-                            shouldReverseItems = false
-                        )
-
-                    // Build and show the menu
-                    val menu = browserMenu.menuBuilder.build(context)
-
-                    // Get the modern toolbar system directly from the manager
-                    val modernToolbarSystem = modernToolbarManager?.modernToolbarSystem
-
-                    if (modernToolbarSystem != null) {
-                        // Find the contextual toolbar within the modern system
-                        val contextualToolbar =
-                            findContextualToolbarInModernSystem(modernToolbarSystem)
-                        val menuButton =
-                            contextualToolbar?.findViewById<View>(R.id.menu_button)
-
-                        if (menuButton != null) {
-                            // Use the same positioning approach as the working implementation
-                            // Create a temporary view above the button for better positioning
-                            val tempView = View(context)
-                            tempView.layoutParams = android.view.ViewGroup.LayoutParams(1, 1)
-
-                            // Add the temp view to the contextual toolbar parent
-                            contextualToolbar.addView(tempView)
-
-                            // Position the temp view above the menu button (same as working implementation)
-                            tempView.x = menuButton.x
-                            tempView.y = menuButton.y
-
-                            // Show menu anchored to temp view
-                            menu.show(anchor = tempView)
-
-                            // Clean up temp view after menu interaction
-                            tempView.postDelayed({
-                                try {
-                                    contextualToolbar.removeView(tempView)
-                                } catch (e: Exception) {
-                                    // Ignore if view was already removed
-                                }
-                            }, 36000)
-
-                        } else {
-                            // Fallback: show menu anchored to the modern toolbar system itself
-                            menu.show(anchor = modernToolbarSystem)
-                        }
-                    } else {
-                        android.util.Log.w(
-                            "ModernToolbar", "Modern toolbar system not found, using fallback"
-                        )
-                        // Ultimate fallback: show menu anchored to the browser layout
-                        menu.show(anchor = binding.browserLayout)
-                    }
-                } catch (e: Exception) {
-                    android.util.Log.e(
-                        "ModernToolbar", "Failed to open menu via modern approach", e
-                    )
-                    // Final fallback: try the original button click approach
-                    try {
-                        val menuButton = browserToolbarView.view.findViewById<View>(
-                            mozilla.components.browser.toolbar.R.id.mozac_browser_toolbar_menu
-                        )
-                        menuButton?.performClick()
-                    } catch (e2: Exception) {
-                        android.util.Log.e("ModernToolbar", "All menu approaches failed", e2)
-                    }
-                }
-            }
-
-            com.prirai.android.nira.components.toolbar.modern.ModernToolbarManager.NavigationAction.SEARCH -> {
-                // Navigate to search dialog
-                val directions = NavGraphDirections.actionGlobalSearchDialog(
-                    sessionId = null
-                )
-                nav(R.id.browserFragment, directions)
-            }
-
-            com.prirai.android.nira.components.toolbar.modern.ModernToolbarManager.NavigationAction.NEW_TAB -> {
-                // Create a new tab with the correct private mode and contextId
-                val activity = (requireActivity() as BrowserActivity)
-                val isPrivate = activity.browsingModeManager.mode.isPrivate
-                val currentProfile = activity.browsingModeManager.currentProfile
-                val contextId = if (isPrivate) "private" else "profile_${currentProfile.id}"
-
-                requireContext().components.tabsUseCases.addTab(
-                    url = "about:homepage",
-                    private = isPrivate,
-                    contextId = contextId,
-                    selectTab = true
-                )
-
-                // Navigate to Compose home fragment
-                try {
-                    androidx.navigation.fragment.NavHostFragment.findNavController(this).navigate(R.id.homeFragment)
-                } catch (e: Exception) {
-                    android.util.Log.e("BrowserFragment", "Failed to navigate to home", e)
-                }
-            }
-
-            com.prirai.android.nira.components.toolbar.modern.ModernToolbarManager.NavigationAction.BOOKMARKS -> {
-                try {
-                    // Use the EXACT same logic as the working contextual toolbar bookmark button
-                    browserInteractor.onBrowserToolbarMenuItemTapped(
-                        com.prirai.android.nira.components.toolbar.ToolbarMenu.Item.Bookmarks
-                    )
-                } catch (e: Exception) {
-                }
-            }
-        }
-    }
 
     private fun handleNewTabInIsland(islandId: String) {
         // Navigate to Compose home fragment
@@ -513,39 +341,17 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
                     val currentTabIds = state.tabs.map { it.id }.toSet()
                     val newTabIds = currentTabIds - lastTabIds
 
-                    // Auto-group new tabs with their parent
-                    newTabIds.forEach { newTabId ->
-                        val newTab = state.tabs.find { it.id == newTabId }
-                        val parentId = newTab?.parentId
-                        if (parentId != null) {
-                            // Record parent-child relationship for island auto-grouping
-                            modernToolbarManager?.recordTabParent(newTabId, parentId)
-                            modernToolbarManager?.autoGroupNewTab(newTabId)
-                        }
-                    }
-
                     lastTabIds = currentTabIds
 
-                    // Update tabs in toolbar
-                    modernToolbarManager?.updateTabs(filteredTabs, state.selectedTabId)
+                    // Tabs are updated automatically via store observation in UnifiedToolbar
 
-                    // Update navigation state
-                    val selectedTab = state.tabs.find { it.id == state.selectedTabId }
-                    selectedTab?.let { tab ->
-                        modernToolbarManager?.updateNavigationState(
-                            canGoBack = tab.content.canGoBack,
-                            canGoForward = tab.content.canGoForward
-                        )
-                        modernToolbarManager?.updateLoadingState(tab.content.loading)
-                    }
-
-                    // Update modern toolbar with current context
+                    // Update toolbar with current context
                     val currentSelectedTab = state.tabs.find { it.id == state.selectedTabId }
                     val currentUrl = currentSelectedTab?.content?.url ?: ""
                     // Properly detect homepage - both empty URL and about:homepage
                     val currentIsHomepage = currentUrl.isEmpty() || currentUrl == "about:homepage"
 
-                    modernToolbarManager?.updateModernContext(
+                    unifiedToolbar?.updateContextualToolbar(
                         tab = currentSelectedTab,
                         canGoBack = currentSelectedTab?.content?.canGoBack ?: false,
                         canGoForward = currentSelectedTab?.content?.canGoForward ?: false,
@@ -587,7 +393,7 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
         // Properly detect homepage - both empty URL and about:homepage
         val isHomepage = currentUrl.isEmpty() || currentUrl == "about:homepage"
 
-        modernToolbarManager?.updateModernContext(
+        unifiedToolbar?.updateContextualToolbar(
             tab = selectedTab,
             canGoBack = selectedTab?.content?.canGoBack ?: false,
             canGoForward = selectedTab?.content?.canGoForward ?: false,
@@ -597,66 +403,9 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
 
     }
 
-    private fun hideOldToolbarComponents(toolbarPosition: Int) {
+    // Legacy method removed - no longer needed with UnifiedToolbar
 
-        // Hide old separate toolbar components that are no longer needed
-        binding.tabGroupBar.visibility = View.GONE
-        binding.contextualBottomToolbar.visibility = View.GONE
-
-        // Hide any duplicate or conflicting toolbar components in the coordinator layout
-        try {
-            val coordinatorLayout = binding.browserLayout
-            for (i in 0 until coordinatorLayout.childCount) {
-                val child = coordinatorLayout.getChildAt(i)
-
-                // Look for any remaining BrowserToolbar or toolbar-related views that aren't the modern system
-                if (child is mozilla.components.browser.toolbar.BrowserToolbar && child != browserToolbarView.view) {
-                    child.visibility = View.GONE
-                }
-
-                // Check for views with the opposite gravity that might conflict
-                val layoutParams = child.layoutParams
-                if (layoutParams is androidx.coordinatorlayout.widget.CoordinatorLayout.LayoutParams) {
-                    val isModernToolbar =
-                        child is com.prirai.android.nira.components.toolbar.modern.ModernToolbarSystem
-
-                    if (!isModernToolbar) {
-                        if (toolbarPosition == com.prirai.android.nira.components.toolbar.ToolbarPosition.BOTTOM.ordinal) {
-                            // Hide old bottom components
-                            if ((layoutParams.gravity and android.view.Gravity.BOTTOM) == android.view.Gravity.BOTTOM) {
-                                child.visibility = View.GONE
-                            }
-                        } else {
-                            // Hide old top components
-                            if ((layoutParams.gravity and android.view.Gravity.TOP) == android.view.Gravity.TOP || layoutParams.gravity == android.view.Gravity.NO_GRAVITY) {
-                                // Don't hide the EngineView or other essential components
-                                if (child.javaClass.simpleName.contains("Toolbar") || child.javaClass.simpleName.contains(
-                                        "Tab"
-                                    )
-                                ) {
-                                    child.visibility = View.GONE
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        } catch (e: Exception) {
-            android.util.Log.w("ModernToolbar", "Error hiding old components", e)
-        }
-
-    }
-
-    private fun findContextualToolbarInModernSystem(modernToolbarSystem: com.prirai.android.nira.components.toolbar.modern.ModernToolbarSystem): android.view.ViewGroup? {
-        // Search through the modern toolbar system's children to find the contextual toolbar
-        for (i in 0 until modernToolbarSystem.childCount) {
-            val child = modernToolbarSystem.getChildAt(i)
-            if (child is ContextualBottomToolbar) {
-                return child
-            }
-        }
-        return null
-    }
+    // Legacy method removed - no longer needed with UnifiedToolbar
 
     private fun applySimpleScrollBehaviorFix() {
         val prefs = UserPreferences(requireContext())
@@ -693,13 +442,8 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
      * Follows Mozilla's pattern from Fenix.
      */
     private fun expandBrowserViewForFullscreen() {
-        // Hide modern toolbar systems
-        modernToolbarManager?.modernToolbarSystem?.apply {
-            collapse()
-            isVisible = false
-        }
-
-        modernToolbarManager?.topToolbarSystem?.apply {
+        // Hide unified toolbar
+        unifiedToolbar?.apply {
             collapse()
             isVisible = false
         }
@@ -714,17 +458,8 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
     private fun collapseBrowserViewFromFullscreen() {
         if (!webAppToolbarShouldBeVisible) return
 
-        // Show and expand modern toolbar systems
-        modernToolbarManager?.modernToolbarSystem?.apply {
-            isVisible = true
-            post {
-                requestApplyInsets()
-                expand()
-                requestLayout()
-            }
-        }
-
-        modernToolbarManager?.topToolbarSystem?.apply {
+        // Show and expand unified toolbar
+        unifiedToolbar?.apply {
             isVisible = true
             post {
                 requestApplyInsets()

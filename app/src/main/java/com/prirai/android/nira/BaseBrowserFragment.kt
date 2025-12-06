@@ -124,6 +124,15 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
     internal val browserToolbarView: BrowserToolbarView
         get() = _browserToolbarView!!
 
+    // Unified Toolbar System
+    @VisibleForTesting
+    @Suppress("VariableNaming")
+    internal var _unifiedToolbar: com.prirai.android.nira.components.toolbar.unified.UnifiedToolbar? = null
+
+    @VisibleForTesting
+    internal val unifiedToolbar: com.prirai.android.nira.components.toolbar.unified.UnifiedToolbar?
+        get() = _unifiedToolbar
+
     protected val thumbnailsFeature = ViewBoundFeatureWrapper<BrowserThumbnails>()
 
     private val sessionFeature = ViewBoundFeatureWrapper<SessionFeature>()
@@ -163,10 +172,16 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
+        // For custom tabs: read EXTRA_SESSION_ID (used by external apps)
+        // For normal browsing: customTabSessionId should be null so SessionFeature follows selected tab
         customTabSessionId = requireArguments().getString(EXTRA_SESSION_ID)
 
         _binding = FragmentBrowserBinding.inflate(inflater, container, false)
         val view = binding.root
+        
+        // Note: activeSessionId is provided during navigation but we DON'T need to select it again here
+        // because it's already selected in the calling fragment (ComposeHomeFragment) before navigation
+        // getCurrentTab() will return the already-selected tab which is what we want
 
         val activity = activity as BrowserActivity
         val originalContext = ActivityContextWrapper.getOriginalContext(activity)
@@ -262,6 +277,7 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
             browserToolbarMenuController
         )
 
+        // Create legacy BrowserToolbarView for backward compatibility (web extensions, etc.)
         _browserToolbarView = BrowserToolbarView(
             container = binding.browserLayout,
             toolbarPosition = if (UserPreferences(context).toolbarPosition == ToolbarPosition.BOTTOM.ordinal) ToolbarPosition.BOTTOM else ToolbarPosition.TOP,
@@ -270,6 +286,9 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
             lifecycleOwner = viewLifecycleOwner
         )
 
+        // Hide the legacy toolbar view - UnifiedToolbar will be used instead
+        browserToolbarView.view.visibility = android.view.View.GONE
+
         //TODO: show ssl dialog
 
         toolbarIntegration.set(
@@ -277,6 +296,9 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
             owner = this,
             view = view
         )
+
+        // Initialize UnifiedToolbar for subclasses
+        initializeUnifiedToolbar(view, tab)
 
         // Set up custom Find in Page component
         setupFindInPage(view)
@@ -378,6 +400,7 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
             view = view
         )
 
+        android.util.Log.d("BaseBrowserFragment", "Initializing SessionFeature with customTabSessionId=$customTabSessionId")
         sessionFeature.set(
             feature = SessionFeature(
                 requireContext().components.store,
@@ -389,6 +412,7 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
             owner = this,
             view = view
         )
+        android.util.Log.d("BaseBrowserFragment", "SessionFeature initialized, will observe: ${if (customTabSessionId == null) "selected tab (dynamic)" else "tab $customTabSessionId (locked)"}")
 
         searchFeature.set(
             feature = SearchFeature(store, customTabSessionId) { request, tabId ->
@@ -711,7 +735,8 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
         if (browserInitialized) {
             view?.let { view ->
                 fullScreenChanged(false)
-                browserToolbarView.expand()
+                // Expand unified toolbar instead of legacy toolbar
+                unifiedToolbar?.expand()
                 resumeDownloadDialogState(selectedTab.id)
             }
         } else {
@@ -989,6 +1014,14 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
     /*
      * Dereference these views when the fragment view is destroyed to prevent memory leaks
      */
+    /**
+     * Initialize UnifiedToolbar - can be overridden by subclasses for custom behavior
+     */
+    protected open fun initializeUnifiedToolbar(view: View, tab: SessionState) {
+        // Default implementation - subclasses can override
+        // This is intentionally empty in the base class to allow subclasses full control
+    }
+
     override fun onDestroyView() {
         super.onDestroyView()
 
@@ -997,6 +1030,7 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
         binding.engineView.setActivityContext(null)
         _browserToolbarView = null
         _browserInteractor = null
+        _unifiedToolbar = null
         _binding = null
     }
 

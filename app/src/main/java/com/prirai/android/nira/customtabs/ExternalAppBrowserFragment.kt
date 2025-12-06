@@ -60,8 +60,9 @@ class ExternalAppBrowserFragment : CustomTabBrowserFragment() {
 
     override fun onInitializeUI(view: View, tab: SessionState) {
         // Hide unnecessary UI elements for custom tabs
-        binding.contextualBottomToolbar.isVisible = false
-        binding.tabGroupBar?.isVisible = false
+        // Contextual toolbar and tab group bar are now part of UnifiedToolbar
+        // binding.contextualBottomToolbar.isVisible = false // Removed with legacy toolbar
+        // binding.tabGroupBar?.isVisible = false // Removed with legacy toolbar
         
         // Add custom minimal header
         addCustomHeader(view, tab)
