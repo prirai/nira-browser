@@ -33,11 +33,9 @@ import com.prirai.android.nira.components.StoreProvider
 import com.prirai.android.nira.components.toolbar.BrowserFragmentStore
 import com.prirai.android.nira.components.toolbar.BrowserFragmentState
 import com.prirai.android.nira.components.toolbar.BrowserInteractor
-import com.prirai.android.nira.components.toolbar.BrowserToolbarView
 import com.prirai.android.nira.components.toolbar.BrowserToolbarViewInteractor
 import com.prirai.android.nira.components.toolbar.DefaultBrowserToolbarController
 import com.prirai.android.nira.components.toolbar.DefaultBrowserToolbarMenuController
-import com.prirai.android.nira.components.toolbar.ToolbarIntegration
 import com.prirai.android.nira.components.toolbar.ToolbarPosition
 import com.prirai.android.nira.databinding.FragmentBrowserBinding
 import com.prirai.android.nira.downloads.DownloadService
@@ -116,14 +114,6 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
     protected val browserInteractor: BrowserToolbarViewInteractor
         get() = _browserInteractor!!
 
-    @VisibleForTesting
-    @Suppress("VariableNaming")
-    internal var _browserToolbarView: BrowserToolbarView? = null
-
-    @VisibleForTesting
-    internal val browserToolbarView: BrowserToolbarView
-        get() = _browserToolbarView!!
-
     // Unified Toolbar System
     @VisibleForTesting
     @Suppress("VariableNaming")
@@ -141,7 +131,6 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
     private val appLinksFeature = ViewBoundFeatureWrapper<AppLinksFeature>()
     private val promptsFeature = ViewBoundFeatureWrapper<PromptFeature>()
     private var findInPageComponent: FindInPageComponent? = null
-    private val toolbarIntegration = ViewBoundFeatureWrapper<ToolbarIntegration>()
     private val sitePermissionsFeature = ViewBoundFeatureWrapper<SitePermissionsFeature>()
     private val fullScreenFeature = ViewBoundFeatureWrapper<FullScreenFeature>()
     private val swipeRefreshFeature = ViewBoundFeatureWrapper<SwipeRefreshFeature>()
@@ -277,26 +266,6 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
             browserToolbarMenuController
         )
 
-        // Create legacy BrowserToolbarView for backward compatibility (web extensions, etc.)
-        _browserToolbarView = BrowserToolbarView(
-            container = binding.browserLayout,
-            toolbarPosition = if (UserPreferences(context).toolbarPosition == ToolbarPosition.BOTTOM.ordinal) ToolbarPosition.BOTTOM else ToolbarPosition.TOP,
-            interactor = browserInteractor,
-            customTabSession = customTabSessionId?.let { store.state.findCustomTab(it) },
-            lifecycleOwner = viewLifecycleOwner
-        )
-
-        // Hide the legacy toolbar view - UnifiedToolbar will be used instead
-        browserToolbarView.view.visibility = android.view.View.GONE
-
-        //TODO: show ssl dialog
-
-        toolbarIntegration.set(
-            feature = browserToolbarView.toolbarIntegration,
-            owner = this,
-            view = view
-        )
-
         // Initialize UnifiedToolbar for subclasses
         initializeUnifiedToolbar(view, tab)
 
@@ -317,34 +286,37 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
             view = view
         )
 
-        readerViewFeature.set(
-            feature = ReaderModeIntegration(
-                requireContext(),
-                components.engine,
-                components.store,
-                browserToolbarView.view,
-                binding.readerViewBar,
-                binding.readerViewAppearanceButton
-            ),
-            owner = this,
-            view = view
-        )
+        // Setup reader view and reload/stop button features using unifiedToolbar's browser toolbar
+        unifiedToolbar?.getBrowserToolbar()?.let { toolbar ->
+            readerViewFeature.set(
+                feature = ReaderModeIntegration(
+                    requireContext(),
+                    components.engine,
+                    components.store,
+                    toolbar,
+                    binding.readerViewBar,
+                    binding.readerViewAppearanceButton
+                ),
+                owner = this,
+                view = view
+            )
 
-        reloadStopButtonFeature.set(
-            feature = ReloadStopButtonIntegration(
-                context = requireContext(),
-                store = components.store,
-                toolbar = browserToolbarView.view,
-                onReload = { components.sessionUseCases.reload() },
-                onStop = {
-                    components.store.state.selectedTab?.let {
-                        components.sessionUseCases.stopLoading.invoke(it.id)
+            reloadStopButtonFeature.set(
+                feature = ReloadStopButtonIntegration(
+                    context = requireContext(),
+                    store = components.store,
+                    toolbar = toolbar,
+                    onReload = { components.sessionUseCases.reload() },
+                    onStop = {
+                        components.store.state.selectedTab?.let {
+                            components.sessionUseCases.stopLoading.invoke(it.id)
+                        }
                     }
-                }
-            ),
-            owner = this,
-            view = view
-        )
+                ),
+                owner = this,
+                view = view
+            )
+        }
 
         promptsFeature.set(
             PromptFeature(
@@ -400,7 +372,6 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
             view = view
         )
 
-        android.util.Log.d("BaseBrowserFragment", "Initializing SessionFeature with customTabSessionId=$customTabSessionId")
         sessionFeature.set(
             feature = SessionFeature(
                 requireContext().components.store,
@@ -412,7 +383,6 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
             owner = this,
             view = view
         )
-        android.util.Log.d("BaseBrowserFragment", "SessionFeature initialized, will observe: ${if (customTabSessionId == null) "selected tab (dynamic)" else "tab $customTabSessionId (locked)"}")
 
         searchFeature.set(
             feature = SearchFeature(store, customTabSessionId) { request, tabId ->
@@ -586,7 +556,7 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
                 }
                 .collect {
                     findInPageComponent?.onBackPressed()
-                    browserToolbarView.expand()
+                    unifiedToolbar?.expand()
                 }
         }
     }
@@ -616,7 +586,7 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
             return
         }
 
-        browserToolbarView.expand()
+        unifiedToolbar?.expand()
     }
 
     @VisibleForTesting
@@ -924,8 +894,8 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
             (view as? SwipeGestureLayout)?.isSwipeEnabled = false
 
             // Completely hide and collapse toolbar
-            browserToolbarView.collapse()
-            browserToolbarView.view.isVisible = false
+            unifiedToolbar?.collapse()
+            unifiedToolbar?.visibility = android.view.View.GONE
             
             // Reset engine view layout - remove all margins and behaviors
             val browserEngine = binding.swipeRefresh.layoutParams as CoordinatorLayout.LayoutParams
@@ -951,10 +921,10 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
             (view as? SwipeGestureLayout)?.isSwipeEnabled = true
 
             if (webAppToolbarShouldBeVisible) {
-                browserToolbarView.view.isVisible = true
+                unifiedToolbar?.visibility = android.view.View.VISIBLE
                 val toolbarHeight = resources.getDimensionPixelSize(R.dimen.browser_toolbar_height)
                 initializeEngineView(toolbarHeight)
-                browserToolbarView.expand()
+                unifiedToolbar?.expand()
             }
             
             // Restore window insets padding to swipeRefresh
@@ -1028,7 +998,6 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
         findInPageComponent?.destroy()
         findInPageComponent = null
         binding.engineView.setActivityContext(null)
-        _browserToolbarView = null
         _browserInteractor = null
         _unifiedToolbar = null
         _binding = null
@@ -1043,15 +1012,15 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
     }
 
     override fun onAccessibilityStateChanged(enabled: Boolean) {
-        if (_browserToolbarView != null) {
-            browserToolbarView.setToolbarBehavior(enabled)
-        }
+        // Toolbar behavior is now handled by UnifiedToolbar
+        // No action needed here as UnifiedToolbar handles scroll behavior internally
     }
 
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
 
-        _browserToolbarView?.dismissMenu()
+        // Dismiss menu from unified toolbar's browser toolbar
+        unifiedToolbar?.getBrowserToolbar()?.dismissMenu()
     }
 
     // This method is called in response to native web extension messages from
@@ -1059,11 +1028,7 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
     // messages are processed the fragment/view may no longer be attached.
     internal fun safeInvalidateBrowserToolbarView() {
         context?.let {
-            val toolbarView = _browserToolbarView
-            if (toolbarView != null) {
-                toolbarView.view.invalidateActions()
-                toolbarView.toolbarIntegration.invalidateMenu()
-            }
+            unifiedToolbar?.getBrowserToolbar()?.invalidateActions()
         }
     }
 }

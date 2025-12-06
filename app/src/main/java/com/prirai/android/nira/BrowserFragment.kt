@@ -41,16 +41,19 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
         val context = requireContext()
         val components = context.components
 
-        binding.gestureLayout.addGestureListener(
-            ToolbarGestureHandler(
-                activity = requireActivity(),
-                contentLayout = binding.browserLayout,
-                tabPreview = binding.tabPreview,
-                toolbarLayout = browserToolbarView.view,
-                store = components.store,
-                selectTabUseCase = components.tabsUseCases.selectTab
+        // Only add gesture handler if unifiedToolbar has a browser toolbar
+        unifiedToolbar?.getBrowserToolbar()?.let { toolbar ->
+            binding.gestureLayout.addGestureListener(
+                ToolbarGestureHandler(
+                    activity = requireActivity(),
+                    contentLayout = binding.browserLayout,
+                    tabPreview = binding.tabPreview,
+                    toolbarLayout = toolbar,
+                    store = components.store,
+                    selectTabUseCase = components.tabsUseCases.selectTab
+                )
             )
-        )
+        }
 
         thumbnailsFeature.set(
             feature = BrowserThumbnails(context, binding.engineView, components.store),
@@ -58,20 +61,23 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
             view = view
         )
 
-        if (UserPreferences(requireContext()).barAddonsList.isNotEmpty()) {
-            webExtToolbarFeature.set(
-                feature = WebExtensionToolbarFeature(
-                    browserToolbarView.view,
-                    components.store,
-                    UserPreferences(requireContext()).barAddonsList.split(","),
-                ), owner = this, view = view
-            )
-        } else if (UserPreferences(requireContext()).showAddonsInBar) {
-            webExtToolbarFeature.set(
-                feature = WebExtensionToolbarFeature(
-                    browserToolbarView.view, components.store, showAllExtensions = true
-                ), owner = this, view = view
-            )
+        // Setup web extension toolbar feature using unifiedToolbar's browser toolbar
+        unifiedToolbar?.getBrowserToolbar()?.let { toolbar ->
+            if (UserPreferences(requireContext()).barAddonsList.isNotEmpty()) {
+                webExtToolbarFeature.set(
+                    feature = WebExtensionToolbarFeature(
+                        toolbar,
+                        components.store,
+                        UserPreferences(requireContext()).barAddonsList.split(","),
+                    ), owner = this, view = view
+                )
+            } else if (UserPreferences(requireContext()).showAddonsInBar) {
+                webExtToolbarFeature.set(
+                    feature = WebExtensionToolbarFeature(
+                        toolbar, components.store, showAllExtensions = true
+                    ), owner = this, view = view
+                )
+            }
         }
 
         windowFeature.set(
@@ -171,17 +177,7 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
             
             // Set tab selection listener
             unifiedToolbar?.setOnTabSelectedListener { tabId ->
-                android.util.Log.d("BrowserFragment", "Tab pill clicked: $tabId")
                 requireContext().components.tabsUseCases.selectTab(tabId)
-                android.util.Log.d("BrowserFragment", "Tab selected in store, current selectedTabId: ${requireContext().components.store.state.selectedTabId}")
-                
-                // Navigate to the selected tab if needed
-                val selectedTab = requireContext().components.store.state.tabs.find { it.id == tabId }
-                if (selectedTab?.content?.url != "about:homepage") {
-                    // Already on BrowserFragment, just switch the tab
-                    // The tab content will update automatically via store observation
-                    android.util.Log.d("BrowserFragment", "Tab switched, SessionFeature should update EngineView now")
-                }
             }
 
             // Set contextual toolbar listener
@@ -221,7 +217,7 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
                             com.prirai.android.nira.browser.tabs.TabsBottomSheetFragment.TAG
                         )
                     } catch (e: Exception) {
-                        android.util.Log.e("UnifiedToolbar", "Failed to open tabs bottom sheet", e)
+                        // Silently handle tab sheet opening failure
                     }
                 }
 
@@ -249,8 +245,7 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
             initializeModernToolbarWithCurrentState()
 
         } catch (e: Exception) {
-            // Fallback to the simple fix
-            android.util.Log.e("UnifiedToolbar", "Failed to initialize unified toolbar", e)
+            // Silently handle toolbar initialization failure and apply simple fix
             applySimpleScrollBehaviorFix()
         }
     }
