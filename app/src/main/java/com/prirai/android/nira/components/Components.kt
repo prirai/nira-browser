@@ -100,8 +100,8 @@ open class Components(private val applicationContext: Context) {
 
     val faviconCache by lazy { FaviconCache.getInstance(applicationContext) }
 
-    val tabGroupManager by lazy { 
-        com.prirai.android.nira.browser.tabgroups.TabGroupManager(applicationContext)
+    val tabGroupManager by lazy {
+        com.prirai.android.nira.browser.tabgroups.UnifiedTabGroupManager.getInstance(applicationContext)
     }
 
     val fileSizeFormatter by lazy { DefaultFileSizeFormatter(applicationContext) }

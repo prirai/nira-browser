@@ -81,6 +81,10 @@ class UnifiedToolbar @JvmOverloads constructor(
     private var showContextualToolbar: Boolean = prefs.showContextualToolbar
 
     init {
+        // Allow children to draw outside bounds (for elevated tab pills during drag)
+        clipChildren = false
+        clipToPadding = false
+        
         // Add toolbarSystem as child
         addView(toolbarSystem, LayoutParams(
             LayoutParams.MATCH_PARENT,
@@ -193,7 +197,18 @@ class UnifiedToolbar @JvmOverloads constructor(
                     // Island renaming is handled by the tab group system
                 },
                 onNewTabInIsland = { islandId ->
-                    // New tab creation in island is handled by tab management
+                    // Create a new tab and add it to the specified island (tab group)
+                    val newTabId = context.components.tabsUseCases.addTab(
+                        url = "about:blank",
+                        selectTab = true,
+                        private = false
+                    )
+
+                    // Add the new tab to the island/group using UnifiedTabGroupManager
+                    lifecycleOwner.lifecycleScope.launch {
+                        val unifiedManager = com.prirai.android.nira.browser.tabgroups.UnifiedTabGroupManager.getInstance(context)
+                        unifiedManager.addTabToGroup(newTabId, islandId)
+                    }
                 },
                 onProfileSelected = { profile ->
                     // Switch to the selected profile and reload to apply changes

@@ -157,9 +157,10 @@ class TabGroupWithProfileSwitcher @JvmOverloads constructor(
         onIslandRenamed: ((String, String) -> Unit)? = null,
         onNewTabInIsland: ((String) -> Unit)? = null,
         onProfileSelected: (BrowserProfile) -> Unit,
-        onPrivateModeSelected: (() -> Unit)? = null
+        onPrivateModeSelected: (() -> Unit)? = null,
+        onTabDuplicated: ((String) -> Unit)? = null
     ) {
-        tabGroupView.setup(onTabSelected, onTabClosed, onIslandRenamed, onNewTabInIsland)
+        tabGroupView.setup(onTabSelected, onTabClosed, onIslandRenamed, onNewTabInIsland, onTabDuplicated)
         this.onProfileSelected = onProfileSelected
         this.onPrivateModeSelected = onPrivateModeSelected
         

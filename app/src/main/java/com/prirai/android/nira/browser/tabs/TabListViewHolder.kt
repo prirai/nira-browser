@@ -149,7 +149,8 @@ class TabListViewHolder(
             CoroutineScope(Dispatchers.Main).launch {
                 try {
                     val tabGroupManager = itemView.context.components.tabGroupManager
-                    val groupName = tabGroupManager.getGroupNameForTab(tabId)
+                    val groupData = tabGroupManager.getGroupForTab(tabId)
+                    val groupName = groupData?.name
 
                     // Only show indicator if group name is not null and not blank
                     if (groupName != null && groupName.isNotBlank()) {

@@ -35,7 +35,8 @@ class ModernTabPillAdapter(
     private var onIslandHeaderClick: (String) -> Unit = {},
     private var onIslandLongPress: (String) -> Unit = {},
     private var onIslandPlusClick: (String) -> Unit = {},
-    private var onTabUngroupFromIsland: ((String, String) -> Unit)? = null
+    private var onTabUngroupFromIsland: ((String, String) -> Unit)? = null,
+    private var onTabDuplicate: ((String) -> Unit)? = null
 ) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
     private var displayItems = mutableListOf<TabPillItem>()
@@ -259,7 +260,8 @@ class ModernTabPillAdapter(
         onIslandHeaderClick: (String) -> Unit = {},
         onIslandLongPress: (String) -> Unit = {},
         onIslandPlusClick: (String) -> Unit = {},
-        onTabUngroupFromIsland: ((String, String) -> Unit)? = null
+        onTabUngroupFromIsland: ((String, String) -> Unit)? = null,
+        onTabDuplicate: ((String) -> Unit)? = null
     ) {
         this.onTabClick = onTabClick
         this.onTabClose = onTabClose
@@ -267,6 +269,7 @@ class ModernTabPillAdapter(
         this.onIslandLongPress = onIslandLongPress
         this.onIslandPlusClick = onIslandPlusClick
         this.onTabUngroupFromIsland = onTabUngroupFromIsland
+        this.onTabDuplicate = onTabDuplicate
     }
 
     // ViewHolder for regular tabs
@@ -313,8 +316,8 @@ class ModernTabPillAdapter(
             setupStandaloneTabSwipeGesture(tab.id)
 
             // Add long-press for context menu
+            // Note: Only show if isDragging flag is not set by touch handler
             cardView.setOnLongClickListener {
-                // Don't show menu if we're dragging
                 if (!isDragging) {
                     vibrateHaptic()
                     showStandaloneTabContextMenu(cardView, tab.id)
@@ -332,16 +335,28 @@ class ModernTabPillAdapter(
         private fun setupStandaloneTabSwipeGesture(tabId: String) {
             var startY = 0f
             var startX = 0f
-            var isDragging = false
+            var localIsDragging = false
             var hasMoved = false
+            var dragClone: View? = null
+            var decorView: ViewGroup? = null
 
             cardView.setOnTouchListener { v, event ->
                 when (event.action) {
                     android.view.MotionEvent.ACTION_DOWN -> {
                         startY = event.rawY
                         startX = event.rawX
-                        isDragging = false
+                        localIsDragging = false
                         hasMoved = false
+                        isDragging = false // Reset class-level isDragging
+                        
+                        // Post a delayed check to set isDragging=true if touch is still down
+                        // This prevents long-press menu from showing during drag
+                        cardView.postDelayed({
+                            if (!localIsDragging && !hasMoved) {
+                                // Touch is being held without movement
+                                // Don't set isDragging to allow long-press to proceed
+                            }
+                        }, 100)
                         false
                     }
 
@@ -352,23 +367,53 @@ class ModernTabPillAdapter(
                         // Mark as moved if finger moved significantly
                         if (deltaX > 20 || Math.abs(deltaY) > 20) {
                             hasMoved = true
+                            isDragging = true // Set class-level flag to prevent long-press menu
                         }
 
                         // Only start dragging if moving up, not sideways
-                        if (deltaY > 20 && deltaX < 50 && !isDragging) {
+                        if (deltaY > 20 && deltaX < 50 && !localIsDragging) {
+                            localIsDragging = true
                             isDragging = true
                             v.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS)
+                            
+                            // Create clone and add to DecorView
+                            val activity = itemView.context as? android.app.Activity
+                            decorView = activity?.window?.decorView as? ViewGroup
+                            
+                            if (decorView != null) {
+                                // Hide original
+                                cardView.alpha = 0f
+                                
+                                // Create clone
+                                dragClone = createTabClone()
+                                
+                                // Position clone at original location
+                                val location = IntArray(2)
+                                cardView.getLocationInWindow(location)
+                                dragClone?.x = location[0].toFloat()
+                                dragClone?.y = location[1].toFloat()
+                                
+                                // Add to decorView
+                                decorView?.addView(dragClone, ViewGroup.LayoutParams(
+                                    cardView.width,
+                                    cardView.height
+                                ))
+                            }
                         }
 
-                        if (isDragging) {
-                            // Visual feedback during drag - elevate above container
+                        if (localIsDragging && dragClone != null) {
+                            // Update clone position to follow finger
+                            val location = IntArray(2)
+                            cardView.getLocationInWindow(location)
+                            
+                            dragClone?.y = location[1].toFloat() - deltaY
+                            
+                            // Visual feedback during drag
                             val progress = (deltaY / 100f).coerceIn(0f, 1f)
-                            cardView.scaleX = 1f - (progress * 0.2f)
-                            cardView.scaleY = 1f - (progress * 0.2f)
-                            cardView.rotation = -progress * 10f
-                            cardView.alpha = 1f - (progress * 0.3f)
-                            cardView.translationY = -deltaY
-                            cardView.elevation = 16f
+                            dragClone?.scaleX = 1f - (progress * 0.2f)
+                            dragClone?.scaleY = 1f - (progress * 0.2f)
+                            dragClone?.rotation = -progress * 10f
+                            dragClone?.alpha = 1f - (progress * 0.3f)
                             true
                         } else {
                             false
@@ -376,34 +421,54 @@ class ModernTabPillAdapter(
                     }
 
                     android.view.MotionEvent.ACTION_UP, android.view.MotionEvent.ACTION_CANCEL -> {
-                        if (isDragging) {
+                        if (localIsDragging) {
                             val deltaY = startY - event.rawY
                             if (deltaY > 100) {
-                                // Trigger delete animation
-                                animateStandaloneTabDelete()
-                            } else {
-                                // Spring back
-                                cardView.animate()
-                                    .scaleX(1f)
-                                    .scaleY(1f)
-                                    .rotation(0f)
-                                    .alpha(1f)
-                                    .translationY(0f)
-                                    .setDuration(200)
-                                    .withEndAction {
-                                        cardView.elevation = 0f
+                                // Animate clone flying away
+                                dragClone?.animate()
+                                    ?.translationY(-500f)
+                                    ?.rotation(-30f)
+                                    ?.scaleX(0.3f)
+                                    ?.scaleY(0.3f)
+                                    ?.alpha(0f)
+                                    ?.setDuration(250)
+                                    ?.withEndAction {
+                                        decorView?.removeView(dragClone)
+                                        dragClone = null
+                                        // Trigger actual delete
+                                        currentTabId?.let { 
+                                            android.util.Log.d("ModernTabPillAdapter", "Deleting standalone tab: $it")
+                                            onTabClose(it) 
+                                        }
                                     }
-                                    .start()
+                                    ?.start()
+                            } else {
+                                // Spring back - animate clone back and show original
+                                dragClone?.animate()
+                                    ?.scaleX(1f)
+                                    ?.scaleY(1f)
+                                    ?.rotation(0f)
+                                    ?.alpha(0f)
+                                    ?.setDuration(200)
+                                    ?.withEndAction {
+                                        decorView?.removeView(dragClone)
+                                        dragClone = null
+                                        cardView.alpha = 1f
+                                        isDragging = false
+                                    }
+                                    ?.start()
                             }
-                            isDragging = false
+                            localIsDragging = false
                             hasMoved = false
                             true
                         } else if (hasMoved) {
-                            // Finger moved but didn't drag up - don't trigger click
+                            // Finger moved but didn't drag up - don't trigger click or long-press
                             hasMoved = false
+                            isDragging = false
                             true
                         } else {
-                            // No movement - allow click to proceed
+                            // No movement - allow click/long-press to proceed
+                            isDragging = false
                             false
                         }
                     }
@@ -415,16 +480,16 @@ class ModernTabPillAdapter(
 
         private fun showStandaloneTabContextMenu(anchorView: View, tabId: String) {
             val wrapper = android.view.ContextThemeWrapper(itemView.context, R.style.RoundedPopupMenu)
-            val popupMenu = android.widget.PopupMenu(wrapper, anchorView, android.view.Gravity.NO_GRAVITY, 
+            val popupMenu = android.widget.PopupMenu(wrapper, anchorView, android.view.Gravity.NO_GRAVITY,
                 0, R.style.RoundedPopupMenu)
-            
+
             // Add menu items for standalone tabs with icons
             val duplicateItem = popupMenu.menu.add(0, 1, 0, "Duplicate Tab")
             duplicateItem.setIcon(android.R.drawable.ic_menu_add)
-            
+
             val closeItem = popupMenu.menu.add(0, 2, 1, "Close Tab")
             closeItem.setIcon(android.R.drawable.ic_menu_close_clear_cancel)
-            
+
             // Force icons to show
             try {
                 val popup = android.widget.PopupMenu::class.java.getDeclaredField("mPopup")
@@ -435,13 +500,13 @@ class ModernTabPillAdapter(
             } catch (e: Exception) {
                 // Ignore if reflection fails
             }
-            
+
             popupMenu.setOnMenuItemClickListener { menuItem ->
                 when (menuItem.itemId) {
                     1 -> {
                         // Duplicate tab
                         itemView.performHapticFeedback(android.view.HapticFeedbackConstants.VIRTUAL_KEY)
-                        // TODO: Implement duplicate tab functionality via callback
+                        onTabDuplicate?.invoke(tabId)
                         true
                     }
                     2 -> {
@@ -453,12 +518,69 @@ class ModernTabPillAdapter(
                     else -> false
                 }
             }
-            
+
             // Show menu above the anchor view
             popupMenu.gravity = android.view.Gravity.TOP
             popupMenu.show()
         }
 
+        private fun createTabClone(): View {
+            // Create a clone of the cardView with same appearance
+            val clone = android.widget.FrameLayout(itemView.context).apply {
+                layoutParams = ViewGroup.LayoutParams(cardView.width, cardView.height)
+                elevation = 16f
+            }
+            
+            // Clone the card appearance
+            val clonedCard = androidx.cardview.widget.CardView(itemView.context).apply {
+                layoutParams = ViewGroup.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.MATCH_PARENT
+                )
+                radius = cardView.radius
+                cardElevation = cardView.cardElevation
+                background = cardView.background?.constantState?.newDrawable()?.mutate()
+                
+                // Clone content
+                val content = android.widget.LinearLayout(itemView.context).apply {
+                    orientation = android.widget.LinearLayout.HORIZONTAL
+                    gravity = android.view.Gravity.CENTER_VERTICAL
+                    val padding = (8 * context.resources.displayMetrics.density).toInt()
+                    setPadding(padding, padding, padding, padding)
+                }
+                
+                // Clone favicon
+                val clonedFavicon = android.widget.ImageView(itemView.context).apply {
+                    val size = (24 * context.resources.displayMetrics.density).toInt()
+                    layoutParams = android.widget.LinearLayout.LayoutParams(size, size).apply {
+                        marginEnd = (8 * context.resources.displayMetrics.density).toInt()
+                    }
+                    setImageDrawable(faviconView.drawable)
+                }
+                content.addView(clonedFavicon)
+                
+                // Clone title
+                val clonedTitle = android.widget.TextView(itemView.context).apply {
+                    layoutParams = android.widget.LinearLayout.LayoutParams(
+                        0,
+                        ViewGroup.LayoutParams.WRAP_CONTENT,
+                        1f
+                    )
+                    text = titleView.text
+                    textSize = titleView.textSize / context.resources.displayMetrics.scaledDensity
+                    setTextColor(titleView.currentTextColor)
+                    maxLines = 1
+                    ellipsize = android.text.TextUtils.TruncateAt.END
+                }
+                content.addView(clonedTitle)
+                
+                addView(content)
+            }
+            
+            clone.addView(clonedCard)
+            return clone
+        }
+        
         private fun animateStandaloneTabDelete() {
             // Multi-stage breaking apart animation for standalone tabs
             // Stage 1: Shake and lift
@@ -1078,6 +1200,17 @@ class ModernTabPillAdapter(
             var isDragging = false
             var hasMoved = false
             var longPressTimer: android.os.Handler? = null
+            var dragClone: View? = null
+            var decorView: ViewGroup? = null
+
+            // Add long-press for context menu
+            tabContent.setOnLongClickListener {
+                if (!isDragging && !hasMoved) {
+                    it.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS)
+                    showTabContextMenu(tabView, tabId, islandId)
+                }
+                true
+            }
 
             tabContent.setOnTouchListener { v, event ->
                 when (event.action) {
@@ -1104,17 +1237,45 @@ class ModernTabPillAdapter(
                         if (deltaY > 20 && deltaX < 50 && !isDragging) {
                             isDragging = true
                             v.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS)
+                            
+                            // Create clone and add to DecorView
+                            val activity = itemView.context as? android.app.Activity
+                            decorView = activity?.window?.decorView as? ViewGroup
+                            
+                            if (decorView != null) {
+                                // Hide original
+                                tabView.alpha = 0f
+
+                                // Create clone
+                                dragClone = createGroupedTabClone(tabView, itemView.context)
+
+                                // Position clone at original location
+                                val location = IntArray(2)
+                                tabView.getLocationInWindow(location)
+                                dragClone?.x = location[0].toFloat()
+                                dragClone?.y = location[1].toFloat()
+                                
+                                // Add to decorView
+                                decorView?.addView(dragClone, ViewGroup.LayoutParams(
+                                    tabView.width,
+                                    tabView.height
+                                ))
+                            }
                         }
 
-                        if (isDragging) {
-                            // Visual feedback during drag - elevate above container
+                        if (isDragging && dragClone != null) {
+                            // Update clone position to follow finger
+                            val location = IntArray(2)
+                            tabView.getLocationInWindow(location)
+                            
+                            dragClone?.y = location[1].toFloat() - deltaY
+                            
+                            // Visual feedback during drag
                             val progress = (deltaY / 100f).coerceIn(0f, 1f)
-                            tabView.scaleX = 1f - (progress * 0.2f)
-                            tabView.scaleY = 1f - (progress * 0.2f)
-                            tabView.rotation = -progress * 10f
-                            tabView.alpha = 1f - (progress * 0.3f)
-                            tabView.translationY = -deltaY
-                            tabView.elevation = 16f
+                            dragClone?.scaleX = 1f - (progress * 0.2f)
+                            dragClone?.scaleY = 1f - (progress * 0.2f)
+                            dragClone?.rotation = -progress * 10f
+                            dragClone?.alpha = 1f - (progress * 0.3f)
                             true
                         } else {
                             false
@@ -1127,11 +1288,36 @@ class ModernTabPillAdapter(
                         if (isDragging) {
                             val deltaY = startY - event.rawY
                             if (deltaY > 100) {
-                                // Delete with animation
-                                animateTabDelete(tabView, tabId)
+                                // Animate clone flying away
+                                dragClone?.animate()
+                                    ?.translationY(-500f)
+                                    ?.rotation(-30f)
+                                    ?.scaleX(0.3f)
+                                    ?.scaleY(0.3f)
+                                    ?.alpha(0f)
+                                    ?.setDuration(250)
+                                    ?.withEndAction {
+                                        decorView?.removeView(dragClone)
+                                        dragClone = null
+                                        // Trigger actual delete
+                                        android.util.Log.d("ModernTabPillAdapter", "Deleting grouped tab: $tabId")
+                                        onTabClose(tabId)
+                                    }
+                                    ?.start()
                             } else {
-                                // Spring back
-                                resetTabVisualState(tabView)
+                                // Spring back - animate clone back and show original
+                                dragClone?.animate()
+                                    ?.scaleX(1f)
+                                    ?.scaleY(1f)
+                                    ?.rotation(0f)
+                                    ?.alpha(0f)
+                                    ?.setDuration(200)
+                                    ?.withEndAction {
+                                        decorView?.removeView(dragClone)
+                                        dragClone = null
+                                        tabView.alpha = 1f
+                                    }
+                                    ?.start()
                             }
                             isDragging = false
                             hasMoved = false
@@ -1182,7 +1368,7 @@ class ModernTabPillAdapter(
                     1 -> {
                         // Duplicate tab
                         itemView.performHapticFeedback(android.view.HapticFeedbackConstants.VIRTUAL_KEY)
-                        // TODO: Implement duplicate tab functionality via callback
+                        onTabDuplicate?.invoke(tabId)
                         true
                     }
                     2 -> {
@@ -1304,6 +1490,69 @@ class ModernTabPillAdapter(
         }
 
 
+    }
+
+    /**
+     * Creates a clone view for grouped tab dragging animation
+     */
+    private fun createGroupedTabClone(originalView: View, context: Context): View {
+        // Create a clone of the tab view with same appearance
+        val clone = android.widget.FrameLayout(context).apply {
+            layoutParams = ViewGroup.LayoutParams(originalView.width, originalView.height)
+            elevation = 16f
+            background = originalView.background?.constantState?.newDrawable()?.mutate()
+        }
+
+        // Find and clone the tab content
+        val originalContent = originalView.findViewById<ViewGroup>(R.id.tabPillContent)
+
+        if (originalContent != null) {
+            val clonedContent = android.widget.LinearLayout(context).apply {
+                orientation = android.widget.LinearLayout.HORIZONTAL
+                gravity = android.view.Gravity.CENTER_VERTICAL
+                layoutParams = ViewGroup.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.MATCH_PARENT
+                )
+                val padding = (8 * context.resources.displayMetrics.density).toInt()
+                setPadding(padding, padding, padding, padding)
+            }
+
+            // Clone favicon if exists
+            val favicon = originalContent.findViewById<android.widget.ImageView>(R.id.tabFavicon)
+            if (favicon != null) {
+                val clonedFavicon = android.widget.ImageView(context).apply {
+                    val size = (16 * context.resources.displayMetrics.density).toInt()
+                    layoutParams = android.widget.LinearLayout.LayoutParams(size, size).apply {
+                        marginEnd = (6 * context.resources.displayMetrics.density).toInt()
+                    }
+                    setImageDrawable(favicon.drawable)
+                }
+                clonedContent.addView(clonedFavicon)
+            }
+
+            // Clone title
+            val title = originalContent.findViewById<android.widget.TextView>(R.id.tabTitle)
+            if (title != null) {
+                val clonedTitle = android.widget.TextView(context).apply {
+                    layoutParams = android.widget.LinearLayout.LayoutParams(
+                        0,
+                        ViewGroup.LayoutParams.WRAP_CONTENT,
+                        1f
+                    )
+                    text = title.text
+                    textSize = title.textSize / context.resources.displayMetrics.scaledDensity
+                    setTextColor(title.currentTextColor)
+                    maxLines = 1
+                    ellipsize = android.text.TextUtils.TruncateAt.END
+                }
+                clonedContent.addView(clonedTitle)
+            }
+
+            clone.addView(clonedContent)
+        }
+
+        return clone
     }
 
     /**

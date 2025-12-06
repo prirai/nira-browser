@@ -9,6 +9,10 @@ import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import mozilla.components.browser.state.state.SessionState
+import com.prirai.android.nira.ext.components
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 /**
  * Enhanced tab group view with Tab Islands support - automatic and manual grouping,
@@ -27,6 +31,7 @@ class EnhancedTabGroupView @JvmOverloads constructor(
     private var onTabClosed: ((String) -> Unit)? = null
     private var onIslandRenamed: ((String, String) -> Unit)? = null
     private var onNewTabInIsland: ((String) -> Unit)? = null
+    private var onTabDuplicated: ((String) -> Unit)? = null
 
     private var currentTabs = mutableListOf<SessionState>()
     private var selectedTabId: String? = null
@@ -508,19 +513,22 @@ class EnhancedTabGroupView @JvmOverloads constructor(
         onTabSelected: (String) -> Unit,
         onTabClosed: (String) -> Unit,
         onIslandRenamed: ((String, String) -> Unit)? = null,
-        onNewTabInIsland: ((String) -> Unit)? = null
+        onNewTabInIsland: ((String) -> Unit)? = null,
+        onTabDuplicated: ((String) -> Unit)? = null
     ) {
         this.onTabSelected = onTabSelected
         this.onTabClosed = onTabClosed
         this.onIslandRenamed = onIslandRenamed
         this.onNewTabInIsland = onNewTabInIsland
+        this.onTabDuplicated = onTabDuplicated
         tabAdapter.updateCallbacks(
             onTabSelected,
             { tabId -> handleTabClose(tabId) },
             { islandId -> handleIslandHeaderClick(islandId) },
             { islandId -> handleIslandLongPress(islandId) },
             { islandId -> handleIslandPlusClick(islandId) },
-            { tabId, islandId -> handleTabUngroupFromIsland(tabId, islandId) }
+            { tabId, islandId -> handleTabUngroupFromIsland(tabId, islandId) },
+            { tabId -> handleTabDuplicate(tabId) }
         )
     }
 
@@ -741,6 +749,42 @@ class EnhancedTabGroupView @JvmOverloads constructor(
             lastTabIds = emptyList()
             refreshDisplay()
         }
+    }
+
+    private fun handleTabDuplicate(tabId: String) {
+        // Find the tab to duplicate
+        val tabToDuplicate = currentTabs.find { it.id == tabId } ?: return
+
+        // Create a new tab with the same URL and context (profile)
+        val newTabId = context.components.tabsUseCases.addTab(
+            url = tabToDuplicate.content.url,
+            selectTab = false,  // Don't switch to the new tab
+            private = tabToDuplicate.content.private,
+            contextId = tabToDuplicate.contextId,
+            parentId = null
+        )
+
+        // If the original tab is in a group, add the duplicate to the same group at the position right after the original
+        kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main).launch {
+            val unifiedManager = com.prirai.android.nira.browser.tabgroups.UnifiedTabGroupManager.getInstance(context)
+            val groupData = unifiedManager.getGroupForTab(tabId)
+            if (groupData != null) {
+                // Find the position of the original tab in the group
+                val originalPosition = groupData.tabIds.indexOf(tabId)
+                if (originalPosition != -1) {
+                    // Add the duplicate right after the original (position + 1)
+                    unifiedManager.addTabToGroup(newTabId, groupData.id, position = originalPosition + 1)
+                } else {
+                    // Fallback: add at the end if position not found
+                    unifiedManager.addTabToGroup(newTabId, groupData.id)
+                }
+            }
+        }
+
+        performHapticFeedback(android.view.HapticFeedbackConstants.VIRTUAL_KEY)
+
+        // Delegate to external callback if set
+        onTabDuplicated?.invoke(newTabId)
     }
 
     private fun showIslandOptionsDialog(islandId: String) {

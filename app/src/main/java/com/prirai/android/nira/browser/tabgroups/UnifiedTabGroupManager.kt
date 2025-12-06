@@ -425,6 +425,54 @@ class UnifiedTabGroupManager private constructor(private val context: Context) {
         _groupEvents.emit(GroupEvent.AllGroupsCleared)
     }
 
+    /**
+     * Handles new tab creation from a link in another tab.
+     * Automatically groups tabs opened from cross-domain links.
+     */
+    suspend fun handleNewTabFromLink(
+        newTabId: String,
+        newTabUrl: String,
+        sourceTabId: String?,
+        sourceTabUrl: String?
+    ) = withContext(Dispatchers.IO) {
+        // Only proceed if we have source information
+        if (sourceTabId == null || sourceTabUrl == null) {
+            return@withContext
+        }
+
+        // Check if domains are different
+        val sourceDomain = extractDomain(sourceTabUrl)
+        val newDomain = extractDomain(newTabUrl)
+
+        if (sourceDomain != newDomain &&
+            sourceDomain != "unknown" &&
+            newDomain != "unknown" &&
+            !newTabUrl.startsWith("about:")) {
+
+            // Get the source tab's group
+            val sourceGroupId = tabToGroupMap[sourceTabId]
+
+            if (sourceGroupId != null) {
+                // Add new tab to the same group as source
+                addTabToGroup(newTabId, sourceGroupId)
+            } else {
+                // Source tab is not in a group, create a new group for both
+                val newGroup = createGroup(tabIds = listOf(sourceTabId, newTabId))
+            }
+        }
+    }
+
+    /**
+     * Extract domain from URL for comparison
+     */
+    private fun extractDomain(url: String): String {
+        return try {
+            android.net.Uri.parse(url).host?.replace("www.", "") ?: "unknown"
+        } catch (e: Exception) {
+            "unknown"
+        }
+    }
+
     private suspend fun emitStateUpdate() {
         _groupsState.value = groupsCache.values.sortedBy { it.createdAt }
     }

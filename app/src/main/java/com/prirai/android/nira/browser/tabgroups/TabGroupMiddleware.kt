@@ -1,6 +1,7 @@
 package com.prirai.android.nira.browser.tabgroups
 
 import android.net.Uri
+import android.util.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -15,8 +16,12 @@ import androidx.core.net.toUri
  * Middleware that monitors tab creation and applies cross-domain grouping logic.
  */
 class TabGroupMiddleware(
-    private val tabGroupManager: TabGroupManager
+    private val tabGroupManager: UnifiedTabGroupManager
 ) : Middleware<BrowserState, BrowserAction> {
+
+    companion object {
+        private const val TAG = "TabGroupMiddleware"
+    }
 
     override fun invoke(
         context: MiddlewareContext<BrowserState, BrowserAction>,
@@ -44,53 +49,60 @@ class TabGroupMiddleware(
     private fun handleNewTab(state: BrowserState, action: TabListAction.AddTabAction) {
         val newTab = action.tab
         val newTabUrl = newTab.content.url
-        
-        
-        // Don't auto-group tabs created via NEW_TAB button or address bar
-        if (newTab.source == mozilla.components.browser.state.state.SessionState.Source.Internal.NewTab ||
-            newTab.source == mozilla.components.browser.state.state.SessionState.Source.Internal.UserEntered) {
-            return
-        }
-        
+
+        Log.d(TAG, "handleNewTab: tabId=${newTab.id}, url=$newTabUrl, source=${newTab.source}")
+
         // Check both the URL in the tab and the URL being loaded
         val effectiveUrl = if (newTabUrl.isBlank() || newTabUrl == "about:blank") {
-            // Check if this tab has a pending URL load
-            val loadRequest = newTab.content.url
-            if (loadRequest.isNotBlank() && loadRequest != "about:blank") {
-                loadRequest
-            } else {
-                return
-            }
+            // If the tab has no URL yet, wait for the actual URL to be loaded
+            // We'll catch it on the content update
+            Log.d(TAG, "Tab has blank URL, skipping for now")
+            return
         } else {
             newTabUrl
         }
-        
-        // Find the currently selected tab (this should be the source of the new tab)
-        val sourceTab = state.selectedTabId?.let { selectedId ->
-            if (selectedId != newTab.id) {
-                state.tabs.find { it.id == selectedId }
-            } else {
-                // If the new tab is already selected, find the previous one
-                state.tabs.filter { it.id != newTab.id }
-                    .maxByOrNull { it.lastAccess }
+
+        // Don't auto-group tabs with about: or chrome: URLs
+        if (effectiveUrl.startsWith("about:") || effectiveUrl.startsWith("chrome:")) {
+            Log.d(TAG, "Skipping system URL: $effectiveUrl")
+            return
+        }
+
+        // Find the currently selected tab or the tab with parentId
+        val sourceTab = if (newTab.parentId != null) {
+            // If tab has a parent, use that as the source
+            state.tabs.find { it.id == newTab.parentId }
+        } else {
+            // Otherwise use the currently selected tab
+            state.selectedTabId?.let { selectedId ->
+                if (selectedId != newTab.id) {
+                    state.tabs.find { it.id == selectedId }
+                } else {
+                    // If the new tab is already selected, find the previous one
+                    state.tabs.filter { it.id != newTab.id }
+                        .maxByOrNull { it.lastAccess }
+                }
             }
         }
-        
-        
+
+        Log.d(TAG, "Source tab: ${sourceTab?.id}, url=${sourceTab?.content?.url}")
+
         if (sourceTab != null) {
             val sourceUrl = sourceTab.content.url
-            
+
             // Only group if both URLs are valid and from different domains
             if (sourceUrl.isNotBlank() && sourceUrl != "about:blank") {
                 val sourceDomain = extractDomain(sourceUrl)
                 val newDomain = extractDomain(effectiveUrl)
-                
-                
-                if (sourceDomain != newDomain && 
-                    sourceDomain != "unknown" && 
+
+                Log.d(TAG, "Comparing domains: source=$sourceDomain, new=$newDomain")
+
+                if (sourceDomain != newDomain &&
+                    sourceDomain != "unknown" &&
                     newDomain != "unknown") {
-                    
-                    
+
+                    Log.d(TAG, "Cross-domain link detected, grouping tabs")
+
                     // This appears to be a cross-domain link - group them
                     CoroutineScope(Dispatchers.IO).launch {
                         try {
@@ -100,29 +112,23 @@ class TabGroupMiddleware(
                                 sourceTabId = sourceTab.id,
                                 sourceTabUrl = sourceUrl
                             )
+                            Log.d(TAG, "Successfully grouped tabs")
                         } catch (e: Exception) {
+                            Log.e(TAG, "Failed to group tabs", e)
                         }
                     }
                 } else {
-                    // For same domain, don't force grouping unless it's a natural fit
+                    Log.d(TAG, "Same domain or unknown domain, not grouping")
                 }
             }
+        } else {
+            Log.d(TAG, "No source tab found")
         }
     }
     
     private fun handleTabSelection(state: BrowserState, action: TabListAction.SelectTabAction) {
-        // When a tab is selected, update the tab group bar context
-        CoroutineScope(Dispatchers.Main).launch {
-            try {
-                val selectedTab = state.tabs.find { it.id == action.tabId }
-                if (selectedTab != null) {
-                    // Force refresh of current group to update UI
-                    tabGroupManager.updateCurrentTabContext(selectedTab.id)
-                }
-            } catch (e: Exception) {
-                // Ignore errors during tab selection updates
-            }
-        }
+        // UnifiedTabGroupManager handles state updates automatically via StateFlow
+        // No manual refresh needed
     }
     
     /**
