@@ -331,30 +331,44 @@ class ModernTabPillAdapter(
 
         private fun setupStandaloneTabSwipeGesture(tabId: String) {
             var startY = 0f
+            var startX = 0f
             var isDragging = false
+            var hasMoved = false
 
             cardView.setOnTouchListener { v, event ->
                 when (event.action) {
                     android.view.MotionEvent.ACTION_DOWN -> {
                         startY = event.rawY
+                        startX = event.rawX
+                        isDragging = false
+                        hasMoved = false
                         false
                     }
 
                     android.view.MotionEvent.ACTION_MOVE -> {
                         val deltaY = startY - event.rawY
+                        val deltaX = Math.abs(event.rawX - startX)
+                        
+                        // Mark as moved if finger moved significantly
+                        if (deltaX > 20 || Math.abs(deltaY) > 20) {
+                            hasMoved = true
+                        }
 
-                        if (deltaY > 20 && !isDragging) {
+                        // Only start dragging if moving up, not sideways
+                        if (deltaY > 20 && deltaX < 50 && !isDragging) {
                             isDragging = true
                             v.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS)
                         }
 
                         if (isDragging) {
-                            // Visual feedback during drag
+                            // Visual feedback during drag - elevate above container
                             val progress = (deltaY / 100f).coerceIn(0f, 1f)
                             cardView.scaleX = 1f - (progress * 0.2f)
                             cardView.scaleY = 1f - (progress * 0.2f)
                             cardView.rotation = -progress * 10f
                             cardView.alpha = 1f - (progress * 0.3f)
+                            cardView.translationY = -deltaY
+                            cardView.elevation = 16f
                             true
                         } else {
                             false
@@ -366,7 +380,6 @@ class ModernTabPillAdapter(
                             val deltaY = startY - event.rawY
                             if (deltaY > 100) {
                                 // Trigger delete animation
-                                v.performClick()
                                 animateStandaloneTabDelete()
                             } else {
                                 // Spring back
@@ -375,13 +388,22 @@ class ModernTabPillAdapter(
                                     .scaleY(1f)
                                     .rotation(0f)
                                     .alpha(1f)
+                                    .translationY(0f)
                                     .setDuration(200)
+                                    .withEndAction {
+                                        cardView.elevation = 0f
+                                    }
                                     .start()
                             }
                             isDragging = false
+                            hasMoved = false
+                            true
+                        } else if (hasMoved) {
+                            // Finger moved but didn't drag up - don't trigger click
+                            hasMoved = false
                             true
                         } else {
-                            v.performClick()
+                            // No movement - allow click to proceed
                             false
                         }
                     }
@@ -460,7 +482,10 @@ class ModernTabPillAdapter(
                                 .setDuration(300)
                                 .setInterpolator(android.view.animation.AccelerateInterpolator())
                                 .withEndAction {
-                                    currentTabId?.let { onTabClose(it) }
+                                    currentTabId?.let { 
+                                        android.util.Log.d("ModernTabPillAdapter", "Deleting standalone tab: $it")
+                                        onTabClose(it) 
+                                    }
                                 }
                                 .start()
                         }
@@ -1051,6 +1076,7 @@ class ModernTabPillAdapter(
             var startY = 0f
             var startX = 0f
             var isDragging = false
+            var hasMoved = false
             var longPressTimer: android.os.Handler? = null
 
             tabContent.setOnTouchListener { v, event ->
@@ -1059,43 +1085,38 @@ class ModernTabPillAdapter(
                         startY = event.rawY
                         startX = event.rawX
                         isDragging = false
+                        hasMoved = false
                         
-                        // Start long press timer for context menu
-                        longPressTimer = android.os.Handler(android.os.Looper.getMainLooper())
-                        longPressTimer?.postDelayed({
-                            if (!isDragging) {
-                                // Show context menu
-                                v.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS)
-                                showTabContextMenu(tabView, tabId, islandId)
-                            }
-                        }, 1000)  // Increased to 1000ms to avoid conflict with swipe
+                        // Don't start long press timer - we don't want menu on drag
                         false
                     }
 
                     android.view.MotionEvent.ACTION_MOVE -> {
                         val deltaY = startY - event.rawY
                         val deltaX = Math.abs(event.rawX - startX)
+                        
+                        // Mark as moved if finger moved significantly
+                        if (deltaX > 20 || Math.abs(deltaY) > 20) {
+                            hasMoved = true
+                        }
 
                         // Check if user is trying to swipe up for delete
                         if (deltaY > 20 && deltaX < 50 && !isDragging) {
                             isDragging = true
-                            longPressTimer?.removeCallbacksAndMessages(null)
                             v.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS)
                         }
 
                         if (isDragging) {
-                            // Visual feedback during drag - shake and scale
+                            // Visual feedback during drag - elevate above container
                             val progress = (deltaY / 100f).coerceIn(0f, 1f)
                             tabView.scaleX = 1f - (progress * 0.2f)
                             tabView.scaleY = 1f - (progress * 0.2f)
                             tabView.rotation = -progress * 10f
                             tabView.alpha = 1f - (progress * 0.3f)
+                            tabView.translationY = -deltaY
+                            tabView.elevation = 16f
                             true
                         } else {
-                            // Cancel long press if moved too much
-                            if (deltaX > 20 || Math.abs(deltaY) > 20) {
-                                longPressTimer?.removeCallbacksAndMessages(null)
-                            }
                             false
                         }
                     }
@@ -1109,11 +1130,18 @@ class ModernTabPillAdapter(
                                 // Delete with animation
                                 animateTabDelete(tabView, tabId)
                             } else {
+                                // Spring back
                                 resetTabVisualState(tabView)
                             }
+                            isDragging = false
+                            hasMoved = false
+                            true
+                        } else if (hasMoved) {
+                            // Finger moved but didn't drag up - don't trigger click
+                            hasMoved = false
                             true
                         } else {
-                            v.performClick()
+                            // No movement - allow click to proceed
                             false
                         }
                     }
@@ -1179,6 +1207,7 @@ class ModernTabPillAdapter(
         }
 
         private fun animateTabDelete(tabView: View, tabId: String) {
+            android.util.Log.d("ModernTabPillAdapter", "animateTabDelete called for tab: $tabId")
             // Multi-stage "breaking apart" animation optimized for visibility
             // Even if clipped by EngineView, the shake and scale are visible
             
@@ -1209,6 +1238,7 @@ class ModernTabPillAdapter(
                                 .setDuration(250)
                                 .setInterpolator(android.view.animation.AccelerateInterpolator())
                                 .withEndAction {
+                                    android.util.Log.d("ModernTabPillAdapter", "Deleting grouped tab: $tabId")
                                     onTabClose(tabId)
                                 }
                                 .start()

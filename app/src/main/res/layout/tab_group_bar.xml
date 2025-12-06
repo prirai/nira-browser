@@ -8,7 +8,9 @@
     android:orientation="horizontal"
     android:paddingHorizontal="12dp"
     android:paddingVertical="8dp"
-    android:elevation="2dp">
+    android:elevation="2dp"
+    android:clipChildren="false"
+    android:clipToPadding="false">
 
     <TextView
         android:id="@+id/privateIndicator"
@@ -25,6 +27,7 @@
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_weight="1"
+        android:clipChildren="false"
         android:clipToPadding="false"
         android:overScrollMode="never"
         android:scrollbars="none" />

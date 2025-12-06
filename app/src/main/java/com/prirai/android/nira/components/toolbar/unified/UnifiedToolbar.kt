@@ -186,7 +186,8 @@ class UnifiedToolbar @JvmOverloads constructor(
                     onTabSelectedCallback?.invoke(tabId)
                 },
                 onTabClosed = { tabId ->
-                    // Tab closing is handled by the browser's tab management system
+                    // Close the tab using browser's tab management system
+                    context.components.tabsUseCases.removeTab(tabId)
                 },
                 onIslandRenamed = { islandId, newName ->
                     // Island renaming is handled by the tab group system
