@@ -301,21 +301,23 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
                 view = view
             )
 
-            reloadStopButtonFeature.set(
-                feature = ReloadStopButtonIntegration(
-                    context = requireContext(),
-                    store = components.store,
-                    toolbar = toolbar,
-                    onReload = { components.sessionUseCases.reload() },
-                    onStop = {
-                        components.store.state.selectedTab?.let {
-                            components.sessionUseCases.stopLoading.invoke(it.id)
-                        }
-                    }
-                ),
-                owner = this,
-                view = view
-            )
+            // Reload/Stop button is now handled by UnifiedToolbar
+            // This avoids duplicate reload buttons when UnifiedToolbar is used
+            // reloadStopButtonFeature.set(
+            //     feature = ReloadStopButtonIntegration(
+            //         context = requireContext(),
+            //         store = components.store,
+            //         toolbar = toolbar,
+            //         onReload = { components.sessionUseCases.reload() },
+            //         onStop = {
+            //             components.store.state.selectedTab?.let {
+            //                 components.sessionUseCases.stopLoading.invoke(it.id)
+            //             }
+            //         }
+            //     ),
+            //     owner = this,
+            //     view = view
+            // )
         }
 
         promptsFeature.set(
