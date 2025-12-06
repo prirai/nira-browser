@@ -234,13 +234,13 @@ class ComposeHomeFragment : Fragment() {
         // Add compose view to coordinator layout
         coordinatorLayout.addView(composeView)
 
-        // Setup UnifiedToolbar
+        // Setup UnifiedToolbar in the same coordinatorLayout
         setupUnifiedToolbar(coordinatorLayout)
 
         return coordinatorLayout
     }
 
-    private fun setupUnifiedToolbar(container: ViewGroup) {
+    private fun setupUnifiedToolbar(coordinatorLayout: CoordinatorLayout) {
         val prefs = UserPreferences(requireContext())
         val tabGroupManager = requireContext().components.tabGroupManager
 
@@ -275,10 +275,10 @@ class ComposeHomeFragment : Fragment() {
             }
         }
 
-        // Create UnifiedToolbar
+        // Create UnifiedToolbar in the coordinatorLayout (not fragment container)
         unifiedToolbar = UnifiedToolbar.create(
             context = requireContext(),
-            parent = container,
+            parent = coordinatorLayout,
             lifecycleOwner = viewLifecycleOwner,
             interactor = toolbarInteractor,
             customTabSession = null,
