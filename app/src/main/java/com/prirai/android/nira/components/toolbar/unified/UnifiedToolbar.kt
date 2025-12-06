@@ -165,8 +165,8 @@ class UnifiedToolbar @JvmOverloads constructor(
         tabGroupBar = TabGroupWithProfileSwitcher(context).apply {
             // No need to set background - it already applies Material 3 theming
             
-            // Setup the enhanced tab group view callbacks
-            tabGroupView.setup(
+            // Setup TabGroupWithProfileSwitcher with all callbacks
+            setup(
                 onTabSelected = { tabId ->
                     // Invoke the callback set from outside
                     onTabSelectedCallback?.invoke(tabId)
@@ -179,18 +179,45 @@ class UnifiedToolbar @JvmOverloads constructor(
                 },
                 onNewTabInIsland = { islandId ->
                     // New tab in island handled
+                },
+                onProfileSelected = { profile ->
+                    // Switch to the selected profile
+                    val profileManager = com.prirai.android.nira.browser.profile.ProfileManager.getInstance(context)
+                    profileManager.setActiveProfile(profile)
+                    // Reload to apply profile change
+                    context.components.sessionUseCases.reload()
+                },
+                onPrivateModeSelected = {
+                    // Toggle private mode
+                    val profileManager = com.prirai.android.nira.browser.profile.ProfileManager.getInstance(context)
+                    val isCurrentlyPrivate = profileManager.isPrivateMode()
+                    profileManager.setPrivateMode(!isCurrentlyPrivate)
+                    // Reload to apply private mode change
+                    context.components.sessionUseCases.reload()
                 }
             )
         }
 
-        // Observe store to update tabs
+        // Observe store to update tabs with proper filtering by profile/private mode
         lifecycleOwner.lifecycleScope.launch {
             store.flowScoped { flow ->
                 flow.collect { state ->
-                    tabGroupBar?.tabGroupView?.updateTabs(
-                        state.tabs,
-                        state.selectedTabId
-                    )
+                    val profileManager = com.prirai.android.nira.browser.profile.ProfileManager.getInstance(context)
+                    val isPrivateMode = profileManager.isPrivateMode()
+                    val currentProfile = profileManager.getActiveProfile()
+                    
+                    // Filter tabs based on current mode and profile (same logic as TabsBottomSheetFragment)
+                    val expectedContextId = if (isPrivateMode) {
+                        "private"
+                    } else {
+                        "profile_${currentProfile.id}"
+                    }
+                    
+                    val filteredTabs = state.tabs.filter { tab ->
+                        tab.content.private == isPrivateMode && tab.contextId == expectedContextId
+                    }
+                    
+                    tabGroupBar?.updateTabs(filteredTabs, state.selectedTabId)
                 }
             }
         }
