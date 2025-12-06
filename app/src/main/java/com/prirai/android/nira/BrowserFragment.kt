@@ -222,8 +222,21 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
                 }
 
                 override fun onMenuClicked() {
-                    // Open the browser menu via the toolbar interactor
-                    browserInteractor.onBrowserToolbarMenuItemTapped(ToolbarMenu.Item.Settings)
+                    // Show the browser menu
+                    val menuToolbar = com.prirai.android.nira.components.toolbar.BrowserMenu(
+                        context = requireContext(),
+                        store = requireContext().components.store,
+                        onItemTapped = {
+                            browserInteractor.onBrowserToolbarMenuItemTapped(it)
+                        },
+                        lifecycleOwner = viewLifecycleOwner,
+                        isPinningSupported = requireContext().components.webAppUseCases.isPinningSupported(),
+                        shouldReverseItems = com.prirai.android.nira.preferences.UserPreferences(requireContext()).toolbarPosition == com.prirai.android.nira.components.toolbar.ToolbarPosition.TOP.ordinal
+                    )
+                    // Show menu anchored to the contextual toolbar's menu button
+                    unifiedToolbar?.getContextualToolbar()?.let { toolbar ->
+                        menuToolbar.menuBuilder.build(requireContext()).show(anchor = toolbar)
+                    }
                 }
 
                 override fun onSearchClicked() {
