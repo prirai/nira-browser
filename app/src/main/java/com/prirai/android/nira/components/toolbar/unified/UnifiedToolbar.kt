@@ -443,7 +443,13 @@ class UnifiedToolbar @JvmOverloads constructor(
             )
             val padding = (4 * context.resources.displayMetrics.density).toInt()
             setPadding(padding, padding, padding, padding)
-            background = androidx.core.content.ContextCompat.getDrawable(context, android.R.drawable.list_selector_background)
+            
+            // Add ripple effect (unbounded for circular feedback)
+            val outValue = android.util.TypedValue()
+            context.theme.resolveAttribute(android.R.attr.selectableItemBackgroundBorderless, outValue, true)
+            setBackgroundResource(outValue.resourceId)
+            isClickable = true
+            isFocusable = true
             
             // Add square background (same as ContextualBottomToolbar)
             val backgroundView = android.widget.ImageView(context).apply {
