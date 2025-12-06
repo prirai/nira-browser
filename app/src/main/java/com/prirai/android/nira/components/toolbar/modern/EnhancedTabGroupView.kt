@@ -34,6 +34,7 @@ class EnhancedTabGroupView @JvmOverloads constructor(
     // Track last update to prevent unnecessary refreshes
     private var lastTabIds = emptyList<String>()
     private var lastSelectedId: String? = null
+    private var isInitialSetup = true
     private var lastDisplayItemsCount = 0
 
     // Track parent-child relationships for automatic grouping
@@ -567,8 +568,13 @@ class EnhancedTabGroupView @JvmOverloads constructor(
 
             // Scroll to selected tab if selection changed
             if (hasSelectionChanged && selectedId != null) {
-                scrollToSelectedTab(selectedId)
+                // On initial setup, scroll instantly without animation
+                // On subsequent changes, use smooth scroll
+                scrollToSelectedTab(selectedId, animate = !isInitialSetup)
             }
+            
+            // Mark initial setup as complete
+            isInitialSetup = false
 
             animateVisibility(true)
         } else {
@@ -579,7 +585,7 @@ class EnhancedTabGroupView @JvmOverloads constructor(
     /**
      * Scrolls to show the selected tab in the RecyclerView
      */
-    private fun scrollToSelectedTab(selectedId: String) {
+    private fun scrollToSelectedTab(selectedId: String, animate: Boolean = true) {
         post {
             val displayItems = islandManager.createDisplayItems(currentTabs)
             val position = displayItems.indexOfFirst { item ->
@@ -591,7 +597,11 @@ class EnhancedTabGroupView @JvmOverloads constructor(
             }
 
             if (position >= 0) {
-                smoothScrollToPosition(position)
+                if (animate) {
+                    smoothScrollToPosition(position)
+                } else {
+                    scrollToPosition(position)
+                }
             }
         }
     }

@@ -96,7 +96,8 @@ class ComposeHomeFragment : Fragment() {
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.MATCH_PARENT
             )
-            fitsSystemWindows = true
+            // Don't use fitsSystemWindows - UnifiedToolbar handles insets
+            fitsSystemWindows = false
         }
 
         // Create ComposeView for the main content

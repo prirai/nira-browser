@@ -14,8 +14,7 @@
     <action
         android:id="@+id/action_global_browser"
         app:destination="@id/browserFragment"
-        app:popUpTo="@id/browserFragment"
-        app:popUpToInclusive="false"
+        app:launchSingleTop="true"
         app:enterAnim="@anim/fade_in"
         app:exitAnim="@anim/fade_out"
         app:popEnterAnim="@anim/fade_in"
