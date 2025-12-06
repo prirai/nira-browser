@@ -765,6 +765,7 @@ class EnhancedTabGroupView @JvmOverloads constructor(
         )
 
         // If the original tab is in a group, add the duplicate to the same group at the position right after the original
+        // The tab bar displays grouped tabs in the order specified by the group's tabIds, so this will position it correctly
         kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main).launch {
             val unifiedManager = com.prirai.android.nira.browser.tabgroups.UnifiedTabGroupManager.getInstance(context)
             val groupData = unifiedManager.getGroupForTab(tabId)
@@ -773,6 +774,7 @@ class EnhancedTabGroupView @JvmOverloads constructor(
                 val originalPosition = groupData.tabIds.indexOf(tabId)
                 if (originalPosition != -1) {
                     // Add the duplicate right after the original (position + 1)
+                    // This ensures it appears right next to the original in the tab bar
                     unifiedManager.addTabToGroup(newTabId, groupData.id, position = originalPosition + 1)
                 } else {
                     // Fallback: add at the end if position not found

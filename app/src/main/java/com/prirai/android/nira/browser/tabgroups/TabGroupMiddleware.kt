@@ -90,35 +90,23 @@ class TabGroupMiddleware(
         if (sourceTab != null) {
             val sourceUrl = sourceTab.content.url
 
-            // Only group if both URLs are valid and from different domains
+            // Group all links opened from another tab (both same-domain and cross-domain)
             if (sourceUrl.isNotBlank() && sourceUrl != "about:blank") {
-                val sourceDomain = extractDomain(sourceUrl)
-                val newDomain = extractDomain(effectiveUrl)
+                Log.d(TAG, "Link opened from source tab, grouping tabs")
 
-                Log.d(TAG, "Comparing domains: source=$sourceDomain, new=$newDomain")
-
-                if (sourceDomain != newDomain &&
-                    sourceDomain != "unknown" &&
-                    newDomain != "unknown") {
-
-                    Log.d(TAG, "Cross-domain link detected, grouping tabs")
-
-                    // This appears to be a cross-domain link - group them
-                    CoroutineScope(Dispatchers.IO).launch {
-                        try {
-                            tabGroupManager.handleNewTabFromLink(
-                                newTabId = newTab.id,
-                                newTabUrl = effectiveUrl,
-                                sourceTabId = sourceTab.id,
-                                sourceTabUrl = sourceUrl
-                            )
-                            Log.d(TAG, "Successfully grouped tabs")
-                        } catch (e: Exception) {
-                            Log.e(TAG, "Failed to group tabs", e)
-                        }
+                // Group the new tab with the source tab
+                CoroutineScope(Dispatchers.IO).launch {
+                    try {
+                        tabGroupManager.handleNewTabFromLink(
+                            newTabId = newTab.id,
+                            newTabUrl = effectiveUrl,
+                            sourceTabId = sourceTab.id,
+                            sourceTabUrl = sourceUrl
+                        )
+                        Log.d(TAG, "Successfully grouped tabs")
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Failed to group tabs", e)
                     }
-                } else {
-                    Log.d(TAG, "Same domain or unknown domain, not grouping")
                 }
             }
         } else {

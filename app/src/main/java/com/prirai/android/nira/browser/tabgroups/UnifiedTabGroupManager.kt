@@ -427,7 +427,7 @@ class UnifiedTabGroupManager private constructor(private val context: Context) {
 
     /**
      * Handles new tab creation from a link in another tab.
-     * Automatically groups tabs opened from cross-domain links.
+     * Automatically groups tabs opened from links (both same-domain and cross-domain).
      */
     suspend fun handleNewTabFromLink(
         newTabId: String,
@@ -440,25 +440,20 @@ class UnifiedTabGroupManager private constructor(private val context: Context) {
             return@withContext
         }
 
-        // Check if domains are different
-        val sourceDomain = extractDomain(sourceTabUrl)
-        val newDomain = extractDomain(newTabUrl)
+        // Skip system URLs
+        if (newTabUrl.startsWith("about:") || newTabUrl.startsWith("chrome:")) {
+            return@withContext
+        }
 
-        if (sourceDomain != newDomain &&
-            sourceDomain != "unknown" &&
-            newDomain != "unknown" &&
-            !newTabUrl.startsWith("about:")) {
+        // Get the source tab's group
+        val sourceGroupId = tabToGroupMap[sourceTabId]
 
-            // Get the source tab's group
-            val sourceGroupId = tabToGroupMap[sourceTabId]
-
-            if (sourceGroupId != null) {
-                // Add new tab to the same group as source
-                addTabToGroup(newTabId, sourceGroupId)
-            } else {
-                // Source tab is not in a group, create a new group for both
-                val newGroup = createGroup(tabIds = listOf(sourceTabId, newTabId))
-            }
+        if (sourceGroupId != null) {
+            // Add new tab to the same group as source
+            addTabToGroup(newTabId, sourceGroupId)
+        } else {
+            // Source tab is not in a group, create a new group for both
+            val newGroup = createGroup(tabIds = listOf(sourceTabId, newTabId))
         }
     }
 
