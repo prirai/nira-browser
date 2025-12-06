@@ -662,8 +662,6 @@ class UnifiedToolbar @JvmOverloads constructor(
             ))
         }
         
-        android.util.Log.d("UnifiedToolbar", "Bottom container created with ${container.childCount} children, visibility will be: ${container.visibility}")
-        
         return if (container.childCount > 0) container else null
     }
 

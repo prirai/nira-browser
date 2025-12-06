@@ -197,14 +197,8 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
                             weight = 0f
                         }
                         
-                        android.util.Log.d("BrowserFragment", "Adding bottom container to rootContainer at index ${it.childCount}")
                         it.addView(container, layoutParams)
-                        
-                        // Force visibility
                         container.visibility = View.VISIBLE
-                        container.post {
-                            android.util.Log.d("BrowserFragment", "Bottom container size: ${container.width}x${container.height}, childCount=${container.childCount}")
-                        }
                     }
                 }
             }
