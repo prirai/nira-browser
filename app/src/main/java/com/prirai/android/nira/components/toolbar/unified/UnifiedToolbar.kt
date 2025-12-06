@@ -198,13 +198,48 @@ class UnifiedToolbar @JvmOverloads constructor(
                     // Switch to the selected profile and reload to apply changes
                     val profileManager = com.prirai.android.nira.browser.profile.ProfileManager.getInstance(context)
                     profileManager.setActiveProfile(profile)
+                    profileManager.setPrivateMode(false) // Switching to a profile exits private mode
+                    
+                    // Manually trigger tab bar update with filtered tabs
+                    val expectedContextId = "profile_${profile.id}"
+                    val state = store.state
+                    val filteredTabs = state.tabs.filter { tab ->
+                        tab.content.private == false && tab.contextId == expectedContextId
+                    }
+                    
+                    android.util.Log.d("UnifiedToolbar", "onProfileSelected: profile=${profile.name}, expectedContextId=$expectedContextId")
+                    android.util.Log.d("UnifiedToolbar", "onProfileSelected: Total tabs=${state.tabs.size}, Filtered tabs=${filteredTabs.size}")
+                    
+                    tabGroupBar?.updateTabs(filteredTabs, state.selectedTabId)
+                    tabGroupBar?.updateProfileIcon(profile)
+                    
                     context.components.sessionUseCases.reload()
                 },
                 onPrivateModeSelected = {
-                    // Toggle private mode and reload to apply changes
+                    // Private mode was already set by the menu handler, just update the UI
                     val profileManager = com.prirai.android.nira.browser.profile.ProfileManager.getInstance(context)
-                    val isCurrentlyPrivate = profileManager.isPrivateMode()
-                    profileManager.setPrivateMode(!isCurrentlyPrivate)
+                    val isPrivateMode = profileManager.isPrivateMode()
+                    val currentProfile = profileManager.getActiveProfile()
+                    
+                    // Manually trigger tab bar update with filtered tabs
+                    val expectedContextId = if (isPrivateMode) {
+                        "private"
+                    } else {
+                        "profile_${currentProfile.id}"
+                    }
+                    val state = store.state
+                    val filteredTabs = state.tabs.filter { tab ->
+                        tab.content.private == isPrivateMode && tab.contextId == expectedContextId
+                    }
+                    
+                    android.util.Log.d("UnifiedToolbar", "onPrivateModeSelected: isPrivateMode=$isPrivateMode, expectedContextId=$expectedContextId")
+                    android.util.Log.d("UnifiedToolbar", "onPrivateModeSelected: Total tabs=${state.tabs.size}, Filtered tabs=${filteredTabs.size}")
+                    filteredTabs.forEach { tab ->
+                        android.util.Log.d("UnifiedToolbar", "  - Tab: ${tab.content.title} (${tab.id}), private=${tab.content.private}, contextId=${tab.contextId}")
+                    }
+                    
+                    tabGroupBar?.updateTabs(filteredTabs, state.selectedTabId)
+                    
                     context.components.sessionUseCases.reload()
                 }
             )
@@ -234,6 +269,9 @@ class UnifiedToolbar @JvmOverloads constructor(
                     val filteredTabs = state.tabs.filter { tab ->
                         tab.content.private == isPrivateMode && tab.contextId == expectedContextId
                     }
+                    
+                    android.util.Log.d("UnifiedToolbar", "Flow collect: isPrivateMode=$isPrivateMode, expectedContextId=$expectedContextId")
+                    android.util.Log.d("UnifiedToolbar", "Flow collect: Total tabs=${state.tabs.size}, Filtered tabs=${filteredTabs.size}, selectedTabId=${state.selectedTabId}")
                     
                     tabGroupBar?.updateTabs(filteredTabs, state.selectedTabId)
                 }
