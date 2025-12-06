@@ -1493,7 +1493,50 @@ class ModernTabPillAdapter(
     }
 
     /**
-     * Creates a clone view for grouped tab dragging animation
+     * Creates a visual clone of a grouped tab pill for drag-to-delete animation.
+     *
+     * This function creates a detached copy of a tab pill view that can be dragged
+     * independently over the web content area. It's used to provide visual feedback
+     * during the drag-to-delete gesture for grouped tabs.
+     *
+     * Purpose:
+     * - Provides a floating clone that follows the user's finger during drag gesture
+     * - Allows the clone to appear over the web content (outside RecyclerView bounds)
+     * - Maintains the same visual appearance as the original pill during drag
+     * - Essential for the drag-to-delete user experience on grouped tabs
+     *
+     * Implementation:
+     * - Creates a new FrameLayout with matching dimensions and elevation
+     * - Clones the background drawable to maintain visual consistency
+     * - Recursively finds and clones child views (favicon and title)
+     * - Preserves all visual properties: text, colors, sizes, padding
+     *
+     * Visual structure cloned:
+     * ```
+     * FrameLayout (clone root, elevated)
+     *   └── LinearLayout (tabPillContent)
+     *       ├── ImageView (tabFavicon) - 16dp, optional
+     *       └── TextView (tabTitle) - ellipsized, single line
+     * ```
+     *
+     * Resource IDs used:
+     * - R.id.tabPillContent: Container for favicon and title
+     * - R.id.tabFavicon: Tab's favicon image
+     * - R.id.tabTitle: Tab's title text
+     *
+     * Animation flow:
+     * 1. User long-presses on grouped tab pill
+     * 2. This function creates a clone of the pill view
+     * 3. Clone is added to UnifiedToolbar's overlay container
+     * 4. Clone follows finger with elevation shadow
+     * 5. On drag-up beyond threshold, tab closes and clone animates away
+     *
+     * @param originalView The tab pill view to clone (from RecyclerView)
+     * @param context Android context for creating new views
+     * @return Detached clone view ready to be added to overlay container
+     *
+     * @see ModernTabPillViewHolder.handleLongPress where this is called
+     * @see UnifiedToolbar drag handling for animation logic
      */
     private fun createGroupedTabClone(originalView: View, context: Context): View {
         // Create a clone of the tab view with same appearance

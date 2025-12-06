@@ -46,6 +46,32 @@ class TabGroupMiddleware(
         }
     }
     
+    /**
+     * Handles new tab creation to determine if it should be auto-grouped.
+     *
+     * This method analyzes newly created tabs to detect if they were opened from
+     * a link in another tab. If so, it automatically groups them together to
+     * maintain browsing context.
+     *
+     * Detection logic:
+     * - Checks if tab has a parentId (set by context menu "open in new tab")
+     * - Falls back to using currently selected tab as source
+     * - Skips tabs with blank URLs (waiting for actual URL to load)
+     * - Skips system URLs (about:, chrome:)
+     *
+     * Grouping triggers:
+     * - Any tab opened from another tab with a valid URL
+     * - Both same-domain and cross-domain links
+     * - Delegates actual grouping to UnifiedTabGroupManager.handleNewTabFromLink()
+     *
+     * Logging:
+     * - All decisions are logged with tag "TabGroupMiddleware"
+     * - Useful for debugging why tabs are/aren't grouped
+     * - Use: adb logcat | grep TabGroupMiddleware
+     *
+     * @param state Current browser state containing all tabs
+     * @param action The AddTabAction containing the new tab
+     */
     private fun handleNewTab(state: BrowserState, action: TabListAction.AddTabAction) {
         val newTab = action.tab
         val newTabUrl = newTab.content.url

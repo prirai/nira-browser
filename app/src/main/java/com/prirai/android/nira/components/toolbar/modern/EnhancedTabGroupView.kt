@@ -751,6 +751,31 @@ class EnhancedTabGroupView @JvmOverloads constructor(
         }
     }
 
+    /**
+     * Handles tab duplication request from context menu.
+     *
+     * Creates an exact duplicate of the specified tab with the same URL, profile,
+     * and privacy mode. If the original tab is in a group, the duplicate is
+     * automatically added to the same group right next to the original.
+     *
+     * Visual positioning:
+     * - Duplicate appears immediately after the original in the tab bar
+     * - This works because grouped tabs are displayed in the order specified
+     *   by the group's tabIds array (see TabIslandManager.createDisplayItems)
+     * - Position is set via UnifiedTabGroupManager.addTabToGroup(position = originalPos + 1)
+     *
+     * Tab properties copied:
+     * - URL (content.url)
+     * - Profile context (contextId)
+     * - Privacy mode (content.private)
+     *
+     * The duplicate tab:
+     * - Is NOT auto-selected (selectTab = false)
+     * - Preserves the same profile as original
+     * - Joins the same group if original is grouped
+     *
+     * @param tabId ID of the tab to duplicate
+     */
     private fun handleTabDuplicate(tabId: String) {
         // Find the tab to duplicate
         val tabToDuplicate = currentTabs.find { it.id == tabId } ?: return
