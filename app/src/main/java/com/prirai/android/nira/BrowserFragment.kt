@@ -1,6 +1,7 @@
 package com.prirai.android.nira
 
 import android.view.View
+import android.view.ViewGroup
 import androidx.core.view.isVisible
 import com.prirai.android.nira.browser.toolbar.ToolbarGestureHandler
 import com.prirai.android.nira.browser.toolbar.WebExtensionToolbarFeature
@@ -237,9 +238,32 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
                         // Reverse item order for top toolbar (menu drops down), normal order for bottom toolbar (menu pops up)
                         shouldReverseItems = com.prirai.android.nira.preferences.UserPreferences(requireContext()).toolbarPosition == com.prirai.android.nira.components.toolbar.ToolbarPosition.TOP.ordinal
                     )
-                    // Show menu anchored to the contextual toolbar for proper positioning
-                    unifiedToolbar?.getContextualToolbar()?.let { toolbar ->
-                        menuToolbar.menuBuilder.build(requireContext()).show(anchor = toolbar)
+                    // Show menu aligned to the right using custom anchor (same as home page)
+                    val prefs = com.prirai.android.nira.preferences.UserPreferences(requireContext())
+                    val isBottomToolbar = prefs.toolbarPosition == com.prirai.android.nira.components.toolbar.ToolbarPosition.BOTTOM.ordinal
+                    
+                    val decorView = requireActivity().window.decorView as ViewGroup
+                    val anchorView = android.view.View(requireContext()).apply {
+                        id = android.view.View.generateViewId()
+                        layoutParams = android.widget.FrameLayout.LayoutParams(10, 10).apply {
+                            gravity = if (isBottomToolbar) {
+                                android.view.Gravity.BOTTOM or android.view.Gravity.END
+                            } else {
+                                android.view.Gravity.TOP or android.view.Gravity.END
+                            }
+                            
+                            if (isBottomToolbar) {
+                                bottomMargin = 80
+                            } else {
+                                topMargin = 80
+                            }
+                            rightMargin = 20
+                        }
+                    }
+                    
+                    decorView.addView(anchorView)
+                    anchorView.post {
+                        menuToolbar.menuBuilder.build(requireContext()).show(anchor = anchorView)
                     }
                 }
 

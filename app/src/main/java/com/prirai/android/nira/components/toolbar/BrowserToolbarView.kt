@@ -290,7 +290,35 @@ class BrowserToolbarView(
                         isPinningSupported = context.components.webAppUseCases.isPinningSupported(),
                         shouldReverseItems = settings.toolbarPosition == ToolbarPosition.TOP.ordinal
                     )
-                    menuToolbar.menuBuilder.build(parent.context).show(anchor = imageView)
+                    // Show menu aligned to the right by creating a custom anchor
+                    val decorView = (parent.context as? android.app.Activity)?.window?.decorView as? ViewGroup
+                    if (decorView != null) {
+                        val anchorView = View(parent.context).apply {
+                            id = View.generateViewId()
+                            layoutParams = android.widget.FrameLayout.LayoutParams(10, 10).apply {
+                                gravity = if (settings.toolbarPosition == ToolbarPosition.BOTTOM.ordinal) {
+                                    android.view.Gravity.BOTTOM or android.view.Gravity.END
+                                } else {
+                                    android.view.Gravity.TOP or android.view.Gravity.END
+                                }
+                                
+                                if (settings.toolbarPosition == ToolbarPosition.BOTTOM.ordinal) {
+                                    bottomMargin = 80
+                                } else {
+                                    topMargin = 80
+                                }
+                                rightMargin = 20
+                            }
+                        }
+                        
+                        decorView.addView(anchorView)
+                        anchorView.post {
+                            menuToolbar.menuBuilder.build(parent.context).show(anchor = anchorView)
+                        }
+                    } else {
+                        // Fallback to original behavior
+                        menuToolbar.menuBuilder.build(parent.context).show(anchor = imageView)
+                    }
                 }
                 val backgroundResource = parent.context.theme.resolveAttribute(android.R.attr.selectableItemBackgroundBorderless)
                 imageView.setBackgroundResource(backgroundResource)
