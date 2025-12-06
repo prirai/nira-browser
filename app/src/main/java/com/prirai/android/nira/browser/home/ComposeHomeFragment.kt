@@ -25,15 +25,11 @@ import com.prirai.android.nira.browser.home.compose.*
 import com.prirai.android.nira.browser.shortcuts.ShortcutDatabase
 import com.prirai.android.nira.ext.components
 import com.prirai.android.nira.preferences.UserPreferences
-import com.prirai.android.nira.settings.HomepageChoice
 import com.prirai.android.nira.settings.HomepageBackgroundChoice
 import com.prirai.android.nira.ui.theme.NiraTheme
-import com.prirai.android.nira.components.toolbar.ToolbarMenu
 import mozilla.components.browser.state.selector.normalTabs
 import mozilla.components.browser.state.selector.privateTabs
-
-import com.prirai.android.nira.browser.home.HomeMenu
-import mozilla.components.browser.menu.view.MenuButton
+import androidx.core.graphics.toColorInt
 
 class ComposeHomeFragment : Fragment() {
 
@@ -264,8 +260,8 @@ class ComposeHomeFragment : Fragment() {
 
         if (isPrivate) {
             // Purple background for private mode
-            requireActivity().window.statusBarColor = android.graphics.Color.parseColor("#6A1B9A")
-            requireActivity().window.navigationBarColor = android.graphics.Color.parseColor("#6A1B9A")
+            requireActivity().window.statusBarColor = "#6A1B9A".toColorInt()
+            requireActivity().window.navigationBarColor = "#6A1B9A".toColorInt()
         } else {
             // Default theme color - use the actual theme attributes
             val typedValue = android.util.TypedValue()
@@ -367,7 +363,6 @@ class ComposeHomeFragment : Fragment() {
                 try {
                     findNavController().navigate(R.id.homeFragment)
                 } catch (e: Exception) {
-                    // Already on homeFragment, just reload
                     viewModel.loadShortcuts()
                     viewModel.loadBookmarks()
                 }
