@@ -72,6 +72,9 @@ class UnifiedToolbar @JvmOverloads constructor(
     
     // Reload/Stop button integration
     private var reloadStopIntegration: com.prirai.android.nira.integration.ReloadStopButtonIntegration? = null
+    
+    // Contextual toolbar listener reference (used when contextual toolbar is disabled)
+    private var contextualToolbarListener: ContextualBottomToolbar.ContextualToolbarListener? = null
 
     // Configuration
     private var showTabGroupBar: Boolean = prefs.showTabGroupBar
@@ -129,16 +132,25 @@ class UnifiedToolbar @JvmOverloads constructor(
 
         when (toolbarPos) {
             ModernToolbarSystem.ToolbarPosition.TOP -> {
-                // TOP: Tab Bar -> Address Bar -> Contextual Toolbar
-                addTabGroupBar(store, lifecycleOwner)
+                // TOP: Address Bar only in the top toolbar system
+                // Tab bar and contextual toolbar will be in a separate bottom container
                 addAddressBar(parent, lifecycleOwner, interactor, customTabSession, store)
-                addContextualToolbar()
+                // Create bottom components (they will be retrieved separately)
+                addBottomComponentsForTopToolbar(store, lifecycleOwner)
+                // Add browser actions to address bar if contextual toolbar is disabled
+                if (!showContextualToolbar) {
+                    addBrowserActionsToAddressBar()
+                }
             }
             ModernToolbarSystem.ToolbarPosition.BOTTOM -> {
-                // BOTTOM: Contextual Toolbar -> Address Bar -> Tab Bar
+                // BOTTOM: Contextual Toolbar -> Address Bar -> Tab Bar (all together)
                 addContextualToolbar()
                 addAddressBar(parent, lifecycleOwner, interactor, customTabSession, store)
                 addTabGroupBar(store, lifecycleOwner)
+                // Add browser actions to address bar if contextual toolbar is disabled
+                if (!showContextualToolbar) {
+                    addBrowserActionsToAddressBar()
+                }
             }
         }
 
@@ -151,24 +163,12 @@ class UnifiedToolbar @JvmOverloads constructor(
     }
 
     /**
-     * Adds the tab group bar component (TabGroupWithProfileSwitcher) to the unified toolbar.
-     *
-     * This method:
-     * 1. Creates TabGroupWithProfileSwitcher with all necessary callbacks
-     * 2. Sets up profile switching and private mode toggling
-     * 3. Observes browser store to filter tabs by current profile and private mode
-     * 4. Adds the component to the ModernToolbarSystem
-     *
-     * Tab filtering logic:
-     * - Only shows tabs matching current profile (contextId = "profile_{id}")
-     * - In private mode, only shows tabs with contextId = "private"
-     * - Ensures each profile sees only its own tabs
-     *
-     * @param store The browser store to observe for tab changes
-     * @param lifecycleOwner Lifecycle owner to scope the store observation
+     * Creates the tab group bar component (TabGroupWithProfileSwitcher).
+     * This is separated from addTabGroupBar to allow creating the component
+     * without immediately adding it to the toolbar system (needed for TOP toolbar mode).
      */
     @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
-    private fun addTabGroupBar(
+    private fun createTabGroupBar(
         store: BrowserStore,
         lifecycleOwner: LifecycleOwner
     ) {
@@ -207,9 +207,6 @@ class UnifiedToolbar @JvmOverloads constructor(
                         tab.content.private == false && tab.contextId == expectedContextId
                     }
                     
-                    android.util.Log.d("UnifiedToolbar", "onProfileSelected: profile=${profile.name}, expectedContextId=$expectedContextId")
-                    android.util.Log.d("UnifiedToolbar", "onProfileSelected: Total tabs=${state.tabs.size}, Filtered tabs=${filteredTabs.size}")
-                    
                     tabGroupBar?.updateTabs(filteredTabs, state.selectedTabId)
                     tabGroupBar?.updateProfileIcon(profile)
                     
@@ -230,12 +227,6 @@ class UnifiedToolbar @JvmOverloads constructor(
                     val state = store.state
                     val filteredTabs = state.tabs.filter { tab ->
                         tab.content.private == isPrivateMode && tab.contextId == expectedContextId
-                    }
-                    
-                    android.util.Log.d("UnifiedToolbar", "onPrivateModeSelected: isPrivateMode=$isPrivateMode, expectedContextId=$expectedContextId")
-                    android.util.Log.d("UnifiedToolbar", "onPrivateModeSelected: Total tabs=${state.tabs.size}, Filtered tabs=${filteredTabs.size}")
-                    filteredTabs.forEach { tab ->
-                        android.util.Log.d("UnifiedToolbar", "  - Tab: ${tab.content.title} (${tab.id}), private=${tab.content.private}, contextId=${tab.contextId}")
                     }
                     
                     tabGroupBar?.updateTabs(filteredTabs, state.selectedTabId)
@@ -270,15 +261,37 @@ class UnifiedToolbar @JvmOverloads constructor(
                         tab.content.private == isPrivateMode && tab.contextId == expectedContextId
                     }
                     
-                    android.util.Log.d("UnifiedToolbar", "Flow collect: isPrivateMode=$isPrivateMode, expectedContextId=$expectedContextId")
-                    android.util.Log.d("UnifiedToolbar", "Flow collect: Total tabs=${state.tabs.size}, Filtered tabs=${filteredTabs.size}, selectedTabId=${state.selectedTabId}")
-                    
                     tabGroupBar?.updateTabs(filteredTabs, state.selectedTabId)
                 }
             }
         }
-
-        toolbarSystem.addComponent(tabGroupBar!!, ModernToolbarSystem.ComponentType.TAB_GROUP)
+    }
+    
+    /**
+     * Adds the tab group bar component (TabGroupWithProfileSwitcher) to the unified toolbar.
+     *
+     * This method:
+     * 1. Creates TabGroupWithProfileSwitcher with all necessary callbacks
+     * 2. Sets up profile switching and private mode toggling
+     * 3. Observes browser store to filter tabs by current profile and private mode
+     * 4. Adds the component to the ModernToolbarSystem
+     *
+     * Tab filtering logic:
+     * - Only shows tabs matching current profile (contextId = "profile_{id}")
+     * - In private mode, only shows tabs with contextId = "private"
+     * - Ensures each profile sees only its own tabs
+     *
+     * @param store The browser store to observe for tab changes
+     * @param lifecycleOwner Lifecycle owner to scope the store observation
+     */
+    private fun addTabGroupBar(
+        store: BrowserStore,
+        lifecycleOwner: LifecycleOwner
+    ) {
+        createTabGroupBar(store, lifecycleOwner)
+        if (tabGroupBar != null) {
+            toolbarSystem.addComponent(tabGroupBar!!, ModernToolbarSystem.ComponentType.TAB_GROUP)
+        }
     }
 
     /**
@@ -364,10 +377,35 @@ class UnifiedToolbar @JvmOverloads constructor(
     }
 
     /**
+     * Add bottom components (tab bar and contextual) when toolbar is at TOP
+     * This creates a separate bottom container for these components
+     */
+    private fun addBottomComponentsForTopToolbar(store: BrowserStore, lifecycleOwner: LifecycleOwner) {
+        // For top toolbar mode, create components but don't add them to the toolbar system
+        // They will be retrieved via getBottomComponentsContainer() and positioned separately
+        
+        // Always create contextual toolbar for the container (it might be hidden)
+        contextualToolbar = ContextualBottomToolbar(context).apply {
+            // No need to set background - it already applies Material 3 theming
+            if (!showContextualToolbar) {
+                visibility = View.GONE
+            }
+        }
+        
+        // Create tab group bar if enabled
+        if (showTabGroupBar) {
+            createTabGroupBar(store, lifecycleOwner)
+        }
+        
+    }
+
+    /**
      * Add contextual toolbar component (ContextualBottomToolbar)
      */
     private fun addContextualToolbar() {
         if (!showContextualToolbar) {
+            // When contextual toolbar is disabled, don't create it
+            // Buttons will be added to address bar in setup()
             return
         }
 
@@ -376,6 +414,123 @@ class UnifiedToolbar @JvmOverloads constructor(
         }
 
         toolbarSystem.addComponent(contextualToolbar!!, ModernToolbarSystem.ComponentType.CONTEXTUAL)
+    }
+    
+    // Store tab count view reference to update the count
+    private var tabCountBadgeView: android.widget.TextView? = null
+    
+    /**
+     * Add browser actions (tab count, menu) to address bar when contextual toolbar is disabled
+     */
+    private fun addBrowserActionsToAddressBar() {
+        val toolbar = browserToolbar ?: return
+        
+        // Add menu button first
+        val menuAction = mozilla.components.browser.toolbar.BrowserToolbar.Button(
+            imageDrawable = androidx.core.content.ContextCompat.getDrawable(context, com.prirai.android.nira.R.drawable.ic_more_vert)!!,
+            contentDescription = "Menu",
+            listener = {
+                contextualToolbarListener?.onMenuClicked()
+            }
+        )
+        toolbar.addBrowserAction(menuAction)
+        
+        // Create custom tab count button - exact replica of ContextualBottomToolbar's tab count
+        val tabCountContainer = android.widget.FrameLayout(context).apply {
+            layoutParams = ViewGroup.LayoutParams(
+                (48 * context.resources.displayMetrics.density).toInt(),
+                (48 * context.resources.displayMetrics.density).toInt()
+            )
+            val padding = (4 * context.resources.displayMetrics.density).toInt()
+            setPadding(padding, padding, padding, padding)
+            background = androidx.core.content.ContextCompat.getDrawable(context, android.R.drawable.list_selector_background)
+            
+            // Add square background (same as ContextualBottomToolbar)
+            val backgroundView = android.widget.ImageView(context).apply {
+                setImageDrawable(androidx.core.content.ContextCompat.getDrawable(context, com.prirai.android.nira.R.drawable.tab_number_background))
+                val size = (28 * context.resources.displayMetrics.density).toInt()
+                layoutParams = android.widget.FrameLayout.LayoutParams(size, size).apply {
+                    gravity = android.view.Gravity.CENTER
+                }
+                scaleType = android.widget.ImageView.ScaleType.FIT_XY
+                imageTintList = android.content.res.ColorStateList.valueOf(
+                    com.google.android.material.color.MaterialColors.getColor(
+                        this,
+                        com.google.android.material.R.attr.colorOnSurface,
+                        android.graphics.Color.BLACK
+                    )
+                )
+            }
+            addView(backgroundView)
+            
+            // Add count text (same as ContextualBottomToolbar)
+            val countText = android.widget.TextView(context).apply {
+                val size = (28 * context.resources.displayMetrics.density).toInt()
+                layoutParams = android.widget.FrameLayout.LayoutParams(size, size).apply {
+                    gravity = android.view.Gravity.CENTER
+                }
+                gravity = android.view.Gravity.CENTER
+                textSize = 13f
+                setTypeface(typeface, android.graphics.Typeface.BOLD)
+                setTextColor(
+                    com.google.android.material.color.MaterialColors.getColor(
+                        this,
+                        com.google.android.material.R.attr.colorOnSurface,
+                        android.graphics.Color.BLACK
+                    )
+                )
+                maxLines = 1
+            }
+            addView(countText)
+            tabCountBadgeView = countText
+            
+            setOnClickListener {
+                contextualToolbarListener?.onTabCountClicked()
+            }
+        }
+        
+        // Add tab count view directly to browser actions container at the beginning
+        toolbar.asView().post {
+            val browserActions = toolbar.asView().findViewById<ViewGroup>(
+                mozilla.components.browser.toolbar.R.id.mozac_browser_toolbar_browser_actions
+            )
+            if (browserActions != null) {
+                // Add at index 0 so it appears before the menu button
+                browserActions.addView(tabCountContainer, 0)
+            }
+        }
+        
+        // Start observing tab count to update the text
+        observeTabCountForBadge()
+    }
+    
+    /**
+     * Observe store to update tab count badge
+     */
+    private fun observeTabCountForBadge() {
+        val store = context.components.store
+        val lifecycleOwner = context as? androidx.lifecycle.LifecycleOwner ?: return
+        
+        lifecycleOwner.lifecycleScope.launch {
+            store.flowScoped { flow ->
+                flow.collect { state ->
+                    val profileManager = com.prirai.android.nira.browser.profile.ProfileManager.getInstance(context)
+                    val isPrivateMode = profileManager.isPrivateMode()
+                    val currentProfile = profileManager.getActiveProfile()
+                    val expectedContextId = if (isPrivateMode) {
+                        "private"
+                    } else {
+                        "profile_${currentProfile.id}"
+                    }
+                    
+                    val filteredTabCount = state.tabs.count { tab ->
+                        tab.content.private == isPrivateMode && tab.contextId == expectedContextId
+                    }
+                    
+                    tabCountBadgeView?.text = if (filteredTabCount > 99) "99+" else filteredTabCount.toString()
+                }
+            }
+        }
     }
 
     /**
@@ -433,6 +588,8 @@ class UnifiedToolbar @JvmOverloads constructor(
      * Set listener for contextual toolbar interactions
      */
     fun setContextualToolbarListener(listener: ContextualBottomToolbar.ContextualToolbarListener) {
+        // Store listener for use when contextual toolbar is disabled
+        contextualToolbarListener = listener
         contextualToolbar?.listener = listener
     }
     
@@ -457,6 +614,52 @@ class UnifiedToolbar @JvmOverloads constructor(
      * Get the tab group bar component
      */
     fun getTabGroupBar(): TabGroupWithProfileSwitcher? = tabGroupBar
+    
+    /**
+     * Get a container with bottom components (tab bar and contextual) for TOP toolbar mode.
+     * This returns a LinearLayout containing the components that should be positioned at the bottom.
+     * Returns null if toolbar is not in TOP mode.
+     */
+    fun getBottomComponentsContainer(): ViewGroup? {
+        val toolbarPos = if (prefs.toolbarPosition == ToolbarPosition.BOTTOM.ordinal) {
+            ToolbarPosition.BOTTOM
+        } else {
+            ToolbarPosition.TOP
+        }
+        
+        if (toolbarPos != ToolbarPosition.TOP) {
+            return null
+        }
+        
+        // Create a container for bottom components
+        val container = android.widget.LinearLayout(context).apply {
+            orientation = android.widget.LinearLayout.VERTICAL
+            layoutParams = ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            )
+        }
+        
+        // Add tab bar first (at top of bottom container)
+        tabGroupBar?.let {
+            container.addView(it, ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            ))
+        }
+        
+        // Add contextual toolbar below tab bar
+        contextualToolbar?.let {
+            container.addView(it, ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            ))
+        }
+        
+        android.util.Log.d("UnifiedToolbar", "Bottom container created with ${container.childCount} children, visibility will be: ${container.visibility}")
+        
+        return if (container.childCount > 0) container else null
+    }
 
     /**
      * Update component visibility based on settings
