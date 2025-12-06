@@ -95,7 +95,7 @@ class WebAppInstallationManager(private val context: Context) {
 
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                val webAppEntity = webAppManager.installWebApp(
+                webAppManager.installWebApp(
                     url = detectedPwa.url,
                     name = detectedPwa.name,
                     manifestUrl = detectedPwa.manifest?.startUrl,
@@ -140,13 +140,13 @@ class WebAppInstallationManager(private val context: Context) {
     /**
      * Get mock manifest for demonstration
      */
-    private fun getMockManifest(url: String): WebAppManifest? {
+    private fun getMockManifest(url: String): WebAppManifest {
         // In a real implementation, this would parse the actual manifest
         return WebAppManifest(
             name = "Example PWA",
             shortName = "Example",
             startUrl = url,
-            display = mozilla.components.concept.engine.manifest.WebAppManifest.DisplayMode.STANDALONE,
+            display = WebAppManifest.DisplayMode.STANDALONE,
             themeColor = 0x4285F4,
             backgroundColor = 0xFFFFFF
         )

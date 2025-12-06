@@ -75,7 +75,7 @@ class EnhancedTabGroupView @JvmOverloads constructor(
 
         // Background is handled by parent TabGroupWithProfileSwitcher
         // Make this transparent so parent background shows through
-        setBackgroundColor(android.graphics.Color.TRANSPARENT)
+        setBackgroundColor(Color.TRANSPARENT)
 
         elevation = 0f
     }

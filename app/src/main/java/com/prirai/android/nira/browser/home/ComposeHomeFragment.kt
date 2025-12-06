@@ -402,36 +402,36 @@ class ComposeHomeFragment : Fragment() {
 
     private fun showNativeMenu() {
         var menuBuilder: mozilla.components.browser.menu.BrowserMenuBuilder? = null
-        
-        val homeMenu = com.prirai.android.nira.browser.home.HomeMenu(
+
+        HomeMenu(
             context = requireContext(),
             lifecycleOwner = viewLifecycleOwner,
             onItemTapped = { item ->
                 when (item) {
-                    is com.prirai.android.nira.browser.home.HomeMenu.Item.NewTab -> {
+                    is HomeMenu.Item.NewTab -> {
                         androidx.navigation.fragment.NavHostFragment.findNavController(this)
                             .navigate(R.id.homeFragment)
                     }
-                    is com.prirai.android.nira.browser.home.HomeMenu.Item.NewPrivateTab -> {
+                    is HomeMenu.Item.NewPrivateTab -> {
                         browsingModeManager.mode = BrowsingMode.Private
                         androidx.navigation.fragment.NavHostFragment.findNavController(this)
                             .navigate(R.id.homeFragment)
                     }
-                    is com.prirai.android.nira.browser.home.HomeMenu.Item.Bookmarks -> {
+                    is HomeMenu.Item.Bookmarks -> {
                         val bookmarksBottomSheet = BookmarksBottomSheetFragment.newInstance()
                         bookmarksBottomSheet.show(parentFragmentManager, "BookmarksBottomSheet")
                     }
-                    is com.prirai.android.nira.browser.home.HomeMenu.Item.History -> {
+                    is HomeMenu.Item.History -> {
                         startActivity(android.content.Intent(requireContext(), com.prirai.android.nira.history.HistoryActivity::class.java).apply {
                             flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
                         })
                     }
-                    is com.prirai.android.nira.browser.home.HomeMenu.Item.AddonsManager -> {
+                    is HomeMenu.Item.AddonsManager -> {
                         startActivity(android.content.Intent(requireContext(), com.prirai.android.nira.addons.AddonsActivity::class.java).apply {
                             flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
                         })
                     }
-                    is com.prirai.android.nira.browser.home.HomeMenu.Item.Settings -> {
+                    is HomeMenu.Item.Settings -> {
                         startActivity(android.content.Intent(requireContext(), com.prirai.android.nira.settings.activity.SettingsActivity::class.java).apply {
                             flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
                         })
@@ -445,12 +445,12 @@ class ComposeHomeFragment : Fragment() {
         
         menuBuilder?.let { builder ->
             val menu = builder.build(requireContext())
-            val prefs = com.prirai.android.nira.preferences.UserPreferences(requireContext())
+            val prefs = UserPreferences(requireContext())
             val isBottomToolbar = prefs.toolbarPosition == com.prirai.android.nira.components.toolbar.ToolbarPosition.BOTTOM.ordinal
             
-            val decorView = requireActivity().window.decorView as android.view.ViewGroup
-            val anchorView = android.view.View(requireContext()).apply {
-                id = android.view.View.generateViewId()
+            val decorView = requireActivity().window.decorView as ViewGroup
+            val anchorView = View(requireContext()).apply {
+                id = View.generateViewId()
                 layoutParams = android.widget.FrameLayout.LayoutParams(10, 10).apply {
                     gravity = if (isBottomToolbar) {
                         android.view.Gravity.BOTTOM or android.view.Gravity.END

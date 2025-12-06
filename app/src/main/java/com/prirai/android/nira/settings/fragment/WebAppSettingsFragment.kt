@@ -113,8 +113,8 @@ class WebAppSettingsFragment : Fragment() {
         viewLifecycleOwner.lifecycleScope.launch {
             Components(requireContext()).webAppManager.updateWebAppUsage(webApp.id)
             // Launch the PWA using WebAppActivity
-            val intent = Intent(requireContext(), com.prirai.android.nira.webapp.WebAppActivity::class.java).apply {
-                putExtra(com.prirai.android.nira.webapp.WebAppActivity.EXTRA_WEB_APP_URL, webApp.url)
+            val intent = Intent(requireContext(), WebAppActivity::class.java).apply {
+                putExtra(WebAppActivity.EXTRA_WEB_APP_URL, webApp.url)
             }
             startActivity(intent)
         }

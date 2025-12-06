@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <resources>
-    <color name="mozac_ui_tabcounter_default_tint">#ffffff</color>
 
     <color name="main_icon">#FFFFFF</color>
     <color name="primary_icon">#e3e3e3</color>
@@ -12,11 +11,9 @@
     <color name="selected_tab">#5e5e5e</color>
 
     <!-- Drag and drop -->
-    <color name="drop_target_highlight">#4D00BCD4</color>
 
     <!-- Selected tab highlight -->
-    <color name="selected_tab_highlight">#263238</color>
-    
+
     <!-- Tab card colors (dark mode) -->
     <color name="tab_card_background">#2C2C2C</color>
     <color name="tab_card_stroke">#404040</color>

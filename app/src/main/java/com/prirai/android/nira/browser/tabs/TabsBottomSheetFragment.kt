@@ -100,7 +100,7 @@ class TabsBottomSheetFragment : BottomSheetDialogFragment() {
             
             // Apply window insets to handle gesture navigation
             androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(bottomSheet) { v, insets ->
-                val systemBars = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars())
+                insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars())
                 // The profile chip scroll view already has paddingBottom set to handle gesture area
                 insets
             }
@@ -516,7 +516,7 @@ class TabsBottomSheetFragment : BottomSheetDialogFragment() {
             )
             
             try {
-                androidx.navigation.fragment.NavHostFragment.findNavController(this@TabsBottomSheetFragment)
+                NavHostFragment.findNavController(this@TabsBottomSheetFragment)
                     .navigate(R.id.homeFragment)
                 dismiss()
             } catch (e: Exception) {

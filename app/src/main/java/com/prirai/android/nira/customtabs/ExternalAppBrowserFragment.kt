@@ -268,7 +268,7 @@ class ExternalAppBrowserFragment : CustomTabBrowserFragment() {
                         private = false
                     ),
                     contextId = null,  // Critical: null for guest tab
-                    source = mozilla.components.browser.state.state.SessionState.Source.Internal.NewTab
+                    source = SessionState.Source.Internal.NewTab
                 )
                 
                 // Mark this tab as a guest tab in ProfileMiddleware BEFORE dispatching

@@ -2,22 +2,14 @@
 <resources>
     <dimen name="icon_width">24dp</dimen>
     <dimen name="item_height">64dp</dimen>
-    <dimen name="zero">0dp</dimen>
-    <dimen name="text_margin">16dp</dimen>
     <dimen name="browser_toolbar_height">60dp</dimen>
     <dimen name="browser_fragment_gesture_preview_offset">48dp</dimen>
     <dimen name="context_menu_height">48dp</dimen>
     <dimen name="context_menu_x_offset">8dp</dimen>
     <dimen name="browser_fragment_toolbar_elevation">16dp</dimen>
-    <dimen name="tab_counter_box_width_height">24dp</dimen>
     <dimen name="home_fragment_top_toolbar_header_margin">60dp</dimen>
     <dimen name="tab_icon_size">48dp</dimen>
-    <dimen name="find_in_page_height">56dp</dimen>
     <dimen name="find_in_page_margin">16dp</dimen>
     <dimen name="custom_tab_header_height">56dp</dimen>
-    <dimen name="profile_switcher_size">36dp</dimen>
-    <dimen name="profile_switcher_margin">4dp</dimen>
-    <dimen name="profile_switcher_padding">6dp</dimen>
     <dimen name="search_result_corner_radius">24dp</dimen>
-    <dimen name="search_result_group_margin">8dp</dimen>
 </resources>

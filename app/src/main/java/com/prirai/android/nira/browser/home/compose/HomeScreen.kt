@@ -76,7 +76,7 @@ fun HomeScreen(
     backgroundImageUrl: String? = null,
     modifier: Modifier = Modifier
 ) {
-    val isDark = isSystemInDarkTheme()
+    isSystemInDarkTheme()
     val backgroundColor = MaterialTheme.colorScheme.background
     
     // Get window insets for edge-to-edge support
@@ -94,7 +94,7 @@ fun HomeScreen(
                     .build(),
                 contentDescription = "Homepage background",
                 modifier = Modifier.fillMaxSize(),
-                contentScale = androidx.compose.ui.layout.ContentScale.Crop
+                contentScale = ContentScale.Crop
             )
             // Add semi-transparent overlay for better content readability
             Box(
@@ -732,7 +732,7 @@ fun AddShortcutDialog(
             }
         },
         confirmButton = {
-            androidx.compose.material3.TextButton(
+            TextButton(
                 onClick = {
                     if (url.isBlank()) {
                         urlError = true
@@ -760,12 +760,12 @@ fun AddShortcutDialog(
                     onSave(validUrl, finalTitle)
                 }
             ) {
-                androidx.compose.material3.Text("Save")
+                Text("Save")
             }
         },
         dismissButton = {
-            androidx.compose.material3.TextButton(onClick = onDismiss) {
-                androidx.compose.material3.Text("Cancel")
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
             }
         }
     )

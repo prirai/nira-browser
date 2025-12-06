@@ -92,7 +92,7 @@ class PwaSuggestionsFragment : Fragment() {
         suggestionManager.getAllSuggestedPwas()
     }
 
-    private fun updateSuggestionsList(suggestions: List<com.prirai.android.nira.webapp.PwaSuggestionManager.PwaSuggestion>) {
+    private fun updateSuggestionsList(suggestions: List<PwaSuggestionManager.PwaSuggestion>) {
         if (suggestions.isEmpty()) {
             binding.emptyState.visibility = View.VISIBLE
             binding.suggestionsRecyclerView.visibility = View.GONE
@@ -103,22 +103,22 @@ class PwaSuggestionsFragment : Fragment() {
         }
     }
 
-    private fun updateDetectionState(state: com.prirai.android.nira.webapp.PwaSuggestionManager.DetectionState) {
+    private fun updateDetectionState(state: PwaSuggestionManager.DetectionState) {
         when (state) {
-            com.prirai.android.nira.webapp.PwaSuggestionManager.DetectionState.Idle -> {
+            PwaSuggestionManager.DetectionState.Idle -> {
                 binding.progressBar.visibility = View.GONE
                 binding.refreshButton.visibility = View.VISIBLE
             }
-            com.prirai.android.nira.webapp.PwaSuggestionManager.DetectionState.Detecting -> {
+            PwaSuggestionManager.DetectionState.Detecting -> {
                 binding.progressBar.visibility = View.VISIBLE
                 binding.refreshButton.visibility = View.GONE
                 binding.emptyState.visibility = View.GONE
             }
-            is com.prirai.android.nira.webapp.PwaSuggestionManager.DetectionState.SuggestionsReady -> {
+            is PwaSuggestionManager.DetectionState.SuggestionsReady -> {
                 binding.progressBar.visibility = View.GONE
                 binding.refreshButton.visibility = View.VISIBLE
             }
-            is com.prirai.android.nira.webapp.PwaSuggestionManager.DetectionState.Error -> {
+            is PwaSuggestionManager.DetectionState.Error -> {
                 binding.progressBar.visibility = View.GONE
                 binding.refreshButton.visibility = View.VISIBLE
                 showError(state.message)
@@ -126,7 +126,7 @@ class PwaSuggestionsFragment : Fragment() {
         }
     }
 
-    private fun installSuggestedPwa(pwa: com.prirai.android.nira.webapp.PwaSuggestionManager.PwaSuggestion) {
+    private fun installSuggestedPwa(pwa: PwaSuggestionManager.PwaSuggestion) {
         // Show installation confirmation
         androidx.appcompat.app.AlertDialog.Builder(requireContext())
             .setTitle(getString(R.string.install_suggested_pwa))
@@ -139,13 +139,13 @@ class PwaSuggestionsFragment : Fragment() {
             .show()
     }
 
-    private fun startInstallation(pwa: com.prirai.android.nira.webapp.PwaSuggestionManager.PwaSuggestion) {
+    private fun startInstallation(pwa: PwaSuggestionManager.PwaSuggestion) {
         // This would use the WebAppInstallationManager to install the PWA
         // For now, we'll show a success message
         showInstallationSuccess(pwa)
     }
 
-    private fun showInstallationSuccess(pwa: com.prirai.android.nira.webapp.PwaSuggestionManager.PwaSuggestion) {
+    private fun showInstallationSuccess(pwa: PwaSuggestionManager.PwaSuggestion) {
         androidx.appcompat.app.AlertDialog.Builder(requireContext())
             .setTitle(getString(R.string.app_installed))
             .setMessage(getString(R.string.pwa_installation_complete, pwa.name))
@@ -156,7 +156,7 @@ class PwaSuggestionsFragment : Fragment() {
             .show()
     }
 
-    private fun showPwaDetails(pwa: com.prirai.android.nira.webapp.PwaSuggestionManager.PwaSuggestion) {
+    private fun showPwaDetails(pwa: PwaSuggestionManager.PwaSuggestion) {
         // Show detailed information about the PWA
         androidx.appcompat.app.AlertDialog.Builder(requireContext())
             .setTitle(pwa.name)

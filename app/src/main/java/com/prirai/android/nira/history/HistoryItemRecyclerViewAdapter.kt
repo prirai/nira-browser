@@ -69,8 +69,7 @@ open class HistoryItemRecyclerViewAdapter(
     }
 
     fun getItem(position: Int): VisitInfo {
-        val item = historyItems[position]
-        return when (item) {
+        return when (val item = historyItems[position]) {
             is HistoryItem.Visit -> item.visitInfo
             is HistoryItem.Header -> values[0]
         }
