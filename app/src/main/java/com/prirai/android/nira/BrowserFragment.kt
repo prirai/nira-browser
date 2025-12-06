@@ -222,18 +222,22 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
                 }
 
                 override fun onMenuClicked() {
-                    // Show the browser menu
+                    // Show the browser menu (not settings).
+                    // Creates a BrowserMenu instance with all standard menu items
+                    // (forward, reload, share, bookmarks, settings, etc.)
                     val menuToolbar = com.prirai.android.nira.components.toolbar.BrowserMenu(
                         context = requireContext(),
                         store = requireContext().components.store,
-                        onItemTapped = {
-                            browserInteractor.onBrowserToolbarMenuItemTapped(it)
+                        onItemTapped = { item ->
+                            // Handle menu item selection via the browser interactor
+                            browserInteractor.onBrowserToolbarMenuItemTapped(item)
                         },
                         lifecycleOwner = viewLifecycleOwner,
                         isPinningSupported = requireContext().components.webAppUseCases.isPinningSupported(),
+                        // Reverse item order for top toolbar (menu drops down), normal order for bottom toolbar (menu pops up)
                         shouldReverseItems = com.prirai.android.nira.preferences.UserPreferences(requireContext()).toolbarPosition == com.prirai.android.nira.components.toolbar.ToolbarPosition.TOP.ordinal
                     )
-                    // Show menu anchored to the contextual toolbar's menu button
+                    // Show menu anchored to the contextual toolbar for proper positioning
                     unifiedToolbar?.getContextualToolbar()?.let { toolbar ->
                         menuToolbar.menuBuilder.build(requireContext()).show(anchor = toolbar)
                     }

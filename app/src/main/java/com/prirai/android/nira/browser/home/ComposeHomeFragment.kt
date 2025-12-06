@@ -89,14 +89,18 @@ class ComposeHomeFragment : Fragment() {
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
-        // Create a CoordinatorLayout as root
+        // Create a CoordinatorLayout as root container for the homepage
         val coordinatorLayout = CoordinatorLayout(requireContext()).apply {
             id = View.generateViewId()
             layoutParams = ViewGroup.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.MATCH_PARENT
             )
-            // Don't use fitsSystemWindows - UnifiedToolbar handles insets
+            // IMPORTANT: Don't use fitsSystemWindows here!
+            // UnifiedToolbar handles window insets directly via its own WindowInsetsListener.
+            // Setting fitsSystemWindows=true here would add extra padding at the bottom
+            // (for navigation bar), causing inconsistent spacing compared to BrowserFragment
+            // which doesn't use fitsSystemWindows in its layout XML.
             fitsSystemWindows = false
         }
 

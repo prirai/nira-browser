@@ -151,7 +151,21 @@ class UnifiedToolbar @JvmOverloads constructor(
     }
 
     /**
-     * Add tab group bar component (TabGroupWithProfileSwitcher)
+     * Adds the tab group bar component (TabGroupWithProfileSwitcher) to the unified toolbar.
+     *
+     * This method:
+     * 1. Creates TabGroupWithProfileSwitcher with all necessary callbacks
+     * 2. Sets up profile switching and private mode toggling
+     * 3. Observes browser store to filter tabs by current profile and private mode
+     * 4. Adds the component to the ModernToolbarSystem
+     *
+     * Tab filtering logic:
+     * - Only shows tabs matching current profile (contextId = "profile_{id}")
+     * - In private mode, only shows tabs with contextId = "private"
+     * - Ensures each profile sees only its own tabs
+     *
+     * @param store The browser store to observe for tab changes
+     * @param lifecycleOwner Lifecycle owner to scope the store observation
      */
     @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
     private fun addTabGroupBar(
@@ -163,42 +177,44 @@ class UnifiedToolbar @JvmOverloads constructor(
         }
 
         tabGroupBar = TabGroupWithProfileSwitcher(context).apply {
-            // No need to set background - it already applies Material 3 theming
+            // Material 3 theming is already applied by TabGroupWithProfileSwitcher
             
-            // Setup TabGroupWithProfileSwitcher with all callbacks
+            // Setup with all required callbacks for tab interaction and profile management
             setup(
                 onTabSelected = { tabId ->
-                    // Invoke the callback set from outside
+                    // Delegate to external callback set via setOnTabSelectedListener()
                     onTabSelectedCallback?.invoke(tabId)
                 },
                 onTabClosed = { tabId ->
-                    // Tab closing handled by browser
+                    // Tab closing is handled by the browser's tab management system
                 },
                 onIslandRenamed = { islandId, newName ->
-                    // Island rename handled
+                    // Island renaming is handled by the tab group system
                 },
                 onNewTabInIsland = { islandId ->
-                    // New tab in island handled
+                    // New tab creation in island is handled by tab management
                 },
                 onProfileSelected = { profile ->
-                    // Switch to the selected profile
+                    // Switch to the selected profile and reload to apply changes
                     val profileManager = com.prirai.android.nira.browser.profile.ProfileManager.getInstance(context)
                     profileManager.setActiveProfile(profile)
-                    // Reload to apply profile change
                     context.components.sessionUseCases.reload()
                 },
                 onPrivateModeSelected = {
-                    // Toggle private mode
+                    // Toggle private mode and reload to apply changes
                     val profileManager = com.prirai.android.nira.browser.profile.ProfileManager.getInstance(context)
                     val isCurrentlyPrivate = profileManager.isPrivateMode()
                     profileManager.setPrivateMode(!isCurrentlyPrivate)
-                    // Reload to apply private mode change
                     context.components.sessionUseCases.reload()
                 }
             )
         }
 
-        // Observe store to update tabs with proper filtering by profile/private mode
+        // Observe browser store and filter tabs by current profile and private mode.
+        // This ensures that:
+        // 1. Each profile only sees its own tabs (contextId matches "profile_{id}")
+        // 2. Private mode only shows private tabs (contextId = "private")
+        // 3. Tab bar updates automatically when profile switches or tabs change
         lifecycleOwner.lifecycleScope.launch {
             store.flowScoped { flow ->
                 flow.collect { state ->
@@ -206,13 +222,15 @@ class UnifiedToolbar @JvmOverloads constructor(
                     val isPrivateMode = profileManager.isPrivateMode()
                     val currentProfile = profileManager.getActiveProfile()
                     
-                    // Filter tabs based on current mode and profile (same logic as TabsBottomSheetFragment)
+                    // Determine expected contextId based on current browsing mode
+                    // Private mode uses "private", normal mode uses "profile_{id}"
                     val expectedContextId = if (isPrivateMode) {
                         "private"
                     } else {
                         "profile_${currentProfile.id}"
                     }
                     
+                    // Filter tabs to only show those belonging to current profile/mode
                     val filteredTabs = state.tabs.filter { tab ->
                         tab.content.private == isPrivateMode && tab.contextId == expectedContextId
                     }

@@ -34,6 +34,13 @@ class EnhancedTabGroupView @JvmOverloads constructor(
     // Track last update to prevent unnecessary refreshes
     private var lastTabIds = emptyList<String>()
     private var lastSelectedId: String? = null
+    
+    /**
+     * Tracks whether this is the initial setup of the view.
+     * 
+     * Used to prevent visible scrolling animation when the view is first created
+     * during fragment transitions. Set to false after the first updateTabs() call.
+     */
     private var isInitialSetup = true
     private var lastDisplayItemsCount = 0
 
@@ -566,14 +573,16 @@ class EnhancedTabGroupView @JvmOverloads constructor(
                 tabAdapter.updateDisplayItems(displayItems, selectedId)
             }
 
-            // Scroll to selected tab if selection changed
+            // Scroll to selected tab if selection changed.
+            // Important: We differentiate between initial setup (fragment creation) and
+            // actual tab selection to avoid jarring scroll animations during navigation.
             if (hasSelectionChanged && selectedId != null) {
-                // On initial setup, scroll instantly without animation
-                // On subsequent changes, use smooth scroll
+                // On initial setup: instant scroll (no animation) - tab bar appears already positioned
+                // On tab switch: smooth scroll (animated) - provides visual feedback to user
                 scrollToSelectedTab(selectedId, animate = !isInitialSetup)
             }
             
-            // Mark initial setup as complete
+            // Mark initial setup as complete after first update
             isInitialSetup = false
 
             animateVisibility(true)
@@ -583,7 +592,21 @@ class EnhancedTabGroupView @JvmOverloads constructor(
     }
 
     /**
-     * Scrolls to show the selected tab in the RecyclerView
+     * Scrolls the RecyclerView to show the selected tab.
+     *
+     * This method intelligently handles scrolling to avoid jarring animations during
+     * fragment transitions:
+     * - On initial setup (fragment creation), scrolls instantly without animation
+     * - On subsequent tab selections, uses smooth scroll animation for visual feedback
+     *
+     * The distinction is important because when navigating between fragments
+     * (e.g., ComposeHomeFragment to BrowserFragment), the toolbar is recreated and
+     * we want the tab bar to already be positioned at the selected tab without
+     * showing a visible scrolling animation.
+     *
+     * @param selectedId The ID of the tab to scroll to
+     * @param animate If true, uses smoothScrollToPosition (animated). If false, uses
+     *                scrollToPosition (instant). Defaults to true for normal tab switches.
      */
     private fun scrollToSelectedTab(selectedId: String, animate: Boolean = true) {
         post {
