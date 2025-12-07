@@ -95,6 +95,12 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
     override fun onResume() {
         super.onResume()
         // Contextual toolbar updates handled automatically by UnifiedToolbar
+
+        // Ensure tab preview is hidden (fixes doubled content issue after returning from settings)
+        binding.tabPreview.visibility = android.view.View.GONE
+
+        // Reset EngineView's dynamic toolbar configuration to prevent rendering artifacts
+        binding.engineView.setVerticalClipping(0)
     }
 
     private fun observeTabChangesForToolbar() {
@@ -175,7 +181,7 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
 
             // Set engine view for scroll behavior
             unifiedToolbar?.setEngineView(binding.engineView)
-            
+
             // For TOP toolbar mode, add bottom components to the activity's root container
             if (prefs.toolbarPosition == com.prirai.android.nira.components.toolbar.ToolbarPosition.TOP.ordinal) {
                 val bottomContainer = unifiedToolbar?.getBottomComponentsContainer()

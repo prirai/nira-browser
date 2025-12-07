@@ -650,26 +650,31 @@ open class BrowserActivity : LocaleAwareAppCompatActivity(), ComponentCallbacks2
     private fun enableEdgeToEdge() {
         // Enable edge-to-edge mode
         WindowCompat.setDecorFitsSystemWindows(window, false)
-        
-        // Make navigation bar transparent
-        window.navigationBarColor = android.graphics.Color.TRANSPARENT
-        
-        // Make status bar transparent for true edge-to-edge
-        window.statusBarColor = android.graphics.Color.TRANSPARENT
-        
-        // Handle navigation bar contrast for Android 10+
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
-            // Enable contrast enforcement so system adds scrim when needed
-            window.isNavigationBarContrastEnforced = true
+
+        // Use theme-aware colors instead of transparent to prevent content clipping issues
+        val isDark = isAppInDarkTheme()
+
+        // Set status bar color based on theme
+        window.statusBarColor = if (isDark) {
+            android.graphics.Color.parseColor("#1C1B1F") // Material 3 dark surface
+        } else {
+            android.graphics.Color.parseColor("#FFFBFE") // Material 3 light surface
         }
-        
+
+        // Set navigation bar color based on theme
+        window.navigationBarColor = if (isDark) {
+            android.graphics.Color.parseColor("#1C1B1F") // Material 3 dark surface
+        } else {
+            android.graphics.Color.parseColor("#FFFBFE") // Material 3 light surface
+        }
+
         // Setup system bar appearance
         val insetsController = WindowCompat.getInsetsController(window, window.decorView)
-        insetsController.isAppearanceLightStatusBars = !isAppInDarkTheme()
-        
+        insetsController.isAppearanceLightStatusBars = !isDark
+
         // Set navigation bar to dark/light mode
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-            insetsController.isAppearanceLightNavigationBars = !isAppInDarkTheme()
+            insetsController.isAppearanceLightNavigationBars = !isDark
         }
     }
     

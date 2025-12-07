@@ -326,7 +326,26 @@ class TabsWithGroupsAdapter(
                 0xFF424242.toInt()
             }
             groupName.setTextColor(textColor)
-            tabCount.setTextColor(textColor)
+
+            // Set tab counter background to contrast with text (opposite theme color)
+            val counterBackgroundColor = if (isDark) {
+                0xFF3A3A3A.toInt() // Slightly lighter than pure black in dark mode
+            } else {
+                0xFFE0E0E0.toInt() // Light gray in light mode
+            }
+            val counterTextColor = if (isDark) {
+                0xFFFFFFFF.toInt() // White text in dark mode
+            } else {
+                0xFF212121.toInt() // Dark text in light mode
+            }
+
+            // Create circular background drawable with theme-aware color
+            val circleDrawable = android.graphics.drawable.GradientDrawable().apply {
+                shape = android.graphics.drawable.GradientDrawable.OVAL
+                setColor(counterBackgroundColor)
+            }
+            tabCount.background = circleDrawable
+            tabCount.setTextColor(counterTextColor)
 
             expandIcon.animate().rotation(if (isExpanded) 180f else 0f).setDuration(200).start()
             expandIcon.setColorFilter(textColor)
