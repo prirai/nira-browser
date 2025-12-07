@@ -8,10 +8,10 @@ import androidx.core.view.ViewCompat
 import mozilla.components.concept.toolbar.ScrollableToolbar
 
 /**
- * Revolutionary scroll behavior that provides buttery smooth toolbar animations
- * with intelligent snapping and momentum-based hiding/showing.
+ * Scroll behavior for toolbar auto-hide on scroll.
  * 
- * Works with any ScrollableToolbar implementation (ModernToolbarSystem or UnifiedToolbar).
+ * Provides instant show/hide: scroll down hides toolbar, scroll up shows toolbar.
+ * Works with any ScrollableToolbar implementation (UnifiedToolbar or ModernToolbarSystem).
  */
 class ModernScrollBehavior(
     context: Context,
@@ -62,24 +62,16 @@ class ModernScrollBehavior(
         type: Int
     ) {
         if (!isScrollingEnabled) return
-        
-        val toolbarHeight = getToolbarHeight(child)
-        
-        if (toolbarHeight <= 0) {
-            return
-        }
 
-        // Simple binary approach: scroll down = hide, scroll up = show
-        val currentDirection = if (dy > 0) 1 else if (dy < 0) -1 else 0
-        
+        // Instant show/hide based on scroll direction
         when {
-            // Scrolling down - hide toolbar
-            currentDirection == 1 && !isToolbarHidden -> {
+            dy > 0 && !isToolbarHidden -> {
+                // Scrolling down - hide toolbar
                 collapseToolbar(child)
                 isToolbarHidden = true
             }
-            // Scrolling up - show toolbar
-            currentDirection == -1 && isToolbarHidden -> {
+            dy < 0 && isToolbarHidden -> {
+                // Scrolling up - show toolbar
                 expandToolbar(child)
                 isToolbarHidden = false
             }
@@ -98,18 +90,16 @@ class ModernScrollBehavior(
         consumed: IntArray
     ) {
         // Handle overscroll/fling scenarios
-        if (dyUnconsumed != 0) {
-            when {
-                // Scrolling down past content - ensure toolbar is hidden
-                dyUnconsumed > 0 && !isToolbarHidden -> {
-                    collapseToolbar(child)
-                    isToolbarHidden = true
-                }
-                // Scrolling up past content - ensure toolbar is visible
-                dyUnconsumed < 0 && isToolbarHidden -> {
-                    expandToolbar(child)
-                    isToolbarHidden = false
-                }
+        when {
+            dyUnconsumed > 0 && !isToolbarHidden -> {
+                // Scrolling down past content - hide toolbar
+                collapseToolbar(child)
+                isToolbarHidden = true
+            }
+            dyUnconsumed < 0 && isToolbarHidden -> {
+                // Scrolling up past content - show toolbar
+                expandToolbar(child)
+                isToolbarHidden = false
             }
         }
     }
@@ -120,59 +110,25 @@ class ModernScrollBehavior(
         target: View,
         type: Int
     ) {
-        // No need for snapping with instant show/hide
-        // State is already determined by scroll direction
-    }
-    
-    private fun getToolbarHeight(child: View): Int {
-        return when (child) {
-            is ModernToolbarSystem -> child.getTotalHeight()
-            else -> child.height
-        }
-    }
-    
-    private fun getCurrentOffset(child: View): Int {
-        return when (child) {
-            is ModernToolbarSystem -> child.getCurrentOffset()
-            else -> 0
-        }
-    }
-    
-    private fun setToolbarOffset(child: View, offset: Int) {
-        when (child) {
-            is ModernToolbarSystem -> child.setToolbarOffset(offset)
-            else -> {
-                // Generic implementation using translationY
-                child.translationY = offset.toFloat()
-            }
-        }
+        // Nothing to do - state is already determined by scroll direction
     }
     
     private fun expandToolbar(child: View) {
-        when (child) {
-            is ScrollableToolbar -> child.expand()
-            else -> setToolbarOffset(child, 0)
-        }
+        (child as? ScrollableToolbar)?.expand()
     }
     
     private fun collapseToolbar(child: View) {
-        when (child) {
-            is ScrollableToolbar -> child.collapse()
-            else -> setToolbarOffset(child, getToolbarHeight(child))
-        }
+        (child as? ScrollableToolbar)?.collapse()
     }
 
     private fun findEngineView(coordinatorLayout: CoordinatorLayout): mozilla.components.concept.engine.EngineView? {
         for (i in 0 until coordinatorLayout.childCount) {
             val child = coordinatorLayout.getChildAt(i)
             
-            // Direct EngineView
             if (child is mozilla.components.concept.engine.EngineView) {
                 return child
             }
             
-            // EngineView in ViewPager2 or Fragment
-            if (child is androidx.viewpager2.widget.ViewPager2) continue
             if (child is androidx.fragment.app.FragmentContainerView) {
                 return searchForEngineView(child)
             }
@@ -182,12 +138,10 @@ class ModernScrollBehavior(
 
     private fun searchForEngineView(view: View): mozilla.components.concept.engine.EngineView? {
         if (view is mozilla.components.concept.engine.EngineView) return view
-        if (view is androidx.viewpager2.widget.ViewPager2) return null
         
         if (view is android.view.ViewGroup) {
             for (i in 0 until view.childCount) {
-                val engineView = searchForEngineView(view.getChildAt(i))
-                if (engineView != null) return engineView
+                searchForEngineView(view.getChildAt(i))?.let { return it }
             }
         }
         return null
