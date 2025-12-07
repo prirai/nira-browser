@@ -28,8 +28,7 @@ import mozilla.components.concept.engine.EngineView
 import mozilla.components.concept.toolbar.ScrollableToolbar
 import mozilla.components.lib.state.ext.flowScoped
 import mozilla.components.support.ktx.android.content.res.resolveAttribute
-import mozilla.components.ui.widgets.behavior.EngineViewScrollingBehavior
-import mozilla.components.ui.widgets.behavior.ViewPosition as MozacToolbarPosition
+import com.prirai.android.nira.components.toolbar.modern.ModernScrollBehavior
 
 /**
  * UnifiedToolbar - Centralized toolbar component that unifies tab bar, address bar, and contextual toolbar.
@@ -100,9 +99,21 @@ class UnifiedToolbar @JvmOverloads constructor(
         toolbarSystem.setToolbarPosition(toolbarPos)
     }
     
-    // Forward ScrollableToolbar methods to toolbarSystem
-    override fun enableScrolling() = toolbarSystem.enableScrolling()
-    override fun disableScrolling() = toolbarSystem.disableScrolling()
+    // Forward ScrollableToolbar methods to toolbarSystem and behavior
+    override fun enableScrolling() {
+        toolbarSystem.enableScrolling()
+        (layoutParams as? CoordinatorLayout.LayoutParams)?.let {
+            (it.behavior as? ModernScrollBehavior)?.enableScrolling()
+        }
+    }
+    
+    override fun disableScrolling() {
+        toolbarSystem.disableScrolling()
+        (layoutParams as? CoordinatorLayout.LayoutParams)?.let {
+            (it.behavior as? ModernScrollBehavior)?.disableScrolling()
+        }
+    }
+    
     override fun expand() = toolbarSystem.expand()
     override fun collapse() = toolbarSystem.collapse()
 
@@ -575,12 +586,7 @@ class UnifiedToolbar @JvmOverloads constructor(
                     ToolbarPosition.TOP -> android.view.Gravity.TOP
                 }
 
-                val mozacPosition = when (toolbarPos) {
-                    ToolbarPosition.BOTTOM -> MozacToolbarPosition.BOTTOM
-                    ToolbarPosition.TOP -> MozacToolbarPosition.TOP
-                }
-
-                behavior = EngineViewScrollingBehavior(context, null, mozacPosition)
+                behavior = ModernScrollBehavior(context, null)
             }
 
             this.layoutParams = layoutParams
