@@ -34,4 +34,7 @@
     <color name="progress_bar_color">@color/colorAccent</color>
     <color name="secure_icon_color">#4CAF50</color>
     <color name="insecure_icon_color">#F44336</color>
+    
+    <!-- Settings/Preference dividers -->
+    <color name="preference_divider">#E0E0E0</color>
 </resources>

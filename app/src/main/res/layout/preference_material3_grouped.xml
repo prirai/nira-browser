@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8" ?>
-<!-- Material 3 Preference Layout with iOS-style grouped theming -->
+<!-- Material 3 Preference Layout for grouped styling -->
 <LinearLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"

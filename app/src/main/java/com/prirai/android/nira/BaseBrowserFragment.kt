@@ -601,29 +601,16 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
         val context = requireContext()
 
         if (UserPreferences(context).hideBarWhileScrolling) {
-            // CRITICAL: Don't set dynamic toolbar height for bottom toolbar
-            // Gecko reserves space at the TOP by default, which causes black bar
-            if (UserPreferences(context).shouldUseBottomToolbar) {
-                binding.engineView.setDynamicToolbarMaxHeight(0)
-                // For bottom toolbar, don't use OldEngineViewClippingBehavior
-                // as it clips from top and causes black bar
-                val swipeRefreshParams = binding.swipeRefresh.layoutParams as CoordinatorLayout.LayoutParams
-                swipeRefreshParams.topMargin = 0
-                swipeRefreshParams.bottomMargin = 0
-                binding.swipeRefresh.layoutParams = swipeRefreshParams
-            } else {
-                binding.engineView.setDynamicToolbarMaxHeight(toolbarHeight)
-
-                val toolbarPosition = OldToolbarPosition.TOP
-                (binding.swipeRefresh.layoutParams as CoordinatorLayout.LayoutParams).behavior =
-                    OldEngineViewClippingBehavior(
-                        context,
-                        null,
-                        binding.swipeRefresh,
-                        toolbarHeight,
-                        toolbarPosition.ordinal
-                    )
-            }
+            // CRITICAL: With UnifiedToolbar, we use simple translation, not dynamic toolbar
+            // Dynamic toolbar reserves space in Gecko causing black bars
+            // Always set to 0 regardless of toolbar position
+            binding.engineView.setDynamicToolbarMaxHeight(0)
+            
+            // Reset swipeRefresh margins
+            val swipeRefreshParams = binding.swipeRefresh.layoutParams as CoordinatorLayout.LayoutParams
+            swipeRefreshParams.topMargin = 0
+            swipeRefreshParams.bottomMargin = 0
+            binding.swipeRefresh.layoutParams = swipeRefreshParams
         } else {
             binding.engineView.setDynamicToolbarMaxHeight(0)
 

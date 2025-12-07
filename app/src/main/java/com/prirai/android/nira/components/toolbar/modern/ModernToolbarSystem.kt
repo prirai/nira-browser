@@ -139,18 +139,11 @@ class ModernToolbarSystem @JvmOverloads constructor(
     }
 
     private fun updateDynamicToolbarHeight() {
-        // CRITICAL: Don't set dynamic toolbar height for bottom toolbar
-        // Gecko reserves space at the TOP by default, causing black bar at top
-        // Bottom toolbar doesn't need dynamic toolbar behavior
-        if (toolbarPosition == ToolbarPosition.BOTTOM) {
-            engineView?.setDynamicToolbarMaxHeight(0)
-            return
-        }
-
-        val totalHeight = getTotalHeight()
-        if (totalHeight > 0) {
-            engineView?.setDynamicToolbarMaxHeight(totalHeight)
-        }
+        // CRITICAL: Don't set dynamic toolbar height when using scroll behavior
+        // The scroll behavior translates the toolbar, not shrinks it
+        // Setting dynamic toolbar height reserves space in Gecko, causing black bars
+        engineView?.setDynamicToolbarMaxHeight(0)
+        engineView?.setVerticalClipping(0)
     }
 
     fun getTotalHeight(): Int {
@@ -176,12 +169,10 @@ class ModernToolbarSystem @JvmOverloads constructor(
     }
 
     override fun expand() {
-        if (!scrollingEnabled) return
         animateToOffset(0)
     }
 
     override fun collapse() {
-        if (!scrollingEnabled) return
         val totalHeight = getTotalHeight()
         if (totalHeight > 0) {
             animateToOffset(totalHeight)
@@ -215,17 +206,28 @@ class ModernToolbarSystem @JvmOverloads constructor(
             ToolbarPosition.BOTTOM -> currentOffset.toFloat()  // Positive moves DOWN (hiding)
         }
 
-        alpha = if (totalHeight > 0) {
-            1f - (currentOffset.toFloat() / totalHeight * 0.3f) // Subtle fade
-        } else 1f
-
-        // Apply clipping to engine view
-        // CRITICAL: Don't clip for bottom toolbar - clipping removes content from TOP
+        // Fade out and hide immediately when hiding starts to prevent black bar
         if (toolbarPosition == ToolbarPosition.TOP) {
-            engineView?.setVerticalClipping(currentOffset)
+            if (currentOffset > 0) {
+                // Hiding started - make invisible immediately
+                visibility = View.INVISIBLE
+                alpha = 0f
+            } else {
+                // Fully visible
+                visibility = View.VISIBLE
+                alpha = 1f
+            }
         } else {
-            engineView?.setVerticalClipping(0)
+            // Bottom toolbar - normal behavior
+            alpha = if (totalHeight > 0) {
+                if (currentOffset >= totalHeight) 0f else 1f
+            } else 1f
+            
+            visibility = View.VISIBLE
         }
+
+        // No vertical clipping needed - we're using simple translation
+        // Dynamic toolbar is disabled, so no reserved space to manage
     }
 
     fun getCurrentOffset(): Int = currentOffset

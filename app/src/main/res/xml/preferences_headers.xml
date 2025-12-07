@@ -4,6 +4,9 @@
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
     
+    <androidx.preference.PreferenceCategory
+        android:title="">
+    
     <!-- Core Settings -->
     <androidx.preference.Preference
         android:fragment="com.prirai.android.nira.settings.fragment.GeneralSettingsFragment"
@@ -65,5 +68,7 @@
         android:title="@string/settings_about"
         android:singleLineTitle="false"
         android:summary="@string/settings_about_explain"/>
+    
+    </androidx.preference.PreferenceCategory>
         
 </androidx.preference.PreferenceScreen>

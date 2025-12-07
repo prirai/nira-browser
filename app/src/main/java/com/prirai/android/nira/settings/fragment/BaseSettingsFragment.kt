@@ -1,10 +1,18 @@
 package com.prirai.android.nira.settings.fragment
 
+import android.graphics.Canvas
+import android.graphics.Paint
+import android.graphics.Rect
 import android.os.Bundle
+import android.view.View
+import androidx.core.content.ContextCompat
 import androidx.preference.Preference
 import androidx.preference.Preference.OnPreferenceChangeListener
 import androidx.preference.Preference.OnPreferenceClickListener
 import androidx.preference.PreferenceFragmentCompat
+import androidx.preference.PreferenceViewHolder
+import androidx.recyclerview.widget.RecyclerView
+import com.prirai.android.nira.R
 
 abstract class BaseSettingsFragment : PreferenceFragmentCompat() {
 
@@ -14,8 +22,112 @@ abstract class BaseSettingsFragment : PreferenceFragmentCompat() {
         preferenceManager.sharedPreferencesName = "scw_preferences"
     }
     
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+        
+        // Apply iOS-style grouped styling with custom dividers
+        listView.apply {
+            // Disable default divider
+            setDivider(null)
+            setDividerHeight(0)
+            
+            // Add custom item decoration for grouped styling
+            addItemDecoration(GroupedPreferenceItemDecoration())
+        }
+    }
+    
     override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
         // Override in subclasses
+    }
+
+    /**
+     * Custom ItemDecoration for iOS-style grouped preferences with:
+     * - Top item: top margin + top rounding
+     * - Middle items: dividers limited to content area
+     * - Bottom item: bottom margin + bottom rounding
+     */
+    private inner class GroupedPreferenceItemDecoration : RecyclerView.ItemDecoration() {
+        
+        private val dividerPaint = Paint().apply {
+            color = ContextCompat.getColor(requireContext(), R.color.preference_divider)
+            strokeWidth = 1f
+        }
+        
+        override fun getItemOffsets(
+            outRect: Rect,
+            view: View,
+            parent: RecyclerView,
+            state: RecyclerView.State
+        ) {
+            val position = parent.getChildAdapterPosition(view)
+            if (position == RecyclerView.NO_POSITION) return
+            
+            val adapter = parent.adapter ?: return
+            
+            // Check if this is a category
+            val isCategory = adapter.getItemViewType(position) == 0 // PreferenceCategory type
+            
+            if (isCategory) {
+                // Categories get spacing above them
+                outRect.top = (16 * resources.displayMetrics.density).toInt()
+                return
+            }
+            
+            // Determine position in group
+            val isFirstInGroup = position == 0 || adapter.getItemViewType(position - 1) == 0
+            val isLastInGroup = position == adapter.itemCount - 1 || 
+                                (position < adapter.itemCount - 1 && adapter.getItemViewType(position + 1) == 0)
+            
+            // Horizontal margins for all items
+            val horizontalMargin = (16 * resources.displayMetrics.density).toInt()
+            outRect.left = horizontalMargin
+            outRect.right = horizontalMargin
+            
+            // Vertical margins only for first and last in group
+            val verticalMargin = (8 * resources.displayMetrics.density).toInt()
+            outRect.top = if (isFirstInGroup) verticalMargin else 0
+            outRect.bottom = if (isLastInGroup) verticalMargin else 0
+            
+            // Apply background based on position
+            applyBackground(view, isFirstInGroup, isLastInGroup)
+        }
+        
+        override fun onDraw(canvas: Canvas, parent: RecyclerView, state: RecyclerView.State) {
+            val adapter = parent.adapter ?: return
+            
+            for (i in 0 until parent.childCount) {
+                val child = parent.getChildAt(i)
+                val position = parent.getChildAdapterPosition(child)
+                
+                if (position == RecyclerView.NO_POSITION) continue
+                
+                val isCategory = adapter.getItemViewType(position) == 0
+                if (isCategory) continue
+                
+                // Check if we should draw divider below this item
+                val isLastInGroup = position == adapter.itemCount - 1 || 
+                                   (position < adapter.itemCount - 1 && adapter.getItemViewType(position + 1) == 0)
+                
+                if (!isLastInGroup) {
+                    // Draw divider limited to content area (with padding from left)
+                    val dividerLeft = child.left + (76 * resources.displayMetrics.density) // Icon + padding space
+                    val dividerRight = child.right.toFloat()
+                    val dividerY = child.bottom.toFloat()
+                    
+                    canvas.drawLine(dividerLeft, dividerY, dividerRight, dividerY, dividerPaint)
+                }
+            }
+        }
+        
+        private fun applyBackground(view: View, isFirst: Boolean, isLast: Boolean) {
+            val backgroundRes = when {
+                isFirst && isLast -> R.drawable.preference_background_single
+                isFirst -> R.drawable.preference_background_top
+                isLast -> R.drawable.preference_background_bottom
+                else -> R.drawable.preference_background_middle
+            }
+            view.setBackgroundResource(backgroundRes)
+        }
     }
 
     protected fun switchPreference(

@@ -182,25 +182,20 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
             // Set engine view for scroll behavior
             unifiedToolbar?.setEngineView(binding.engineView)
 
-            // For TOP toolbar mode, add bottom components to the activity's root container
+            // For TOP toolbar mode, add bottom components directly to fragment layout
             if (prefs.toolbarPosition == com.prirai.android.nira.components.toolbar.ToolbarPosition.TOP.ordinal) {
                 val bottomContainer = unifiedToolbar?.getBottomComponentsContainer()
                 
                 bottomContainer?.let { container ->
-                    // Add to activity's root container at bottom
-                    val activity = requireActivity() as? com.prirai.android.nira.BrowserActivity
-                    val rootContainer = activity?.findViewById<ViewGroup>(com.prirai.android.nira.R.id.rootContainer)
+                    // Add directly to browserLayout (CoordinatorLayout) instead of rootContainer
+                    val coordinatorLayout = binding.browserLayout as? androidx.coordinatorlayout.widget.CoordinatorLayout
                     
-                    rootContainer?.let {
-                        // Set the NavHostFragment to have weight=1 so it doesn't take all space
-                        val navHost = it.getChildAt(it.childCount - 1)
-                        (navHost.layoutParams as? android.widget.LinearLayout.LayoutParams)?.weight = 1f
-                        
-                        val layoutParams = android.widget.LinearLayout.LayoutParams(
-                            android.widget.LinearLayout.LayoutParams.MATCH_PARENT,
-                            android.widget.LinearLayout.LayoutParams.WRAP_CONTENT
+                    coordinatorLayout?.let {
+                        val layoutParams = androidx.coordinatorlayout.widget.CoordinatorLayout.LayoutParams(
+                            androidx.coordinatorlayout.widget.CoordinatorLayout.LayoutParams.MATCH_PARENT,
+                            androidx.coordinatorlayout.widget.CoordinatorLayout.LayoutParams.WRAP_CONTENT
                         ).apply {
-                            weight = 0f
+                            gravity = android.view.Gravity.BOTTOM
                         }
                         
                         it.addView(container, layoutParams)

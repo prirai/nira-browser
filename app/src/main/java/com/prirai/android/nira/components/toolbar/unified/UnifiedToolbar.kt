@@ -78,6 +78,10 @@ class UnifiedToolbar @JvmOverloads constructor(
     // Configuration
     private var showTabGroupBar: Boolean = prefs.showTabGroupBar
     private var showContextualToolbar: Boolean = prefs.showContextualToolbar
+    
+    // Bottom components container reference (for TOP toolbar mode)
+    private var bottomComponentsContainer: ViewGroup? = null
+    private var shouldHideBottomComponents = false
 
     init {
         // Allow children to draw outside bounds (for elevated tab pills during drag)
@@ -97,6 +101,7 @@ class UnifiedToolbar @JvmOverloads constructor(
             ModernToolbarSystem.ToolbarPosition.TOP
         }
         toolbarSystem.setToolbarPosition(toolbarPos)
+        shouldHideBottomComponents = (toolbarPos == ModernToolbarSystem.ToolbarPosition.TOP)
     }
     
     // Forward ScrollableToolbar methods to toolbarSystem and behavior
@@ -114,8 +119,38 @@ class UnifiedToolbar @JvmOverloads constructor(
         }
     }
     
-    override fun expand() = toolbarSystem.expand()
-    override fun collapse() = toolbarSystem.collapse()
+    override fun expand() {
+        toolbarSystem.expand()
+        // Also show bottom components if in TOP mode
+        if (shouldHideBottomComponents) {
+            bottomComponentsContainer?.let { container ->
+                container.visibility = View.VISIBLE
+                container.animate()
+                    .translationY(0f)
+                    .alpha(1f)
+                    .setDuration(200)
+                    .start()
+            }
+        }
+    }
+    
+    override fun collapse() {
+        toolbarSystem.collapse()
+        // Also hide bottom components if in TOP mode
+        if (shouldHideBottomComponents) {
+            bottomComponentsContainer?.let { container ->
+                // Set GONE immediately to prevent space reservation
+                container.visibility = View.GONE
+                // Still animate for smooth visual effect (though invisible)
+                val height = container.height.toFloat()
+                container.animate()
+                    .translationY(height)
+                    .alpha(0f)
+                    .setDuration(200)
+                    .start()
+            }
+        }
+    }
 
     /**
      * Setup the unified toolbar with all components.
@@ -417,6 +452,14 @@ class UnifiedToolbar @JvmOverloads constructor(
             if (!showContextualToolbar) {
                 visibility = View.GONE
             }
+            
+            // Apply window insets to add padding for navigation bar
+            // Now that we're using CoordinatorLayout, this won't cause container size issues
+            androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(this) { v, insets ->
+                val systemBars = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars())
+                v.setPadding(v.paddingLeft, v.paddingTop, v.paddingRight, systemBars.bottom)
+                insets
+            }
         }
         
         // Create tab group bar if enabled
@@ -666,6 +709,7 @@ class UnifiedToolbar @JvmOverloads constructor(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT
             )
+            // No padding - the toolbars will handle their own spacing
         }
         
         // Add tab bar first (at top of bottom container)
@@ -683,6 +727,9 @@ class UnifiedToolbar @JvmOverloads constructor(
                 ViewGroup.LayoutParams.WRAP_CONTENT
             ))
         }
+        
+        // Store reference for expand/collapse operations
+        bottomComponentsContainer = container
         
         return if (container.childCount > 0) container else null
     }
