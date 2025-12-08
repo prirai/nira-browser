@@ -244,10 +244,17 @@ class UnifiedToolbar @JvmOverloads constructor(
                 },
                 onNewTabInIsland = { islandId ->
                     // Create a new tab and add it to the specified island (tab group)
+                    // Get current profile info for contextId
+                    val profileManager = com.prirai.android.nira.browser.profile.ProfileManager.getInstance(context)
+                    val currentProfile = profileManager.getActiveProfile()
+                    val isPrivateMode = profileManager.isPrivateMode()
+                    val contextId = if (isPrivateMode) "private" else "profile_${currentProfile.id}"
+                    
                     val newTabId = context.components.tabsUseCases.addTab(
-                        url = "about:blank",
+                        url = "about:homepage",
                         selectTab = true,
-                        private = false
+                        private = isPrivateMode,
+                        contextId = contextId
                     )
 
                     // Add the new tab to the island/group using UnifiedTabGroupManager
