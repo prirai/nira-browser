@@ -668,5 +668,7 @@
   <string name="search_tabs">Search tabs</string>
   <string name="search_tabs_bookmarks_history">Search tabs, bookmarks, and history</string>
   <string name="search_tabs_description">Type to search across all your tabs, bookmarks, and browsing history</string>
+    <string name="printer_icon">Printer Icon</string>
+    <string name="pdf_icon">PDF Icon</string>
 
 </resources>
