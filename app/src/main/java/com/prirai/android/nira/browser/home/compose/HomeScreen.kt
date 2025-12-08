@@ -74,6 +74,7 @@ fun HomeScreen(
     currentProfile: ProfileInfo,
     onProfileClick: () -> Unit,
     backgroundImageUrl: String? = null,
+    isToolbarAtTop: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     isSystemInDarkTheme()
@@ -83,6 +84,9 @@ fun HomeScreen(
     val windowInsets = WindowInsets.systemBars
     val topPadding = with(LocalDensity.current) { windowInsets.getTop(this).toDp() }
     val bottomPadding = with(LocalDensity.current) { windowInsets.getBottom(this).toDp() }
+    
+    // Add toolbar height when toolbar is at top (approximately 56dp for toolbar)
+    val toolbarHeight = if (isToolbarAtTop) 56.dp else 0.dp
     
     Box(modifier = modifier.fillMaxSize()) {
         // Background image layer
@@ -116,7 +120,7 @@ fun HomeScreen(
                 ),
             contentPadding = PaddingValues(
                 start = 16.dp,
-                top = topPadding + 16.dp,  // Add system bar padding
+                top = topPadding + toolbarHeight + 16.dp,  // Add system bar + toolbar padding
                 end = 16.dp,
                 bottom = bottomPadding + 100.dp  // Add navigation bar padding + toolbar space
             ),

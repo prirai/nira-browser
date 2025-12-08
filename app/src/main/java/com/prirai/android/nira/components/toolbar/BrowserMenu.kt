@@ -35,7 +35,9 @@ class BrowserMenu(
             menuItems,
             endOfMenuAlwaysVisible = !shouldReverseItems,
             store = store,
-            style = WebExtensionBrowserMenuBuilder.Style(webExtIconTintColorResource = primaryTextColor()),
+            style = WebExtensionBrowserMenuBuilder.Style(
+                webExtIconTintColorResource = primaryTextColor()
+            ),
             onAddonsManagerTapped = {
                 val intent = Intent(context, AddonsActivity::class.java)
                 intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
@@ -106,7 +108,7 @@ class BrowserMenu(
         BrowserMenuItemToolbar(listOf(back, forward, share, refresh))
     }
 
-    val externalAppItem = BrowserMenuImageText(
+    val externalAppItem = ThemedBrowserMenuImageText(
         context.getString(R.string.mozac_feature_contextmenu_open_link_in_external_app),
         R.drawable.ic_baseline_open_in_new
     ) {
@@ -150,10 +152,9 @@ class BrowserMenu(
         }
     }
 
-    private val settings = BrowserMenuImageText(
+    private val settings = ThemedBrowserMenuImageText(
         label = context.getString(R.string.settings),
-        imageResource = R.drawable.ic_round_settings,
-        iconTintColorResource = primaryTextColor()
+        imageResource = R.drawable.ic_round_settings
     ) {
         onItemTapped.invoke(ToolbarMenu.Item.Settings)
     }
@@ -168,10 +169,9 @@ class BrowserMenu(
         onItemTapped.invoke(ToolbarMenu.Item.RequestDesktop(checked))
     }
 
-    private val installWebApp = BrowserMenuImageText(
+    private val installWebApp = ThemedBrowserMenuImageText(
         label = context.getString(R.string.install_web_app),
-        imageResource = R.drawable.ic_round_smartphone,
-        iconTintColorResource = primaryTextColor()
+        imageResource = R.drawable.ic_round_smartphone
     ) {
         onItemTapped.invoke(ToolbarMenu.Item.InstallWebApp)
     }.apply {
@@ -180,79 +180,86 @@ class BrowserMenu(
         }
     }
 
-    private val addToHomescreen = BrowserMenuImageText(
+    private val addToHomescreen = ThemedBrowserMenuImageText(
         label = context.getString(R.string.action_add_to_homescreen),
-        imageResource = R.drawable.ic_round_smartphone,
-        iconTintColorResource = primaryTextColor()
+        imageResource = R.drawable.ic_round_smartphone
     ) {
         onItemTapped.invoke(ToolbarMenu.Item.AddToHomeScreen)
     }
 
-    private val findInPage = BrowserMenuImageText(
+    private val findInPage = ThemedBrowserMenuImageText(
         label = context.getString(R.string.mozac_feature_findindpage_input),
-        imageResource = R.drawable.mozac_ic_search_24,
-        iconTintColorResource = primaryTextColor()
+        imageResource = R.drawable.mozac_ic_search_24
     ) {
         onItemTapped.invoke(ToolbarMenu.Item.FindInPage)
     }
 
-    val historyItem = BrowserMenuImageText(
+    val historyItem = ThemedBrowserMenuImageText(
         context.getString(R.string.action_history),
-        R.drawable.ic_baseline_history,
-        primaryTextColor()
+        R.drawable.ic_baseline_history
     ) {
         onItemTapped.invoke(ToolbarMenu.Item.History)
     }
 
-    val printItem = BrowserMenuImageText(
+    val printItem = ThemedBrowserMenuImageText(
         context.getString(R.string.action_print),
-        R.drawable.ic_baseline_print,
-        primaryTextColor()
+        R.drawable.ic_baseline_print
     ) {
         onItemTapped.invoke(ToolbarMenu.Item.Print)
     }
 
-    val saveAsPdfItem = BrowserMenuImageText(
+    val saveAsPdfItem = ThemedBrowserMenuImageText(
         context.getString(R.string.save_as_pdf),
-        R.drawable.ic_baseline_pdf,
-        primaryTextColor()
+        R.drawable.ic_baseline_pdf
     ) {
         onItemTapped.invoke(ToolbarMenu.Item.PDF)
     }
 
-    val newTabItem = BrowserMenuImageText(
+    val newTabItem = ThemedBrowserMenuImageText(
         context.getString(R.string.mozac_browser_menu_new_tab),
-        R.drawable.mozac_ic_tab_new_24,
-        primaryTextColor()
+        R.drawable.mozac_ic_tab_new_24
     ) {
         onItemTapped.invoke(ToolbarMenu.Item.NewTab)
     }
 
-    val newPrivateTabItem = BrowserMenuImageText(
+    val newPrivateTabItem = ThemedBrowserMenuImageText(
         context.getString(R.string.mozac_browser_menu_new_private_tab),
-        R.drawable.ic_incognito,
-        primaryTextColor()
+        R.drawable.ic_incognito
     ) {
         onItemTapped.invoke(ToolbarMenu.Item.NewPrivateTab)
     }
 
-    val bookmarksItem = BrowserMenuImageText(
+    val bookmarksItem = ThemedBrowserMenuImageText(
         context.getString(R.string.action_bookmarks),
-        R.drawable.ic_baseline_bookmark,
-        primaryTextColor()
+        R.drawable.ic_baseline_bookmark
     ) {
         onItemTapped.invoke(ToolbarMenu.Item.Bookmarks)
     }
 
-    val securityItem = BrowserMenuImageText(
+    val securityItem = ThemedBrowserMenuImageText(
         label = "Security",
-        imageResource = R.drawable.ic_baseline_lock,
-        iconTintColorResource = primaryTextColor()
+        imageResource = R.drawable.ic_baseline_lock
     ) {
         onItemTapped.invoke(ToolbarMenu.Item.Security)
     }
 
     @ColorRes
     @VisibleForTesting
-    internal fun primaryTextColor() = R.color.primary_icon
+    internal fun primaryTextColor(): Int {
+        // Use Material 3 onSurface color for menu items
+        // Resolve the color from theme attribute at runtime
+        val typedValue = android.util.TypedValue()
+        val resolved = context.theme.resolveAttribute(
+            com.google.android.material.R.attr.colorOnSurface,
+            typedValue,
+            true
+        )
+        
+        return if (resolved && typedValue.resourceId != 0) {
+            typedValue.resourceId
+        } else {
+            // Fallback to primary_icon if Material 3 color not available
+            R.color.primary_icon
+        }
+    }
 }

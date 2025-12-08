@@ -161,6 +161,9 @@ class ComposeHomeFragment : Fragment() {
                     HomepageBackgroundChoice.GALLERY.ordinal -> prefs.homepageBackgroundUrl
                     else -> null
                 }
+                
+                // Check if toolbar is at top
+                val isToolbarAtTop = prefs.toolbarPosition == com.prirai.android.nira.components.toolbar.ToolbarPosition.TOP.ordinal
 
                 NiraTheme(isPrivateMode = isPrivateMode) {
                     HomeScreen(
@@ -171,6 +174,7 @@ class ComposeHomeFragment : Fragment() {
                         tabCount = tabCount,
                         currentProfile = currentProfile,
                         backgroundImageUrl = backgroundImageUrl,
+                        isToolbarAtTop = isToolbarAtTop,
                         onProfileClick = { showProfileSwitcher() },
                         onShortcutClick = { shortcut ->
                             components.sessionUseCases.loadUrl(shortcut.url)
@@ -302,8 +306,18 @@ class ComposeHomeFragment : Fragment() {
                     gravity = android.view.Gravity.BOTTOM
                 }
                 
+                // Apply window insets to avoid navigation bar
+                androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(container) { view, insets ->
+                    val systemBars = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars())
+                    view.setPadding(0, 0, 0, systemBars.bottom)
+                    insets
+                }
+                
                 coordinatorLayout.addView(container, layoutParams)
                 container.visibility = android.view.View.VISIBLE
+                
+                // Request insets to be applied
+                androidx.core.view.ViewCompat.requestApplyInsets(container)
             }
         }
 
@@ -564,110 +578,98 @@ class ComposeHomeFragment : Fragment() {
     }
 
     private fun showNativeMenu() {
-        var menuBuilder: mozilla.components.browser.menu.BrowserMenuBuilder? = null
-
-        HomeMenu(
-            context = requireContext(),
-            lifecycleOwner = viewLifecycleOwner,
-            onItemTapped = { item ->
-                when (item) {
-                    is HomeMenu.Item.NewTab -> {
-                        // Create new tab in current profile with about:homepage
-                        val profileManager = com.prirai.android.nira.browser.profile.ProfileManager.getInstance(requireContext())
-                        val currentProfile = profileManager.getActiveProfile()
-                        val contextId = "profile_${currentProfile.id}"
-                        
-                        components.tabsUseCases.addTab(
-                            url = "about:homepage",
-                            selectTab = true,
-                            private = false,
-                            contextId = contextId
-                        )
-                        
-                        // Stay on homeFragment as it will show the new tab
-                    }
-
-                    is HomeMenu.Item.NewPrivateTab -> {
-                        // Create new private tab with about:homepage
-                        browsingModeManager.mode = BrowsingMode.Private
-                        
-                        components.tabsUseCases.addTab(
-                            url = "about:homepage",
-                            selectTab = true,
-                            private = true,
-                            contextId = "private"
-                        )
-                        
-                        // Stay on homeFragment as it will show the new tab
-                    }
-
-                    is HomeMenu.Item.Bookmarks -> {
-                        val bookmarksBottomSheet = BookmarksBottomSheetFragment.newInstance()
-                        bookmarksBottomSheet.show(parentFragmentManager, "BookmarksBottomSheet")
-                    }
-
-                    is HomeMenu.Item.History -> {
-                        startActivity(android.content.Intent(
-                            requireContext(),
-                            com.prirai.android.nira.history.HistoryActivity::class.java
-                        ).apply {
-                            flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
-                        })
-                    }
-
-                    is HomeMenu.Item.AddonsManager -> {
-                        startActivity(android.content.Intent(
-                            requireContext(),
-                            com.prirai.android.nira.addons.AddonsActivity::class.java
-                        ).apply {
-                            flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
-                        })
-                    }
-
-                    is HomeMenu.Item.Settings -> {
-                        startActivity(android.content.Intent(
-                            requireContext(),
-                            com.prirai.android.nira.settings.activity.SettingsActivity::class.java
-                        ).apply {
-                            flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
-                        })
-                    }
+        val profileManager = com.prirai.android.nira.browser.profile.ProfileManager.getInstance(requireContext())
+        val currentProfile = profileManager.getActiveProfile()
+        
+        // Create menu items using custom Material 3 menu
+        val menuItems = listOf(
+            com.prirai.android.nira.components.menu.Material3BrowserMenu.MenuItem.Action(
+                id = "new_tab",
+                title = getString(R.string.mozac_browser_menu_new_tab),
+                iconRes = R.drawable.mozac_ic_tab_new_24,
+                onClick = {
+                    val contextId = "profile_${currentProfile.id}"
+                    components.tabsUseCases.addTab(
+                        url = "about:homepage",
+                        selectTab = true,
+                        private = false,
+                        contextId = contextId
+                    )
                 }
-            },
-            onMenuBuilderChanged = { builder ->
-                menuBuilder = builder
-            }
+            ),
+            com.prirai.android.nira.components.menu.Material3BrowserMenu.MenuItem.Action(
+                id = "new_private_tab",
+                title = getString(R.string.mozac_browser_menu_new_private_tab),
+                iconRes = R.drawable.ic_incognito,
+                onClick = {
+                    browsingModeManager.mode = BrowsingMode.Private
+                    components.tabsUseCases.addTab(
+                        url = "about:homepage",
+                        selectTab = true,
+                        private = true,
+                        contextId = "private"
+                    )
+                }
+            ),
+            com.prirai.android.nira.components.menu.Material3BrowserMenu.MenuItem.Divider,
+            com.prirai.android.nira.components.menu.Material3BrowserMenu.MenuItem.Action(
+                id = "history",
+                title = getString(R.string.action_history),
+                iconRes = R.drawable.ic_baseline_history,
+                onClick = {
+                    startActivity(android.content.Intent(
+                        requireContext(),
+                        com.prirai.android.nira.history.HistoryActivity::class.java
+                    ).apply {
+                        flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
+                    })
+                }
+            ),
+            com.prirai.android.nira.components.menu.Material3BrowserMenu.MenuItem.Action(
+                id = "bookmarks",
+                title = getString(R.string.action_bookmarks),
+                iconRes = R.drawable.ic_baseline_bookmark,
+                onClick = {
+                    val bookmarksBottomSheet = BookmarksBottomSheetFragment.newInstance()
+                    bookmarksBottomSheet.show(parentFragmentManager, "BookmarksBottomSheet")
+                }
+            ),
+            com.prirai.android.nira.components.menu.Material3BrowserMenu.MenuItem.Divider,
+            com.prirai.android.nira.components.menu.Material3BrowserMenu.MenuItem.Action(
+                id = "settings",
+                title = getString(R.string.settings),
+                iconRes = R.drawable.ic_round_settings,
+                onClick = {
+                    startActivity(android.content.Intent(
+                        requireContext(),
+                        com.prirai.android.nira.settings.activity.SettingsActivity::class.java
+                    ).apply {
+                        flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
+                    })
+                }
+            ),
+            com.prirai.android.nira.components.menu.Material3BrowserMenu.MenuItem.Action(
+                id = "addons",
+                title = getString(R.string.mozac_browser_menu_extensions),
+                iconRes = R.drawable.mozac_ic_extension_24,
+                onClick = {
+                    startActivity(android.content.Intent(
+                        requireContext(),
+                        com.prirai.android.nira.addons.AddonsActivity::class.java
+                    ).apply {
+                        flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
+                    })
+                }
+            )
         )
-
-        menuBuilder?.let { builder ->
-            val menu = builder.build(requireContext())
-            val prefs = UserPreferences(requireContext())
-            val isBottomToolbar =
-                prefs.toolbarPosition == com.prirai.android.nira.components.toolbar.ToolbarPosition.BOTTOM.ordinal
-
-            val decorView = requireActivity().window.decorView as ViewGroup
-            val anchorView = View(requireContext()).apply {
-                id = View.generateViewId()
-                layoutParams = android.widget.FrameLayout.LayoutParams(10, 10).apply {
-                    gravity = if (isBottomToolbar) {
-                        android.view.Gravity.BOTTOM or android.view.Gravity.END
-                    } else {
-                        android.view.Gravity.TOP or android.view.Gravity.END
-                    }
-
-                    if (isBottomToolbar) {
-                        bottomMargin = 80
-                    } else {
-                        topMargin = 80
-                    }
-                    rightMargin = 20
-                }
-            }
-
-            decorView.addView(anchorView)
-            anchorView.post {
-                menu.show(anchor = anchorView)
-            }
+        
+        // Find menu button as anchor
+        val menuButton = view?.findViewById<android.widget.ImageButton>(R.id.menu_button)
+        menuButton?.let {
+            com.prirai.android.nira.components.menu.Material3BrowserMenu(
+                requireContext(),
+                menuItems
+            ).show(it)
         }
     }
 }

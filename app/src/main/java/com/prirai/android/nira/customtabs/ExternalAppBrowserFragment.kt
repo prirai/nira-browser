@@ -80,11 +80,11 @@ class ExternalAppBrowserFragment : CustomTabBrowserFragment() {
      * This adds extra top padding on top of the status bar padding.
      */
     private fun setupCustomTabContentPadding(view: View) {
-        val swipeRefresh = view.findViewById<View>(R.id.swipeRefresh) ?: return
+        val engineView = binding.engineView.asView()
         val headerHeight = resources.getDimensionPixelSize(R.dimen.custom_tab_header_height)
         
         // Listen for insets and add header height to the top padding
-        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(swipeRefresh) { v, insets ->
+        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(engineView) { v, insets ->
             val systemBars = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars())
             
             // Apply padding: status bar + header height at top, nav bar at bottom
@@ -99,8 +99,8 @@ class ExternalAppBrowserFragment : CustomTabBrowserFragment() {
         }
         
         // Force apply insets
-        swipeRefresh.post {
-            androidx.core.view.ViewCompat.requestApplyInsets(swipeRefresh)
+        engineView.post {
+            androidx.core.view.ViewCompat.requestApplyInsets(engineView)
         }
     }
     

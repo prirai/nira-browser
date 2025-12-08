@@ -101,14 +101,16 @@ class ModernToolbarSystem @JvmOverloads constructor(
     fun setEngineView(engine: EngineView) {
         engineView = engine
 
-        // CRITICAL: For bottom toolbar, immediately set clipping to 0
-        // to prevent black bar at top before any scroll events
-        if (toolbarPosition == ToolbarPosition.BOTTOM) {
+        // For TOP toolbar: Enable dynamic toolbar so content starts below toolbar
+        // For BOTTOM toolbar: Set clipping to 0 to prevent black bar at top
+        if (toolbarPosition == ToolbarPosition.TOP) {
+            // Enable dynamic toolbar - this makes content start below the toolbar
+            updateDynamicToolbarHeight()
+        } else {
+            // BOTTOM toolbar: Disable dynamic toolbar
             engine.setDynamicToolbarMaxHeight(0)
             engine.setVerticalClipping(0)
         }
-
-        updateDynamicToolbarHeight()
     }
 
     fun setToolbarPosition(position: ToolbarPosition) {
@@ -139,11 +141,41 @@ class ModernToolbarSystem @JvmOverloads constructor(
     }
 
     private fun updateDynamicToolbarHeight() {
-        // CRITICAL: Don't set dynamic toolbar height when using scroll behavior
-        // The scroll behavior translates the toolbar, not shrinks it
-        // Setting dynamic toolbar height reserves space in Gecko, causing black bars
-        engineView?.setDynamicToolbarMaxHeight(0)
-        engineView?.setVerticalClipping(0)
+        val engine = engineView ?: return
+        
+        if (toolbarPosition == ToolbarPosition.TOP) {
+            // TOP toolbar: Enable dynamic toolbar to offset content below toolbar
+            // We need to measure the toolbar first if height is 0
+            if (height == 0) {
+                // Force measure to get proper height
+                measure(
+                    View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED),
+                    View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
+                )
+            }
+            
+            val totalHeight = getTotalHeight()
+            if (totalHeight > 0) {
+                engine.setDynamicToolbarMaxHeight(totalHeight)
+                // Set clipping to current offset so content adjusts as toolbar hides/shows
+                engine.setVerticalClipping(currentOffset)
+            } else {
+                // If still no height, post to next frame
+                post {
+                    val h = getTotalHeight()
+                    if (h > 0) {
+                        engine.setDynamicToolbarMaxHeight(h)
+                        engine.setVerticalClipping(currentOffset)
+                    }
+                }
+            }
+        } else {
+            // BOTTOM toolbar: Disable dynamic toolbar (no content offset needed)
+            // The scroll behavior translates the toolbar, not shrinks it
+            // Setting dynamic toolbar height reserves space in Gecko, causing black bars
+            engine.setDynamicToolbarMaxHeight(0)
+            engine.setVerticalClipping(0)
+        }
     }
 
     fun getTotalHeight(): Int {
@@ -206,28 +238,21 @@ class ModernToolbarSystem @JvmOverloads constructor(
             ToolbarPosition.BOTTOM -> currentOffset.toFloat()  // Positive moves DOWN (hiding)
         }
 
-        // Fade out and hide immediately when hiding starts to prevent black bar
+        // Update vertical clipping for TOP toolbar so content can expand as toolbar hides
         if (toolbarPosition == ToolbarPosition.TOP) {
-            if (currentOffset > 0) {
-                // Hiding started - make invisible immediately
-                visibility = View.INVISIBLE
-                alpha = 0f
-            } else {
-                // Fully visible
-                visibility = View.VISIBLE
-                alpha = 1f
-            }
+            engineView?.setVerticalClipping(currentOffset)
+            
+            // Keep toolbar visible but translated for smooth animation
+            visibility = View.VISIBLE
+            alpha = 1f
         } else {
-            // Bottom toolbar - normal behavior
+            // Bottom toolbar - normal fade behavior
             alpha = if (totalHeight > 0) {
                 if (currentOffset >= totalHeight) 0f else 1f
             } else 1f
             
             visibility = View.VISIBLE
         }
-
-        // No vertical clipping needed - we're using simple translation
-        // Dynamic toolbar is disabled, so no reserved space to manage
     }
 
     fun getCurrentOffset(): Int = currentOffset

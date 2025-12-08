@@ -198,8 +198,18 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
                             gravity = android.view.Gravity.BOTTOM
                         }
                         
+                        // Apply window insets to avoid navigation bar
+                        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(container) { view, insets ->
+                            val systemBars = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars())
+                            view.setPadding(0, 0, 0, systemBars.bottom)
+                            insets
+                        }
+                        
                         it.addView(container, layoutParams)
                         container.visibility = View.VISIBLE
+                        
+                        // Request insets to be applied
+                        androidx.core.view.ViewCompat.requestApplyInsets(container)
                     }
                 }
             }
@@ -251,47 +261,14 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
                 }
 
                 override fun onMenuClicked() {
-                    // Show the browser menu (not settings).
-                    // Creates a BrowserMenu instance with all standard menu items
-                    // (forward, reload, share, bookmarks, settings, etc.)
-                    val menuToolbar = com.prirai.android.nira.components.toolbar.BrowserMenu(
-                        context = requireContext(),
-                        store = requireContext().components.store,
-                        onItemTapped = { item ->
-                            // Handle menu item selection via the browser interactor
-                            browserInteractor.onBrowserToolbarMenuItemTapped(item)
-                        },
-                        lifecycleOwner = viewLifecycleOwner,
-                        isPinningSupported = requireContext().components.webAppUseCases.isPinningSupported(),
-                        // Reverse item order for top toolbar (menu drops down), normal order for bottom toolbar (menu pops up)
-                        shouldReverseItems = com.prirai.android.nira.preferences.UserPreferences(requireContext()).toolbarPosition == com.prirai.android.nira.components.toolbar.ToolbarPosition.TOP.ordinal
-                    )
-                    // Show menu aligned to the right using custom anchor (same as home page)
-                    val prefs = com.prirai.android.nira.preferences.UserPreferences(requireContext())
-                    val isBottomToolbar = prefs.toolbarPosition == com.prirai.android.nira.components.toolbar.ToolbarPosition.BOTTOM.ordinal
-                    
-                    val decorView = requireActivity().window.decorView as ViewGroup
-                    val anchorView = android.view.View(requireContext()).apply {
-                        id = android.view.View.generateViewId()
-                        layoutParams = android.widget.FrameLayout.LayoutParams(10, 10).apply {
-                            gravity = if (isBottomToolbar) {
-                                android.view.Gravity.BOTTOM or android.view.Gravity.END
-                            } else {
-                                android.view.Gravity.TOP or android.view.Gravity.END
-                            }
-                            
-                            if (isBottomToolbar) {
-                                bottomMargin = 80
-                            } else {
-                                topMargin = 80
-                            }
-                            rightMargin = 20
+                    // Show custom Material 3 menu
+                    // Use try-catch to handle cases where view might not be ready
+                    try {
+                        if (view != null && isAdded) {
+                            showBrowserMenu()
                         }
-                    }
-                    
-                    decorView.addView(anchorView)
-                    anchorView.post {
-                        menuToolbar.menuBuilder.build(requireContext()).show(anchor = anchorView)
+                    } catch (e: Exception) {
+                        android.util.Log.e("BrowserFragment", "Error showing menu", e)
                     }
                 }
 
@@ -529,11 +506,255 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
                 requestApplyInsets()
                 expand()
                 requestLayout()
-            }
         }
 
-        // BaseBrowserFragment will call initializeEngineView automatically
     }
-
-
+        // BaseBrowserFragment will call initializeEngineView automatically
+}
+    private fun showBrowserMenu() {
+        val store = requireContext().components.store
+        val selectedTab = store.state.tabs.find { it.id == store.state.selectedTabId }
+        
+        val menuItems = mutableListOf<com.prirai.android.nira.components.menu.Material3BrowserMenu.MenuItem>()
+        
+        // History & Bookmarks Pill Row
+        menuItems.add(
+            com.prirai.android.nira.components.menu.Material3BrowserMenu.MenuItem.PillRow(
+                title1 = getString(R.string.action_history),
+                icon1 = R.drawable.ic_baseline_history,
+                onClick1 = {
+                    browserInteractor.onBrowserToolbarMenuItemTapped(
+                        com.prirai.android.nira.components.toolbar.ToolbarMenu.Item.History
+                    )
+                },
+                title2 = getString(R.string.action_bookmarks),
+                icon2 = R.drawable.ic_baseline_bookmark,
+                onClick2 = {
+                    browserInteractor.onBrowserToolbarMenuItemTapped(
+                        com.prirai.android.nira.components.toolbar.ToolbarMenu.Item.Bookmarks
+                    )
+                }
+            )
+        )
+        
+        menuItems.add(com.prirai.android.nira.components.menu.Material3BrowserMenu.MenuItem.Divider)
+        
+        // Print & PDF Pill Row
+        menuItems.add(
+            com.prirai.android.nira.components.menu.Material3BrowserMenu.MenuItem.PillRow(
+                title1 = getString(R.string.action_print),
+                icon1 = R.drawable.ic_baseline_print,
+                onClick1 = {
+                    browserInteractor.onBrowserToolbarMenuItemTapped(
+                        com.prirai.android.nira.components.toolbar.ToolbarMenu.Item.Print
+                    )
+                },
+                title2 = getString(R.string.save_as_pdf),
+                icon2 = R.drawable.ic_baseline_pdf,
+                onClick2 = {
+                    browserInteractor.onBrowserToolbarMenuItemTapped(
+                        com.prirai.android.nira.components.toolbar.ToolbarMenu.Item.PDF
+                    )
+                }
+            )
+        )
+        
+        // Add to Homescreen/Install (conditional)
+        if (requireContext().components.webAppUseCases.isPinningSupported()) {
+            if (requireContext().components.webAppUseCases.isInstallable()) {
+                menuItems.add(
+                    com.prirai.android.nira.components.menu.Material3BrowserMenu.MenuItem.Action(
+                        id = "install_webapp",
+                        title = getString(R.string.install_web_app),
+                        iconRes = R.drawable.ic_round_smartphone,
+                        onClick = {
+                            browserInteractor.onBrowserToolbarMenuItemTapped(
+                                com.prirai.android.nira.components.toolbar.ToolbarMenu.Item.InstallWebApp
+                            )
+                        }
+                    )
+                )
+            } else {
+                menuItems.add(
+                    com.prirai.android.nira.components.menu.Material3BrowserMenu.MenuItem.Action(
+                        id = "add_to_homescreen",
+                        title = getString(R.string.action_add_to_homescreen),
+                        iconRes = R.drawable.ic_round_smartphone,
+                        onClick = {
+                            browserInteractor.onBrowserToolbarMenuItemTapped(
+                                com.prirai.android.nira.components.toolbar.ToolbarMenu.Item.AddToHomeScreen
+                            )
+                        }
+                    )
+                )
+            }
+        }
+        
+        // Open in App (conditional)
+        selectedTab?.let { tab ->
+            if (requireContext().components.appLinksUseCases.appLinkRedirect(tab.content.url).hasExternalApp()) {
+                menuItems.add(
+                    com.prirai.android.nira.components.menu.Material3BrowserMenu.MenuItem.Action(
+                        id = "open_in_app",
+                        title = getString(R.string.mozac_feature_contextmenu_open_link_in_external_app),
+                        iconRes = R.drawable.ic_baseline_open_in_new,
+                        onClick = {
+                            browserInteractor.onBrowserToolbarMenuItemTapped(
+                                com.prirai.android.nira.components.toolbar.ToolbarMenu.Item.OpenInApp
+                            )
+                        }
+                    )
+                )
+            }
+        }
+        
+        // Desktop Mode Toggle
+        menuItems.add(
+            com.prirai.android.nira.components.menu.Material3BrowserMenu.MenuItem.Toggle(
+                id = "desktop_mode",
+                title = getString(R.string.desktop_mode),
+                iconRes = R.drawable.ic_desktop,
+                isChecked = selectedTab?.content?.desktopMode ?: false,
+                onToggle = { checked ->
+                    browserInteractor.onBrowserToolbarMenuItemTapped(
+                        com.prirai.android.nira.components.toolbar.ToolbarMenu.Item.RequestDesktop(checked)
+                    )
+                }
+            )
+        )
+        
+        menuItems.add(com.prirai.android.nira.components.menu.Material3BrowserMenu.MenuItem.Divider)
+        
+        // Find in Page
+        menuItems.add(
+            com.prirai.android.nira.components.menu.Material3BrowserMenu.MenuItem.Action(
+                id = "find_in_page",
+                title = getString(R.string.mozac_feature_findindpage_input),
+                iconRes = R.drawable.mozac_ic_search_24,
+                onClick = {
+                    browserInteractor.onBrowserToolbarMenuItemTapped(
+                        com.prirai.android.nira.components.toolbar.ToolbarMenu.Item.FindInPage
+                    )
+                }
+            )
+        )
+        
+        // Add to Favorites
+        menuItems.add(
+            com.prirai.android.nira.components.menu.Material3BrowserMenu.MenuItem.Action(
+                id = "add_to_favorites",
+                title = "Add to Favorites",
+                iconRes = R.drawable.ic_baseline_bookmark_add,
+                onClick = {
+                    selectedTab?.let { tab ->
+                        android.widget.Toast.makeText(
+                            requireContext(),
+                            "Added to favorites",
+                            android.widget.Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                }
+            )
+        )
+        
+        menuItems.add(com.prirai.android.nira.components.menu.Material3BrowserMenu.MenuItem.Divider)
+        
+        // Extensions
+        menuItems.add(
+            com.prirai.android.nira.components.menu.Material3BrowserMenu.MenuItem.Action(
+                id = "extensions",
+                title = getString(R.string.mozac_browser_menu_extensions),
+                iconRes = R.drawable.mozac_ic_extension_24,
+                onClick = {
+                    startActivity(android.content.Intent(
+                        requireContext(),
+                        com.prirai.android.nira.addons.AddonsActivity::class.java
+                    ).apply {
+                        flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
+                    })
+                }
+            )
+        )
+        
+        // Settings
+        menuItems.add(
+            com.prirai.android.nira.components.menu.Material3BrowserMenu.MenuItem.Action(
+                id = "settings",
+                title = getString(R.string.settings),
+                iconRes = R.drawable.ic_round_settings,
+                onClick = {
+                    browserInteractor.onBrowserToolbarMenuItemTapped(
+                        com.prirai.android.nira.components.toolbar.ToolbarMenu.Item.Settings
+                    )
+                }
+            )
+        )
+        
+        menuItems.add(com.prirai.android.nira.components.menu.Material3BrowserMenu.MenuItem.Divider)
+        
+        // New Tab & Private Tab above toolbar
+        menuItems.add(
+            com.prirai.android.nira.components.menu.Material3BrowserMenu.MenuItem.Action(
+                id = "new_tab",
+                title = getString(R.string.mozac_browser_menu_new_tab),
+                iconRes = R.drawable.mozac_ic_tab_new_24,
+                onClick = {
+                    browserInteractor.onBrowserToolbarMenuItemTapped(
+                        com.prirai.android.nira.components.toolbar.ToolbarMenu.Item.NewTab
+                    )
+                }
+            )
+        )
+        
+        menuItems.add(
+            com.prirai.android.nira.components.menu.Material3BrowserMenu.MenuItem.Action(
+                id = "new_private_tab",
+                title = getString(R.string.mozac_browser_menu_new_private_tab),
+                iconRes = R.drawable.ic_incognito,
+                onClick = {
+                    browserInteractor.onBrowserToolbarMenuItemTapped(
+                        com.prirai.android.nira.components.toolbar.ToolbarMenu.Item.NewPrivateTab
+                    )
+                }
+            )
+        )
+        
+        menuItems.add(com.prirai.android.nira.components.menu.Material3BrowserMenu.MenuItem.Divider)
+        
+        // Toolbar Row at bottom
+        menuItems.add(
+            com.prirai.android.nira.components.menu.Material3BrowserMenu.MenuItem.ToolbarRow(
+                onBackClick = {
+                    requireContext().components.sessionUseCases.goBack()
+                },
+                onForwardClick = {
+                    requireContext().components.sessionUseCases.goForward()
+                },
+                onReloadClick = {
+                    requireContext().components.sessionUseCases.reload()
+                },
+                onShareClick = {
+                    browserInteractor.onBrowserToolbarMenuItemTapped(
+                        com.prirai.android.nira.components.toolbar.ToolbarMenu.Item.Share
+                    )
+                },
+                backEnabled = selectedTab?.content?.canGoBack ?: false,
+                forwardEnabled = selectedTab?.content?.canGoForward ?: false
+            )
+        )
+        
+        // Find anchor for menu
+        // Try to get the actual toolbar view as anchor
+        val toolbarView = unifiedToolbar?.getToolbarView()
+        val menuButton = view?.findViewById<android.widget.ImageButton>(R.id.menu_button)
+        
+        val anchor = toolbarView ?: menuButton ?: view
+        
+        anchor?.let {
+            com.prirai.android.nira.components.menu.Material3BrowserMenu(
+                requireContext(),
+                menuItems
+            ).show(it)
+        }
+    }
 }

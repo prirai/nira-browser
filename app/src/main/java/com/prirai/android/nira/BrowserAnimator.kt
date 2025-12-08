@@ -22,7 +22,7 @@ import java.lang.ref.WeakReference
 class BrowserAnimator(
     private val fragment: WeakReference<Fragment>,
     private val engineView: WeakReference<EngineView>,
-    private val swipeRefresh: WeakReference<View>,
+    private val swipeRefresh: WeakReference<View>?,
     private val viewLifecycleScope: WeakReference<LifecycleCoroutineScope>
 ) {
 
@@ -30,7 +30,7 @@ class BrowserAnimator(
         get() = engineView.get()
 
     private val unwrappedSwipeRefresh: View?
-        get() = swipeRefresh.get()
+        get() = swipeRefresh?.get()
 
     fun beginAnimateInIfNecessary() {
         unwrappedEngineView?.asView()?.visibility = View.VISIBLE
