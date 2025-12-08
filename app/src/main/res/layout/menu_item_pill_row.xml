@@ -11,10 +11,12 @@
 
     <com.google.android.material.card.MaterialCardView
         android:layout_width="match_parent"
-        android:layout_height="40dp"
+        android:layout_height="48dp"
         app:cardCornerRadius="20dp"
-        app:cardElevation="4dp"
-        app:cardBackgroundColor="@color/chip_stroke_color">
+        app:cardElevation="0dp"
+        app:strokeWidth="1dp"
+        app:strokeColor="?attr/colorOutline"
+        app:cardBackgroundColor="?attr/colorSurfaceContainerHighest">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -37,15 +39,17 @@
                     android:layout_width="20dp"
                     android:layout_height="20dp"
                     android:layout_marginEnd="8dp"
-                    android:tint="?attr/colorOnSurface"
+                    android:contentDescription="@string/printer_icon"
+                    app:tint="?attr/colorOnSurfaceVariant"
                     tools:src="@drawable/ic_baseline_print" />
 
                 <com.google.android.material.textview.MaterialTextView
                     android:id="@+id/pill_title_1"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:textColor="?attr/colorOnSurface"
+                    android:textColor="?attr/colorOnSurfaceVariant"
                     android:textSize="13sp"
+                    android:textStyle="bold"
                     tools:text="Print" />
             </LinearLayout>
 
@@ -54,7 +58,7 @@
                 android:layout_height="match_parent"
                 android:layout_marginTop="8dp"
                 android:layout_marginBottom="8dp"
-                android:background="?attr/colorOutlineVariant" />
+                android:background="?attr/colorOutline" />
 
             <LinearLayout
                 android:id="@+id/pill_action_2"
@@ -72,15 +76,17 @@
                     android:layout_width="20dp"
                     android:layout_height="20dp"
                     android:layout_marginEnd="8dp"
-                    android:tint="?attr/colorOnSurface"
+                    android:contentDescription="@string/pdf_icon"
+                    app:tint="?attr/colorOnSurfaceVariant"
                     tools:src="@drawable/ic_baseline_pdf" />
 
                 <com.google.android.material.textview.MaterialTextView
                     android:id="@+id/pill_title_2"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:textColor="?attr/colorOnSurface"
+                    android:textColor="?attr/colorOnSurfaceVariant"
                     android:textSize="13sp"
+                    android:textStyle="bold"
                     tools:text="PDF" />
             </LinearLayout>
 
