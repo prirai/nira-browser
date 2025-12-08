@@ -212,7 +212,8 @@ class ModernTabPillAdapter(
                         item1.islandColor == item2.islandColor &&
                         item1.session.content.title == item2.session.content.title &&
                         item1.session.content.url == item2.session.content.url &&
-                        item1.session.content.loading == item2.session.content.loading
+                        item1.session.content.loading == item2.session.content.loading &&
+                        item1.session.content.icon == item2.session.content.icon
 
             item1 is TabPillItem.IslandHeader && item2 is TabPillItem.IslandHeader ->
                 item1.island.id == item2.island.id &&
@@ -234,7 +235,8 @@ class ModernTabPillAdapter(
                         item1.tabs.zip(item2.tabs).all { (tab1, tab2) ->
                             tab1.content.title == tab2.content.title &&
                                     tab1.content.url == tab2.content.url &&
-                                    tab1.content.loading == tab2.content.loading
+                                    tab1.content.loading == tab2.content.loading &&
+                                    tab1.content.icon == tab2.content.icon
                         }
 
             else -> false
