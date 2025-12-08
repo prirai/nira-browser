@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Dark theme variant of m3_default_color_secondary_text.
+    Uses hardcoded color values to avoid circular reference issues.
+-->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Disabled state - 38% opacity primary text color for dark mode -->
+    <item android:state_enabled="false" android:alpha="0.38" android:color="#FFFFFF"/>
+    <!-- Default state - secondary text color for dark mode -->
+    <item android:color="#B0B0B0"/>
+</selector>
