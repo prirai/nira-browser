@@ -290,6 +290,23 @@ class ComposeHomeFragment : Fragment() {
             store = components.store
         )
         
+        // For TOP toolbar mode, add bottom components directly to fragment layout
+        if (prefs.toolbarPosition == com.prirai.android.nira.components.toolbar.ToolbarPosition.TOP.ordinal) {
+            val bottomContainer = unifiedToolbar?.getBottomComponentsContainer()
+            
+            bottomContainer?.let { container ->
+                val layoutParams = CoordinatorLayout.LayoutParams(
+                    CoordinatorLayout.LayoutParams.MATCH_PARENT,
+                    CoordinatorLayout.LayoutParams.WRAP_CONTENT
+                ).apply {
+                    gravity = android.view.Gravity.BOTTOM
+                }
+                
+                coordinatorLayout.addView(container, layoutParams)
+                container.visibility = android.view.View.VISIBLE
+            }
+        }
+
         // Set tab selection listener - using EXACT same approach as TabsBottomSheetFragment
         unifiedToolbar?.setOnTabSelectedListener { tabId ->
             components.tabsUseCases.selectTab(tabId)
@@ -326,7 +343,19 @@ class ComposeHomeFragment : Fragment() {
             }
 
             override fun onNewTabClicked() {
-                components.tabsUseCases.addTab("about:blank")
+                // Get current profile info for contextId
+                val profileManager = com.prirai.android.nira.browser.profile.ProfileManager.getInstance(requireContext())
+                val isPrivateMode = components.store.state.selectedTab?.content?.private ?: browsingModeManager.mode.isPrivate
+                val currentProfile = profileManager.getActiveProfile()
+                val contextId = if (isPrivateMode) "private" else "profile_${currentProfile.id}"
+                
+                // Create new tab with about:homepage
+                components.tabsUseCases.addTab(
+                    url = "about:homepage",
+                    selectTab = true,
+                    private = isPrivateMode,
+                    contextId = contextId
+                )
             }
 
             override fun onTabCountClicked() {
@@ -543,14 +572,33 @@ class ComposeHomeFragment : Fragment() {
             onItemTapped = { item ->
                 when (item) {
                     is HomeMenu.Item.NewTab -> {
-                        androidx.navigation.fragment.NavHostFragment.findNavController(this)
-                            .navigate(R.id.homeFragment)
+                        // Create new tab in current profile with about:homepage
+                        val profileManager = com.prirai.android.nira.browser.profile.ProfileManager.getInstance(requireContext())
+                        val currentProfile = profileManager.getActiveProfile()
+                        val contextId = "profile_${currentProfile.id}"
+                        
+                        components.tabsUseCases.addTab(
+                            url = "about:homepage",
+                            selectTab = true,
+                            private = false,
+                            contextId = contextId
+                        )
+                        
+                        // Stay on homeFragment as it will show the new tab
                     }
 
                     is HomeMenu.Item.NewPrivateTab -> {
+                        // Create new private tab with about:homepage
                         browsingModeManager.mode = BrowsingMode.Private
-                        androidx.navigation.fragment.NavHostFragment.findNavController(this)
-                            .navigate(R.id.homeFragment)
+                        
+                        components.tabsUseCases.addTab(
+                            url = "about:homepage",
+                            selectTab = true,
+                            private = true,
+                            contextId = "private"
+                        )
+                        
+                        // Stay on homeFragment as it will show the new tab
                     }
 
                     is HomeMenu.Item.Bookmarks -> {
