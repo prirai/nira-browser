@@ -744,14 +744,19 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
         )
         
         // Find anchor for menu
-        // Try to get the actual toolbar view as anchor
-        val toolbarView = unifiedToolbar?.getToolbarView()
+        // When contextual toolbar is enabled, prioritize menu button from it, not from address bar
+        val prefs = com.prirai.android.nira.preferences.UserPreferences(requireContext())
         val menuButton = view?.findViewById<android.widget.ImageButton>(R.id.menu_button)
+        val toolbarView = unifiedToolbar?.getToolbarView()
         
-        val anchor = toolbarView ?: menuButton ?: view
+        // Use menu button if contextual toolbar is showing, otherwise use toolbar view
+        val anchor = if (prefs.showContextualToolbar && menuButton != null) {
+            menuButton
+        } else {
+            toolbarView ?: menuButton ?: view
+        }
         
         // Determine menu position: prefer bottom UNLESS toolbar is at top AND contextual toolbar is disabled
-        val prefs = com.prirai.android.nira.preferences.UserPreferences(requireContext())
         val preferBottom = prefs.toolbarPosition == com.prirai.android.nira.components.toolbar.ToolbarPosition.BOTTOM.ordinal ||
                           prefs.showContextualToolbar
         

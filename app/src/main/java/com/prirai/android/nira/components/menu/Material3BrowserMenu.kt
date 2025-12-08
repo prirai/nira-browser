@@ -117,13 +117,18 @@ class Material3BrowserMenu(
             val spaceBelow = screenHeight - (anchorY + anchor.height)
             val spaceAbove = anchorY
             
+            // Determine if anchor is in the bottom half of the screen (contextual toolbar case)
+            val anchorInBottomHalf = anchorY > screenHeight / 2
+            
             // Decide whether to show above or below
             val showAbove = if (preferBottom) {
-                // Prefer bottom: only show above if there's not enough space below AND more space above
-                spaceBelow < menuHeight && spaceAbove > spaceBelow
+                // Prefer bottom positioning: if anchor is in bottom half, show above it to keep menu at bottom
+                // if anchor is in top half, show below it to position menu at bottom
+                anchorInBottomHalf
             } else {
-                // Prefer top: only show below if there's not enough space above AND more space below
-                !(spaceAbove < menuHeight && spaceBelow > spaceAbove)
+                // Prefer top positioning: if anchor is in top half, show below it to keep menu at top
+                // if anchor is in bottom half, show above it to position menu at top
+                !anchorInBottomHalf
             }
             
             // Calculate Y position

@@ -651,21 +651,22 @@ open class BrowserActivity : LocaleAwareAppCompatActivity(), ComponentCallbacks2
         // Enable edge-to-edge mode
         WindowCompat.setDecorFitsSystemWindows(window, false)
 
-        // Use theme-aware colors instead of transparent to prevent content clipping issues
         val isDark = isAppInDarkTheme()
 
-        // Set status bar color based on theme
+        // Use semi-transparent scrim for status bar to ensure visibility on all devices
+        // This works better than opaque colors on devices like Xiaomi HyperOS
         window.statusBarColor = if (isDark) {
-            android.graphics.Color.parseColor("#1C1B1F") // Material 3 dark surface
+            android.graphics.Color.argb(230, 28, 27, 31) // 90% opaque Material 3 dark surface
         } else {
-            android.graphics.Color.parseColor("#FFFBFE") // Material 3 light surface
+            android.graphics.Color.argb(230, 255, 251, 254) // 90% opaque Material 3 light surface
         }
 
-        // Set navigation bar color based on theme
-        window.navigationBarColor = if (isDark) {
-            android.graphics.Color.parseColor("#1C1B1F") // Material 3 dark surface
-        } else {
-            android.graphics.Color.parseColor("#FFFBFE") // Material 3 light surface
+        // Navigation bar remains transparent - content flows behind it
+        window.navigationBarColor = android.graphics.Color.TRANSPARENT
+
+        // Remove navigation bar contrast enforcement (removes the white scrim on Android 10+)
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+            window.isNavigationBarContrastEnforced = false
         }
 
         // Setup system bar appearance
