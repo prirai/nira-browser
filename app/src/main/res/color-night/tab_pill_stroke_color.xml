@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Selected state - use direct color to avoid circular reference -->
+    <item android:color="#00BCD4" android:state_selected="true"/>
+    <!-- Default state - subtle border for dark mode -->
+    <item android:color="#404040"/>
+</selector>

@@ -4,13 +4,14 @@
     
     Issue: The Material library's version references @dimen/material_emphasis_disabled
     in android:alpha, which isn't supported by some Android versions' LayoutInflater
-    when loading StateListDrawables. This causes a crash when long-pressing links and
-    opening context menus.
+    when loading StateListDrawables. This also causes circular reference issues with
+    theme attributes.
     
-    Fix: Override with hardcoded alpha value (0.38 = 38% Material disabled emphasis).
+    Fix: Use hardcoded color values and alpha to avoid both issues.
 -->
 <selector xmlns:android="http://schemas.android.com/apk/res/android">
-    <item android:state_enabled="false" android:alpha="0.38"
-          android:color="?android:attr/textColorPrimary"/>
-    <item android:color="?android:attr/textColorSecondary"/>
+    <!-- Disabled state - 38% opacity primary text color -->
+    <item android:state_enabled="false" android:alpha="0.38" android:color="#212121"/>
+    <!-- Default state - secondary text color -->
+    <item android:color="#757575"/>
 </selector>

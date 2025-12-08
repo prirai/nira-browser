@@ -120,23 +120,12 @@ class BrowserToolbarView(
             view.apply {
                 setToolbarBehavior()
 
-                elevation = resources.getDimension(R.dimen.browser_fragment_toolbar_elevation)
+                // Remove elevation to prevent shadow bleeding onto contextual toolbar
+                elevation = 0f
+                outlineProvider = null
 
-                if (!isCustomTabSession) {
-                    // Apply Material 3 surface color with tonal elevation (3dp)
-                    val elevationDp = 3f * resources.displayMetrics.density
-                    val elevatedColor = com.google.android.material.elevation.ElevationOverlayProvider(context)
-                        .compositeOverlayWithThemeSurfaceColorIfNeeded(elevationDp)
-                    
-                    val drawable = android.graphics.drawable.GradientDrawable()
-                    drawable.shape = android.graphics.drawable.GradientDrawable.RECTANGLE
-                    drawable.setColor(elevatedColor)
-                    drawable.cornerRadius = 0f
-                    
-                    // Set background for both the toolbar container and the URL display area
-                    setBackgroundColor(elevatedColor)
-                    display.setUrlBackground(drawable)
-                }
+                // Note: URL field background is set via ToolbarIntegration using
+                // toolbar_background.xml and toolbar_background_private.xml drawables
 
                 display.onUrlClicked = {
                     interactor.onBrowserToolbarClicked()

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <selector xmlns:android="http://schemas.android.com/apk/res/android">
-    <!-- Selected state - accent color -->
-    <item android:color="?attr/colorPrimary" android:state_selected="true"/>
+    <!-- Selected state - use direct color to avoid circular reference -->
+    <item android:color="#ff333333" android:state_selected="true"/>
     <!-- Default state - subtle border -->
-    <item android:color="?attr/colorOutlineVariant"/>
+    <item android:color="#E0E0E0"/>
 </selector>
