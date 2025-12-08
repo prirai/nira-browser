@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Override for Material3 color that causes crashes on some Android devices.
+    
+    Issue: The Material library's version references @dimen/material_emphasis_disabled
+    in android:alpha, which isn't supported by some Android versions' LayoutInflater
+    when loading StateListDrawables. This causes a crash when long-pressing links and
+    opening context menus.
+    
+    Fix: Override with hardcoded alpha value (0.38 = 38% Material disabled emphasis).
+-->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_enabled="false" android:alpha="0.38"
+          android:color="?android:attr/textColorPrimary"/>
+    <item android:color="?android:attr/textColorSecondary"/>
+</selector>
