@@ -750,11 +750,16 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
         
         val anchor = toolbarView ?: menuButton ?: view
         
+        // Determine menu position: prefer bottom UNLESS toolbar is at top AND contextual toolbar is disabled
+        val prefs = com.prirai.android.nira.preferences.UserPreferences(requireContext())
+        val preferBottom = prefs.toolbarPosition == com.prirai.android.nira.components.toolbar.ToolbarPosition.BOTTOM.ordinal ||
+                          prefs.showContextualToolbar
+        
         anchor?.let {
             com.prirai.android.nira.components.menu.Material3BrowserMenu(
                 requireContext(),
                 menuItems
-            ).show(it)
+            ).show(it, preferBottom)
         }
     }
 }

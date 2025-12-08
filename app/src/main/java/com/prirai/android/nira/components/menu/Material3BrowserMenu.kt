@@ -64,7 +64,7 @@ class Material3BrowserMenu(
     
     private var popupWindow: PopupWindow? = null
     
-    fun show(anchor: View) {
+    fun show(anchor: View, preferBottom: Boolean = true) {
         val inflater = LayoutInflater.from(context)
         val menuView = inflater.inflate(R.layout.material3_browser_menu, null)
         
@@ -117,8 +117,14 @@ class Material3BrowserMenu(
             val spaceBelow = screenHeight - (anchorY + anchor.height)
             val spaceAbove = anchorY
             
-            // Decide whether to show above or below based on available space
-            val showAbove = spaceBelow < menuHeight && spaceAbove > spaceBelow
+            // Decide whether to show above or below
+            val showAbove = if (preferBottom) {
+                // Prefer bottom: only show above if there's not enough space below AND more space above
+                spaceBelow < menuHeight && spaceAbove > spaceBelow
+            } else {
+                // Prefer top: only show below if there's not enough space above AND more space below
+                !(spaceAbove < menuHeight && spaceBelow > spaceAbove)
+            }
             
             // Calculate Y position
             val yPos = if (showAbove) {
