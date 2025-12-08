@@ -270,10 +270,16 @@ class UnifiedToolbar @JvmOverloads constructor(
                     profileManager.setPrivateMode(false) // Switching to a profile exits private mode
                     
                     // Manually trigger tab bar update with filtered tabs
+                    // Include guest tabs (contextId == null) in addition to profile tabs
                     val expectedContextId = "profile_${profile.id}"
                     val state = store.state
                     val filteredTabs = state.tabs.filter { tab ->
-                        tab.content.private == false && tab.contextId == expectedContextId
+                        if (tab.contextId == null) {
+                            // Guest tabs from custom tabs - always show in current profile
+                            tab.content.private == false
+                        } else {
+                            tab.content.private == false && tab.contextId == expectedContextId
+                        }
                     }
                     
                     tabGroupBar?.updateTabs(filteredTabs, state.selectedTabId)
@@ -288,6 +294,7 @@ class UnifiedToolbar @JvmOverloads constructor(
                     val currentProfile = profileManager.getActiveProfile()
                     
                     // Manually trigger tab bar update with filtered tabs
+                    // Include guest tabs in normal mode, but not in private mode
                     val expectedContextId = if (isPrivateMode) {
                         "private"
                     } else {
@@ -295,7 +302,12 @@ class UnifiedToolbar @JvmOverloads constructor(
                     }
                     val state = store.state
                     val filteredTabs = state.tabs.filter { tab ->
-                        tab.content.private == isPrivateMode && tab.contextId == expectedContextId
+                        if (tab.contextId == null && !isPrivateMode) {
+                            // Guest tabs from custom tabs - show in normal mode
+                            tab.content.private == false
+                        } else {
+                            tab.content.private == isPrivateMode && tab.contextId == expectedContextId
+                        }
                     }
                     
                     tabGroupBar?.updateTabs(filteredTabs, state.selectedTabId)
@@ -309,7 +321,8 @@ class UnifiedToolbar @JvmOverloads constructor(
         // This ensures that:
         // 1. Each profile only sees its own tabs (contextId matches "profile_{id}")
         // 2. Private mode only shows private tabs (contextId = "private")
-        // 3. Tab bar updates automatically when profile switches or tabs change
+        // 3. Guest tabs from custom tabs (contextId == null) are shown in normal mode
+        // 4. Tab bar updates automatically when profile switches or tabs change
         lifecycleOwner.lifecycleScope.launch {
             store.flowScoped { flow ->
                 flow.collect { state ->
@@ -326,8 +339,15 @@ class UnifiedToolbar @JvmOverloads constructor(
                     }
                     
                     // Filter tabs to only show those belonging to current profile/mode
+                    // Also include guest tabs (contextId == null) which come from custom tabs
                     val filteredTabs = state.tabs.filter { tab ->
-                        tab.content.private == isPrivateMode && tab.contextId == expectedContextId
+                        if (tab.contextId == null) {
+                            // Guest tabs from custom tabs - always show in current profile if not private
+                            !isPrivateMode && !tab.content.private
+                        } else {
+                            // Regular profile tabs
+                            tab.content.private == isPrivateMode && tab.contextId == expectedContextId
+                        }
                     }
                     
                     tabGroupBar?.updateTabs(filteredTabs, state.selectedTabId)
@@ -348,7 +368,8 @@ class UnifiedToolbar @JvmOverloads constructor(
      * Tab filtering logic:
      * - Only shows tabs matching current profile (contextId = "profile_{id}")
      * - In private mode, only shows tabs with contextId = "private"
-     * - Ensures each profile sees only its own tabs
+     * - Guest tabs from custom tabs (contextId == null) are shown in normal mode
+     * - Ensures each profile sees only its own tabs plus guest tabs
      *
      * @param store The browser store to observe for tab changes
      * @param lifecycleOwner Lifecycle owner to scope the store observation
@@ -455,17 +476,8 @@ class UnifiedToolbar @JvmOverloads constructor(
         
         // Always create contextual toolbar for the container (it might be hidden)
         contextualToolbar = ContextualBottomToolbar(context).apply {
-            // No need to set background - it already applies Material 3 theming
             if (!showContextualToolbar) {
                 visibility = View.GONE
-            }
-            
-            // Apply window insets to add padding for navigation bar
-            // Now that we're using CoordinatorLayout, this won't cause container size issues
-            androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(this) { v, insets ->
-                val systemBars = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars())
-                v.setPadding(v.paddingLeft, v.paddingTop, v.paddingRight, systemBars.bottom)
-                insets
             }
         }
         
@@ -495,6 +507,11 @@ class UnifiedToolbar @JvmOverloads constructor(
     
     // Store tab count view reference to update the count
     private var tabCountBadgeView: android.widget.TextView? = null
+    
+    /**
+     * Get the toolbar view for anchoring popups
+     */
+    fun getToolbarView(): View? = browserToolbar?.asView()
     
     /**
      * Add browser actions (tab count, menu) to address bar when contextual toolbar is disabled

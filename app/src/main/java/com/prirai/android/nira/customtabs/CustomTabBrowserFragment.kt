@@ -56,8 +56,8 @@ abstract class CustomTabBrowserFragment : Fragment(), mozilla.components.support
      * Same as BaseBrowserFragment but for custom tabs.
      */
     private fun setupEdgeToEdgeForCustomTab() {
-        // Setup insets for the swipeRefresh (web content container)
-        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(binding.swipeRefresh) { view, insets ->
+        // Setup insets for the engineView (web content container)
+        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(binding.engineView.asView()) { view, insets ->
             val systemBars = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars())
             
             // Apply padding to prevent web content from going behind system bars
@@ -77,8 +77,8 @@ abstract class CustomTabBrowserFragment : Fragment(), mozilla.components.support
         }
         
         // Request insets to be applied immediately
-        binding.swipeRefresh.post {
-            androidx.core.view.ViewCompat.requestApplyInsets(binding.swipeRefresh)
+        binding.engineView.asView().post {
+            androidx.core.view.ViewCompat.requestApplyInsets(binding.engineView.asView())
         }
     }
     
