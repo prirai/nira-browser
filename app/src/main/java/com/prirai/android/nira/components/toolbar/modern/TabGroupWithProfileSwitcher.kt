@@ -240,54 +240,107 @@ class TabGroupWithProfileSwitcher @JvmOverloads constructor(
         val currentProfile = profileManager.getActiveProfile()
         val isPrivate = profileManager.isPrivateMode()
 
-        // Create popup menu with Gravity.TOP to appear above the pill
-        val popup = PopupMenu(context, profilePillCard, Gravity.TOP or Gravity.END)
+        val dialogView = android.view.LayoutInflater.from(context).inflate(R.layout.dialog_profile_switcher, null)
+        val recyclerView = dialogView.findViewById<androidx.recyclerview.widget.RecyclerView>(R.id.profileRecyclerView)
         
-        // Add Private mode as first option
-        val privateItem = popup.menu.add(0, -1, 0, "🕵️ Private")
-        if (isPrivate) {
-            privateItem.isChecked = true
+        recyclerView.layoutManager = androidx.recyclerview.widget.LinearLayoutManager(context)
+        
+        val items = mutableListOf<ProfileSwitcherItem>()
+        
+        // Add private mode
+        items.add(ProfileSwitcherItem(
+            id = "private",
+            emoji = "🕵️",
+            name = "Private",
+            description = null,
+            isSelected = isPrivate,
+            isPrivate = true
+        ))
+        
+        // Add all profiles
+        profiles.forEach { profile ->
+            items.add(ProfileSwitcherItem(
+                id = profile.id,
+                emoji = profile.emoji,
+                name = profile.name,
+                description = null,
+                isSelected = !isPrivate && profile.id == currentProfile.id,
+                isPrivate = false
+            ))
         }
         
-        // Add profile options
-        profiles.forEachIndexed { index, profile ->
-            val item = popup.menu.add(0, index, index + 1, "${profile.emoji} ${profile.name}")
-            
-            // Mark current profile
-            if (profile.id == currentProfile.id && !isPrivate) {
-                item.isChecked = true
-            }
-        }
-
-        // Enable icons in menu
-        popup.menu.setGroupCheckable(0, true, true)
-
-        popup.setOnMenuItemClickListener { item ->
-            val itemId = item.itemId
-            
-            if (itemId == -1) {
+        val adapter = ProfileSwitcherAdapter(items) { selectedItem ->
+            if (selectedItem.isPrivate) {
                 // Private mode selected
                 profileManager.setPrivateMode(true)
                 updateToPrivateMode()
                 onPrivateModeSelected?.invoke()
-                true
-            } else if (itemId < profiles.size) {
-                // Profile selected
-                val profile = profiles[itemId]
-                profileManager.setActiveProfile(profile)
-                profileManager.setPrivateMode(false)
-                
-                // Update the emoji to show the new profile
-                updateProfileIcon(profile)
-                
-                // Notify callback
-                onProfileSelected?.invoke(profile)
-                true
             } else {
-                false
+                // Profile selected
+                val profile = profiles.find { it.id == selectedItem.id }
+                if (profile != null) {
+                    profileManager.setActiveProfile(profile)
+                    profileManager.setPrivateMode(false)
+                    updateProfileIcon(profile)
+                    onProfileSelected?.invoke(profile)
+                }
             }
         }
-
-        popup.show()
+        
+        recyclerView.adapter = adapter
+        
+        val dialog = com.google.android.material.dialog.MaterialAlertDialogBuilder(context)
+            .setView(dialogView)
+            .create()
+            
+        dialog.show()
+    }
+    
+    private data class ProfileSwitcherItem(
+        val id: String,
+        val emoji: String,
+        val name: String,
+        val description: String?,
+        val isSelected: Boolean,
+        val isPrivate: Boolean
+    )
+    
+    private inner class ProfileSwitcherAdapter(
+        private val items: List<ProfileSwitcherItem>,
+        private val onItemClick: (ProfileSwitcherItem) -> Unit
+    ) : androidx.recyclerview.widget.RecyclerView.Adapter<androidx.recyclerview.widget.RecyclerView.ViewHolder>() {
+        
+        override fun onCreateViewHolder(parent: android.view.ViewGroup, viewType: Int): androidx.recyclerview.widget.RecyclerView.ViewHolder {
+            val view = android.view.LayoutInflater.from(parent.context).inflate(R.layout.item_profile_selector, parent, false)
+            return object : androidx.recyclerview.widget.RecyclerView.ViewHolder(view) {}
+        }
+        
+        override fun onBindViewHolder(holder: androidx.recyclerview.widget.RecyclerView.ViewHolder, position: Int) {
+            val item = items[position]
+            val card = holder.itemView.findViewById<com.google.android.material.card.MaterialCardView>(R.id.profileCard)
+            val emoji = holder.itemView.findViewById<android.widget.TextView>(R.id.profileEmoji)
+            val name = holder.itemView.findViewById<android.widget.TextView>(R.id.profileName)
+            val description = holder.itemView.findViewById<android.widget.TextView>(R.id.profileDescription)
+            
+            emoji.text = item.emoji
+            name.text = item.name
+            
+            if (item.description != null) {
+                description.text = item.description
+                description.visibility = android.view.View.VISIBLE
+            } else {
+                description.visibility = android.view.View.GONE
+            }
+            
+            card.isChecked = item.isSelected
+            
+            card.setOnClickListener {
+                onItemClick(item)
+                // Find the dialog and dismiss it
+                (holder.itemView.parent.parent.parent as? android.app.Dialog)?.dismiss()
+            }
+        }
+        
+        override fun getItemCount() = items.size
     }
 }

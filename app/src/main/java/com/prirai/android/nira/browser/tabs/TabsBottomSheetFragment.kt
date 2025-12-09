@@ -111,8 +111,17 @@ class TabsBottomSheetFragment : BottomSheetDialogFragment() {
     }
 
     private fun setupUI() {
+        // Apply Material 3 theming
+        val isDarkMode = com.prirai.android.nira.theme.ThemeManager.isDarkMode(requireContext())
+        val isAmoled = com.prirai.android.nira.theme.ThemeManager.isAmoledActive(requireContext())
+        
+        if (isAmoled) {
+            dialog?.window?.decorView?.setBackgroundColor(android.graphics.Color.BLACK)
+        }
+        
         binding.newTabFab.setOnClickListener {
             addNewTab()
+            dismiss()
         }
         
         binding.searchTabFab.setOnClickListener {
@@ -440,13 +449,16 @@ class TabsBottomSheetFragment : BottomSheetDialogFragment() {
         lifecycleScope.launch {
             val group = unifiedGroupManager.getGroup(groupId) ?: return@launch
             
-            val input = android.widget.EditText(requireContext())
+            val dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_edittext, null)
+            val inputLayout = dialogView.findViewById<com.google.android.material.textfield.TextInputLayout>(R.id.text_input_layout)
+            val input = dialogView.findViewById<com.google.android.material.textfield.TextInputEditText>(R.id.edit_text)
+            
+            inputLayout.hint = "Group name"
             input.setText(group.name)
-            input.hint = "Group name"
             
             MaterialAlertDialogBuilder(requireContext())
                 .setTitle("Rename Group")
-                .setView(input)
+                .setView(dialogView)
                 .setPositiveButton("Rename") { _, _ ->
                     lifecycleScope.launch {
                         unifiedGroupManager.renameGroup(groupId, input.text.toString())
@@ -459,19 +471,55 @@ class TabsBottomSheetFragment : BottomSheetDialogFragment() {
     }
 
     private fun showChangeGroupColorDialog(groupId: String) {
-        val colorNames = COLORS.map { it.replaceFirstChar { c -> c.uppercase() } }.toTypedArray()
-        
-        MaterialAlertDialogBuilder(requireContext())
-            .setTitle("Choose Color")
-            .setItems(colorNames) { _, which ->
-                lifecycleScope.launch {
-                    val colorInt = getColorInt(COLORS[which])
-                    unifiedGroupManager.changeGroupColor(groupId, colorInt)
-                    updateTabsDisplay()
+        lifecycleScope.launch {
+            val group = unifiedGroupManager.getGroup(groupId) ?: return@launch
+            val currentColor = group.color
+            
+            val dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_color_picker, null)
+            val recyclerView = dialogView.findViewById<androidx.recyclerview.widget.RecyclerView>(R.id.colorRecyclerView)
+            
+            var selectedColorIndex = COLORS.indexOfFirst { getColorInt(it) == currentColor }.takeIf { it >= 0 } ?: 0
+            
+            val colorAdapter = object : androidx.recyclerview.widget.RecyclerView.Adapter<androidx.recyclerview.widget.RecyclerView.ViewHolder>() {
+                override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): androidx.recyclerview.widget.RecyclerView.ViewHolder {
+                    val view = LayoutInflater.from(parent.context).inflate(R.layout.item_color_chip, parent, false)
+                    return object : androidx.recyclerview.widget.RecyclerView.ViewHolder(view) {}
                 }
+                
+                override fun onBindViewHolder(holder: androidx.recyclerview.widget.RecyclerView.ViewHolder, position: Int) {
+                    val card = holder.itemView.findViewById<com.google.android.material.card.MaterialCardView>(R.id.colorCard)
+                    val colorView = holder.itemView.findViewById<View>(R.id.colorView)
+                    
+                    val colorInt = getColorInt(COLORS[position])
+                    colorView.setBackgroundColor(colorInt)
+                    card.isChecked = position == selectedColorIndex
+                    
+                    card.setOnClickListener {
+                        val oldSelection = selectedColorIndex
+                        selectedColorIndex = position
+                        notifyItemChanged(oldSelection)
+                        notifyItemChanged(selectedColorIndex)
+                    }
+                }
+                
+                override fun getItemCount() = COLORS.size
             }
-            .setNegativeButton("Cancel", null)
-            .show()
+            
+            recyclerView.adapter = colorAdapter
+            
+            MaterialAlertDialogBuilder(requireContext())
+                .setTitle("Choose Color")
+                .setView(dialogView)
+                .setPositiveButton("Apply") { _, _ ->
+                    lifecycleScope.launch {
+                        val colorInt = getColorInt(COLORS[selectedColorIndex])
+                        unifiedGroupManager.changeGroupColor(groupId, colorInt)
+                        updateTabsDisplay()
+                    }
+                }
+                .setNegativeButton("Cancel", null)
+                .show()
+        }
     }
     
     private fun getColorInt(colorName: String): Int {
