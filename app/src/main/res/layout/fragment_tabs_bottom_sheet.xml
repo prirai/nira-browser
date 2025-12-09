@@ -12,10 +12,10 @@
         <!-- Handle indicator for bottom sheet -->
         <View
             android:id="@+id/dragHandle"
-            android:layout_width="32dp"
+            android:layout_width="40dp"
             android:layout_height="4dp"
             android:layout_centerHorizontal="true"
-            android:layout_marginTop="16dp"
+            android:layout_marginTop="12dp"
             android:background="@drawable/drag_handle_background" />
 
         <!-- Tabs RecyclerView -->
@@ -25,9 +25,11 @@
             android:layout_height="match_parent"
             android:layout_below="@id/dragHandle"
             android:layout_above="@id/profileChipScrollView"
-            android:layout_marginTop="16dp"
+            android:layout_marginTop="8dp"
             android:paddingTop="8dp"
-            android:paddingBottom="80dp"
+            android:paddingBottom="8dp"
+            android:paddingStart="8dp"
+            android:paddingEnd="8dp"
             android:clipToPadding="false"
             android:overScrollMode="never" />
 
@@ -78,13 +80,14 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_alignParentBottom="true"
-            android:paddingBottom="24dp"
+            android:paddingBottom="16dp"
+            android:paddingTop="12dp"
             android:clipToPadding="false"
             android:scrollbars="none"
             android:overScrollMode="never"
-            android:background="?attr/colorSurfaceVariant"
-            android:paddingVertical="8dp"
-            android:elevation="4dp">
+            android:background="@drawable/rounded_bottom_sheet"
+            android:backgroundTint="?attr/colorSurfaceContainer"
+            android:elevation="8dp">
             
             <com.google.android.material.chip.ChipGroup
                 android:id="@+id/profileChipGroup"
@@ -99,18 +102,21 @@
 
     </RelativeLayout>
 
-    <!-- FAB for search -->
-    <com.google.android.material.floatingactionbutton.FloatingActionButton
+    <!-- Extended FAB for search -->
+    <com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
         android:id="@+id/searchTabFab"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_gravity="bottom|end"
-        android:layout_marginEnd="88dp"
-        android:layout_marginBottom="76dp"
-        android:src="@drawable/ic_search"
-        android:contentDescription="@string/search_tabs"
-        app:fabSize="normal"
-        app:elevation="6dp" />
+        android:layout_gravity="bottom|start"
+        android:layout_marginStart="16dp"
+        android:layout_marginBottom="92dp"
+        android:text="@string/search_tabs"
+        android:textColor="?attr/colorOnPrimaryContainer"
+        app:icon="@drawable/ic_search"
+        app:iconTint="?attr/colorOnPrimaryContainer"
+        app:backgroundTint="?attr/colorPrimaryContainer"
+        app:elevation="6dp"
+        app:cornerRadius="16dp" />
 
     <!-- FAB for new tab -->
     <com.google.android.material.floatingactionbutton.FloatingActionButton
@@ -119,7 +125,7 @@
         android:layout_height="wrap_content"
         android:layout_gravity="bottom|end"
         android:layout_marginEnd="16dp"
-        android:layout_marginBottom="76dp"
+        android:layout_marginBottom="92dp"
         android:src="@drawable/ic_round_add"
         android:contentDescription="@string/new_tab"
         app:fabSize="normal"

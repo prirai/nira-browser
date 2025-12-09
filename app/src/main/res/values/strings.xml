@@ -670,5 +670,21 @@
   <string name="search_tabs_description">Type to search across all your tabs, bookmarks, and browsing history</string>
     <string name="printer_icon">Printer Icon</string>
     <string name="pdf_icon">PDF Icon</string>
+  
+  <!-- Theme picker descriptions -->
+  <string name="light_mode">Light Mode</string>
+  <string name="light_mode_description">Bright and clean interface for daytime use</string>
+  <string name="dark_mode">Dark Mode</string>
+  <string name="dark_mode_description">Easy on the eyes, perfect for low-light environments</string>
+  <string name="system_default">System Default</string>
+  <string name="system_default_description">Automatically follows your device theme</string>
+  
+  <!-- Web theme picker descriptions -->
+  <string name="web_light_theme_description">Request websites to use light theme</string>
+  <string name="web_dark_theme_description">Request websites to use dark theme</string>
+  <string name="web_system_theme_description">Follow system theme preference</string>
+  
+  <!-- Profile switcher -->
+  <string name="switch_profile">Switch Profile</string>
 
 </resources>

@@ -1,7 +1,6 @@
 package com.prirai.android.nira.settings.fragment
 
 import android.app.Activity
-import android.app.AlertDialog
 import android.content.Intent
 import android.os.Bundle
 import android.widget.EditText
@@ -309,61 +308,59 @@ class CustomizationSettingsFragment : BaseSettingsFragment() {
 
     private fun pickHomepageBackground() {
         val startingChoice = UserPreferences(requireContext()).homepageBackgroundChoice
-        val singleItems =
-            resources.getStringArray(R.array.homepage_background_image_types).toMutableList()
         val checkedItem = UserPreferences(requireContext()).homepageBackgroundChoice
+
+        val dialogView = layoutInflater.inflate(R.layout.dialog_homepage_background_picker, null)
+        val noneCard = dialogView.findViewById<com.google.android.material.card.MaterialCardView>(R.id.noneCard)
+        val urlCard = dialogView.findViewById<com.google.android.material.card.MaterialCardView>(R.id.urlCard)
+        val galleryCard = dialogView.findViewById<com.google.android.material.card.MaterialCardView>(R.id.galleryCard)
+        
+        // Set initial checked state
+        when (checkedItem) {
+            HomepageBackgroundChoice.NONE.ordinal -> noneCard.isChecked = true
+            HomepageBackgroundChoice.URL.ordinal -> urlCard.isChecked = true
+            HomepageBackgroundChoice.GALLERY.ordinal -> galleryCard.isChecked = true
+        }
+        
+        var selectedChoice = checkedItem
+        
+        noneCard.setOnClickListener {
+            noneCard.isChecked = true
+            urlCard.isChecked = false
+            galleryCard.isChecked = false
+            selectedChoice = HomepageBackgroundChoice.NONE.ordinal
+        }
+        
+        urlCard.setOnClickListener {
+            noneCard.isChecked = false
+            urlCard.isChecked = true
+            galleryCard.isChecked = false
+            selectedChoice = HomepageBackgroundChoice.URL.ordinal
+        }
+        
+        galleryCard.setOnClickListener {
+            noneCard.isChecked = false
+            urlCard.isChecked = false
+            galleryCard.isChecked = true
+            selectedChoice = HomepageBackgroundChoice.GALLERY.ordinal
+        }
 
         MaterialAlertDialogBuilder(requireContext())
             .setTitle(resources.getString(R.string.homepage_background_image))
-            .setNeutralButton(resources.getString(R.string.cancel)) { _, _ ->
+            .setView(dialogView)
+            .setNegativeButton(resources.getString(R.string.cancel)) { _, _ ->
                 UserPreferences(requireContext()).homepageBackgroundChoice = startingChoice
             }
-            .setPositiveButton(resources.getString(R.string.mozac_feature_prompts_ok)) { _, _ -> }
-            .setSingleChoiceItems(singleItems.toTypedArray(), checkedItem) { _, which ->
-                UserPreferences(requireContext()).homepageBackgroundChoice = which
+            .setPositiveButton(resources.getString(R.string.mozac_feature_prompts_ok)) { _, _ ->
+                UserPreferences(requireContext()).homepageBackgroundChoice = selectedChoice
+                val singleItems = resources.getStringArray(R.array.homepage_background_image_types)
                 preferenceScreen.findPreference<Preference>(requireContext().resources.getString(R.string.key_homepage_background_image))!!.summary =
-                    singleItems[which]
-                when (which) {
+                    singleItems[selectedChoice]
+                    
+                when (selectedChoice) {
                     HomepageBackgroundChoice.URL.ordinal -> {
-                        AlertDialog.Builder(requireContext())
-                            .setTitle(resources.getString(R.string.homepage_background_image))
-                            .setMessage(resources.getString(R.string.url))
-                            .setView(R.layout.dialog_edittext)
-                            .setPositiveButton(resources.getString(R.string.mozac_feature_prompts_ok)) { dialog, _ ->
-                                val editText =
-                                    (dialog as AlertDialog).findViewById<EditText>(R.id.edit_text)
-                                if (editText != null) {
-                                    UserPreferences(requireContext()).homepageBackgroundUrl =
-                                        editText.text.toString()
-                                    Toast.makeText(
-                                        context,
-                                        requireContext().resources.getText(R.string.successful),
-                                        Toast.LENGTH_LONG
-                                    ).show()
-                                } else {
-                                    UserPreferences(requireContext()).homepageBackgroundChoice =
-                                        HomepageBackgroundChoice.NONE.ordinal
-                                    Toast.makeText(
-                                        context,
-                                        requireContext().resources.getText(R.string.failed),
-                                        Toast.LENGTH_LONG
-                                    ).show()
-                                }
-                            }
-                            .setNegativeButton(resources.getString(R.string.cancel)) { dialog, _ ->
-                                UserPreferences(requireContext()).homepageBackgroundChoice =
-                                    HomepageBackgroundChoice.NONE.ordinal
-                            }
-                            .show()
-                            .apply {
-                                findViewById<EditText>(R.id.edit_text)?.setText(
-                                    UserPreferences(
-                                        requireContext()
-                                    ).homepageBackgroundUrl
-                                )
-                            }
+                        showUrlInputDialog()
                     }
-
                     HomepageBackgroundChoice.GALLERY.ordinal -> {
                         val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
                             addCategory(Intent.CATEGORY_OPENABLE)
@@ -377,21 +374,90 @@ class CustomizationSettingsFragment : BaseSettingsFragment() {
             }
             .show()
     }
+    
+    private fun showUrlInputDialog() {
+        val dialogView = layoutInflater.inflate(R.layout.dialog_edittext, null)
+        val inputLayout = dialogView.findViewById<com.google.android.material.textfield.TextInputLayout>(R.id.text_input_layout)
+        val editText = dialogView.findViewById<com.google.android.material.textfield.TextInputEditText>(R.id.edit_text)
+        
+        inputLayout.hint = resources.getString(R.string.url)
+        editText.setText(UserPreferences(requireContext()).homepageBackgroundUrl)
+        
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle(resources.getString(R.string.homepage_background_image))
+            .setView(dialogView)
+            .setPositiveButton(resources.getString(R.string.mozac_feature_prompts_ok)) { _, _ ->
+                if (editText.text.toString().isNotEmpty()) {
+                    UserPreferences(requireContext()).homepageBackgroundUrl = editText.text.toString()
+                    Toast.makeText(
+                        context,
+                        requireContext().resources.getText(R.string.successful),
+                        Toast.LENGTH_LONG
+                    ).show()
+                } else {
+                    UserPreferences(requireContext()).homepageBackgroundChoice = HomepageBackgroundChoice.NONE.ordinal
+                    Toast.makeText(
+                        context,
+                        requireContext().resources.getText(R.string.failed),
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
+            }
+            .setNegativeButton(resources.getString(R.string.cancel)) { _, _ ->
+                UserPreferences(requireContext()).homepageBackgroundChoice = HomepageBackgroundChoice.NONE.ordinal
+            }
+            .show()
+    }
 
     private fun pickAppTheme() {
         val startingChoice = UserPreferences(requireContext()).appThemeChoice
-        val singleItems = resources.getStringArray(R.array.theme_types).toMutableList()
         val checkedItem = UserPreferences(requireContext()).appThemeChoice
+
+        val dialogView = layoutInflater.inflate(R.layout.dialog_theme_picker, null)
+        val lightCard = dialogView.findViewById<com.google.android.material.card.MaterialCardView>(R.id.lightThemeCard)
+        val darkCard = dialogView.findViewById<com.google.android.material.card.MaterialCardView>(R.id.darkThemeCard)
+        val systemCard = dialogView.findViewById<com.google.android.material.card.MaterialCardView>(R.id.systemThemeCard)
+        
+        // Set initial checked state
+        when (checkedItem) {
+            0 -> lightCard.isChecked = true
+            1 -> darkCard.isChecked = true
+            2 -> systemCard.isChecked = true
+        }
+        
+        var selectedChoice = checkedItem
+        
+        lightCard.setOnClickListener {
+            lightCard.isChecked = true
+            darkCard.isChecked = false
+            systemCard.isChecked = false
+            selectedChoice = 0
+        }
+        
+        darkCard.setOnClickListener {
+            lightCard.isChecked = false
+            darkCard.isChecked = true
+            systemCard.isChecked = false
+            selectedChoice = 1
+        }
+        
+        systemCard.setOnClickListener {
+            lightCard.isChecked = false
+            darkCard.isChecked = false
+            systemCard.isChecked = true
+            selectedChoice = 2
+        }
 
         MaterialAlertDialogBuilder(requireContext())
             .setTitle(resources.getString(R.string.theme))
-            .setNeutralButton(resources.getString(R.string.cancel)) { _, _ ->
+            .setView(dialogView)
+            .setNegativeButton(resources.getString(R.string.cancel)) { _, _ ->
                 UserPreferences(requireContext()).appThemeChoice = startingChoice
             }
-            .setPositiveButton(resources.getString(R.string.mozac_feature_prompts_ok)) { _, _ -> }
-            .setSingleChoiceItems(singleItems.toTypedArray(), checkedItem) { dialog, which ->
-                UserPreferences(requireContext()).appThemeChoice = which
-                applyAppTheme(which)
+            .setPositiveButton(resources.getString(R.string.mozac_feature_prompts_ok)) { _, _ ->
+                UserPreferences(requireContext()).appThemeChoice = selectedChoice
+                applyAppTheme(selectedChoice)
+                requireActivity().recreate()
             }
             .show()
     }
@@ -481,17 +547,51 @@ class CustomizationSettingsFragment : BaseSettingsFragment() {
 
     private fun pickWebTheme() {
         val startingChoice = UserPreferences(requireContext()).webThemeChoice
-        val singleItems = resources.getStringArray(R.array.theme_types).toMutableList()
         val checkedItem = UserPreferences(requireContext()).webThemeChoice
+
+        val dialogView = layoutInflater.inflate(R.layout.dialog_web_theme_picker, null)
+        val lightCard = dialogView.findViewById<com.google.android.material.card.MaterialCardView>(R.id.lightThemeCard)
+        val darkCard = dialogView.findViewById<com.google.android.material.card.MaterialCardView>(R.id.darkThemeCard)
+        val systemCard = dialogView.findViewById<com.google.android.material.card.MaterialCardView>(R.id.systemThemeCard)
+        
+        // Set initial checked state
+        when (checkedItem) {
+            0 -> lightCard.isChecked = true
+            1 -> darkCard.isChecked = true
+            2 -> systemCard.isChecked = true
+        }
+        
+        var selectedChoice = checkedItem
+        
+        lightCard.setOnClickListener {
+            lightCard.isChecked = true
+            darkCard.isChecked = false
+            systemCard.isChecked = false
+            selectedChoice = 0
+        }
+        
+        darkCard.setOnClickListener {
+            lightCard.isChecked = false
+            darkCard.isChecked = true
+            systemCard.isChecked = false
+            selectedChoice = 1
+        }
+        
+        systemCard.setOnClickListener {
+            lightCard.isChecked = false
+            darkCard.isChecked = false
+            systemCard.isChecked = true
+            selectedChoice = 2
+        }
 
         MaterialAlertDialogBuilder(requireContext())
             .setTitle(resources.getString(R.string.web_theme))
-            .setNeutralButton(resources.getString(R.string.cancel)) { _, _ ->
+            .setView(dialogView)
+            .setNegativeButton(resources.getString(R.string.cancel)) { _, _ ->
                 UserPreferences(requireContext()).webThemeChoice = startingChoice
             }
-            .setPositiveButton(resources.getString(R.string.mozac_feature_prompts_ok)) { _, _ -> }
-            .setSingleChoiceItems(singleItems.toTypedArray(), checkedItem) { dialog, which ->
-                UserPreferences(requireContext()).webThemeChoice = which
+            .setPositiveButton(resources.getString(R.string.mozac_feature_prompts_ok)) { _, _ ->
+                UserPreferences(requireContext()).webThemeChoice = selectedChoice
             }
             .show()
     }
