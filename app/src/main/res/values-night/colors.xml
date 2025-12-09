@@ -49,7 +49,7 @@
     <color name="toolbar_background">@color/m3_surface_container</color>
     <color name="toolbar_private_outline">#B87CB8</color>
     <color name="statusbar_background">@color/m3_surface_container_high</color>
-    <color name="selected_tab">@color/m3_secondary_container</color>
+    <color name="selected_tab">@color/m3_primary_container</color>
 
     <!-- Tab card colors (dark mode) -->
     <color name="tab_card_background">@color/m3_surface_container_low</color>
