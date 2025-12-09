@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="utf-8" ?>
+<!-- Material 3 URL field background - different from container -->
 <shape xmlns:android="http://schemas.android.com/apk/res/android">
-    <!-- Material 3 elevated surface color for URL field -->
-    <solid android:color="?attr/colorSurfaceContainerHighest" />
+    <!-- Use elevated surface color for the URL field -->
+    <solid android:color="?attr/colorSurfaceContainer" />
 
     <!-- Thin stroke for definition -->
     <stroke

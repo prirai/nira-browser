@@ -22,8 +22,9 @@ object ColorConstants {
         return context.getColor(R.color.insecure_icon_color)
     }
     
-    // Tab group colors - Material 3 based
+    // Tab group colors - Material 3 based with expanded palette
     object TabGroups {
+        // Primary Material 3 colors
         const val BLUE = 0xFF2196F3.toInt()
         const val RED = 0xFFF44336.toInt()
         const val GREEN = 0xFF4CAF50.toInt()
@@ -32,6 +33,16 @@ object ColorConstants {
         const val PINK = 0xFFE91E63.toInt()
         const val TEAL = 0xFF009688.toInt()
         const val YELLOW = 0xFFFFC107.toInt()
+        
+        // Extended Material 3 colors
+        const val INDIGO = 0xFF3F51B5.toInt()
+        const val CYAN = 0xFF00BCD4.toInt()
+        const val LIME = 0xFFCDDC39.toInt()
+        const val AMBER = 0xFFFFC107.toInt()
+        const val DEEP_ORANGE = 0xFFFF5722.toInt()
+        const val LIGHT_GREEN = 0xFF8BC34A.toInt()
+        const val DEEP_PURPLE = 0xFF673AB7.toInt()
+        const val BROWN = 0xFF795548.toInt()
         
         fun parseColor(colorString: String): Int {
             return when (colorString.lowercase()) {
@@ -43,6 +54,14 @@ object ColorConstants {
                 "pink" -> PINK
                 "teal" -> TEAL
                 "yellow" -> YELLOW
+                "indigo" -> INDIGO
+                "cyan" -> CYAN
+                "lime" -> LIME
+                "amber" -> AMBER
+                "deep_orange" -> DEEP_ORANGE
+                "light_green" -> LIGHT_GREEN
+                "deep_purple" -> DEEP_PURPLE
+                "brown" -> BROWN
                 else -> BLUE // Default
             }
         }
@@ -57,6 +76,14 @@ object ColorConstants {
                 PINK -> "pink"
                 TEAL -> "teal"
                 YELLOW -> "yellow"
+                INDIGO -> "indigo"
+                CYAN -> "cyan"
+                LIME -> "lime"
+                AMBER -> "amber"
+                DEEP_ORANGE -> "deep_orange"
+                LIGHT_GREEN -> "light_green"
+                DEEP_PURPLE -> "deep_purple"
+                BROWN -> "brown"
                 else -> "blue"
             }
         }

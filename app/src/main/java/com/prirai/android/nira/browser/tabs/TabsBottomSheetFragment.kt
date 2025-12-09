@@ -21,7 +21,6 @@ import com.prirai.android.nira.browser.tabgroups.UnifiedTabGroupManager
 import com.prirai.android.nira.browser.tabgroups.TabGroupData
 import com.prirai.android.nira.databinding.FragmentTabsBottomSheetBinding
 import com.prirai.android.nira.ext.components
-import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
@@ -29,8 +28,9 @@ import kotlinx.coroutines.launch
 import mozilla.components.lib.state.ext.flowScoped
 import kotlin.random.Random
 import androidx.core.graphics.toColorInt
+import androidx.fragment.app.DialogFragment
 
-class TabsBottomSheetFragment : BottomSheetDialogFragment() {
+class TabsBottomSheetFragment : DialogFragment() {
 
     private var _binding: FragmentTabsBottomSheetBinding? = null
     private val binding get() = _binding!!
@@ -76,38 +76,37 @@ class TabsBottomSheetFragment : BottomSheetDialogFragment() {
         isInitializing = false
     }
 
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        // Use fullscreen dialog style
+        setStyle(STYLE_NORMAL, R.style.FullScreenDialogTheme)
+    }
+
     override fun onStart() {
         super.onStart()
-
-        val bottomSheetDialog = dialog as com.google.android.material.bottomsheet.BottomSheetDialog
-        val behavior = bottomSheetDialog.behavior
-
-        val screenHeight = resources.displayMetrics.heightPixels
-        val desiredHeight = (screenHeight * 0.85).toInt()
-
-        behavior.isFitToContents = false
-        behavior.peekHeight = desiredHeight
-        behavior.expandedOffset = screenHeight - desiredHeight
-        behavior.state = com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_EXPANDED
-        behavior.skipCollapsed = true
-        behavior.isHideable = true
-        behavior.isDraggable = true
-
-        bottomSheetDialog.findViewById<View>(com.google.android.material.R.id.design_bottom_sheet)?.let { bottomSheet ->
-            val layoutParams = bottomSheet.layoutParams
-            layoutParams.height = desiredHeight
-            bottomSheet.layoutParams = layoutParams
+        
+        // Make dialog fullscreen
+        dialog?.window?.let { window ->
+            window.setLayout(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT
+            )
             
-            // Apply window insets to handle gesture navigation
-            androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(bottomSheet) { v, insets ->
-                insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars())
-                // The profile chip scroll view already has paddingBottom set to handle gesture area
+            // Apply window insets for edge-to-edge
+            androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(window.decorView) { v, insets ->
+                val systemBars = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars())
+                
+                // Apply padding to profile chip bar to avoid navigation bar overlap
+                binding.profileChipScrollView.setPadding(
+                    binding.profileChipScrollView.paddingLeft,
+                    binding.profileChipScrollView.paddingTop,
+                    binding.profileChipScrollView.paddingRight,
+                    systemBars.bottom + 16 // Add extra padding for navigation bar
+                )
+                
                 insets
             }
         }
-
-        bottomSheetDialog.setCancelable(true)
-        bottomSheetDialog.setCanceledOnTouchOutside(true)
     }
 
     private fun setupUI() {
@@ -561,8 +560,24 @@ class TabsBottomSheetFragment : BottomSheetDialogFragment() {
 
     private fun showProfileCreateDialog() {
         val composeView = androidx.compose.ui.platform.ComposeView(requireContext())
+        val userPreferences = com.prirai.android.nira.preferences.UserPreferences(requireContext())
+        val themeChoice = com.prirai.android.nira.settings.ThemeChoice.values()[userPreferences.appThemeChoice]
+        val isDark = when (themeChoice) {
+            com.prirai.android.nira.settings.ThemeChoice.DARK -> true
+            com.prirai.android.nira.settings.ThemeChoice.LIGHT -> false
+            com.prirai.android.nira.settings.ThemeChoice.SYSTEM -> 
+                requireContext().resources.configuration.uiMode and 
+                android.content.res.Configuration.UI_MODE_NIGHT_MASK == 
+                android.content.res.Configuration.UI_MODE_NIGHT_YES
+        }
+        
         composeView.setContent {
-            androidx.compose.material3.MaterialTheme {
+            com.prirai.android.nira.ui.theme.NiraTheme(
+                darkTheme = isDark,
+                isPrivateMode = browsingModeManager.mode == BrowsingMode.Private,
+                amoledMode = userPreferences.amoledMode,
+                dynamicColor = userPreferences.dynamicColors
+            ) {
                 com.prirai.android.nira.browser.profile.ProfileCreateDialog(
                     onDismiss = {
                         (composeView.parent as? ViewGroup)?.removeView(composeView)
@@ -588,8 +603,24 @@ class TabsBottomSheetFragment : BottomSheetDialogFragment() {
 
     private fun showProfileEditDialog(profile: com.prirai.android.nira.browser.profile.BrowserProfile) {
         val composeView = androidx.compose.ui.platform.ComposeView(requireContext())
+        val userPreferences = com.prirai.android.nira.preferences.UserPreferences(requireContext())
+        val themeChoice = com.prirai.android.nira.settings.ThemeChoice.values()[userPreferences.appThemeChoice]
+        val isDark = when (themeChoice) {
+            com.prirai.android.nira.settings.ThemeChoice.DARK -> true
+            com.prirai.android.nira.settings.ThemeChoice.LIGHT -> false
+            com.prirai.android.nira.settings.ThemeChoice.SYSTEM -> 
+                requireContext().resources.configuration.uiMode and 
+                android.content.res.Configuration.UI_MODE_NIGHT_MASK == 
+                android.content.res.Configuration.UI_MODE_NIGHT_YES
+        }
+        
         composeView.setContent {
-            androidx.compose.material3.MaterialTheme {
+            com.prirai.android.nira.ui.theme.NiraTheme(
+                darkTheme = isDark,
+                isPrivateMode = browsingModeManager.mode == BrowsingMode.Private,
+                amoledMode = userPreferences.amoledMode,
+                dynamicColor = userPreferences.dynamicColors
+            ) {
                 com.prirai.android.nira.browser.profile.ProfileEditDialog(
                     profile = profile,
                     onDismiss = {

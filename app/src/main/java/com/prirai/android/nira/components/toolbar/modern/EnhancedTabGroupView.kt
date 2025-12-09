@@ -9,6 +9,7 @@ import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import mozilla.components.browser.state.state.SessionState
+import com.prirai.android.nira.R
 import com.prirai.android.nira.ext.components
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -871,52 +872,70 @@ class EnhancedTabGroupView @JvmOverloads constructor(
     }
 
     private fun showChangeColorDialog(islandId: String) {
-        islandManager.getIsland(islandId) ?: return
+        val island = islandManager.getIsland(islandId) ?: return
+        val currentColor = island.color
 
-        val colors = TabIsland.DEFAULT_COLORS
-        val colorNames = arrayOf(
-            "Red", "Green", "Blue", "Orange", "Light Green",
-            "Yellow", "Grey", "Pink", "Purple", "Cyan", "Lime", "Deep Orange"
+        val dialogView = android.view.LayoutInflater.from(context).inflate(R.layout.dialog_color_picker, null)
+        val recyclerView = dialogView.findViewById<androidx.recyclerview.widget.RecyclerView>(R.id.colorRecyclerView)
+        
+        // Use expanded Material 3 color palette
+        val colors = listOf(
+            com.prirai.android.nira.theme.ColorConstants.TabGroups.RED,
+            com.prirai.android.nira.theme.ColorConstants.TabGroups.PINK,
+            com.prirai.android.nira.theme.ColorConstants.TabGroups.PURPLE,
+            com.prirai.android.nira.theme.ColorConstants.TabGroups.DEEP_PURPLE,
+            com.prirai.android.nira.theme.ColorConstants.TabGroups.INDIGO,
+            com.prirai.android.nira.theme.ColorConstants.TabGroups.BLUE,
+            com.prirai.android.nira.theme.ColorConstants.TabGroups.CYAN,
+            com.prirai.android.nira.theme.ColorConstants.TabGroups.TEAL,
+            com.prirai.android.nira.theme.ColorConstants.TabGroups.GREEN,
+            com.prirai.android.nira.theme.ColorConstants.TabGroups.LIGHT_GREEN,
+            com.prirai.android.nira.theme.ColorConstants.TabGroups.LIME,
+            com.prirai.android.nira.theme.ColorConstants.TabGroups.YELLOW,
+            com.prirai.android.nira.theme.ColorConstants.TabGroups.AMBER,
+            com.prirai.android.nira.theme.ColorConstants.TabGroups.ORANGE,
+            com.prirai.android.nira.theme.ColorConstants.TabGroups.DEEP_ORANGE,
+            com.prirai.android.nira.theme.ColorConstants.TabGroups.BROWN
         )
-
-        // Create a custom adapter to show colored circles
-        val adapter = object : android.widget.ArrayAdapter<String>(
-            context,
-            android.R.layout.select_dialog_item,
-            colorNames
-        ) {
-            override fun getView(
-                position: Int,
-                convertView: View?,
-                parent: android.view.ViewGroup
-            ): View {
-                val view = super.getView(position, convertView, parent)
-                val textView = view.findViewById<android.widget.TextView>(android.R.id.text1)
-
-                // Create colored indicator
-                val colorCircle = android.graphics.drawable.GradientDrawable().apply {
-                    shape = android.graphics.drawable.GradientDrawable.OVAL
-                    setColor(colors[position])
-                    setSize(48, 48)
-                }
-
-                textView.setCompoundDrawablesRelativeWithIntrinsicBounds(colorCircle, null, null, null)
-                textView.compoundDrawablePadding = 32
-
-                return view
+        
+        var selectedColorIndex = colors.indexOfFirst { it == currentColor }.takeIf { it >= 0 } ?: 0
+        
+        val colorAdapter = object : androidx.recyclerview.widget.RecyclerView.Adapter<androidx.recyclerview.widget.RecyclerView.ViewHolder>() {
+            override fun onCreateViewHolder(parent: android.view.ViewGroup, viewType: Int): androidx.recyclerview.widget.RecyclerView.ViewHolder {
+                val view = android.view.LayoutInflater.from(parent.context).inflate(R.layout.item_color_chip, parent, false)
+                return object : androidx.recyclerview.widget.RecyclerView.ViewHolder(view) {}
             }
+            
+            override fun onBindViewHolder(holder: androidx.recyclerview.widget.RecyclerView.ViewHolder, position: Int) {
+                val card = holder.itemView.findViewById<com.google.android.material.card.MaterialCardView>(R.id.colorCard)
+                val colorView = holder.itemView.findViewById<View>(R.id.colorView)
+                
+                val colorInt = colors[position]
+                colorView.setBackgroundColor(colorInt)
+                card.isChecked = position == selectedColorIndex
+                
+                card.setOnClickListener {
+                    val oldSelection = selectedColorIndex
+                    selectedColorIndex = position
+                    notifyItemChanged(oldSelection)
+                    notifyItemChanged(selectedColorIndex)
+                }
+            }
+            
+            override fun getItemCount() = colors.size
         }
-
-        val dialog = android.app.AlertDialog.Builder(context)
+        
+        recyclerView.adapter = colorAdapter
+        
+        com.google.android.material.dialog.MaterialAlertDialogBuilder(context)
             .setTitle("Choose Island Color")
-            .setAdapter(adapter) { _, which ->
-                islandManager.changeIslandColor(islandId, colors[which])
+            .setView(dialogView)
+            .setPositiveButton("Apply") { _, _ ->
+                islandManager.changeIslandColor(islandId, colors[selectedColorIndex])
                 refreshDisplay()
             }
             .setNegativeButton("Cancel", null)
-            .create()
-
-        dialog.show()
+            .show()
     }
 
     private fun ungroupIsland(islandId: String) {

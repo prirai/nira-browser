@@ -1,28 +1,28 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Material 3 Color Selection Item -->
+<!-- Material 3 Color Selection Item with Squircle Shape -->
 <com.google.android.material.card.MaterialCardView
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/colorCard"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_margin="8dp"
+    android:layout_margin="6dp"
     android:checkable="true"
     android:clickable="true"
     android:focusable="true"
-    app:cardCornerRadius="28dp"
+    app:cardCornerRadius="16dp"
     app:cardElevation="0dp"
     app:strokeWidth="3dp"
-    app:strokeColor="?attr/colorOutline"
+    app:strokeColor="?attr/colorSurfaceVariant"
     app:checkedIconTint="?attr/colorOnPrimary"
     app:checkedIcon="@drawable/ic_check_circle"
-    app:checkedIconSize="32dp"
+    app:checkedIconSize="28dp"
     app:checkedIconMargin="0dp">
 
     <View
         android:id="@+id/colorView"
-        android:layout_width="56dp"
-        android:layout_height="56dp"
+        android:layout_width="64dp"
+        android:layout_height="64dp"
         android:layout_gravity="center" />
 
 </com.google.android.material.card.MaterialCardView>

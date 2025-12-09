@@ -5,8 +5,9 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
@@ -73,8 +74,14 @@ fun ProfileCreateDialog(
                 
                 Spacer(modifier = Modifier.height(12.dp))
                 
-                LazyRow(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(4),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 250.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    contentPadding = PaddingValues(4.dp)
                 ) {
                     items(emojis.size) { index ->
                         CombinedEmojiColorOption(
@@ -131,14 +138,14 @@ fun CombinedEmojiColorOption(
 ) {
     Box(
         modifier = Modifier
-            .size(56.dp)
-            .clip(CircleShape)
+            .size(64.dp)
+            .clip(RoundedCornerShape(16.dp))
             .background(color.copy(alpha = 0.2f))
             .then(
                 if (selected) {
-                    Modifier.border(3.dp, color, CircleShape)
+                    Modifier.border(3.dp, color, RoundedCornerShape(16.dp))
                 } else {
-                    Modifier.border(1.dp, color.copy(alpha = 0.3f), CircleShape)
+                    Modifier.border(1.dp, color.copy(alpha = 0.3f), RoundedCornerShape(16.dp))
                 }
             )
             .clickable(onClick = onClick),
@@ -254,8 +261,14 @@ fun ProfileEditDialog(
                 
                 Spacer(modifier = Modifier.height(12.dp))
                 
-                LazyRow(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(4),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 250.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    contentPadding = PaddingValues(4.dp)
                 ) {
                     items(emojis.size) { index ->
                         CombinedEmojiColorOption(

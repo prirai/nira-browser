@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Material 3 Address Bar Background -->
 <shape xmlns:android="http://schemas.android.com/apk/res/android"
     android:shape="rectangle">
-    <!-- Material 3 base surface color for toolbar container -->
-    <solid android:color="?attr/colorSurface" />
+    <!-- Material 3 surface container color -->
+    <solid android:color="?attr/colorSurfaceContainerHighest" />
+    <corners android:radius="28dp" />
 </shape>

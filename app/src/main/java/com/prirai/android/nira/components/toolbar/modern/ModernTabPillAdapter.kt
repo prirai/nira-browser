@@ -673,7 +673,15 @@ class ModernTabPillAdapter(
                 val borderColor = when {
                     isGuestTab -> guestTabColor
                     islandColor != null -> islandColor
-                    else -> com.prirai.android.nira.theme.ColorConstants.Profiles.DEFAULT_COLOR
+                    else -> {
+                        // Use Material 3 primary color (supports dynamic colors)
+                        val primaryTypedValue = android.util.TypedValue()
+                        if (theme.resolveAttribute(android.R.attr.colorPrimary, primaryTypedValue, true)) {
+                            primaryTypedValue.data
+                        } else {
+                            ContextCompat.getColor(itemView.context, com.prirai.android.nira.R.color.m3_primary)
+                        }
+                    }
                 }
                 val gradient = GradientDrawable().apply {
                     cornerRadius = 20f
