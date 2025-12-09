@@ -15,7 +15,7 @@ import com.prirai.android.nira.R
 import com.prirai.android.nira.ext.components
 import com.prirai.android.nira.ext.isAppInDarkTheme
 import com.prirai.android.nira.ext.getParcelableExtraCompat
-import com.prirai.android.nira.theme.applyAppTheme
+import com.prirai.android.nira.theme.applyCompleteTheme
 import com.google.android.material.switchmaterial.SwitchMaterial
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -36,7 +36,7 @@ class InstalledAddonDetailsActivity : AppCompatActivity() {
         setContentView(R.layout.activity_installed_add_on_details)
         val addon = requireNotNull(intent.getParcelableExtraCompat<Addon>("add_on"))
 
-        applyAppTheme(this)
+        applyCompleteTheme(this)
 
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.addon_details)) { v, insets ->
             val bars = insets.getInsets(

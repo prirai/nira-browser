@@ -18,7 +18,7 @@ import mozilla.components.feature.addons.ui.translateName
 import com.prirai.android.nira.ext.components
 import com.prirai.android.nira.ext.getParcelableExtraCompat
 import com.prirai.android.nira.ext.getParcelableCompat
-import com.prirai.android.nira.theme.applyAppTheme
+import com.prirai.android.nira.theme.applyCompleteTheme
 
 // An activity to show the settings of an add-on.
 
@@ -34,7 +34,7 @@ class AddonSettingsActivity : AppCompatActivity() {
 
         setContentView(view)
 
-        applyAppTheme(this)
+        applyCompleteTheme(this)
 
         val addon = requireNotNull(intent.getParcelableExtraCompat<Addon>("add_on"))
         title = addon.translateName(this)

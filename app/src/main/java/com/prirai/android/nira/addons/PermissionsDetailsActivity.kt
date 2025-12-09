@@ -15,7 +15,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.prirai.android.nira.R
 import com.prirai.android.nira.ext.isAppInDarkTheme
 import com.prirai.android.nira.ext.getParcelableExtraCompat
-import com.prirai.android.nira.theme.applyAppTheme
+import com.prirai.android.nira.theme.applyCompleteTheme
 import mozilla.components.feature.addons.Addon
 import mozilla.components.feature.addons.ui.AddonPermissionsAdapter
 import mozilla.components.feature.addons.ui.translateName
@@ -33,7 +33,7 @@ class PermissionsDetailsActivity : AppCompatActivity(), View.OnClickListener {
         val addon = requireNotNull(intent.getParcelableExtraCompat<Addon>("add_on"))
         title = addon.translateName(this)
 
-        applyAppTheme(this)
+        applyCompleteTheme(this)
 
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.addon_permissions)) { v, insets ->
             val bars = insets.getInsets(

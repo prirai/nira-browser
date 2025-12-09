@@ -104,8 +104,12 @@ open class BrowserActivity : LocaleAwareAppCompatActivity(), ComponentCallbacks2
         // Switch from splash theme to regular theme immediately
         setTheme(R.style.AppThemeNotActionBar)
         
-        // Apply Material 3 dynamic colors (Material You) on Android 12+
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+        // Apply user theme preferences
+        com.prirai.android.nira.theme.ThemeManager.applyTheme(this)
+        
+        // Apply Material 3 dynamic colors (Material You) on Android 12+ if enabled
+        val prefs = UserPreferences(this)
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S && prefs.dynamicColors) {
             com.google.android.material.color.DynamicColors.applyToActivityIfAvailable(this)
         }
 
@@ -159,6 +163,11 @@ open class BrowserActivity : LocaleAwareAppCompatActivity(), ComponentCallbacks2
 
         applyAppTheme(this)
         
+        // Apply Material You dynamic colors if enabled
+        if (com.prirai.android.nira.theme.ThemeManager.shouldUseDynamicColors(this)) {
+            com.google.android.material.color.DynamicColors.applyToActivityIfAvailable(this)
+        }
+        
         // Register lifecycle observer to capture state on background
         lifecycle.addObserver(object : DefaultLifecycleObserver {
             override fun onPause(owner: LifecycleOwner) {
@@ -206,6 +215,11 @@ open class BrowserActivity : LocaleAwareAppCompatActivity(), ComponentCallbacks2
             lastToolbarPosition = currentPosition
             recreate()
         }
+        
+        // Apply system bars theme based on current mode
+        val selectedTab = components.store.state.tabs.find { it.id == components.store.state.selectedTabId }
+        val isPrivate = selectedTab?.content?.private ?: browsingModeManager.mode.isPrivate
+        com.prirai.android.nira.theme.ThemeManager.applySystemBarsTheme(this, isPrivate)
     }
 
     final override fun onNewIntent(intent: Intent) {
@@ -626,9 +640,10 @@ open class BrowserActivity : LocaleAwareAppCompatActivity(), ComponentCallbacks2
         
         if (isPrivate) {
             // Purple background for private mode
-            toolbar?.setBackgroundColor(android.graphics.Color.parseColor("#6A1B9A"))
-            window.statusBarColor = android.graphics.Color.parseColor("#6A1B9A")
-            window.navigationBarColor = android.graphics.Color.parseColor("#6A1B9A")
+            val purpleColor = com.prirai.android.nira.theme.ColorConstants.PrivateMode.PURPLE
+            toolbar?.setBackgroundColor(purpleColor)
+            window.statusBarColor = purpleColor
+            window.navigationBarColor = purpleColor
         } else {
             // Default theme color
             val typedValue = android.util.TypedValue()

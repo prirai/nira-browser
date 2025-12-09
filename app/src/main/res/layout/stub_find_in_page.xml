@@ -8,6 +8,6 @@
     android:background="?attr/colorSurface"
     android:clickable="true"
     android:focusable="true"
-    app:findInPageNoMatchesTextColor="@color/photonRed50"
+    app:findInPageNoMatchesTextColor="?attr/colorError"
     app:findInPageButtonsTint="?android:attr/textColorPrimary"
     app:findInPageResultCountTextColor="?android:attr/textColorPrimary" />

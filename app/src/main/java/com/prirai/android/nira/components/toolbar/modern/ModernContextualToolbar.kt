@@ -74,7 +74,7 @@ class ModernContextualToolbar @JvmOverloads constructor(
         setupModernClickListeners()
 
         // Modern styling with proper dark mode support
-        setBackgroundColor(ContextCompat.getColor(context, android.R.color.background_dark))
+        setBackgroundColor(ContextCompat.getColor(context, R.color.contextual_toolbar_background))
         elevation = 8f
     }
 
@@ -124,7 +124,7 @@ class ModernContextualToolbar @JvmOverloads constructor(
             this.contentDescription = contentDescription
             background = ContextCompat.getDrawable(context, android.R.drawable.list_selector_background)
             scaleType = android.widget.ImageView.ScaleType.CENTER_INSIDE
-            setColorFilter(ContextCompat.getColor(context, android.R.color.white))
+            setColorFilter(ContextCompat.getColor(context, R.color.contextual_toolbar_icon))
             isClickable = true
             isFocusable = true
             // Ensure proper padding to prevent icon clipping
@@ -144,7 +144,7 @@ class ModernContextualToolbar @JvmOverloads constructor(
             // Tab count background (square with border like original)
             val backgroundView = android.widget.ImageView(context).apply {
                 setImageResource(android.R.drawable.ic_menu_view)
-                setColorFilter(ContextCompat.getColor(context, android.R.color.white))
+                setColorFilter(ContextCompat.getColor(context, R.color.contextual_toolbar_icon))
                 layoutParams = FrameLayout.LayoutParams(24, 24).apply {
                     gravity = android.view.Gravity.CENTER
                 }
@@ -156,7 +156,7 @@ class ModernContextualToolbar @JvmOverloads constructor(
                 text = "1"
                 textSize = 11f
                 gravity = android.view.Gravity.CENTER
-                setTextColor(ContextCompat.getColor(context, android.R.color.white))
+                setTextColor(ContextCompat.getColor(context, R.color.contextual_toolbar_text))
                 typeface = android.graphics.Typeface.DEFAULT_BOLD
                 maxLines = 1
                 layoutParams = FrameLayout.LayoutParams(

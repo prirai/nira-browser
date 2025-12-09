@@ -370,21 +370,7 @@ class TabsBottomSheetFragment : BottomSheetDialogFragment() {
     }
 
     private fun parseColor(colorString: String): Int {
-        return try {
-            when (colorString.lowercase()) {
-                "blue" -> "#2196F3".toColorInt()
-                "red" -> "#F44336".toColorInt()
-                "green" -> "#4CAF50".toColorInt()
-                "orange" -> "#FF9800".toColorInt()
-                "purple" -> "#9C27B0".toColorInt()
-                "pink" -> "#E91E63".toColorInt()
-                "teal" -> "#009688".toColorInt()
-                "yellow" -> "#FFC107".toColorInt()
-                else -> "#2196F3".toColorInt()
-            }
-        } catch (e: Exception) {
-            "#2196F3".toColorInt()
-        }
+        return com.prirai.android.nira.theme.ColorConstants.TabGroups.parseColor(colorString)
     }
 
     private fun showGroupTabOptionsMenu(tabId: String, groupId: String, view: View) {

@@ -40,7 +40,7 @@ class CustomTabToolbarMenu(
 
     @ColorRes
     private fun primaryTextColor(): Int {
-        return android.R.color.primary_text_dark
+        return R.color.m3_primary_text
     }
 
     private val menuItems by lazy {

@@ -116,12 +116,15 @@ abstract class ToolbarIntegration(
         val (secureColor, insecureColor) = when {
             isInternalPage -> {
                 // Internal page - use blue color for both states
-                val blueColor = context.getColor(android.R.color.holo_blue_dark)
+                val blueColor = context.getColor(R.color.security_indicator_secure)
                 Pair(blueColor, blueColor)
             }
             else -> {
                 // Regular page - use green/red colors
-                Pair(0xFF5cb85c.toInt(), 0xFFd9534f.toInt())
+                Pair(
+                    com.prirai.android.nira.theme.ColorConstants.getSecureColor(toolbar.context),
+                    com.prirai.android.nira.theme.ColorConstants.getInsecureColor(toolbar.context)
+                )
             }
         }
         
@@ -176,14 +179,38 @@ class DefaultToolbarIntegration(
 
 
         toolbar.display.colors = toolbar.display.colors.copy(
-            siteInfoIconInsecure = 0xFFd9534f.toInt(),
-            siteInfoIconSecure = 0xFF5cb85c.toInt(),
+            siteInfoIconInsecure = com.prirai.android.nira.theme.ColorConstants.getInsecureColor(context),
+            siteInfoIconSecure = com.prirai.android.nira.theme.ColorConstants.getSecureColor(context),
             text = context.getColorFromAttr(android.R.attr.textColorPrimary),
             menu = context.getColorFromAttr(android.R.attr.textColorPrimary),
-            separator = 0x1E15141a,
-            trackingProtection = 0xFF20123a.toInt(),
-            emptyIcon = 0xFF20123a.toInt(),
-            hint = 0x1E15141a
+            separator = com.prirai.android.nira.theme.ColorConstants.getColorFromAttr(
+                context,
+                com.google.android.material.R.attr.colorOutlineVariant,
+                0x1E15141a
+            ),
+            trackingProtection = if (isPrivate) {
+                com.prirai.android.nira.theme.ColorConstants.PrivateMode.PURPLE
+            } else {
+                com.prirai.android.nira.theme.ColorConstants.getColorFromAttr(
+                    context,
+                    android.R.attr.colorPrimary,
+                    0xFF20123a.toInt()
+                )
+            },
+            emptyIcon = if (isPrivate) {
+                com.prirai.android.nira.theme.ColorConstants.PrivateMode.PURPLE
+            } else {
+                com.prirai.android.nira.theme.ColorConstants.getColorFromAttr(
+                    context,
+                    android.R.attr.colorPrimary,
+                    0xFF20123a.toInt()
+                )
+            },
+            hint = com.prirai.android.nira.theme.ColorConstants.getColorFromAttr(
+                context,
+                com.google.android.material.R.attr.colorOutlineVariant,
+                0x1E15141a
+            )
         )
 
         toolbar.edit.colors = toolbar.edit.colors.copy(

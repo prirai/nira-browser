@@ -320,24 +320,24 @@ class TabsWithGroupsAdapter(
             cardView.setCardBackgroundColor(backgroundColor)
             
             // Adjust text colors based on background
-            val textColor = if (isDark) {
-                0xFFE0E0E0.toInt()
-            } else {
-                0xFF424242.toInt()
-            }
+            val textColor = com.prirai.android.nira.theme.ColorConstants.getColorFromAttr(
+                context,
+                if (isDark) android.R.attr.textColorPrimary else android.R.attr.textColorPrimary,
+                if (isDark) 0xFFE0E0E0.toInt() else 0xFF424242.toInt()
+            )
             groupName.setTextColor(textColor)
 
             // Set tab counter background to contrast with text (opposite theme color)
-            val counterBackgroundColor = if (isDark) {
-                0xFF3A3A3A.toInt() // Slightly lighter than pure black in dark mode
-            } else {
-                0xFFE0E0E0.toInt() // Light gray in light mode
-            }
-            val counterTextColor = if (isDark) {
-                0xFFFFFFFF.toInt() // White text in dark mode
-            } else {
-                0xFF212121.toInt() // Dark text in light mode
-            }
+            val counterBackgroundColor = com.prirai.android.nira.theme.ColorConstants.getColorFromAttr(
+                context,
+                com.google.android.material.R.attr.colorSurfaceVariant,
+                if (isDark) 0xFF3A3A3A.toInt() else 0xFFE0E0E0.toInt()
+            )
+            val counterTextColor = com.prirai.android.nira.theme.ColorConstants.getColorFromAttr(
+                context,
+                com.google.android.material.R.attr.colorOnSurfaceVariant,
+                if (isDark) 0xFFFFFFFF.toInt() else 0xFF212121.toInt()
+            )
 
             // Create circular background drawable with theme-aware color
             val circleDrawable = android.graphics.drawable.GradientDrawable().apply {

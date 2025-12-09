@@ -95,18 +95,14 @@ data class TabIsland(
          * Default colors for tab islands
          */
         val DEFAULT_COLORS = listOf(
-            0xFFE57373.toInt(), // Red
-            0xFF81C784.toInt(), // Green
-            0xFF64B5F6.toInt(), // Blue
-            0xFFFFB74D.toInt(), // Orange
-            0xFFAED581.toInt(), // Light Green
-            0xFFFFD54F.toInt(), // Yellow
-            0xFF90A4AE.toInt(), // Grey
-            0xFFF06292.toInt(), // Pink
-            0xFF9575CD.toInt(), // Purple
-            0xFF4DD0E1.toInt(), // Cyan
-            0xFFDCE775.toInt(), // Lime
-            0xFFFFAB91.toInt()  // Deep Orange
+            com.prirai.android.nira.theme.ColorConstants.TabGroups.RED,
+            com.prirai.android.nira.theme.ColorConstants.TabGroups.GREEN,
+            com.prirai.android.nira.theme.ColorConstants.TabGroups.BLUE,
+            com.prirai.android.nira.theme.ColorConstants.TabGroups.ORANGE,
+            com.prirai.android.nira.theme.ColorConstants.TabGroups.TEAL,
+            com.prirai.android.nira.theme.ColorConstants.TabGroups.YELLOW,
+            com.prirai.android.nira.theme.ColorConstants.TabGroups.PURPLE,
+            com.prirai.android.nira.theme.ColorConstants.TabGroups.PINK
         )
 
         /**

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <selector xmlns:android="http://schemas.android.com/apk/res/android">
-    <!-- Checked/Selected state - use direct color to avoid circular reference -->
-    <item android:color="#ff333333" android:state_checked="true"/>
+    <!-- Checked/Selected state - use Material 3 primary color -->
+    <item android:color="@color/m3_primary" android:state_checked="true"/>
     <!-- Default state - transparent -->
     <item android:color="@android:color/transparent"/>
 </selector>

@@ -165,7 +165,11 @@ class ComposeHomeFragment : Fragment() {
                 // Check if toolbar is at top
                 val isToolbarAtTop = prefs.toolbarPosition == com.prirai.android.nira.components.toolbar.ToolbarPosition.TOP.ordinal
 
-                NiraTheme(isPrivateMode = isPrivateMode) {
+                NiraTheme(
+                    isPrivateMode = isPrivateMode,
+                    amoledMode = prefs.amoledMode,
+                    dynamicColor = prefs.dynamicColors
+                ) {
                     HomeScreen(
                         isPrivateMode = isPrivateMode,
                         shortcuts = shortcuts,
@@ -424,28 +428,12 @@ class ComposeHomeFragment : Fragment() {
         }
 
         val isPrivate = browsingModeManager.mode.isPrivate
-
-        if (isPrivate) {
-            requireActivity().window.statusBarColor = "#6A1B9A".toColorInt()
-            requireActivity().window.navigationBarColor = "#6A1B9A".toColorInt()
-        } else {
-            val typedValue = android.util.TypedValue()
-            val theme = requireContext().theme
-
-            if (theme.resolveAttribute(
-                    com.google.android.material.R.attr.colorSurfaceVariant,
-                    typedValue,
-                    true
-                )
-            ) {
-                requireActivity().window.statusBarColor = typedValue.data
-            }
-
-            val elevationDp = 3f * resources.displayMetrics.density
-            val elevatedColor = com.google.android.material.elevation.ElevationOverlayProvider(requireContext())
-                .compositeOverlayWithThemeSurfaceColorIfNeeded(elevationDp)
-            requireActivity().window.navigationBarColor = elevatedColor
-        }
+        
+        // Use ThemeManager to apply system bars theme
+        com.prirai.android.nira.theme.ThemeManager.applySystemBarsTheme(
+            requireActivity(),
+            isPrivate
+        )
 
         unifiedToolbar?.applyPrivateMode(isPrivate)
     }
@@ -456,19 +444,11 @@ class ComposeHomeFragment : Fragment() {
     }
 
     private fun restoreDefaultStyling() {
-        val typedValue = android.util.TypedValue()
-        val theme = requireContext().theme
-
-        if (theme.resolveAttribute(
-                com.google.android.material.R.attr.colorSurfaceVariant,
-                typedValue,
-                true
-            )
-        ) {
-            requireActivity().window.statusBarColor = typedValue.data
-        }
-
-        requireActivity().window.navigationBarColor = android.graphics.Color.TRANSPARENT
+        // Use ThemeManager to restore system bars
+        com.prirai.android.nira.theme.ThemeManager.applySystemBarsTheme(
+            requireActivity(),
+            browsingModeManager.mode.isPrivate
+        )
     }
 
     private fun handleTabSwipe(isNext: Boolean, isPrivateMode: Boolean) {

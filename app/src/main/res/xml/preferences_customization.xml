@@ -12,6 +12,20 @@
             app:icon="@drawable/ic_palette"
             app:singleLineTitle="false"/>
 
+        <com.prirai.android.nira.settings.MaterialSwitchPreference
+            app:key="dynamic_colors"
+            app:title="Dynamic colors"
+            app:summary="Use colors from your wallpaper (Android 12+)"
+            app:singleLineTitle="false"
+            app:defaultValue="true" />
+
+        <com.prirai.android.nira.settings.MaterialSwitchPreference
+            app:key="amoled_mode"
+            app:title="AMOLED mode"
+            app:summary="Pure black background for OLED displays (dark mode only)"
+            app:singleLineTitle="false"
+            app:defaultValue="false" />
+
         <Preference
             app:key="@string/key_web_theme_type"
             app:title="@string/web_theme"

@@ -493,31 +493,11 @@ class UnifiedTabGroupManager private constructor(private val context: Context) {
     }
 
     private fun parseColor(colorString: String): Int {
-        return when (colorString.lowercase()) {
-            "red" -> 0xFFE57373.toInt()
-            "green" -> 0xFF81C784.toInt()
-            "blue" -> 0xFF64B5F6.toInt()
-            "orange" -> 0xFFFFB74D.toInt()
-            "purple" -> 0xFFBA68C8.toInt()
-            "pink" -> 0xFFF06292.toInt()
-            "cyan" -> 0xFF4DD0E1.toInt()
-            "yellow" -> 0xFFFFF176.toInt()
-            else -> 0xFF64B5F6.toInt()
-        }
+        return com.prirai.android.nira.theme.ColorConstants.TabGroups.parseColor(colorString)
     }
 
     private fun colorToString(color: Int): String {
-        return when (color) {
-            0xFFE57373.toInt() -> "red"
-            0xFF81C784.toInt() -> "green"
-            0xFF64B5F6.toInt() -> "blue"
-            0xFFFFB74D.toInt() -> "orange"
-            0xFFBA68C8.toInt() -> "purple"
-            0xFFF06292.toInt() -> "pink"
-            0xFF4DD0E1.toInt() -> "cyan"
-            0xFFFFF176.toInt() -> "yellow"
-            else -> "blue"
-        }
+        return com.prirai.android.nira.theme.ColorConstants.TabGroups.getColorName(color)
     }
 
     /**

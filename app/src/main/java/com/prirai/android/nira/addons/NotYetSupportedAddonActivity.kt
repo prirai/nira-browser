@@ -16,7 +16,7 @@ import mozilla.components.feature.addons.ui.UnsupportedAddonsAdapterDelegate
 import com.prirai.android.nira.ext.components
 import com.prirai.android.nira.ext.getParcelableArrayListExtraCompat
 import com.prirai.android.nira.ext.getParcelableArrayListCompat
-import com.prirai.android.nira.theme.applyAppTheme
+import com.prirai.android.nira.theme.applyCompleteTheme
 
 // Activity for managing unsupported add-ons, or add-ons that were installed but are no longer available.
 
@@ -27,7 +27,7 @@ class NotYetSupportedAddonActivity : AppCompatActivity() {
 
         val addons = requireNotNull(intent.getParcelableArrayListExtraCompat<Addon>("add_ons"))
 
-        applyAppTheme(this)
+        applyCompleteTheme(this)
 
         supportFragmentManager
             .beginTransaction()

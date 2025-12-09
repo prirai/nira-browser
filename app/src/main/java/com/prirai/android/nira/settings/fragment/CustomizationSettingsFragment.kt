@@ -57,6 +57,33 @@ class CustomizationSettingsFragment : BaseSettingsFragment() {
     override fun onCreatePreferences(savedInstanceState: Bundle?, s: String?) {
         addPreferencesFromResource(R.xml.preferences_customization)
 
+        // Dynamic colors preference
+        switchPreference(
+            preference = "dynamic_colors",
+            isChecked = UserPreferences(requireContext()).dynamicColors,
+            onCheckChange = {
+                UserPreferences(requireContext()).dynamicColors = it
+                // Apply dynamic colors immediately
+                if (it && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                    com.google.android.material.color.DynamicColors.applyToActivitiesIfAvailable(requireActivity().application)
+                }
+                // Recreate activity to apply changes
+                requireActivity().recreate()
+            }
+        )
+
+        // AMOLED mode preference
+        switchPreference(
+            preference = "amoled_mode",
+            isChecked = UserPreferences(requireContext()).amoledMode,
+            onCheckChange = {
+                UserPreferences(requireContext()).amoledMode = it
+                // Apply AMOLED mode immediately by updating system bars and recreating
+                com.prirai.android.nira.theme.ThemeManager.applySystemBarsTheme(requireActivity(), false)
+                requireActivity().recreate()
+            }
+        )
+
         switchPreference(
             preference = requireContext().resources.getString(R.string.key_move_navbar),
             isChecked = !UserPreferences(requireContext()).shouldUseBottomToolbar,

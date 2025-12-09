@@ -456,7 +456,7 @@ class TabIslandsVerticalAdapter(
 
         fun bind() {
             titleText.text = itemView.context.getString(R.string.ungrouped_tabs)
-            titleText.setTextColor(itemView.context.getColor(android.R.color.white))
+            titleText.setTextColor(androidx.core.content.ContextCompat.getColor(itemView.context, R.color.m3_primary_text))
             // Accessibility
             itemView.contentDescription = itemView.context.getString(R.string.ungrouped_tabs_header_description)
         }
@@ -464,10 +464,10 @@ class TabIslandsVerticalAdapter(
         fun setDragMode(isDragging: Boolean) {
             if (isDragging) {
                 titleText.text = "UNGROUP"
-                titleText.setTextColor(itemView.context.getColor(android.R.color.holo_red_light))
+                titleText.setTextColor(androidx.core.content.ContextCompat.getColor(itemView.context, R.color.m3_error))
             } else {
                 titleText.text = itemView.context.getString(R.string.ungrouped_tabs)
-                titleText.setTextColor(itemView.context.getColor(android.R.color.white))
+                titleText.setTextColor(androidx.core.content.ContextCompat.getColor(itemView.context, R.color.m3_primary_text))
             }
         }
     }

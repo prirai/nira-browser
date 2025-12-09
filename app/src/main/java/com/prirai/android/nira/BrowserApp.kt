@@ -47,6 +47,11 @@ class BrowserApp : LocaleAwareApplication() {
         components.engine.warmUp()
 
         applyAppTheme(this)
+        
+        // Apply Material You dynamic colors if enabled
+        if (com.prirai.android.nira.theme.ThemeManager.shouldUseDynamicColors(this)) {
+            com.google.android.material.color.DynamicColors.applyToActivitiesIfAvailable(this)
+        }
 
         logger.info("App onCreate completed in ${System.currentTimeMillis() - appStartTime}ms")
 

@@ -784,14 +784,20 @@ class UnifiedToolbar @JvmOverloads constructor(
      */
     fun applyPrivateMode(isPrivate: Boolean) {
         // Private mode changes the Material 3 surface color
-        val elevationDp = 3f * resources.displayMetrics.density
         val bgColor = if (isPrivate) {
             // Purple for private mode
-            android.graphics.Color.parseColor("#6A1B9A")
+            com.prirai.android.nira.theme.ColorConstants.PrivateMode.PURPLE
         } else {
-            // Normal Material 3 elevated surface
-            com.google.android.material.elevation.ElevationOverlayProvider(context)
-                .compositeOverlayWithThemeSurfaceColorIfNeeded(elevationDp)
+            // Check for AMOLED mode
+            if (com.prirai.android.nira.theme.ThemeManager.isAmoledActive(context)) {
+                // Pure black for AMOLED
+                android.graphics.Color.BLACK
+            } else {
+                // Normal Material 3 elevated surface
+                val elevationDp = 3f * resources.displayMetrics.density
+                com.google.android.material.elevation.ElevationOverlayProvider(context)
+                    .compositeOverlayWithThemeSurfaceColorIfNeeded(elevationDp)
+            }
         }
 
         toolbarSystem.setBackgroundColor(bgColor)

@@ -216,7 +216,7 @@ class TabGroupDragHelper(
             if (dragDown) recyclerView.height.toFloat() else zoneHeight
         )
         
-        dropZonePaint.color = "#FF5722".toColorInt() // Orange-red for ungroup
+        dropZonePaint.color = com.prirai.android.nira.theme.ColorConstants.DragDrop.UNGROUP_COLOR
         canvas.drawRect(rect, dropZonePaint)
         
         // Draw text hint
@@ -243,7 +243,7 @@ class TabGroupDragHelper(
             targetView.bottom.toFloat()
         )
         
-        dropZonePaint.color = "#4CAF50".toColorInt() // Green for valid drop
+        dropZonePaint.color = com.prirai.android.nira.theme.ColorConstants.DragDrop.VALID_DROP_COLOR
         canvas.drawRect(rect, dropZonePaint)
     }
 

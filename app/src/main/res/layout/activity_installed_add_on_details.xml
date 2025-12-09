@@ -92,6 +92,6 @@
             android:layout_below="@id/permissions"
             android:layout_marginTop="16dp"
             android:text="@string/mozac_feature_addons_remove"
-            android:textColor="@color/colorPrimaryDark" />
+            android:textColor="?attr/colorError" />
     </RelativeLayout>
 </ScrollView>

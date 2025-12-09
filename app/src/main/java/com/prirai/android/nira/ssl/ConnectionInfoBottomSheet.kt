@@ -61,15 +61,15 @@ class ConnectionInfoBottomSheet : BottomSheetDialogFragment() {
         if (isInternalPage) {
             securityIcon.setImageResource(R.drawable.shield_lock_24)
             securityStatus.text = "Internal page"
-            securityStatus.setTextColor(context.getColor(android.R.color.holo_blue_dark))
+            securityStatus.setTextColor(context.getColor(R.color.security_indicator_secure))
         } else if (securityInfo?.secure == true) {
             securityIcon.setImageResource(R.drawable.security_24)
             securityStatus.text = "Connection is secure"
-            securityStatus.setTextColor(0xFF5cb85c.toInt())
+            securityStatus.setTextColor(com.prirai.android.nira.theme.ColorConstants.getSecureColor(context))
         } else {
             securityIcon.setImageResource(R.drawable.encrypted_off_24)
             securityStatus.text = "Connection is not secure"
-            securityStatus.setTextColor(0xFFd9534f.toInt())
+            securityStatus.setTextColor(com.prirai.android.nira.theme.ColorConstants.getInsecureColor(context))
         }
 
         // Set website info

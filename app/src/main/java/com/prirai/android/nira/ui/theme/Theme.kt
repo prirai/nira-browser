@@ -28,6 +28,19 @@ private val DarkColorScheme = darkColorScheme(
     tertiary = Pink80
 )
 
+private val AmoledDarkColorScheme = darkColorScheme(
+    primary = Purple80,
+    secondary = PurpleGrey80,
+    tertiary = Pink80,
+    surface = AmoledBlack,
+    background = AmoledBlack,
+    surfaceVariant = AmoledSurfaceVariant,
+    surfaceContainer = AmoledSurfaceVariant,
+    surfaceContainerLow = AmoledBlack,
+    surfaceContainerHigh = AmoledSurfaceDim,
+    surfaceContainerHighest = AmoledSurfaceDim
+)
+
 private val PrivateLightColorScheme = lightColorScheme(
     primary = PrivatePurple60,
     onPrimary = Color.White,
@@ -52,20 +65,62 @@ private val PrivateDarkColorScheme = darkColorScheme(
     onBackground = Color(0xFFE0D5F0)
 )
 
+private val PrivateAmoledColorScheme = darkColorScheme(
+    primary = PrivatePurple80,
+    onPrimary = Color.White,
+    primaryContainer = PrivatePurple60,
+    onPrimaryContainer = Color.White,
+    secondary = PrivatePurple40,
+    surface = AmoledBlack,
+    onSurface = Color(0xFFE0D5F0),
+    background = AmoledBlack,
+    onBackground = Color(0xFFE0D5F0),
+    surfaceVariant = AmoledSurfaceVariant,
+    surfaceContainer = AmoledSurfaceVariant,
+    surfaceContainerLow = AmoledBlack,
+    surfaceContainerHigh = AmoledSurfaceDim,
+    surfaceContainerHighest = AmoledSurfaceDim
+)
+
 @Composable
 fun NiraTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     isPrivateMode: Boolean = false,
+    amoledMode: Boolean = false,
     dynamicColor: Boolean = true,
     content: @Composable () -> Unit
 ) {
     val colorScheme = when {
+        // Private mode with AMOLED
+        isPrivateMode && darkTheme && amoledMode -> PrivateAmoledColorScheme
+        // Private mode without AMOLED
         isPrivateMode && darkTheme -> PrivateDarkColorScheme
         isPrivateMode && !darkTheme -> PrivateLightColorScheme
+        // Dynamic colors (Android 12+)
         dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
             val context = LocalContext.current
-            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+            if (darkTheme) {
+                // Apply AMOLED modifications to dynamic colors
+                val baseDynamic = dynamicDarkColorScheme(context)
+                if (amoledMode) {
+                    baseDynamic.copy(
+                        surface = AmoledBlack,
+                        background = AmoledBlack,
+                        surfaceVariant = AmoledSurfaceVariant,
+                        surfaceContainer = AmoledSurfaceVariant,
+                        surfaceContainerLow = AmoledBlack,
+                        surfaceContainerHigh = AmoledSurfaceDim,
+                        surfaceContainerHighest = AmoledSurfaceDim
+                    )
+                } else {
+                    baseDynamic
+                }
+            } else {
+                dynamicLightColorScheme(context)
+            }
         }
+        // Static colors with AMOLED
+        darkTheme && amoledMode -> AmoledDarkColorScheme
         darkTheme -> DarkColorScheme
         else -> LightColorScheme
     }
@@ -74,12 +129,21 @@ fun NiraTheme(
     if (!view.isInEditMode) {
         SideEffect {
             val window = (view.context as Activity).window
-            // Only set purple for private mode, otherwise use transparent/default
+            // Set status bar and navigation bar colors
             if (isPrivateMode) {
+                // Purple for private mode
                 window.statusBarColor = colorScheme.primary.toArgb()
                 window.navigationBarColor = colorScheme.primary.toArgb()
+            } else if (darkTheme && amoledMode) {
+                // Pure black for AMOLED mode
+                window.statusBarColor = AmoledBlack.toArgb()
+                window.navigationBarColor = AmoledBlack.toArgb()
+            } else if (darkTheme) {
+                // Dark surface for normal dark mode
+                window.statusBarColor = colorScheme.surface.toArgb()
+                window.navigationBarColor = colorScheme.surface.toArgb()
             }
-            // Don't modify status bar for non-private mode - let activity handle it
+            // Set light/dark status bar icons
             WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme && !isPrivateMode
         }
     }

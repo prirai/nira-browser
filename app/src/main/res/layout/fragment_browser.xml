@@ -53,8 +53,8 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_gravity="bottom"
-                android:background="?attr/colorSurface"
-                android:elevation="24dp"
+                android:background="?attr/colorSurfaceContainerHigh"
+                android:elevation="12dp"
                 android:visibility="gone"
             />
 
@@ -67,6 +67,7 @@
             android:id="@+id/loginSelectBar"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:background="?attr/colorSurfaceContainer"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintTop_toBottomOf="@id/browserLayout"
         />
@@ -77,7 +78,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_gravity="bottom"
-        android:background="#FFFFFFFF"
+        android:background="?attr/colorSurface"
         android:elevation="10dp"
         android:paddingBottom="55dp"
         android:visibility="gone"
@@ -93,6 +94,9 @@
         android:contentDescription="@string/reader_view_appearance"
         android:src="@drawable/mozac_ic_font"
         android:visibility="gone"
+        app:backgroundTint="?attr/colorSecondaryContainer"
+        app:tint="?attr/colorOnSecondaryContainer"
+        app:shapeAppearance="@style/ShapeAppearance.Material3.Corner.Large"
     />
 
     <com.prirai.android.nira.browser.FakeTab

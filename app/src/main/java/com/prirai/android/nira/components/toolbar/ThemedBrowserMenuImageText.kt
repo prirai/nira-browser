@@ -60,7 +60,7 @@ class ThemedBrowserMenuImageText(
             typedValue.data
         } else {
             // Fallback to black
-            ContextCompat.getColor(context, android.R.color.black)
+            ContextCompat.getColor(context, com.prirai.android.nira.R.color.menu_text_color)
         }
     }
 }

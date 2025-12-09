@@ -86,7 +86,7 @@
             android:layout_below="@+id/details"
             android:layout_marginTop="10dp"
             android:layout_marginBottom="10dp"
-            android:background="@color/photonGrey40"
+            android:background="?attr/colorOutlineVariant"
             android:importantForAccessibility="no" />
 
         <TextView
@@ -112,7 +112,7 @@
             android:layout_below="@+id/version_label"
             android:layout_marginTop="10dp"
             android:layout_marginBottom="10dp"
-            android:background="@color/photonGrey40"
+            android:background="?attr/colorOutlineVariant"
             android:importantForAccessibility="no" />
 
         <TextView
@@ -138,7 +138,7 @@
             android:layout_below="@+id/last_updated_label"
             android:layout_marginTop="10dp"
             android:layout_marginBottom="10dp"
-            android:background="@color/photonGrey40"
+            android:background="?attr/colorOutlineVariant"
             android:importantForAccessibility="no" />
 
         <TextView

@@ -46,7 +46,7 @@ class UnifiedToolbarTheme(private val context: Context) {
      * Deep purple to indicate private browsing
      */
     val privateToolbarBackgroundColor: Int
-        get() = "#6A1B9A".toColorInt()
+        get() = com.prirai.android.nira.theme.ColorConstants.PrivateMode.PURPLE
 
     /**
      * Primary text color for toolbar
@@ -176,8 +176,8 @@ class UnifiedToolbarTheme(private val context: Context) {
      */
     fun getIconTint(isPrivateMode: Boolean = false): Int {
         return if (isPrivateMode) {
-            // White icons for private mode
-            ContextCompat.getColor(context, android.R.color.white)
+            // On-primary color for private mode
+            ContextCompat.getColor(context, R.color.m3_on_primary)
         } else {
             toolbarIconColor
         }
@@ -188,8 +188,8 @@ class UnifiedToolbarTheme(private val context: Context) {
      */
     fun getTextColor(isPrivateMode: Boolean = false): Int {
         return if (isPrivateMode) {
-            // White text for private mode
-            ContextCompat.getColor(context, android.R.color.white)
+            // On-primary color for private mode
+            ContextCompat.getColor(context, R.color.m3_on_primary)
         } else {
             toolbarTextColor
         }

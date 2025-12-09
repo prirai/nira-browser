@@ -4,7 +4,7 @@ import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.FragmentManager
 import com.prirai.android.nira.R
-import com.prirai.android.nira.theme.applyAppTheme
+import com.prirai.android.nira.theme.applyCompleteTheme
 
 
 // An activity to manage add-ons.
@@ -17,7 +17,7 @@ class AddonsActivity : AppCompatActivity() {
         val addonId = intent.getStringExtra("ADDON_ID")
         val addonUrl = intent.getStringExtra("ADDON_URL")
 
-        applyAppTheme(this)
+        applyCompleteTheme(this)
 
         supportActionBar?.elevation = 0f
 

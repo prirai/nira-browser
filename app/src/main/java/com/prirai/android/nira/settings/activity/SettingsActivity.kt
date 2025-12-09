@@ -11,14 +11,19 @@ import androidx.preference.PreferenceFragmentCompat
 import com.prirai.android.nira.R
 import com.prirai.android.nira.ext.isAppInDarkTheme
 import com.prirai.android.nira.settings.fragment.SettingsFragment
-import com.prirai.android.nira.theme.applyAppTheme
+import com.prirai.android.nira.theme.applyCompleteTheme
 
 class SettingsActivity : AppCompatActivity(), PreferenceFragmentCompat.OnPreferenceStartFragmentCallback {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_settings)
 
-        applyAppTheme(this)
+        com.prirai.android.nira.theme.applyCompleteTheme(this)
+        
+        // Apply background color for AMOLED mode
+        val bgColor = com.prirai.android.nira.theme.ThemeManager.getBackgroundColor(this)
+        window.decorView.setBackgroundColor(bgColor)
+        findViewById<android.view.View>(R.id.container)?.setBackgroundColor(bgColor)
 
         if (savedInstanceState == null) {
             supportFragmentManager

@@ -19,7 +19,7 @@ import androidx.core.view.updatePadding
 import com.prirai.android.nira.R
 import com.prirai.android.nira.ext.isAppInDarkTheme
 import com.prirai.android.nira.ext.getParcelableExtraCompat
-import com.prirai.android.nira.theme.applyAppTheme
+import com.prirai.android.nira.theme.applyCompleteTheme
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -44,7 +44,7 @@ class AddonDetailsActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        applyAppTheme(this)
+        applyCompleteTheme(this)
 
         setContentView(R.layout.activity_add_on_details)
 

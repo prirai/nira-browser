@@ -23,3 +23,8 @@ val PrivateLightBackground = Color(0xFFF5F0FF)
 val PrivateLightSurface = Color(0xFFEBDCFF)
 val PrivateDarkBackground = Color(0xFF1E0E34)
 val PrivateDarkSurface = Color(0xFF2E1A47)
+
+// AMOLED mode colors (pure black)
+val AmoledBlack = Color(0xFF000000)
+val AmoledSurfaceVariant = Color(0xFF0A0A0A)
+val AmoledSurfaceDim = Color(0xFF141414)

@@ -81,15 +81,8 @@ class TabGroupWithProfileSwitcher @JvmOverloads constructor(
                         0f, 0f,                     // bottom-right (square)
                         cornerRadius, cornerRadius  // bottom-left
                     )
-                    setColor(ContextCompat.getColor(context, android.R.color.white))
-                    
-                    // Add elevation shadow effect
-                    val isDark = context.resources.configuration.uiMode and 
-                        android.content.res.Configuration.UI_MODE_NIGHT_MASK ==
-                        android.content.res.Configuration.UI_MODE_NIGHT_YES
-                    if (isDark) {
-                        setColor(ContextCompat.getColor(context, android.R.color.darker_gray))
-                    }
+                    // Use Material 3 surface color
+                    setColor(ContextCompat.getColor(context, R.color.m3_surface_container_background))
                 }
                 background = bg
             }
@@ -223,13 +216,12 @@ class TabGroupWithProfileSwitcher @JvmOverloads constructor(
         val typedValue = android.util.TypedValue()
         val theme = context.theme
         
-        val backgroundColor = if (theme.resolveAttribute(com.google.android.material.R.attr.colorSurfaceVariant, typedValue, true)) {
-            typedValue.data
-        } else {
-            // Fallback
+        val backgroundColor = com.prirai.android.nira.theme.ColorConstants.getColorFromAttr(
+            context,
+            com.google.android.material.R.attr.colorSurfaceVariant,
             if (isDarkMode()) 0xFF1E1E1E.toInt() else 0xFFF5F5F5.toInt()
-        }
-        val purpleColor = 0xFF6F42C1.toInt()
+        )
+        val purpleColor = com.prirai.android.nira.theme.ColorConstants.PrivateMode.PURPLE
         val tintedColor = blendColors(backgroundColor, purpleColor, 0.2f)
         profilePillCard.setCardBackgroundColor(tintedColor)
     }

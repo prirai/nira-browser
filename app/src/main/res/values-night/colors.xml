@@ -1,26 +1,78 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <resources>
+    <!-- Material 3 Dark Color Scheme -->
+    <color name="m3_primary">#D0BCFF</color>
+    <color name="m3_on_primary">#381E72</color>
+    <color name="m3_primary_container">#4F378B</color>
+    <color name="m3_on_primary_container">#EADDFF</color>
+    
+    <color name="m3_secondary">#CCC2DC</color>
+    <color name="m3_on_secondary">#332D41</color>
+    <color name="m3_secondary_container">#4A4458</color>
+    <color name="m3_on_secondary_container">#E8DEF8</color>
+    
+    <color name="m3_tertiary">#EFB8C8</color>
+    <color name="m3_on_tertiary">#492532</color>
+    <color name="m3_tertiary_container">#633B48</color>
+    <color name="m3_on_tertiary_container">#FFD8E4</color>
+    
+    <color name="m3_error">#F2B8B5</color>
+    <color name="m3_on_error">#601410</color>
+    <color name="m3_error_container">#8C1D18</color>
+    <color name="m3_on_error_container">#F9DEDC</color>
+    
+    <color name="m3_surface">#1C1B1F</color>
+    <color name="m3_on_surface">#E6E1E5</color>
+    <color name="m3_surface_variant">#49454F</color>
+    <color name="m3_on_surface_variant">#CAC4D0</color>
+    <color name="m3_surface_container_low">#1D1B20</color>
+    <color name="m3_surface_container">#211F26</color>
+    <color name="m3_surface_container_high">#2B2930</color>
+    <color name="m3_surface_container_highest">#36343B</color>
+    
+    <color name="m3_background">#1C1B1F</color>
+    <color name="m3_on_background">#E6E1E5</color>
+    
+    <color name="m3_outline">#938F99</color>
+    <color name="m3_outline_variant">#49454F</color>
+    
+    <color name="m3_inverse_surface">#E6E1E5</color>
+    <color name="m3_inverse_on_surface">#313033</color>
+    <color name="m3_inverse_primary">#6650a4</color>
+    
+    <color name="m3_scrim">#000000</color>
 
-    <color name="main_icon">#FFFFFF</color>
-    <color name="primary_icon">#e3e3e3</color>
-    <color name="secondary_icon">#5e5e5e</color>
-    <color name="toolbar_background">#5C5C5C</color>
+    <!-- Semantic colors for compatibility -->
+    <color name="main_icon">@color/m3_on_surface</color>
+    <color name="primary_icon">@color/m3_on_surface_variant</color>
+    <color name="secondary_icon">@color/m3_outline</color>
+    <color name="toolbar_background">@color/m3_surface_container</color>
     <color name="toolbar_private_outline">#B87CB8</color>
-    <color name="statusbar_background">#222222</color>
-
-    <color name="selected_tab">#5e5e5e</color>
-
-    <!-- Drag and drop -->
-
-    <!-- Selected tab highlight -->
+    <color name="statusbar_background">@color/m3_surface_container_high</color>
+    <color name="selected_tab">@color/m3_secondary_container</color>
 
     <!-- Tab card colors (dark mode) -->
-    <color name="tab_card_background">#2C2C2C</color>
-    <color name="tab_card_stroke">#404040</color>
-    <color name="tab_group_background">#242424</color>
-    <color name="tab_group_stroke">#383838</color>
+    <color name="tab_card_background">@color/m3_surface_container_low</color>
+    <color name="tab_card_stroke">@color/m3_outline_variant</color>
+    <color name="tab_group_background">@color/m3_surface_container</color>
+    <color name="tab_group_stroke">@color/m3_outline</color>
     
     <!-- Search result chips (dark mode) -->
-    <color name="chip_stroke_color_themed">#00BCD4</color>
-    <color name="chip_text_color_themed">#00BCD4</color>
+    <color name="chip_stroke_color_themed">@color/m3_primary</color>
+    <color name="chip_text_color_themed">@color/m3_primary</color>
+    
+    <!-- Legacy Mozilla colors for compatibility -->
+    <color name="photonBlue40">@color/m3_primary</color>
+    
+    <!-- Material 3 themed backgrounds and text -->
+    <color name="m3_surface_container_background">@color/m3_surface_container</color>
+    <color name="m3_primary_text">@color/m3_on_surface</color>
+    <color name="m3_on_surface_emphasis_high">@color/m3_on_surface</color>
+    <color name="contextual_toolbar_background">@color/m3_surface_container_high</color>
+    <color name="contextual_toolbar_icon">@color/m3_on_surface</color>
+    <color name="contextual_toolbar_text">@color/m3_on_surface</color>
+    
+    <!-- Additional semantic colors -->
+    <color name="security_indicator_secure">@color/secure_icon_color</color>
+    <color name="menu_text_color">@color/m3_on_surface</color>
 </resources>

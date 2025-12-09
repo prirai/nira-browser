@@ -137,13 +137,8 @@ class WebAppActivity : AppCompatActivity() {
         WindowCompat.setDecorFitsSystemWindows(window, true)
         
         // Set status bar color based on theme
-        window.statusBarColor = if (resources.configuration.uiMode and 
-            android.content.res.Configuration.UI_MODE_NIGHT_MASK == 
-            android.content.res.Configuration.UI_MODE_NIGHT_YES) {
-            android.graphics.Color.parseColor("#1C1C1C") // Dark theme
-        } else {
-            android.graphics.Color.WHITE // Light theme
-        }
+        val bgColor = com.prirai.android.nira.theme.ThemeManager.getBackgroundColor(this)
+        window.statusBarColor = bgColor
         
         // Ensure system bars are visible and configure appearance
         val windowInsetsController = WindowCompat.getInsetsController(window, window.decorView)

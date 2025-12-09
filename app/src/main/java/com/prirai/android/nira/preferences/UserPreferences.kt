@@ -81,6 +81,12 @@ class UserPreferences(appContext: Context) : mozilla.components.support.ktx.andr
     // Interface font scale (0.8 to 1.3 scale)
     var interfaceFontScale by floatPreference(INTERFACE_FONT_SCALE, 1.0f)
     
+    // AMOLED mode - pure black backgrounds for OLED displays
+    var amoledMode by booleanPreference(AMOLED_MODE, false)
+    
+    // Enable dynamic colors (Material You) on Android 12+
+    var dynamicColors by booleanPreference(DYNAMIC_COLORS, true)
+    
     // Status bar blur - forced enabled on Android 12+, disabled on older versions
     val statusBarBlurEnabled: Boolean
         get() = android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S
@@ -141,5 +147,7 @@ class UserPreferences(appContext: Context) : mozilla.components.support.ktx.andr
         const val TOOLBAR_ICON_SIZE = "toolbar_icon_size"
         const val INTERFACE_FONT_SCALE = "interface_font_scale"
         const val SHOW_PROFILE_SWITCHER = "show_profile_switcher"
+        const val AMOLED_MODE = "amoled_mode"
+        const val DYNAMIC_COLORS = "dynamic_colors"
     }
 }

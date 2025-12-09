@@ -101,6 +101,19 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
 
         // Reset EngineView's dynamic toolbar configuration to prevent rendering artifacts
         binding.engineView.setVerticalClipping(0)
+        
+        // Apply AMOLED mode background if enabled
+        applyThemeColors()
+    }
+    
+    private fun applyThemeColors() {
+        val bgColor = com.prirai.android.nira.theme.ThemeManager.getBackgroundColor(requireContext())
+        
+        // Apply to all background views
+        binding.gestureLayout.setBackgroundColor(bgColor)
+        binding.browserWindow.setBackgroundColor(bgColor)
+        binding.browserLayout.setBackgroundColor(bgColor)
+        binding.swipeRefresh.setBackgroundColor(bgColor)
     }
 
     private fun observeTabChangesForToolbar() {
