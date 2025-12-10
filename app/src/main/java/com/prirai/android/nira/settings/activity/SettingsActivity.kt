@@ -54,6 +54,13 @@ class SettingsActivity : AppCompatActivity(), PreferenceFragmentCompat.OnPrefere
             WindowInsetsCompat.CONSUMED
         }
         supportActionBar?.elevation = 0f
+
+        title = getString(R.string.settings)
+        supportFragmentManager.addOnBackStackChangedListener {
+            if (supportFragmentManager.backStackEntryCount == 0) {
+                title = getString(R.string.settings)
+            }
+        }
     }
 
     override fun onSupportNavigateUp(): Boolean {

@@ -93,6 +93,10 @@ abstract class BaseSettingsFragment : PreferenceFragmentCompat() {
         }
         
         override fun onDraw(canvas: Canvas, parent: RecyclerView, state: RecyclerView.State) {
+            // Does nothing
+        }
+
+        override fun onDrawOver(canvas: Canvas, parent: RecyclerView, state: RecyclerView.State) {
             val adapter = parent.adapter ?: return
             
             for (i in 0 until parent.childCount) {
@@ -100,22 +104,21 @@ abstract class BaseSettingsFragment : PreferenceFragmentCompat() {
                 val position = parent.getChildAdapterPosition(child)
                 
                 if (position == RecyclerView.NO_POSITION) continue
+
+                // Do not draw a divider for the last item in the adapter
+                if (position == adapter.itemCount - 1) continue
                 
-                val isCategory = adapter.getItemViewType(position) == 0
-                if (isCategory) continue
+                val isCurrentCategory = adapter.getItemViewType(position) == 0
+                val isNextCategory = adapter.getItemViewType(position + 1) == 0
+
+                // Do not draw a divider for categories, or if the next item is a category
+                if (isCurrentCategory || isNextCategory) continue
                 
-                // Check if we should draw divider below this item
-                val isLastInGroup = position == adapter.itemCount - 1 || 
-                                   (position < adapter.itemCount - 1 && adapter.getItemViewType(position + 1) == 0)
+                val dividerLeft = child.left.toFloat()
+                val dividerRight = child.right.toFloat()
+                val dividerY = child.bottom.toFloat()
                 
-                if (!isLastInGroup) {
-                    // Draw divider limited to content area (with padding from left)
-                    val dividerLeft = child.left + (76 * resources.displayMetrics.density) // Icon + padding space
-                    val dividerRight = child.right.toFloat()
-                    val dividerY = child.bottom.toFloat()
-                    
-                    canvas.drawLine(dividerLeft, dividerY, dividerRight, dividerY, dividerPaint)
-                }
+                canvas.drawLine(dividerLeft, dividerY, dividerRight, dividerY, dividerPaint)
             }
         }
         
