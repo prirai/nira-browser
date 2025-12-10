@@ -16,12 +16,13 @@
         android:clickable="true"
         android:focusable="true"
         android:focusableInTouchMode="true"
-        app:browserToolbarClearColor="?android:attr/textColorPrimary"
-        app:browserToolbarInsecureColor="?android:attr/textColorPrimary"
-        app:browserToolbarMenuColor="?android:attr/textColorPrimary"
+        android:background="?attr/colorSurface"
+        app:browserToolbarClearColor="?attr/colorOnSurface"
+        app:browserToolbarInsecureColor="?attr/colorError"
+        app:browserToolbarMenuColor="?attr/colorOnSurface"
         app:browserToolbarProgressBarGravity="bottom"
-        app:browserToolbarSecureColor="?android:attr/textColorPrimary"
-        app:browserToolbarTrackingProtectionAndSecurityIndicatorSeparatorColor="?android:attr/textColorPrimary"
+        app:browserToolbarSecureColor="?attr/colorPrimary"
+        app:browserToolbarTrackingProtectionAndSecurityIndicatorSeparatorColor="?attr/colorOutline"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
@@ -37,6 +38,7 @@
         android:nestedScrollingEnabled="false"
         android:requiresFadingEdge="vertical"
         android:visibility="invisible"
+        android:background="?attr/colorSurface"
         app:layout_constraintBottom_toTopOf="@+id/pill_wrapper"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
@@ -53,7 +55,7 @@
         android:id="@+id/search_suggestions_hint_divider"
         android:layout_width="match_parent"
         android:layout_height="1dp"
-        android:background="#e3e3e3"
+        android:background="?attr/colorOutlineVariant"
         android:visibility="gone"
         app:layout_constraintTop_toBottomOf="@id/top_barrier"
         app:layout_constraintEnd_toEndOf="parent"
@@ -64,7 +66,7 @@
         android:layout_width="0dp"
         android:layout_height="48dp"
         android:layout_marginTop="4dp"
-        android:background="?attr/colorSurface"
+        android:background="?attr/colorSurfaceContainerHigh"
         android:clickable="true"
         android:focusable="true"
         android:visibility="gone"
@@ -82,6 +84,7 @@
         android:focusable="false"
         android:importantForAccessibility="no"
         android:visibility="gone"
+        android:tint="?attr/colorPrimary"
         app:layout_constraintBottom_toBottomOf="@+id/fill_link_from_clipboard"
         app:layout_constraintStart_toStartOf="@+id/fill_link_from_clipboard"
         app:layout_constraintTop_toTopOf="@+id/fill_link_from_clipboard"
@@ -90,7 +93,6 @@
 
     <TextView
         android:id="@+id/clipboard_title"
-        android:textSize="15sp"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginStart="8dp"
@@ -99,6 +101,8 @@
         android:focusable="false"
         android:importantForAccessibility="no"
         android:text="@string/fill_from_clipboard"
+        android:textAppearance="@style/TextAppearance.Material3.BodyMedium"
+        android:textColor="?attr/colorOnSurface"
         android:visibility="gone"
         app:layout_constraintBottom_toTopOf="@id/clipboard_url"
         app:layout_constraintEnd_toEndOf="@+id/fill_link_from_clipboard"
@@ -110,7 +114,6 @@
 
     <TextView
         android:id="@+id/clipboard_url"
-        android:textSize="12sp"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginStart="8dp"
@@ -118,6 +121,8 @@
         android:clickable="false"
         android:focusable="false"
         android:importantForAccessibility="no"
+        android:textAppearance="@style/TextAppearance.Material3.BodySmall"
+        android:textColor="?attr/colorOnSurfaceVariant"
         android:visibility="gone"
         app:layout_constraintBottom_toBottomOf="@+id/fill_link_from_clipboard"
         app:layout_constraintEnd_toEndOf="@+id/fill_link_from_clipboard"
@@ -131,14 +136,14 @@
         android:id="@+id/fill_link_divider"
         android:layout_width="match_parent"
         android:layout_height="1dp"
-        android:background="?attr/colorSurface"
+        android:background="?attr/colorOutlineVariant"
         app:layout_constraintTop_toBottomOf="@id/fill_link_from_clipboard" />
 
     <View
         android:id="@+id/pill_wrapper_divider"
         android:layout_width="match_parent"
         android:layout_height="1dp"
-        android:background="?attr/colorSurface"
+        android:background="?attr/colorOutlineVariant"
         app:layout_constraintBottom_toTopOf="@id/pill_wrapper" />
 
     <View
@@ -157,12 +162,13 @@
 
     <ToggleButton
         android:id="@+id/search_engines_shortcut_button"
-        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+        style="@style/Widget.Material3.Button.TonalButton"
         android:layout_width="48dp"
         android:layout_height="48dp"
         android:textOff="@string/search_engine"
         android:textOn="@string/search_engine"
         app:drawableStartCompat="@drawable/ic_round_search"
+        app:iconTint="?attr/colorOnSecondaryContainer"
         app:layout_constraintBottom_toBottomOf="@id/pill_wrapper"
         app:layout_constraintStart_toStartOf="@+id/pill_wrapper"
         app:layout_constraintTop_toTopOf="@id/pill_wrapper" />

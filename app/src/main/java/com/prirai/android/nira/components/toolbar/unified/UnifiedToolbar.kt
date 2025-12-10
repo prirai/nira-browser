@@ -132,6 +132,8 @@ class UnifiedToolbar @JvmOverloads constructor(
                     .start()
             }
         }
+        // Update status bar color to show toolbar through it (top toolbar only)
+        updateStatusBarForToolbarState(expanded = true)
     }
     
     override fun collapse() {
@@ -150,6 +152,8 @@ class UnifiedToolbar @JvmOverloads constructor(
                     .start()
             }
         }
+        // Update status bar color to hide toolbar (top toolbar only)
+        updateStatusBarForToolbarState(expanded = false)
     }
 
     /**
@@ -803,6 +807,48 @@ class UnifiedToolbar @JvmOverloads constructor(
         toolbarSystem.setBackgroundColor(bgColor)
         
         // Components already have their own background handling
+    }
+    
+    /**
+     * Update status bar color based on toolbar visibility state.
+     * This prevents the toolbar from being visible through the status bar on devices
+     * with transparent status bars (Android 15+, especially Realme devices).
+     * 
+     * @param expanded true if toolbar is visible, false if hidden
+     */
+    private fun updateStatusBarForToolbarState(expanded: Boolean) {
+        // Only update for TOP toolbar position
+        val toolbarPos = if (prefs.toolbarPosition == ToolbarPosition.BOTTOM.ordinal) {
+            ToolbarPosition.BOTTOM
+        } else {
+            ToolbarPosition.TOP
+        }
+        
+        if (toolbarPos != ToolbarPosition.TOP) {
+            return
+        }
+        
+        // Get the activity window
+        val activity = context as? android.app.Activity ?: return
+        val window = activity.window
+        
+        val isDark = com.prirai.android.nira.theme.ThemeManager.isDarkMode(context)
+        
+        if (expanded) {
+            // Toolbar is visible - use semi-transparent status bar to show toolbar through it
+            window.statusBarColor = if (isDark) {
+                android.graphics.Color.argb(230, 28, 27, 31) // 90% opaque Material 3 dark surface
+            } else {
+                android.graphics.Color.argb(230, 255, 251, 254) // 90% opaque Material 3 light surface
+            }
+        } else {
+            // Toolbar is hidden - use fully opaque status bar to hide toolbar content
+            window.statusBarColor = if (isDark) {
+                android.graphics.Color.argb(255, 28, 27, 31) // 100% opaque Material 3 dark surface
+            } else {
+                android.graphics.Color.argb(255, 255, 251, 254) // 100% opaque Material 3 light surface
+            }
+        }
     }
 
     companion object {

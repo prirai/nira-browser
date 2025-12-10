@@ -6,7 +6,6 @@
     android:paddingHorizontal="16dp"
     android:paddingTop="16dp"
     android:paddingBottom="8dp"
-    android:textSize="18sp"
-    android:textStyle="bold"
-    android:textColor="?android:attr/textColorPrimary"
+    android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
+    android:textColor="?attr/colorOnSurface"
     android:text="Header" />

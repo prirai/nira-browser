@@ -12,20 +12,18 @@
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_weight="1"
-        android:textSize="14sp"
-        android:textStyle="bold"
-        android:textColor="?android:attr/textColorSecondary"
+        android:textAppearance="@style/TextAppearance.Material3.LabelLarge"
+        android:textColor="?attr/colorOnSurfaceVariant"
         android:text="Subheader" />
 
     <com.google.android.material.chip.Chip
         android:id="@+id/subHeaderChip"
+        style="@style/Widget.Material3.Chip.Assist"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Chip"
-        android:textSize="11sp"
-        app:chipBackgroundColor="@android:color/transparent"
-        app:chipStrokeWidth="2dp"
-        app:chipStrokeColor="?attr/colorPrimary"
+        app:chipBackgroundColor="?attr/colorSurfaceContainerHigh"
+        app:chipStrokeWidth="0dp"
         app:chipMinHeight="24dp" />
 
 </LinearLayout>

@@ -30,7 +30,16 @@ class TabSearchFragment : BottomSheetDialogFragment() {
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
-        _binding = FragmentTabSearchBinding.inflate(inflater, container, false)
+        // Use dynamic color context if available
+        val userPreferences = com.prirai.android.nira.preferences.UserPreferences(requireContext())
+        val contextForInflater = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S && userPreferences.dynamicColors) {
+            com.google.android.material.color.DynamicColors.wrapContextIfAvailable(requireContext())
+        } else {
+            requireContext()
+        }
+        
+        val themedInflater = inflater.cloneInContext(contextForInflater)
+        _binding = FragmentTabSearchBinding.inflate(themedInflater, container, false)
         return binding.root
     }
 
@@ -53,20 +62,32 @@ class TabSearchFragment : BottomSheetDialogFragment() {
             val userPreferences = com.prirai.android.nira.preferences.UserPreferences(requireContext())
             val isDarkTheme = com.prirai.android.nira.theme.ThemeManager.isDarkMode(requireContext())
             
-            // Apply Material 3 background color with proper theming
-            val bgColor = if (userPreferences.amoledMode && isDarkTheme) {
-                android.graphics.Color.BLACK
-            } else {
+            // Apply dynamic colors if enabled
+            val bgColor = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S && userPreferences.dynamicColors) {
+                val dynamicContext = com.google.android.material.color.DynamicColors.wrapContextIfAvailable(requireContext())
                 val typedValue = android.util.TypedValue()
-                if (requireContext().theme.resolveAttribute(
-                    com.google.android.material.R.attr.colorSurface, typedValue, true
-                )) {
-                    typedValue.data
+                dynamicContext.theme.resolveAttribute(com.google.android.material.R.attr.colorSurface, typedValue, true)
+                if (userPreferences.amoledMode && isDarkTheme) {
+                    android.graphics.Color.BLACK
                 } else {
-                    androidx.core.content.ContextCompat.getColor(
-                        requireContext(), 
-                        com.prirai.android.nira.R.color.m3_surface
-                    )
+                    typedValue.data
+                }
+            } else {
+                // Apply Material 3 background color with proper theming
+                if (userPreferences.amoledMode && isDarkTheme) {
+                    android.graphics.Color.BLACK
+                } else {
+                    val typedValue = android.util.TypedValue()
+                    if (requireContext().theme.resolveAttribute(
+                        com.google.android.material.R.attr.colorSurface, typedValue, true
+                    )) {
+                        typedValue.data
+                    } else {
+                        androidx.core.content.ContextCompat.getColor(
+                            requireContext(), 
+                            com.prirai.android.nira.R.color.m3_surface
+                        )
+                    }
                 }
             }
             
