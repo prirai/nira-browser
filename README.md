@@ -1,6 +1,6 @@
 <div align="center">
 
-# Nira Browser
+# Nira Browser (alpha)
 
 Nira (निरा) means pure — शुद्ध / absolute — पूर्ण / the only one - एकमात्र.
 
@@ -17,6 +17,9 @@ Nira (निरा) means pure — शुद्ध / absolute — पूर्�
 
 </div>
 
+> [!WARNING]  
+> This browser is still in alpha stage and may contain bugs or issues. Use at your own risk. Please submit issues in the [issues tab](https://github.com/prirai/nira-browser/issues) and feature requests in discussions under the "Ideas" section [here](https://github.com/prirai/nira-browser/discussions/new?category=ideas).
+
 ---
 
 ## Features
@@ -30,84 +33,27 @@ Nira (निरा) means pure — शुद्ध / absolute — पूर्�
 - **Tab groups and bar** - First of its kind support for tab grouping and quick bar for faster navigation
 - **Privacy & Security** - Built-in ad and tracker blocking, enhanced tracking protection and safe browsing
 
-### Tab Management
+### Complete feature-set
 
-- **Tab Groups** - Organize tabs into groups with beautiful tab islands
-- **Modern Tab Pills** - Sleek, modern tab interface with smooth animations
-- **Tab Tray** - Multiple view modes: grid, list, and islands with groups
-- **Tab Islands** - Visual grouping of tabs for better organization
-
-### Bookmarks & History
-
-- **Advanced Bookmark Management** - Create folders, organize hierarchically, and sort by multiple criteria
-- **Bookmark Search** - Quickly find bookmarks with instant search
-- **Folder Organization** - Nested folder support with visual path navigation
-- **Comprehensive History** - Full browsing history with search and filtering
-- **Import/Export** - Backup and restore bookmarks easily
-- **Quick Bookmarking** - Add bookmarks with a single tap
-
-### Extensions & Add-ons
-
-- **WebExtension Support** - Full support for Firefox-compatible extensions
-- **Sideloading** - Install extensions from URLs or files (XPI support)
-- **Extension Management** - Enable, disable, configure, and update extensions
-- **Extension Settings** - Per-extension settings and permissions management
-- **Extension Toolbar Actions** - Quick access to extension actions from the toolbar
-- **Auto-Updates** - Automatic extension updates to keep you secure
-
-### Customization
-
-- **Theme Options** - Light, dark, and system-following themes
-- **Toolbar Positioning** - Choose top or bottom toolbar placement
-- **Contextual Bottom Toolbar** - Smart toolbar that adapts based on context
-- **Status Bar Effects** - Beautiful blur effects on Android 12+ devices
-- **Custom Font Sizing** - Adjust text size for comfortable reading
-- **Customizable Homepage** - Configure your perfect start page with shortcuts and feeds
-- **Toolbar Customization** - Show/hide URL bar while scrolling
-
-### Search
-
-- **Multiple Search Engines** - Google, DuckDuckGo, Bing, Baidu, Brave, Naver, Qwant, Startpage, Yandex
-- **Custom Search Engines** - Add your own search engines with custom URLs
-- **Search Suggestions** - Real-time search suggestions as you type
-
-### Advanced Features
-
-- **Reader Mode** - Distraction-free reading with customizable fonts and colors
-- **Find in Page** - Powerful in-page search with keyboard-aware positioning
-- **Save as PDF** - Convert any webpage to PDF with one tap
-- **Custom Tabs** - Seamless integration when opening links from other apps
-- **Download Management** - Built-in download manager with external downloader support
-- **Smart Clipboard** - Intelligent clipboard handling for URLs and text
-- **Media Playback** - Background audio/video with media session controls
-- **Favicon Cache** - Smart favicon caching for faster page loading
-
-### Internationalization
-
-- **Multiple Languages** - Support for Arabic, French, Italian, Japanese, Polish, Portuguese (BR & PT), Russian, Turkish, Vietnamese, Chinese (CN)
-- **RTL Support** - Full right-to-left language support
-
-### Multi-Profile System
-
-- **Isolated Profiles** - Create separate profiles for work, personal, shopping, or any use case
-- **Cookie Isolation** - Each profile maintains its own cookies and session data completely isolated from other profiles
-- **Profile Customization** - Assign unique colors and emoji to easily identify profiles
-- **Quick Switching** - Switch between profiles seamlessly without losing your tabs
-- **Separate Storage** - Each profile has its own bookmarks, history, and settings
-- **Private Mode** - Separate private browsing mode that doesn't persist any data
-
-### Progressive Web Apps
-
-- **PWA Installation** - Install web apps as standalone applications with one tap
-- **Smart Suggestions** - Automatic detection and suggestions for 40+ popular PWAs including Twitter, WhatsApp, Discord, YouTube, Spotify, Notion, Figma, and many more
-- **Custom Theming** - PWAs adopt the site's theme colors for a native app experience
-- **Usage Tracking** - Monitor launch counts and last used dates for installed apps
-- **Notification Support** - PWAs can send notifications with customizable settings per app
-- **Offline Support** - Use installed PWAs even without an internet connection where supported
-- **Homescreen Icons** - Add PWAs to your homescreen with custom icons
-- **Standalone Mode** - Run PWAs in their own window without browser UI
-- **App Management** - Enable/disable, update, or uninstall PWAs from settings
-- **Profile Integration** - PWAs are associated with specific profiles keeping data separate
+- **Tab Groups** support with multiple view modes: grid, list, and islands with groups
+- **Bookmark** support with import/export and folder organization
+- **WebExtension** Support including sideloading from URLs or files (XPI support)
+- **Theming** options including light, dark, material 3 dynamic color themes and amoled
+- **Toolbar Positioning** on top or bottom toolbar
+- **Contextual Toolbar** is a smart toolbar that adapts based on page context
+- **Homepage** shows shortcuts and bookmarks for easy access
+- **Allow showing/hiding** different components of the app for full freedom
+- **Multiple Search Engines** like Google, DuckDuckGo, Bing, Baidu, Brave, Naver, Qwant, Startpage, Yandex and you can add your own search engines with custom URLs
+- Distraction-free **reading** with customizable fonts and colors
+- Convert any **webpage to PDF** with one tap
+- **Custom Tab integration** when opening links from other apps
+- Built-in **download manager** with external downloader support
+- **Background audio/video** with media session controls
+- **Multiple Language support** - Support for Arabic, French, Italian, Japanese, Polish, Portuguese (BR & PT), Russian, Turkish, Vietnamese, Chinese (CN)
+- Create separate profiles for work, personal, shopping, or any use case with full cookie and data isolation and a unique color and emoji to easily identify profiles
+- Switch between profiles seamlessly without losing your tabs
+- Install web apps as standalone applications with one tap with smart suggestions including binding pwa storage with a specific profile
+- Enable/disable, update, or uninstall PWAs from settings
 
 ---
 
@@ -146,31 +92,10 @@ Download the latest APK from the [Releases page](https://github.com/prirai/nira-
    
    # For ARMv7 devices (older phones)
    adb install app/build/outputs/apk/debug/app-armeabi-v7a-debug.apk
+   
+   # For x86_64 devices (emulators and chromebooks)
+   adb install app/build/outputs/apk/debug/app-x86_64-debug.apk
    ```
-
----
-
-## Why Nira Browser?
-
-### For Privacy Enthusiasts
-- No telemetry or data collection
-- Built-in ad and tracker blocking
-- Enhanced tracking protection
-- Private browsing mode
-
-### For Power Users
-- Multi-profile system with isolated browsing data
-- Tab groups for organization
-- Extensive customization options
-- WebExtension support
-- Advanced bookmark management
-- PWA installation and management
-
-### For Everyone
-- Fast and lightweight
-- Beautiful Material 3 design
-- Constantly improving
-- Free and open source
 
 ---
 
@@ -180,7 +105,7 @@ We welcome contributions! Here's how you can help:
 
 ### Ways to Contribute
 
-- **Report Bugs** - Found an issue? [Open an issue](https://github.com/prirai/nira-browser/issues/new)
+- **Report Bugs** - Found an issue? [Open an issue](https://github.com/prirai/nira-browser/issues/new). Make sure to include your device model, Android version, and steps to reproduce.
 - **Suggest Features** - Have an idea? We'd love to hear it!
 - **Translate** - Help translate Nira into your language
 - **Code** - Submit pull requests to improve the browser
@@ -195,37 +120,23 @@ We welcome contributions! Here's how you can help:
 5. **Commit with clear messages** - Describe what and why
 6. **Open a Pull Request** - We'll review it promptly
 
-For detailed development guidelines, see our [AI Agent Development Prompts](prompts/README.md) for structured workflows.
-
----
-
-## Architecture
-
-Nira Browser is built on:
-- **Mozilla GeckoView** - Powerful rendering engine
-- **Mozilla Android Components** - Modular browser components
-- **Kotlin** - Modern, safe programming language
-- **Material 3** - Latest Android design system
-- **Room Database** - For bookmarks, tab groups, shortcuts, and PWA management
-
 ---
 
 ## Roadmap
 
 ### Recently Added
 - [x] Multi-profile system with cookie isolation
-- [x] Progressive Web App (PWA) support
-- [x] PWA suggestion system with 40+ popular apps
-- [x] PWA management and settings interface
+- [x] Progressive Web App (PWA) support including management and settings interface
+- [x] UI/UX refinements
+- [x] Tab/Bookmark/History search
+- [x] Material 3 Theming
+- [x] Amoled theming support
+- [x] Edge-to-edge design
 
 ### Coming Soon
 - [ ] Sync across devices
 - [ ] Profile import/export
 - [ ] More customization options
-
-### In Progress
-- [ ] UI/UX refinements
-- [ ] Tab/Bookmark/History search
 - [ ] Sending tabs and groups to other profiles
 - [ ] Accessibility improvements
 
@@ -245,15 +156,6 @@ Need help? Have questions?
 This project is licensed under the **Mozilla Public License Version 2.0**.
 
 See [LICENSE](LICENSE) file for details.
-
-### What this means:
-- Use for personal or commercial purposes
-- Modify and distribute
-- Patent grant included
-- Must disclose source for modifications
-- License and copyright notice required
-
----
 
 ## Disclaimer
 
