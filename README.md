@@ -136,10 +136,13 @@ We welcome contributions! Here's how you can help:
 ### Coming Soon
 - [ ] Sync across devices
 - [ ] Profile import/export
-- [ ] More customization options
+- [ ] More customization options (never ends?)
 - [ ] Sending tabs and groups to other profiles
 - [ ] Accessibility improvements
-
+- [ ] User js inspired by arkenfox, betterfox and co
+- [ ] Download management interface
+- [ ] QR scanning for opening URLs
+- [ ] New icon representing the project
 ---
 
 ## Support
@@ -192,6 +195,7 @@ SUCH DAMAGES.
 
 ## Acknowledgments
 
+- **SmartCookieWeb browser** - The browser which started it all at [github.com/CookieJarApps/SmartCookieWeb/](https://github.com/CookieJarApps/SmartCookieWeb/)
 - **Mozilla** - For the incredible GeckoView engine and Android Components
 - **All Contributors** - Thank you for making Nira better
 - **Open Source Community** - For the tools and libraries that make this possible
