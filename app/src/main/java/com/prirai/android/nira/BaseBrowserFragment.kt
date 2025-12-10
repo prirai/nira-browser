@@ -884,7 +884,7 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
 
             // Completely hide and collapse toolbar
             unifiedToolbar?.collapse()
-            unifiedToolbar?.visibility = android.view.View.GONE
+            unifiedToolbar?.visibility = View.GONE
             
             // Reset engine view layout - remove all margins and behaviors
             val browserEngine = binding.swipeRefresh.layoutParams as CoordinatorLayout.LayoutParams
@@ -910,7 +910,7 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
             (view as? SwipeGestureLayout)?.isSwipeEnabled = true
 
             if (webAppToolbarShouldBeVisible) {
-                unifiedToolbar?.visibility = android.view.View.VISIBLE
+                unifiedToolbar?.visibility = View.VISIBLE
                 val toolbarHeight = resources.getDimensionPixelSize(R.dimen.browser_toolbar_height)
                 initializeEngineView(toolbarHeight)
                 unifiedToolbar?.expand()

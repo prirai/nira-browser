@@ -25,6 +25,7 @@ import java.io.InputStreamReader
 import java.io.OutputStream
 import java.io.Reader
 import java.util.Scanner
+import androidx.core.content.edit
 
 
 class ImportExportSettingsFragment : BaseSettingsFragment() {
@@ -325,7 +326,7 @@ class ImportExportSettingsFragment : BaseSettingsFragment() {
                 R.string.successful, Toast.LENGTH_LONG
             ).show()
 
-            requireContext().getSharedPreferences(SCW_PREFERENCES, 0).edit().clear().apply()
+            requireContext().getSharedPreferences(SCW_PREFERENCES, 0).edit { clear() }
             Toast.makeText(
                 context,
                 requireContext().resources.getText(R.string.app_restart),

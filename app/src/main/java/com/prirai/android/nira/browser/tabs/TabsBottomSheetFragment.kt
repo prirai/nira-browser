@@ -111,11 +111,11 @@ class TabsBottomSheetFragment : DialogFragment() {
 
     private fun setupUI() {
         // Apply Material 3 theming
-        val isDarkMode = com.prirai.android.nira.theme.ThemeManager.isDarkMode(requireContext())
+        com.prirai.android.nira.theme.ThemeManager.isDarkMode(requireContext())
         val isAmoled = com.prirai.android.nira.theme.ThemeManager.isAmoledActive(requireContext())
         
         if (isAmoled) {
-            dialog?.window?.decorView?.setBackgroundColor(android.graphics.Color.BLACK)
+            dialog?.window?.decorView?.setBackgroundColor(Color.BLACK)
         }
         
         binding.newTabFab.setOnClickListener {
@@ -475,17 +475,17 @@ class TabsBottomSheetFragment : DialogFragment() {
             val currentColor = group.color
             
             val dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_color_picker, null)
-            val recyclerView = dialogView.findViewById<androidx.recyclerview.widget.RecyclerView>(R.id.colorRecyclerView)
+            val recyclerView = dialogView.findViewById<RecyclerView>(R.id.colorRecyclerView)
             
             var selectedColorIndex = COLORS.indexOfFirst { getColorInt(it) == currentColor }.takeIf { it >= 0 } ?: 0
             
-            val colorAdapter = object : androidx.recyclerview.widget.RecyclerView.Adapter<androidx.recyclerview.widget.RecyclerView.ViewHolder>() {
-                override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): androidx.recyclerview.widget.RecyclerView.ViewHolder {
+            val colorAdapter = object : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
+                override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
                     val view = LayoutInflater.from(parent.context).inflate(R.layout.item_color_chip, parent, false)
-                    return object : androidx.recyclerview.widget.RecyclerView.ViewHolder(view) {}
+                    return object : RecyclerView.ViewHolder(view) {}
                 }
                 
-                override fun onBindViewHolder(holder: androidx.recyclerview.widget.RecyclerView.ViewHolder, position: Int) {
+                override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
                     val card = holder.itemView.findViewById<com.google.android.material.card.MaterialCardView>(R.id.colorCard)
                     val colorView = holder.itemView.findViewById<View>(R.id.colorView)
                     

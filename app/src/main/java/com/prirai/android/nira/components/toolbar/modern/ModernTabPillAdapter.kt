@@ -534,7 +534,7 @@ class ModernTabPillAdapter(
             }
             
             // Clone the card appearance
-            val clonedCard = androidx.cardview.widget.CardView(itemView.context).apply {
+            val clonedCard = CardView(itemView.context).apply {
                 layoutParams = ViewGroup.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT,
                     ViewGroup.LayoutParams.MATCH_PARENT
@@ -552,7 +552,7 @@ class ModernTabPillAdapter(
                 }
                 
                 // Clone favicon
-                val clonedFavicon = android.widget.ImageView(itemView.context).apply {
+                val clonedFavicon = ImageView(itemView.context).apply {
                     val size = (24 * context.resources.displayMetrics.density).toInt()
                     layoutParams = android.widget.LinearLayout.LayoutParams(size, size).apply {
                         marginEnd = (8 * context.resources.displayMetrics.density).toInt()
@@ -562,7 +562,7 @@ class ModernTabPillAdapter(
                 content.addView(clonedFavicon)
                 
                 // Clone title
-                val clonedTitle = android.widget.TextView(itemView.context).apply {
+                val clonedTitle = TextView(itemView.context).apply {
                     layoutParams = android.widget.LinearLayout.LayoutParams(
                         0,
                         ViewGroup.LayoutParams.WRAP_CONTENT,
@@ -662,7 +662,7 @@ class ModernTabPillAdapter(
                 typedValue.data
             } else {
                 // Fallback to Material 3 color resource
-                ContextCompat.getColor(itemView.context, com.prirai.android.nira.R.color.m3_surface_container_background)
+                ContextCompat.getColor(itemView.context, R.color.m3_surface_container_background)
             }
             
             // Guest tab color: distinctive orange/amber
@@ -679,7 +679,7 @@ class ModernTabPillAdapter(
                         if (theme.resolveAttribute(android.R.attr.colorPrimary, primaryTypedValue, true)) {
                             primaryTypedValue.data
                         } else {
-                            ContextCompat.getColor(itemView.context, com.prirai.android.nira.R.color.m3_primary)
+                            ContextCompat.getColor(itemView.context, R.color.m3_primary)
                         }
                     }
                 }
@@ -695,7 +695,7 @@ class ModernTabPillAdapter(
                 cardView.scaleX = 1.0f
                 cardView.scaleY = 1.0f
 
-                val textColor = ContextCompat.getColor(itemView.context, com.prirai.android.nira.R.color.m3_primary_text)
+                val textColor = ContextCompat.getColor(itemView.context, R.color.m3_primary_text)
                 titleView.setTextColor(textColor)
                 selectionIndicator.visibility = View.GONE
 
@@ -730,7 +730,7 @@ class ModernTabPillAdapter(
                 cardView.scaleX = 1f
                 cardView.scaleY = 1f
 
-                val textColor = ContextCompat.getColor(itemView.context, com.prirai.android.nira.R.color.m3_primary_text)
+                val textColor = ContextCompat.getColor(itemView.context, R.color.m3_primary_text)
                 titleView.setTextColor(textColor)
                 selectionIndicator.visibility = View.GONE
 
@@ -979,7 +979,7 @@ class ModernTabPillAdapter(
                         val backgroundColor = if (theme.resolveAttribute(com.google.android.material.R.attr.colorSurfaceVariant, typedValue, true)) {
                             typedValue.data
                         } else {
-                            ContextCompat.getColor(itemView.context, com.prirai.android.nira.R.color.m3_surface_container_background)
+                            ContextCompat.getColor(itemView.context, R.color.m3_surface_container_background)
                         }
                         
                         val gradient = GradientDrawable().apply {
@@ -999,7 +999,7 @@ class ModernTabPillAdapter(
                             }
                         }
                         tabContent.background = gradient
-                        val textColor = ContextCompat.getColor(itemView.context, com.prirai.android.nira.R.color.m3_primary_text)
+                        val textColor = ContextCompat.getColor(itemView.context, R.color.m3_primary_text)
                         titleView.setTextColor(textColor)
                         titleView.setTypeface(null, android.graphics.Typeface.BOLD)
                         faviconView.alpha = 1.0f
@@ -1010,7 +1010,7 @@ class ModernTabPillAdapter(
                         val backgroundColor = if (theme.resolveAttribute(com.google.android.material.R.attr.colorSurfaceVariant, typedValue, true)) {
                             typedValue.data
                         } else {
-                            ContextCompat.getColor(itemView.context, com.prirai.android.nira.R.color.m3_surface_container_background)
+                            ContextCompat.getColor(itemView.context, R.color.m3_surface_container_background)
                         }
                         
                         val gradient = GradientDrawable().apply {
@@ -1027,7 +1027,7 @@ class ModernTabPillAdapter(
                             }
                         }
                         tabContent.background = gradient
-                        val textColor = ContextCompat.getColor(itemView.context, com.prirai.android.nira.R.color.m3_primary_text)
+                        val textColor = ContextCompat.getColor(itemView.context, R.color.m3_primary_text)
                         titleView.setTextColor(textColor)
                         titleView.setTypeface(null, android.graphics.Typeface.NORMAL)
                         faviconView.alpha = 0.8f
@@ -1074,7 +1074,7 @@ class ModernTabPillAdapter(
                 val backgroundColor = if (theme.resolveAttribute(com.google.android.material.R.attr.colorSurfaceVariant, typedValue, true)) {
                     typedValue.data
                 } else {
-                    ContextCompat.getColor(itemView.context, com.prirai.android.nira.R.color.m3_surface_container_background)
+                    ContextCompat.getColor(itemView.context, R.color.m3_surface_container_background)
                 }
                 
                 val gradient = GradientDrawable().apply {
@@ -1085,7 +1085,7 @@ class ModernTabPillAdapter(
                     // No rounding needed - plus button is now at the end
                 }
                 tabContent.background = gradient
-                val textColor = ContextCompat.getColor(itemView.context, com.prirai.android.nira.R.color.m3_primary_text)
+                val textColor = ContextCompat.getColor(itemView.context, R.color.m3_primary_text)
                 titleView.setTextColor(textColor)
                 titleView.setTypeface(null, android.graphics.Typeface.BOLD)
                 faviconView.alpha = 1.0f
@@ -1096,7 +1096,7 @@ class ModernTabPillAdapter(
                 val backgroundColor = if (theme.resolveAttribute(com.google.android.material.R.attr.colorSurfaceVariant, typedValue, true)) {
                     typedValue.data
                 } else {
-                    ContextCompat.getColor(itemView.context, com.prirai.android.nira.R.color.m3_surface_container_background)
+                    ContextCompat.getColor(itemView.context, R.color.m3_surface_container_background)
                 }
                 
                 val gradient = GradientDrawable().apply {
@@ -1104,7 +1104,7 @@ class ModernTabPillAdapter(
                     // No rounding needed - plus button is now at the end
                 }
                 tabContent.background = gradient
-                val textColor = ContextCompat.getColor(itemView.context, com.prirai.android.nira.R.color.m3_primary_text)
+                val textColor = ContextCompat.getColor(itemView.context, R.color.m3_primary_text)
                 titleView.setTextColor(textColor)
                 titleView.setTypeface(null, android.graphics.Typeface.NORMAL)
                 faviconView.alpha = 0.8f
@@ -1526,9 +1526,9 @@ class ModernTabPillAdapter(
             }
 
             // Clone favicon if exists
-            val favicon = originalContent.findViewById<android.widget.ImageView>(R.id.tabFavicon)
+            val favicon = originalContent.findViewById<ImageView>(R.id.tabFavicon)
             if (favicon != null) {
-                val clonedFavicon = android.widget.ImageView(context).apply {
+                val clonedFavicon = ImageView(context).apply {
                     val size = (16 * context.resources.displayMetrics.density).toInt()
                     layoutParams = android.widget.LinearLayout.LayoutParams(size, size).apply {
                         marginEnd = (6 * context.resources.displayMetrics.density).toInt()
@@ -1539,9 +1539,9 @@ class ModernTabPillAdapter(
             }
 
             // Clone title
-            val title = originalContent.findViewById<android.widget.TextView>(R.id.tabTitle)
+            val title = originalContent.findViewById<TextView>(R.id.tabTitle)
             if (title != null) {
-                val clonedTitle = android.widget.TextView(context).apply {
+                val clonedTitle = TextView(context).apply {
                     layoutParams = android.widget.LinearLayout.LayoutParams(
                         0,
                         ViewGroup.LayoutParams.WRAP_CONTENT,

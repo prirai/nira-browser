@@ -107,15 +107,15 @@ class Material3BrowserMenu(
             // Get anchor screen position
             val location = IntArray(2)
             anchor.getLocationOnScreen(location)
-            val anchorX = location[0]
+            location[0]
             val anchorY = location[1]
             
             val menuWidth = (280 * displayMetrics.density).toInt()
             val gap = (8 * displayMetrics.density).toInt()
             
             // Check available space below and above
-            val spaceBelow = screenHeight - (anchorY + anchor.height)
-            val spaceAbove = anchorY
+            screenHeight - (anchorY + anchor.height)
+            anchorY
             
             // Determine if anchor is in the bottom half of the screen (contextual toolbar case)
             val anchorInBottomHalf = anchorY > screenHeight / 2

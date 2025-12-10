@@ -5,11 +5,12 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import androidx.core.content.ContextCompat
 import mozilla.components.browser.state.search.SearchEngine
+import androidx.core.graphics.createBitmap
 
 class SearchEngineList(private val context: Context) {
 
     private fun getIconBitmap(drawableId: Int): Bitmap {
-        val drawable = ContextCompat.getDrawable(context, drawableId) ?: return Bitmap.createBitmap(48, 48, Bitmap.Config.ARGB_8888)
+        val drawable = ContextCompat.getDrawable(context, drawableId) ?: return createBitmap(48, 48)
         val bitmap = Bitmap.createBitmap(
             if (drawable.intrinsicWidth > 0) drawable.intrinsicWidth else 48,
             if (drawable.intrinsicHeight > 0) drawable.intrinsicHeight else 48,

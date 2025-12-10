@@ -149,8 +149,8 @@ class ModernToolbarSystem @JvmOverloads constructor(
             if (height == 0) {
                 // Force measure to get proper height
                 measure(
-                    View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED),
-                    View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
+                    MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED),
+                    MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED)
                 )
             }
             
@@ -243,7 +243,7 @@ class ModernToolbarSystem @JvmOverloads constructor(
             engineView?.setVerticalClipping(currentOffset)
             
             // Keep toolbar visible but translated for smooth animation
-            visibility = View.VISIBLE
+            visibility = VISIBLE
             alpha = 1f
         } else {
             // Bottom toolbar - normal fade behavior
@@ -251,7 +251,7 @@ class ModernToolbarSystem @JvmOverloads constructor(
                 if (currentOffset >= totalHeight) 0f else 1f
             } else 1f
             
-            visibility = View.VISIBLE
+            visibility = VISIBLE
         }
     }
 

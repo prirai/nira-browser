@@ -14,6 +14,7 @@ import com.prirai.android.nira.ext.components
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import androidx.core.view.isVisible
 
 /**
  * Enhanced tab group view with Tab Islands support - automatic and manual grouping,
@@ -792,7 +793,7 @@ class EnhancedTabGroupView @JvmOverloads constructor(
 
         // If the original tab is in a group, add the duplicate to the same group at the position right after the original
         // The tab bar displays grouped tabs in the order specified by the group's tabIds, so this will position it correctly
-        kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main).launch {
+        CoroutineScope(Dispatchers.Main).launch {
             val unifiedManager = com.prirai.android.nira.browser.tabgroups.UnifiedTabGroupManager.getInstance(context)
             val groupData = unifiedManager.getGroupForTab(tabId)
             if (groupData != null) {
@@ -876,7 +877,7 @@ class EnhancedTabGroupView @JvmOverloads constructor(
         val currentColor = island.color
 
         val dialogView = android.view.LayoutInflater.from(context).inflate(R.layout.dialog_color_picker, null)
-        val recyclerView = dialogView.findViewById<androidx.recyclerview.widget.RecyclerView>(R.id.colorRecyclerView)
+        val recyclerView = dialogView.findViewById<RecyclerView>(R.id.colorRecyclerView)
         
         // Use expanded Material 3 color palette
         val colors = listOf(
@@ -900,13 +901,13 @@ class EnhancedTabGroupView @JvmOverloads constructor(
         
         var selectedColorIndex = colors.indexOfFirst { it == currentColor }.takeIf { it >= 0 } ?: 0
         
-        val colorAdapter = object : androidx.recyclerview.widget.RecyclerView.Adapter<androidx.recyclerview.widget.RecyclerView.ViewHolder>() {
-            override fun onCreateViewHolder(parent: android.view.ViewGroup, viewType: Int): androidx.recyclerview.widget.RecyclerView.ViewHolder {
+        val colorAdapter = object : Adapter<ViewHolder>() {
+            override fun onCreateViewHolder(parent: android.view.ViewGroup, viewType: Int): ViewHolder {
                 val view = android.view.LayoutInflater.from(parent.context).inflate(R.layout.item_color_chip, parent, false)
-                return object : androidx.recyclerview.widget.RecyclerView.ViewHolder(view) {}
+                return object : ViewHolder(view) {}
             }
             
-            override fun onBindViewHolder(holder: androidx.recyclerview.widget.RecyclerView.ViewHolder, position: Int) {
+            override fun onBindViewHolder(holder: ViewHolder, position: Int) {
                 val card = holder.itemView.findViewById<com.google.android.material.card.MaterialCardView>(R.id.colorCard)
                 val colorView = holder.itemView.findViewById<View>(R.id.colorView)
                 
@@ -987,7 +988,7 @@ class EnhancedTabGroupView @JvmOverloads constructor(
     }
 
     private fun animateVisibility(shouldShow: Boolean) {
-        if (shouldShow == (visibility == VISIBLE)) return
+        if (shouldShow == (isVisible)) return
 
         if (shouldShow) {
             visibility = VISIBLE

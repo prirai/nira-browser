@@ -18,7 +18,7 @@ class SettingsActivity : AppCompatActivity(), PreferenceFragmentCompat.OnPrefere
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_settings)
 
-        com.prirai.android.nira.theme.applyCompleteTheme(this)
+        applyCompleteTheme(this)
         
         // Apply background color for AMOLED mode
         val bgColor = com.prirai.android.nira.theme.ThemeManager.getBackgroundColor(this)

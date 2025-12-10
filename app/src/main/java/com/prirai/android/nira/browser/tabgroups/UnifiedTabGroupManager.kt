@@ -473,7 +473,7 @@ class UnifiedTabGroupManager private constructor(private val context: Context) {
             addTabToGroup(newTabId, sourceGroupId)
         } else {
             // Source tab is not in a group, create a new group for both
-            val newGroup = createGroup(tabIds = listOf(sourceTabId, newTabId))
+            createGroup(tabIds = listOf(sourceTabId, newTabId))
         }
     }
 

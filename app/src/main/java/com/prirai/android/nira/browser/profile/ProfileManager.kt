@@ -6,6 +6,7 @@ import android.content.SharedPreferences
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.Types
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
+import androidx.core.content.edit
 
 /**
  * Manages browser profiles - creation, deletion, and persistence
@@ -70,7 +71,7 @@ class ProfileManager(private val context: Context) {
      * Set the active profile
      */
     fun setActiveProfile(profile: BrowserProfile) {
-        prefs.edit().putString(KEY_ACTIVE_PROFILE_ID, profile.id).apply()
+        prefs.edit { putString(KEY_ACTIVE_PROFILE_ID, profile.id)}
     }
     
     /**
@@ -140,7 +141,7 @@ class ProfileManager(private val context: Context) {
      * Set private browsing mode
      */
     fun setPrivateMode(isPrivate: Boolean) {
-        prefs.edit().putBoolean(KEY_LAST_PRIVATE_PROFILE, isPrivate).apply()
+        prefs.edit { putBoolean(KEY_LAST_PRIVATE_PROFILE, isPrivate) }
     }
     
     private fun saveProfiles(profiles: List<BrowserProfile>) {

@@ -163,7 +163,7 @@ class ComposeHomeFragment : Fragment() {
                 }
                 
                 // Check if toolbar is at top
-                val isToolbarAtTop = prefs.toolbarPosition == com.prirai.android.nira.components.toolbar.ToolbarPosition.TOP.ordinal
+                val isToolbarAtTop = prefs.toolbarPosition == ToolbarPosition.TOP.ordinal
 
                 NiraTheme(
                     isPrivateMode = isPrivateMode,
@@ -255,7 +255,7 @@ class ComposeHomeFragment : Fragment() {
 
     private fun setupUnifiedToolbar(coordinatorLayout: CoordinatorLayout) {
         val prefs = UserPreferences(requireContext())
-        val tabGroupManager = requireContext().components.tabGroupManager
+        requireContext().components.tabGroupManager
 
         // Create toolbar interactor
         val toolbarInteractor = object : BrowserToolbarViewInteractor {
@@ -299,7 +299,7 @@ class ComposeHomeFragment : Fragment() {
         )
         
         // For TOP toolbar mode, add bottom components directly to fragment layout
-        if (prefs.toolbarPosition == com.prirai.android.nira.components.toolbar.ToolbarPosition.TOP.ordinal) {
+        if (prefs.toolbarPosition == ToolbarPosition.TOP.ordinal) {
             val bottomContainer = unifiedToolbar?.getBottomComponentsContainer()
             
             bottomContainer?.let { container ->
@@ -318,7 +318,7 @@ class ComposeHomeFragment : Fragment() {
                 }
                 
                 coordinatorLayout.addView(container, layoutParams)
-                container.visibility = android.view.View.VISIBLE
+                container.visibility = View.VISIBLE
                 
                 // Request insets to be applied
                 androidx.core.view.ViewCompat.requestApplyInsets(container)

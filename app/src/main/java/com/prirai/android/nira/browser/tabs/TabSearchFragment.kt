@@ -85,7 +85,7 @@ class TabSearchFragment : BottomSheetDialogFragment() {
                     } else {
                         androidx.core.content.ContextCompat.getColor(
                             requireContext(), 
-                            com.prirai.android.nira.R.color.m3_surface
+                            R.color.m3_surface
                         )
                     }
                 }

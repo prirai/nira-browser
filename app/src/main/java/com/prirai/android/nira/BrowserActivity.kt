@@ -338,7 +338,7 @@ open class BrowserActivity : LocaleAwareAppCompatActivity(), ComponentCallbacks2
                 override fun getCustomView(): View? = null
                 override fun getTitle(): CharSequence? = null
                 override fun getSubtitle(): CharSequence? = null
-                override fun getNavigationMode(): Int = 0
+                override fun getNavigationMode(): Int = NAVIGATION_MODE_STANDARD
                 override fun setNavigationMode(mode: Int) {}
                 override fun getDisplayOptions(): Int = 0
                 override fun newTab(): Tab? = null

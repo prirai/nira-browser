@@ -2,6 +2,7 @@ package com.prirai.android.nira.browser.profile
 
 import android.content.Context
 import android.content.SharedPreferences
+import androidx.core.content.edit
 
 /**
  * Stores metadata mapping tabs to profiles
@@ -30,7 +31,7 @@ class TabProfileMetadata private constructor(context: Context) {
      * Associate a tab with a profile
      */
     fun setTabProfile(tabId: String, profileId: String) {
-        prefs.edit().putString(KEY_PREFIX + tabId, profileId).apply()
+        prefs.edit { putString(KEY_PREFIX + tabId, profileId)}
     }
     
     /**
@@ -45,7 +46,7 @@ class TabProfileMetadata private constructor(context: Context) {
      * Remove metadata for a tab
      */
     fun removeTab(tabId: String) {
-        prefs.edit().remove(KEY_PREFIX + tabId).apply()
+        prefs.edit {remove(KEY_PREFIX + tabId)}
     }
     
     /**
@@ -61,7 +62,7 @@ class TabProfileMetadata private constructor(context: Context) {
      * Clear all metadata
      */
     fun clear() {
-        prefs.edit().clear().apply()
+        prefs.edit { clear() }
     }
     
     /**

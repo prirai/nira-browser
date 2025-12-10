@@ -213,8 +213,8 @@ class TabGroupWithProfileSwitcher @JvmOverloads constructor(
         profileNameText.text = "Private"
         
         // Use Material 3 purple tint for private mode
-        val typedValue = android.util.TypedValue()
-        val theme = context.theme
+        android.util.TypedValue()
+        context.theme
         
         val backgroundColor = com.prirai.android.nira.theme.ColorConstants.getColorFromAttr(
             context,
@@ -318,18 +318,18 @@ class TabGroupWithProfileSwitcher @JvmOverloads constructor(
         override fun onBindViewHolder(holder: androidx.recyclerview.widget.RecyclerView.ViewHolder, position: Int) {
             val item = items[position]
             val card = holder.itemView.findViewById<com.google.android.material.card.MaterialCardView>(R.id.profileCard)
-            val emoji = holder.itemView.findViewById<android.widget.TextView>(R.id.profileEmoji)
-            val name = holder.itemView.findViewById<android.widget.TextView>(R.id.profileName)
-            val description = holder.itemView.findViewById<android.widget.TextView>(R.id.profileDescription)
+            val emoji = holder.itemView.findViewById<TextView>(R.id.profileEmoji)
+            val name = holder.itemView.findViewById<TextView>(R.id.profileName)
+            val description = holder.itemView.findViewById<TextView>(R.id.profileDescription)
             
             emoji.text = item.emoji
             name.text = item.name
             
             if (item.description != null) {
                 description.text = item.description
-                description.visibility = android.view.View.VISIBLE
+                description.visibility = VISIBLE
             } else {
-                description.visibility = android.view.View.GONE
+                description.visibility = GONE
             }
             
             card.isChecked = item.isSelected

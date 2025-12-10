@@ -97,7 +97,7 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
         // Contextual toolbar updates handled automatically by UnifiedToolbar
 
         // Ensure tab preview is hidden (fixes doubled content issue after returning from settings)
-        binding.tabPreview.visibility = android.view.View.GONE
+        binding.tabPreview.visibility = View.GONE
 
         // Reset EngineView's dynamic toolbar configuration to prevent rendering artifacts
         binding.engineView.setVerticalClipping(0)
@@ -393,7 +393,7 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
 
                     // Detect new tabs for auto-grouping
                     val currentTabIds = state.tabs.map { it.id }.toSet()
-                    val newTabIds = currentTabIds - lastTabIds
+                    currentTabIds - lastTabIds
 
                     lastTabIds = currentTabIds
 
@@ -537,14 +537,14 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
                 icon1 = R.drawable.ic_baseline_history,
                 onClick1 = {
                     browserInteractor.onBrowserToolbarMenuItemTapped(
-                        com.prirai.android.nira.components.toolbar.ToolbarMenu.Item.History
+                        ToolbarMenu.Item.History
                     )
                 },
                 title2 = getString(R.string.action_bookmarks),
                 icon2 = R.drawable.ic_baseline_bookmark,
                 onClick2 = {
                     browserInteractor.onBrowserToolbarMenuItemTapped(
-                        com.prirai.android.nira.components.toolbar.ToolbarMenu.Item.Bookmarks
+                        ToolbarMenu.Item.Bookmarks
                     )
                 }
             )
@@ -559,14 +559,14 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
                 icon1 = R.drawable.ic_baseline_print,
                 onClick1 = {
                     browserInteractor.onBrowserToolbarMenuItemTapped(
-                        com.prirai.android.nira.components.toolbar.ToolbarMenu.Item.Print
+                        ToolbarMenu.Item.Print
                     )
                 },
                 title2 = getString(R.string.save_as_pdf),
                 icon2 = R.drawable.ic_baseline_pdf,
                 onClick2 = {
                     browserInteractor.onBrowserToolbarMenuItemTapped(
-                        com.prirai.android.nira.components.toolbar.ToolbarMenu.Item.PDF
+                        ToolbarMenu.Item.PDF
                     )
                 }
             )
@@ -582,7 +582,7 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
                         iconRes = R.drawable.ic_round_smartphone,
                         onClick = {
                             browserInteractor.onBrowserToolbarMenuItemTapped(
-                                com.prirai.android.nira.components.toolbar.ToolbarMenu.Item.InstallWebApp
+                                ToolbarMenu.Item.InstallWebApp
                             )
                         }
                     )
@@ -595,7 +595,7 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
                         iconRes = R.drawable.ic_round_smartphone,
                         onClick = {
                             browserInteractor.onBrowserToolbarMenuItemTapped(
-                                com.prirai.android.nira.components.toolbar.ToolbarMenu.Item.AddToHomeScreen
+                                ToolbarMenu.Item.AddToHomeScreen
                             )
                         }
                     )
@@ -613,7 +613,7 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
                         iconRes = R.drawable.ic_baseline_open_in_new,
                         onClick = {
                             browserInteractor.onBrowserToolbarMenuItemTapped(
-                                com.prirai.android.nira.components.toolbar.ToolbarMenu.Item.OpenInApp
+                                ToolbarMenu.Item.OpenInApp
                             )
                         }
                     )
@@ -630,7 +630,7 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
                 isChecked = selectedTab?.content?.desktopMode ?: false,
                 onToggle = { checked ->
                     browserInteractor.onBrowserToolbarMenuItemTapped(
-                        com.prirai.android.nira.components.toolbar.ToolbarMenu.Item.RequestDesktop(checked)
+                        ToolbarMenu.Item.RequestDesktop(checked)
                     )
                 }
             )
@@ -646,7 +646,7 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
                 iconRes = R.drawable.mozac_ic_search_24,
                 onClick = {
                     browserInteractor.onBrowserToolbarMenuItemTapped(
-                        com.prirai.android.nira.components.toolbar.ToolbarMenu.Item.FindInPage
+                        ToolbarMenu.Item.FindInPage
                     )
                 }
             )
@@ -697,7 +697,7 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
                 iconRes = R.drawable.ic_round_settings,
                 onClick = {
                     browserInteractor.onBrowserToolbarMenuItemTapped(
-                        com.prirai.android.nira.components.toolbar.ToolbarMenu.Item.Settings
+                        ToolbarMenu.Item.Settings
                     )
                 }
             )
@@ -713,7 +713,7 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
                 iconRes = R.drawable.mozac_ic_tab_new_24,
                 onClick = {
                     browserInteractor.onBrowserToolbarMenuItemTapped(
-                        com.prirai.android.nira.components.toolbar.ToolbarMenu.Item.NewTab
+                        ToolbarMenu.Item.NewTab
                     )
                 }
             )
@@ -726,7 +726,7 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
                 iconRes = R.drawable.ic_incognito,
                 onClick = {
                     browserInteractor.onBrowserToolbarMenuItemTapped(
-                        com.prirai.android.nira.components.toolbar.ToolbarMenu.Item.NewPrivateTab
+                        ToolbarMenu.Item.NewPrivateTab
                     )
                 }
             )
@@ -748,7 +748,7 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
                 },
                 onShareClick = {
                     browserInteractor.onBrowserToolbarMenuItemTapped(
-                        com.prirai.android.nira.components.toolbar.ToolbarMenu.Item.Share
+                        ToolbarMenu.Item.Share
                     )
                 },
                 backEnabled = selectedTab?.content?.canGoBack ?: false,
@@ -758,7 +758,7 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
         
         // Find anchor for menu
         // When contextual toolbar is enabled, prioritize menu button from it, not from address bar
-        val prefs = com.prirai.android.nira.preferences.UserPreferences(requireContext())
+        val prefs = UserPreferences(requireContext())
         val menuButton = view?.findViewById<android.widget.ImageButton>(R.id.menu_button)
         val toolbarView = unifiedToolbar?.getToolbarView()
         

@@ -40,6 +40,7 @@ import mozilla.components.support.ktx.android.content.getColorFromAttr
 import mozilla.components.support.ktx.android.view.hideKeyboard
 import mozilla.components.ui.autocomplete.InlineAutocompleteEditText
 import mozilla.components.ui.widgets.behavior.ViewPosition as OldToolbarPosition
+import androidx.core.graphics.drawable.toDrawable
 
 typealias SearchDialogFragmentStore = SearchFragmentStore
 
@@ -211,7 +212,7 @@ class SearchDialogFragment : AppCompatDialogFragment(), UserInteractionHandler {
 
         if (findNavController().previousBackStackEntry?.destination?.id == R.id.homeFragment) {
             // When displayed above home, dispatches the touch events to scrim area to the HomeFragment
-            binding.searchWrapper.background = ColorDrawable(Color.TRANSPARENT)
+            binding.searchWrapper.background = Color.TRANSPARENT.toDrawable()
             dialog?.window?.decorView?.setOnTouchListener { v, event ->
                 v.performClick()
                 requireActivity().dispatchTouchEvent(event)
@@ -312,7 +313,7 @@ class SearchDialogFragment : AppCompatDialogFragment(), UserInteractionHandler {
         if (!dialogHandledAction) {
             val imm =
                 requireContext().getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
-            imm.toggleSoftInput(InputMethodManager.HIDE_IMPLICIT_ONLY, 0)
+            imm.toggleSoftInput(InputMethodManager.SHOW_IMPLICIT, 0)
         }
     }
 

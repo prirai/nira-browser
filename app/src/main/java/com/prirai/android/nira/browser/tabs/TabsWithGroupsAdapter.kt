@@ -16,6 +16,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import mozilla.components.browser.state.state.TabSessionState
+import androidx.core.content.edit
 
 /**
  * Adapter for tabs within a group with long-press support
@@ -218,7 +219,7 @@ class TabsWithGroupsAdapter(
     }
     
     private fun saveCollapsedState() {
-        prefs.edit().putStringSet("collapsed_groups", collapsedGroups).apply()
+        prefs.edit { putStringSet("collapsed_groups", collapsedGroups) }
     }
 
     companion object {

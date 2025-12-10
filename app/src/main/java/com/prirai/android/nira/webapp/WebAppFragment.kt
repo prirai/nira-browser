@@ -12,6 +12,7 @@ import kotlinx.coroutines.launch
 import mozilla.components.browser.engine.gecko.GeckoEngineView
 import mozilla.components.concept.engine.EngineSession
 import mozilla.components.concept.engine.window.WindowRequest
+import androidx.core.net.toUri
 
 /**
  * Fragment for displaying PWA content in fullscreen mode
@@ -169,11 +170,11 @@ class WebAppFragment : Fragment(), EngineSession.Observer {
             // Open in custom tab with the same profile context
             val customTabIntent = androidx.browser.customtabs.CustomTabsIntent.Builder().build()
             customTabIntent.intent.putExtra("PROFILE_ID", profileId)
-            customTabIntent.launchUrl(requireContext(), android.net.Uri.parse(url))
+            customTabIntent.launchUrl(requireContext(), url.toUri())
         } catch (e: Exception) {
             // Fallback: open in default system browser
             try {
-                val fallbackIntent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url))
+                val fallbackIntent = android.content.Intent(android.content.Intent.ACTION_VIEW, url.toUri())
                 startActivity(fallbackIntent)
             } catch (ex: Exception) {
                 // Ignore if no browser available
@@ -185,13 +186,14 @@ class WebAppFragment : Fragment(), EngineSession.Observer {
         try {
             val intent = android.content.Intent(requireContext(), com.prirai.android.nira.BrowserActivity::class.java)
             intent.action = android.content.Intent.ACTION_VIEW
-            intent.data = android.net.Uri.parse(url)
+            intent.data = url.toUri()
             intent.putExtra("PROFILE_ID", profileId)
             startActivity(intent)
         } catch (e: Exception) {
             // Fallback: open in default system browser
             try {
-                val fallbackIntent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url))
+                val fallbackIntent = android.content.Intent(android.content.Intent.ACTION_VIEW,
+                    url.toUri())
                 startActivity(fallbackIntent)
             } catch (ex: Exception) {
                 // Ignore if no browser available

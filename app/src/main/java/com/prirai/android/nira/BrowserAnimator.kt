@@ -56,7 +56,7 @@ class BrowserAnimator(
                     unwrappedSwipeRefresh?.apply {
                         // If the bitmap is null, the best we can do to reduce the flash is set transparent
                         background = bitmap?.toDrawable(context.resources)
-                            ?: ColorDrawable(Color.TRANSPARENT)
+                            ?: Color.TRANSPARENT.toDrawable()
                     }
 
                     unwrappedEngineView?.asView()?.visibility = View.GONE

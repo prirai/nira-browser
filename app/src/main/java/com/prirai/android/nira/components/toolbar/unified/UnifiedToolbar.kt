@@ -29,6 +29,7 @@ import mozilla.components.concept.toolbar.ScrollableToolbar
 import mozilla.components.lib.state.ext.flowScoped
 import mozilla.components.support.ktx.android.content.res.resolveAttribute
 import com.prirai.android.nira.components.toolbar.modern.ModernScrollBehavior
+import androidx.core.view.isNotEmpty
 
 /**
  * UnifiedToolbar - Centralized toolbar component that unifies tab bar, address bar, and contextual toolbar.
@@ -124,7 +125,7 @@ class UnifiedToolbar @JvmOverloads constructor(
         // Also show bottom components if in TOP mode
         if (shouldHideBottomComponents) {
             bottomComponentsContainer?.let { container ->
-                container.visibility = View.VISIBLE
+                container.visibility = VISIBLE
                 container.animate()
                     .translationY(0f)
                     .alpha(1f)
@@ -142,7 +143,7 @@ class UnifiedToolbar @JvmOverloads constructor(
         if (shouldHideBottomComponents) {
             bottomComponentsContainer?.let { container ->
                 // Set GONE immediately to prevent space reservation
-                container.visibility = View.GONE
+                container.visibility = GONE
                 // Still animate for smooth visual effect (though invisible)
                 val height = container.height.toFloat()
                 container.animate()
@@ -462,8 +463,8 @@ class UnifiedToolbar @JvmOverloads constructor(
         reloadStopIntegration?.start()
         
         // Stop when lifecycle is destroyed
-        lifecycleOwner.lifecycle.addObserver(object : androidx.lifecycle.DefaultLifecycleObserver {
-            override fun onDestroy(owner: androidx.lifecycle.LifecycleOwner) {
+        lifecycleOwner.lifecycle.addObserver(object : DefaultLifecycleObserver {
+            override fun onDestroy(owner: LifecycleOwner) {
                 reloadStopIntegration?.stop()
                 reloadStopIntegration = null
             }
@@ -481,7 +482,7 @@ class UnifiedToolbar @JvmOverloads constructor(
         // Always create contextual toolbar for the container (it might be hidden)
         contextualToolbar = ContextualBottomToolbar(context).apply {
             if (!showContextualToolbar) {
-                visibility = View.GONE
+                visibility = GONE
             }
         }
         
@@ -524,8 +525,8 @@ class UnifiedToolbar @JvmOverloads constructor(
         val toolbar = browserToolbar ?: return
         
         // Add menu button first
-        val menuAction = mozilla.components.browser.toolbar.BrowserToolbar.Button(
-            imageDrawable = androidx.core.content.ContextCompat.getDrawable(context, com.prirai.android.nira.R.drawable.ic_more_vert)!!,
+        val menuAction = BrowserToolbar.Button(
+            imageDrawable = ContextCompat.getDrawable(context, com.prirai.android.nira.R.drawable.ic_more_vert)!!,
             contentDescription = "Menu",
             listener = {
                 contextualToolbarListener?.onMenuClicked()
@@ -551,9 +552,9 @@ class UnifiedToolbar @JvmOverloads constructor(
             
             // Add square background (same as ContextualBottomToolbar)
             val backgroundView = android.widget.ImageView(context).apply {
-                setImageDrawable(androidx.core.content.ContextCompat.getDrawable(context, com.prirai.android.nira.R.drawable.tab_number_background))
+                setImageDrawable(ContextCompat.getDrawable(context, com.prirai.android.nira.R.drawable.tab_number_background))
                 val size = (28 * context.resources.displayMetrics.density).toInt()
-                layoutParams = android.widget.FrameLayout.LayoutParams(size, size).apply {
+                layoutParams = LayoutParams(size, size).apply {
                     gravity = android.view.Gravity.CENTER
                 }
                 scaleType = android.widget.ImageView.ScaleType.FIT_XY
@@ -570,7 +571,7 @@ class UnifiedToolbar @JvmOverloads constructor(
             // Add count text (same as ContextualBottomToolbar)
             val countText = android.widget.TextView(context).apply {
                 val size = (28 * context.resources.displayMetrics.density).toInt()
-                layoutParams = android.widget.FrameLayout.LayoutParams(size, size).apply {
+                layoutParams = LayoutParams(size, size).apply {
                     gravity = android.view.Gravity.CENTER
                 }
                 gravity = android.view.Gravity.CENTER
@@ -613,7 +614,7 @@ class UnifiedToolbar @JvmOverloads constructor(
      */
     private fun observeTabCountForBadge() {
         val store = context.components.store
-        val lifecycleOwner = context as? androidx.lifecycle.LifecycleOwner ?: return
+        val lifecycleOwner = context as? LifecycleOwner ?: return
         
         lifecycleOwner.lifecycleScope.launch {
             store.flowScoped { flow ->
@@ -734,8 +735,8 @@ class UnifiedToolbar @JvmOverloads constructor(
         val container = android.widget.LinearLayout(context).apply {
             orientation = android.widget.LinearLayout.VERTICAL
             layoutParams = ViewGroup.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT
+                LayoutParams.MATCH_PARENT,
+                LayoutParams.WRAP_CONTENT
             )
             // No padding - the toolbars will handle their own spacing
         }
@@ -743,23 +744,23 @@ class UnifiedToolbar @JvmOverloads constructor(
         // Add tab bar first (at top of bottom container)
         tabGroupBar?.let {
             container.addView(it, ViewGroup.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT
+                LayoutParams.MATCH_PARENT,
+                LayoutParams.WRAP_CONTENT
             ))
         }
         
         // Add contextual toolbar below tab bar
         contextualToolbar?.let {
             container.addView(it, ViewGroup.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT
+                LayoutParams.MATCH_PARENT,
+                LayoutParams.WRAP_CONTENT
             ))
         }
         
         // Store reference for expand/collapse operations
         bottomComponentsContainer = container
         
-        return if (container.childCount > 0) container else null
+        return if (container.isNotEmpty()) container else null
     }
 
     /**
@@ -772,8 +773,8 @@ class UnifiedToolbar @JvmOverloads constructor(
         showTabGroupBar = showTabBar
         showContextualToolbar = showContextual
 
-        tabGroupBar?.visibility = if (showTabBar) View.VISIBLE else View.GONE
-        contextualToolbar?.visibility = if (showContextual) View.VISIBLE else View.GONE
+        tabGroupBar?.visibility = if (showTabBar) VISIBLE else GONE
+        contextualToolbar?.visibility = if (showContextual) VISIBLE else GONE
     }
 
     /**
@@ -886,8 +887,8 @@ class UnifiedToolbar @JvmOverloads constructor(
                 parent.addView(toolbar, layoutParams)
             } else {
                 parent.addView(toolbar, ViewGroup.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT,
-                    ViewGroup.LayoutParams.WRAP_CONTENT
+                    LayoutParams.MATCH_PARENT,
+                    LayoutParams.WRAP_CONTENT
                 ))
             }
 
