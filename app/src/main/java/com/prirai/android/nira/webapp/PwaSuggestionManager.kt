@@ -103,31 +103,6 @@ class PwaSuggestionManager(private val context: Context) {
             description = "Virtual whiteboard"
         ),
         PwaSuggestion(
-            url = "https://docs.google.com/",
-            name = "Google Docs",
-            description = "Document editing"
-        ),
-        PwaSuggestion(
-            url = "https://classroom.google.com/",
-            name = "Google Classroom",
-            description = "Online learning platform"
-        ),
-        PwaSuggestion(
-            url = "https://sheets.google.com/",
-            name = "Google Sheets",
-            description = "Spreadsheet editing"
-        ),
-        PwaSuggestion(
-            url = "https://slides.google.com/",
-            name = "Google Slides",
-            description = "Presentation creation"
-        ),
-        PwaSuggestion(
-            url = "https://keep.google.com/",
-            name = "Google Keep",
-            description = "Note-taking service"
-        ),
-        PwaSuggestion(
             url = "https://outlook.live.com/",
             name = "Outlook",
             description = "Email and calendar"
@@ -183,16 +158,6 @@ class PwaSuggestionManager(private val context: Context) {
             description = "Professional networking"
         ),
         PwaSuggestion(
-            url = "https://drive.google.com/",
-            name = "Google Drive",
-            description = "Cloud storage"
-        ),
-        PwaSuggestion(
-            url = "https://photos.google.com/",
-            name = "Google Photos",
-            description = "Photo storage and sharing"
-        ),
-        PwaSuggestion(
             url = "https://www.dropbox.com/",
             name = "Dropbox",
             description = "File storage and sharing"
@@ -223,8 +188,8 @@ class PwaSuggestionManager(private val context: Context) {
             description = "AI assistant"
         ),
         PwaSuggestion(
-            url = "https://bard.google.com/",
-            name = "Google Bard",
+            url = "https://Gemini.google.com/",
+            name = "Google Gemini",
             description = "AI chatbot"
         ),
         PwaSuggestion(
