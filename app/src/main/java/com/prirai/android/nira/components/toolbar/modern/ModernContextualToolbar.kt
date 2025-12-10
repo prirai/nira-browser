@@ -83,16 +83,16 @@ class ModernContextualToolbar @JvmOverloads constructor(
         val buttonSize = 48
 
         // Back button (also serves as bookmarks button on homepage)
-        backButton = createModernButton(R.drawable.ic_arrow_back, "Go back", buttonSize)
+        backButton = createModernButton(R.drawable.ic_ios_back, "Go back", buttonSize)
         addView(backButton, createWeightedLayoutParams())
 
         // Forward button (hidden by default, context-aware)
-        forwardButton = createModernButton(R.drawable.ic_arrow_forward, "Go forward", buttonSize)
+        forwardButton = createModernButton(R.drawable.ic_ios_forward, "Go forward", buttonSize)
         addView(forwardButton, createWeightedLayoutParams())
         forwardButton.visibility = GONE
 
         // Share button (context-aware)
-        shareButton = createModernButton(R.drawable.ic_share, "Share", buttonSize)
+        shareButton = createModernButton(R.drawable.ios_share_24, "Share", buttonSize)
         addView(shareButton, createWeightedLayoutParams())
 
         // Search button (for homepage context)
@@ -269,7 +269,7 @@ class ModernContextualToolbar @JvmOverloads constructor(
         backButton.alpha = 1.0f
 
         forwardButton.visibility = VISIBLE
-        forwardButton.setImageResource(R.drawable.ic_arrow_forward)
+        forwardButton.setImageResource(R.drawable.ic_ios_forward)
         forwardButton.isEnabled = canGoForward
         forwardButton.alpha = if (canGoForward) 1.0f else 0.4f
 
@@ -293,7 +293,7 @@ class ModernContextualToolbar @JvmOverloads constructor(
 
         // Show: back, share, new tab, tabs, menu
         backButton.visibility = VISIBLE
-        backButton.setImageResource(R.drawable.ic_arrow_back) // Reset to back icon
+        backButton.setImageResource(R.drawable.ic_ios_back) // Reset to back icon
         backButton.isEnabled = canGoBack
         backButton.alpha = if (canGoBack) 1.0f else 0.4f
 
@@ -322,12 +322,12 @@ class ModernContextualToolbar @JvmOverloads constructor(
 
         // Show: back, forward, new tab, tabs, menu
         backButton.visibility = VISIBLE
-        backButton.setImageResource(R.drawable.ic_arrow_back) // Reset to back icon
+        backButton.setImageResource(R.drawable.ic_ios_back) // Reset to back icon
         backButton.isEnabled = true
         backButton.alpha = 1.0f
 
         forwardButton.visibility = VISIBLE
-        forwardButton.setImageResource(R.drawable.ic_arrow_forward) // Reset to forward icon
+        forwardButton.setImageResource(R.drawable.ic_ios_forward) // Reset to forward icon
         forwardButton.isEnabled = true
         forwardButton.alpha = 1.0f
 
@@ -352,7 +352,7 @@ class ModernContextualToolbar @JvmOverloads constructor(
 
         // Show basic navigation
         backButton.visibility = VISIBLE
-        backButton.setImageResource(R.drawable.ic_arrow_back) // Reset to back icon
+        backButton.setImageResource(R.drawable.ic_ios_back) // Reset to back icon
         backButton.isEnabled = true
         backButton.alpha = 1.0f
 

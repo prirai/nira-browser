@@ -49,7 +49,7 @@ class BrowserMenu(
 
     override val menuToolbar by lazy {
         val back = BrowserMenuItemToolbar.TwoStateButton(
-            primaryImageResource = mozilla.components.ui.icons.R.drawable.mozac_ic_back_24,
+            primaryImageResource = R.drawable.ic_ios_back,
             primaryContentDescription = null.toString(),
             primaryImageTintResource = primaryTextColor(),
             isInPrimaryState = {
@@ -63,7 +63,7 @@ class BrowserMenu(
         }
 
         val forward = BrowserMenuItemToolbar.TwoStateButton(
-            primaryImageResource = mozilla.components.ui.icons.R.drawable.mozac_ic_forward_24,
+            primaryImageResource = R.drawable.ic_ios_forward,
             primaryContentDescription = context.getString(R.string.forward),
             primaryImageTintResource = primaryTextColor(),
             isInPrimaryState = {
@@ -254,7 +254,7 @@ class BrowserMenu(
             typedValue,
             true
         )
-        
+
         return if (resolved && typedValue.resourceId != 0) {
             typedValue.resourceId
         } else {

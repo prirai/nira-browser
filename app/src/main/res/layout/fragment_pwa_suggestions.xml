@@ -1,11 +1,13 @@
-<?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<?xml version="1.0" encoding="utf-8" ?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="?attr/colorSurface">
+    android:background="?attr/colorSurface"
+>
 
     <com.google.android.material.appbar.MaterialToolbar
         android:id="@+id/toolbar"
@@ -13,15 +15,17 @@
         android:layout_height="?attr/actionBarSize"
         android:background="?attr/colorSurface"
         app:titleTextColor="?attr/colorOnSurface"
-        app:navigationIcon="@drawable/ic_arrow_back"
-        app:navigationIconTint="?attr/colorOnSurface" />
+        app:navigationIcon="@drawable/ic_ios_back"
+        app:navigationIconTint="?attr/colorOnSurface"
+    />
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:padding="16dp"
-        android:gravity="center_vertical">
+        android:gravity="center_vertical"
+    >
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/categoryFilter"
@@ -30,14 +34,16 @@
             android:layout_weight="1"
             android:text="@string/pwa_categories"
             style="@style/Widget.Material3.Button.OutlinedButton"
-            android:layout_marginEnd="8dp" />
+            android:layout_marginEnd="8dp"
+        />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/refreshButton"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/reload"
-            style="@style/Widget.Material3.Button.TextButton" />
+            style="@style/Widget.Material3.Button.TextButton"
+        />
     </LinearLayout>
 
     <androidx.recyclerview.widget.RecyclerView
@@ -46,7 +52,8 @@
         android:layout_height="match_parent"
         android:clipToPadding="false"
         android:padding="8dp"
-        tools:listitem="@layout/item_pwa_suggestion" />
+        tools:listitem="@layout/item_pwa_suggestion"
+    />
 
     <LinearLayout
         android:id="@+id/emptyState"
@@ -55,14 +62,16 @@
         android:orientation="vertical"
         android:gravity="center"
         android:visibility="gone"
-        android:padding="24dp">
+        android:padding="24dp"
+    >
 
         <com.google.android.material.progressindicator.CircularProgressIndicator
             android:id="@+id/progressBar"
             android:layout_width="48dp"
             android:layout_height="48dp"
             android:visibility="gone"
-            app:indicatorColor="?attr/colorPrimary" />
+            app:indicatorColor="?attr/colorPrimary"
+        />
 
         <TextView
             android:id="@+id/emptyStateText"
@@ -72,7 +81,8 @@
             android:textSize="18sp"
             android:textColor="?attr/colorOnSurface"
             android:layout_marginTop="16dp"
-            android:layout_gravity="center_horizontal" />
+            android:layout_gravity="center_horizontal"
+        />
 
         <TextView
             android:layout_width="wrap_content"
@@ -81,6 +91,7 @@
             android:textSize="14sp"
             android:textColor="?attr/colorOnSurfaceVariant"
             android:layout_marginTop="8dp"
-            android:layout_gravity="center_horizontal" />
+            android:layout_gravity="center_horizontal"
+        />
     </LinearLayout>
 </LinearLayout>
