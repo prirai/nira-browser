@@ -108,12 +108,11 @@
 
     <style name="SearchDialogStyle">
         <item name="android:windowAnimationStyle">@null</item>
-        <item
-            name="android:textAppearance"
-        >@style/TextAppearance.AppCompat</item>
-        <item name="android:colorControlNormal">@color/colorAccent</item>
-        <item name="android:colorControlActivated">@color/colorAccent</item>
-        <item name="android:colorControlHighlight">@color/colorAccent</item>
+        <item name="android:textAppearance">@style/TextAppearance.AppCompat</item>
+        <!-- Material 3 dynamic colors -->
+        <item name="android:colorControlNormal">?attr/colorPrimary</item>
+        <item name="android:colorControlActivated">?attr/colorPrimary</item>
+        <item name="android:colorControlHighlight">?attr/colorPrimaryContainer</item>
         <item name="android:windowBackground">?attr/colorSurface</item>
         <item name="windowNoTitle">true</item>
         <item name="android:windowIsFloating">false</item>
@@ -121,9 +120,7 @@
         <item name="windowActionBar">false</item>
         <item name="android:windowFullscreen">false</item>
         <item name="android:windowContentOverlay">@null</item>
-        <item
-            name="android:navigationBarColor"
-        >@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
         <item name="android:windowTranslucentNavigation">true</item>
     </style>
 

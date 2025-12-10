@@ -428,10 +428,15 @@ class TabsWithGroupsAdapter(
             if (isSelected) {
                 val strokeWidth = (2 * cardView.context.resources.displayMetrics.density).toInt()
                 cardView.strokeWidth = strokeWidth
-                cardView.strokeColor = androidx.core.content.ContextCompat.getColor(
-                    cardView.context,
-                    R.color.chip_stroke_color_themed
-                )
+                // Use Material 3 primary color (supports dynamic colors) - same as tab group bar
+                val theme = cardView.context.theme
+                val primaryTypedValue = android.util.TypedValue()
+                val primaryColor = if (theme.resolveAttribute(android.R.attr.colorPrimary, primaryTypedValue, true)) {
+                    primaryTypedValue.data
+                } else {
+                    androidx.core.content.ContextCompat.getColor(cardView.context, R.color.m3_primary)
+                }
+                cardView.strokeColor = primaryColor
                 cardView.cardElevation = 2f * cardView.context.resources.displayMetrics.density
             } else {
                 val strokeWidth = (1 * cardView.context.resources.displayMetrics.density).toInt()

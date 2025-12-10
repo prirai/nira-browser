@@ -48,6 +48,36 @@ class TabSearchFragment : BottomSheetDialogFragment() {
     override fun onStart() {
         super.onStart()
         
+        // Apply Material 3 dynamic theming
+        dialog?.window?.let { window ->
+            val userPreferences = com.prirai.android.nira.preferences.UserPreferences(requireContext())
+            val isDarkTheme = com.prirai.android.nira.theme.ThemeManager.isDarkMode(requireContext())
+            
+            // Apply Material 3 background color with proper theming
+            val bgColor = if (userPreferences.amoledMode && isDarkTheme) {
+                android.graphics.Color.BLACK
+            } else {
+                val typedValue = android.util.TypedValue()
+                if (requireContext().theme.resolveAttribute(
+                    com.google.android.material.R.attr.colorSurface, typedValue, true
+                )) {
+                    typedValue.data
+                } else {
+                    androidx.core.content.ContextCompat.getColor(
+                        requireContext(), 
+                        com.prirai.android.nira.R.color.m3_surface
+                    )
+                }
+            }
+            
+            window.decorView.setBackgroundColor(bgColor)
+            window.navigationBarColor = bgColor
+            
+            // Set status bar color for edge-to-edge
+            window.statusBarColor = android.graphics.Color.TRANSPARENT
+            androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window, false)
+        }
+        
         // Match the TabsBottomSheetFragment height behavior
         val bottomSheetDialog = dialog as com.google.android.material.bottomsheet.BottomSheetDialog
         val behavior = bottomSheetDialog.behavior

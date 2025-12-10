@@ -74,8 +74,22 @@ class SearchDialogFragment : AppCompatDialogFragment(), UserInteractionHandler {
     override fun onResume() {
         super.onResume()
         dialog?.window?.let { win ->
+            // Apply Material 3 dynamic theming
+            val userPreferences = UserPreferences(requireContext())
+            val isDarkTheme = com.prirai.android.nira.theme.ThemeManager.isDarkMode(requireContext())
+            
+            // Apply proper background color with AMOLED support
+            val bgColor = if (userPreferences.amoledMode && isDarkTheme) {
+                Color.BLACK
+            } else {
+                requireContext().getColorFromAttr(com.google.android.material.R.attr.colorSurface)
+            }
+            
+            win.decorView.setBackgroundColor(bgColor)
+            win.navigationBarColor = bgColor
+            
             win.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS)
-            WindowCompat.getInsetsController(win, win.decorView).isAppearanceLightStatusBars = !requireContext().isAppInDarkTheme()
+            WindowCompat.getInsetsController(win, win.decorView).isAppearanceLightStatusBars = !isDarkTheme
         }
     }
 

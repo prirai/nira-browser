@@ -102,13 +102,13 @@
 
     </RelativeLayout>
 
-    <!-- Extended FAB for search -->
+    <!-- Extended FAB for search - positioned next to new tab button -->
     <com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
         android:id="@+id/searchTabFab"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_gravity="bottom|start"
-        android:layout_marginStart="16dp"
+        android:layout_gravity="bottom|end"
+        android:layout_marginEnd="92dp"
         android:layout_marginBottom="120dp"
         android:text="@string/search_tabs"
         android:textColor="?attr/colorOnPrimaryContainer"
@@ -130,5 +130,6 @@
         android:contentDescription="@string/new_tab"
         app:fabSize="normal"
         app:elevation="6dp" />
+
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>
