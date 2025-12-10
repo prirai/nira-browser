@@ -29,11 +29,13 @@ private const val LEARN_MORE_URL =
 class PermissionsDetailsActivity : AppCompatActivity(), View.OnClickListener {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        
         setContentView(R.layout.activity_add_on_permissions)
+        
+        applyCompleteTheme(this)
+        WindowCompat.setDecorFitsSystemWindows(window, false)
         val addon = requireNotNull(intent.getParcelableExtraCompat<Addon>("add_on"))
         title = addon.translateName(this)
-
-        applyCompleteTheme(this)
 
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.addon_permissions)) { v, insets ->
             val bars = insets.getInsets(
@@ -47,7 +49,8 @@ class PermissionsDetailsActivity : AppCompatActivity(), View.OnClickListener {
                 bottom = bars.bottom,
             )
             val insetsController = WindowCompat.getInsetsController(window, v)
-            insetsController.isAppearanceLightStatusBars = !isAppInDarkTheme()
+            val isDark = com.prirai.android.nira.theme.ThemeManager.isDarkMode(this)
+            insetsController.isAppearanceLightStatusBars = !isDark
             WindowInsetsCompat.CONSUMED
         }
 
@@ -62,6 +65,11 @@ class PermissionsDetailsActivity : AppCompatActivity(), View.OnClickListener {
         recyclerView.adapter = AddonPermissionsAdapter(sortedPermissions)
 
         findViewById<View>(R.id.learn_more_label).setOnClickListener(this)
+    }
+
+    override fun onResume() {
+        super.onResume()
+        com.prirai.android.nira.theme.ThemeManager.applySystemBarsTheme(this, false)
     }
 
     override fun onClick(v: View?) {

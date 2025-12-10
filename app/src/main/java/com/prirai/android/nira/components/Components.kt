@@ -262,13 +262,14 @@ open class Components(private val applicationContext: Context) {
             )
         }
         else{
+            // Use Iceraven's comprehensive addon collection (158 extensions)
             AMOAddonsProvider(
                     applicationContext,
                     client,
-                    collectionUser = BuildConfig.VERSION_CODE.toString(),
-                    collectionName = "scw",
+                    collectionUser = "16201230",
+                    collectionName = "What-I-want-on-Fenix",
                     maxCacheAgeInMinutes = DAY_IN_MINUTES,
-                    serverURL = "https://addons.smartcookieweb.com"
+                    serverURL = "https://addons.mozilla.org"
             )
         }
     }

@@ -214,12 +214,8 @@ class ComposeHomeFragment : Fragment() {
                             bookmarksBottomSheet.show(parentFragmentManager, "BookmarksBottomSheet")
                         },
                         onExtensionsClick = {
-                            val intent = android.content.Intent(
-                                requireContext(),
-                                com.prirai.android.nira.addons.AddonsActivity::class.java
-                            )
-                            intent.flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
-                            startActivity(intent)
+                            val extensionsBottomSheet = com.prirai.android.nira.addons.ExtensionsBottomSheetFragment.newInstance()
+                            extensionsBottomSheet.show(parentFragmentManager, com.prirai.android.nira.addons.ExtensionsBottomSheetFragment.TAG)
                         },
                         onTabCountClick = {
                             val tabsBottomSheet =
@@ -409,15 +405,30 @@ class ComposeHomeFragment : Fragment() {
         unifiedToolbar?.applyPrivateMode(isPrivate)
     }
 
+    private var lastBackPressTime = 0L
+    private val BACK_PRESS_TIMEOUT = 4000L // 4 seconds
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         updateToolbarStyling()
         restoreLastMode()
 
-        // Prevent back gesture from leaving the home fragment
+        // Handle double back press to exit app
         requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner, object : androidx.activity.OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
-                // Do nothing to consume the back press
+                val currentTime = System.currentTimeMillis()
+                if (currentTime - lastBackPressTime < BACK_PRESS_TIMEOUT) {
+                    // Second press within timeout - close app
+                    requireActivity().finish()
+                } else {
+                    // First press - show message
+                    lastBackPressTime = currentTime
+                    android.widget.Toast.makeText(
+                        requireContext(),
+                        "Perform back gesture again to close app",
+                        android.widget.Toast.LENGTH_SHORT
+                    ).show()
+                }
             }
         })
     }
@@ -637,15 +648,11 @@ class ComposeHomeFragment : Fragment() {
             ),
             com.prirai.android.nira.components.menu.Material3BrowserMenu.MenuItem.Action(
                 id = "addons",
-                title = getString(R.string.mozac_browser_menu_extensions),
+                title = getString(R.string.extensions),
                 iconRes = R.drawable.mozac_ic_extension_24,
                 onClick = {
-                    startActivity(android.content.Intent(
-                        requireContext(),
-                        com.prirai.android.nira.addons.AddonsActivity::class.java
-                    ).apply {
-                        flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
-                    })
+                    val extensionsBottomSheet = com.prirai.android.nira.addons.ExtensionsBottomSheetFragment.newInstance()
+                    extensionsBottomSheet.show(parentFragmentManager, com.prirai.android.nira.addons.ExtensionsBottomSheetFragment.TAG)
                 }
             )
         )

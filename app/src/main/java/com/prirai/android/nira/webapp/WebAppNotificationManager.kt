@@ -117,7 +117,7 @@ class WebAppNotificationManager(private val context: Context) {
             .setAutoCancel(true)
 
         if (ActivityCompat.checkSelfPermission(
-                this,
+                context,
                 Manifest.permission.POST_NOTIFICATIONS
             ) != PackageManager.PERMISSION_GRANTED
         ) {
@@ -128,7 +128,7 @@ class WebAppNotificationManager(private val context: Context) {
             //                                          int[] grantResults)
             // to handle the case where the user grants the permission. See the documentation
             // for ActivityCompat#requestPermissions for more details.
-            return
+            return false
         }
         notificationManager.notify(notificationId, builder.build())
         return true

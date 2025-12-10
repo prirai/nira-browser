@@ -97,7 +97,7 @@ class BrowserMenu(
         }
 
         val share = BrowserMenuItemToolbar.Button(
-            imageResource = R.drawable.ic_baseline_share,
+            imageResource = R.drawable.ios_share_24,
             contentDescription = context.getString(R.string.mozac_selection_context_menu_share),
             iconTintColorResource = primaryTextColor(),
             listener = {

@@ -167,7 +167,7 @@
         android:layout_height="48dp"
         android:textOff="@string/search_engine"
         android:textOn="@string/search_engine"
-        app:drawableStartCompat="@drawable/ic_round_search"
+        app:drawableStartCompat="@drawable/ic_ios_search"
         app:iconTint="?attr/colorOnSecondaryContainer"
         app:layout_constraintBottom_toBottomOf="@id/pill_wrapper"
         app:layout_constraintStart_toStartOf="@+id/pill_wrapper"

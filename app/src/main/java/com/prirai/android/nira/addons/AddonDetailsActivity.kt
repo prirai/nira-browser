@@ -44,9 +44,10 @@ class AddonDetailsActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        applyCompleteTheme(this)
-
         setContentView(R.layout.activity_add_on_details)
+        
+        applyCompleteTheme(this)
+        WindowCompat.setDecorFitsSystemWindows(window, false)
 
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.addon_details)) { v, insets ->
             val bars = insets.getInsets(
@@ -60,7 +61,8 @@ class AddonDetailsActivity : AppCompatActivity() {
                 bottom = bars.bottom
             )
             val insetsController = WindowCompat.getInsetsController(window, v)
-            insetsController.isAppearanceLightStatusBars = !isAppInDarkTheme()
+            val isDark = com.prirai.android.nira.theme.ThemeManager.isDarkMode(this)
+            insetsController.isAppearanceLightStatusBars = !isDark
             WindowInsetsCompat.CONSUMED
         }
 
@@ -68,6 +70,11 @@ class AddonDetailsActivity : AppCompatActivity() {
 
         val addon = requireNotNull(intent.getParcelableExtraCompat<Addon>("add_on"))
         initViews(addon)
+    }
+
+    override fun onResume() {
+        super.onResume()
+        com.prirai.android.nira.theme.ThemeManager.applySystemBarsTheme(this, false)
     }
 
     private fun initViews(addon: Addon) {

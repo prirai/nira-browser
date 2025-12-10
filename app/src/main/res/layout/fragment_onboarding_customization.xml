@@ -144,7 +144,7 @@
                     android:layout_width="24dp"
                     android:layout_height="24dp"
                     android:contentDescription="@string/back"
-                    android:src="@drawable/mozac_ic_back_24"
+                    android:src="@drawable/ic_ios_back"
                     android:layout_margin="8dp"
                     app:tint="?attr/colorOnSurface" />
 
@@ -153,7 +153,7 @@
                     android:layout_width="24dp"
                     android:layout_height="24dp"
                     android:contentDescription="@string/forward"
-                    android:src="@drawable/mozac_ic_forward_24"
+                    android:src="@drawable/ic_ios_forward"
                     android:layout_margin="8dp"
                     app:tint="?attr/colorOnSurface" />
 
@@ -162,7 +162,7 @@
                     android:layout_width="24dp"
                     android:layout_height="24dp"
                     android:contentDescription="@string/search"
-                    android:src="@drawable/ic_round_search"
+                    android:src="@drawable/ic_ios_search"
                     android:layout_margin="8dp"
                     app:tint="?attr/colorOnSurface" />
 
@@ -171,7 +171,7 @@
                     android:layout_width="24dp"
                     android:layout_height="24dp"
                     android:contentDescription="@string/menu"
-                    android:src="@drawable/ic_menu_rounded"
+                    android:src="@drawable/ic_ios_menu"
                     android:layout_margin="8dp"
                     app:tint="?attr/colorOnSurface" />
 

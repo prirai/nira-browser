@@ -91,7 +91,9 @@ class AddonsFragment : Fragment(), AddonsManagerAdapterDelegate {
                 bottom = bars.bottom,
             )
             val insetsController = WindowCompat.getInsetsController(requireActivity().window, rootView)
-            insetsController.isAppearanceLightStatusBars = !requireContext().isAppInDarkTheme()
+            val userPrefs = UserPreferences(requireContext())
+            val isDark = com.prirai.android.nira.theme.ThemeManager.isDarkMode(requireContext())
+            insetsController.isAppearanceLightStatusBars = !isDark
             WindowInsetsCompat.CONSUMED
         }
 
@@ -126,6 +128,20 @@ class AddonsFragment : Fragment(), AddonsManagerAdapterDelegate {
 
         findPreviousInstallationDialogFragment()?.let { dialog ->
             dialog.onConfirmButtonClicked = onConfirmInstallationButtonClicked
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        applyMaterial3Theme()
+    }
+
+    private fun applyMaterial3Theme() {
+        val userPrefs = UserPreferences(requireContext())
+        val isDark = com.prirai.android.nira.theme.ThemeManager.isDarkMode(requireContext())
+        
+        requireActivity().window?.let { window ->
+            com.prirai.android.nira.theme.ThemeManager.applySystemBarsTheme(requireActivity(), false)
         }
     }
 

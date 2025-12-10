@@ -95,7 +95,7 @@ class AwesomeBarView(
                 components.store,
                 selectTabUseCase,
                 components.icons,
-                getDrawable(activity, R.drawable.ic_round_search),
+                getDrawable(activity, R.drawable.ic_ios_search),
                 excludeSelectedSession = true,
                 switchToTabDescription = activity.resources.getString(R.string.switch_to_tab)
             )
@@ -116,7 +116,7 @@ class AwesomeBarView(
                 engine = engineForSpeculativeConnects
             )
 
-        val searchBitmap = getDrawable(activity, R.drawable.ic_round_search)!!.apply {
+        val searchBitmap = getDrawable(activity, R.drawable.ic_ios_search)!!.apply {
             colorFilter = createBlendModeColorFilterCompat(primaryTextColor, SRC_IN)
         }.toBitmap()
 
@@ -271,7 +271,7 @@ class AwesomeBarView(
             val components = activity.components
             val primaryTextColor = activity.getColorFromAttr(android.R.attr.textColorPrimary)
 
-            val searchBitmap = getDrawable(activity, R.drawable.ic_round_search)!!.apply {
+            val searchBitmap = getDrawable(activity, R.drawable.ic_ios_search)!!.apply {
                 colorFilter = createBlendModeColorFilterCompat(primaryTextColor, SRC_IN)
             }.toBitmap()
 

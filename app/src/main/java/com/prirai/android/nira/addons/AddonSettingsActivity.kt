@@ -33,8 +33,9 @@ class AddonSettingsActivity : AppCompatActivity() {
         val view = binding.root
 
         setContentView(view)
-
+        
         applyCompleteTheme(this)
+        androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window, false)
 
         val addon = requireNotNull(intent.getParcelableExtraCompat<Addon>("add_on"))
         title = addon.translateName(this)
@@ -43,6 +44,11 @@ class AddonSettingsActivity : AppCompatActivity() {
             .beginTransaction()
             .replace(R.id.addonSettingsContainer, AddonSettingsFragment.create(addon))
             .commit()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        com.prirai.android.nira.theme.ThemeManager.applySystemBarsTheme(this, false)
     }
 
     override fun onCreateView(parent: View?, name: String, context: Context, attrs: AttributeSet): View? =

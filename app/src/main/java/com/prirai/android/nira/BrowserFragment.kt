@@ -676,15 +676,11 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
         menuItems.add(
             com.prirai.android.nira.components.menu.Material3BrowserMenu.MenuItem.Action(
                 id = "extensions",
-                title = getString(R.string.mozac_browser_menu_extensions),
+                title = getString(R.string.extensions),
                 iconRes = R.drawable.mozac_ic_extension_24,
                 onClick = {
-                    startActivity(android.content.Intent(
-                        requireContext(),
-                        com.prirai.android.nira.addons.AddonsActivity::class.java
-                    ).apply {
-                        flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
-                    })
+                    val extensionsBottomSheet = com.prirai.android.nira.addons.ExtensionsBottomSheetFragment.newInstance()
+                    extensionsBottomSheet.show(parentFragmentManager, com.prirai.android.nira.addons.ExtensionsBottomSheetFragment.TAG)
                 }
             )
         )

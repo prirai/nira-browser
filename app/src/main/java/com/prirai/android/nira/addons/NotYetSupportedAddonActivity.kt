@@ -23,16 +23,23 @@ import com.prirai.android.nira.theme.applyCompleteTheme
 class NotYetSupportedAddonActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        
         setContentView(R.layout.activity_base)
+        
+        applyCompleteTheme(this)
+        androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window, false)
 
         val addons = requireNotNull(intent.getParcelableArrayListExtraCompat<Addon>("add_ons"))
-
-        applyCompleteTheme(this)
 
         supportFragmentManager
             .beginTransaction()
             .replace(R.id.container, NotYetSupportedAddonFragment.create(addons))
             .commit()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        com.prirai.android.nira.theme.ThemeManager.applySystemBarsTheme(this, false)
     }
 
     // Fragment for managing add-ons that are not yet supported by the browser.
