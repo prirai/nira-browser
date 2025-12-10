@@ -76,8 +76,10 @@ class ExtensionsBottomSheetFragment : DialogFragment() {
                 LaunchedEffect(Unit) {
                     withContext(Dispatchers.IO) {
                         try {
+                            // Get all addons (this loads icons properly)
                             val allAddons = context.components.addonManager.getAddons()
-                            installedAddons = allAddons.filter { it.isInstalled() }
+                            // Filter for installed and enabled ones
+                            installedAddons = allAddons.filter { it.isInstalled() && it.isEnabled() }
                             addons.value = installedAddons
                         } catch (e: Exception) {
                             addons.value = emptyList()
@@ -330,29 +332,46 @@ fun ExtensionItem(
                     .clip(RoundedCornerShape(12.dp)),
                 color = MaterialTheme.colorScheme.surfaceVariant
             ) {
-                val iconUrl = addon.iconUrl.takeIf { it.isNotEmpty() }
-                if (iconUrl != null) {
-                    AsyncImage(
-                        model = ImageRequest.Builder(context)
-                            .data(iconUrl)
-                            .crossfade(true)
-                            .build(),
-                        contentDescription = null,
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(8.dp)
-                    )
-                } else {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Extension,
+                val iconToUse = addon.installedState?.icon ?: addon.icon
+                val iconUrlToUse = if (addon.installedState != null) "" else addon.iconUrl
+                
+                when {
+                    iconToUse != null -> {
+                        AsyncImage(
+                            model = ImageRequest.Builder(context)
+                                .data(iconToUse)
+                                .crossfade(true)
+                                .build(),
                             contentDescription = null,
-                            modifier = Modifier.size(28.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(8.dp)
                         )
+                    }
+                    iconUrlToUse.isNotEmpty() -> {
+                        AsyncImage(
+                            model = ImageRequest.Builder(context)
+                                .data(iconUrlToUse)
+                                .crossfade(true)
+                                .build(),
+                            contentDescription = null,
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(8.dp)
+                        )
+                    }
+                    else -> {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Extension,
+                                contentDescription = null,
+                                modifier = Modifier.size(28.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
                 }
             }

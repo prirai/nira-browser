@@ -37,7 +37,7 @@ class AddonsActivity : AppCompatActivity() {
             if(addonId != null) arguments.putString("ADDON_ID", addonId)
             if(addonUrl != null) arguments.putString("ADDON_URL", addonUrl)
 
-            val addonFragment = AddonsFragment()
+            val addonFragment = ComposeAddonsFragment()
             addonFragment.arguments = arguments
 
             fm.beginTransaction().replace(R.id.container, addonFragment).commit()

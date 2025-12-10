@@ -17,6 +17,7 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updatePadding
 import com.prirai.android.nira.R
+import com.prirai.android.nira.ext.components
 import com.prirai.android.nira.ext.isAppInDarkTheme
 import com.prirai.android.nira.ext.getParcelableExtraCompat
 import com.prirai.android.nira.theme.applyCompleteTheme
@@ -30,6 +31,7 @@ import mozilla.components.feature.addons.ui.showInformationDialog
 import mozilla.components.feature.addons.ui.translateDescription
 import mozilla.components.feature.addons.ui.translateName
 import mozilla.components.feature.addons.update.DefaultAddonUpdater
+import mozilla.components.support.base.feature.ViewBoundFeatureWrapper
 import java.text.DateFormat
 import java.text.SimpleDateFormat
 import java.util.Locale
@@ -39,6 +41,12 @@ class AddonDetailsActivity : AppCompatActivity() {
 
     private val updateAttemptStorage: DefaultAddonUpdater.UpdateAttemptStorage by lazy {
         DefaultAddonUpdater.UpdateAttemptStorage(this)
+    }
+    
+    private val webExtensionPromptFeature = ViewBoundFeatureWrapper<WebExtensionPromptFeature>()
+    
+    companion object {
+        private const val INSTALLATION_DIALOG_FRAGMENT_TAG = "INSTALLATION_DIALOG_FRAGMENT"
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -69,6 +77,24 @@ class AddonDetailsActivity : AppCompatActivity() {
         supportActionBar?.elevation = 0f
 
         val addon = requireNotNull(intent.getParcelableExtraCompat<Addon>("add_on"))
+        
+        val rootView = findViewById<View>(R.id.addon_details)
+        webExtensionPromptFeature.set(
+            feature = WebExtensionPromptFeature(
+                store = components.store,
+                provideAddons = { components.addonManager.getAddons() },
+                context = this,
+                view = rootView,
+                fragmentManager = supportFragmentManager,
+                onLinkClicked = { url, privateBrowsing ->
+                    val intent = Intent(Intent.ACTION_VIEW, url.toUri())
+                    startActivity(intent)
+                }
+            ),
+            owner = this,
+            view = rootView
+        )
+        
         initViews(addon)
     }
 
@@ -130,6 +156,48 @@ class AddonDetailsActivity : AppCompatActivity() {
                 getString(R.string.mozac_feature_addons_rating_content_description_2)
             ratingView.contentDescription = String.format(ratingContentDescription, it.average)
             ratingView.rating = it.average
+        }
+        
+        // Install button
+        val installButton = findViewById<com.google.android.material.button.MaterialButton>(R.id.install_button)
+        if (addon.isInstalled()) {
+            installButton.visibility = View.GONE
+        } else {
+            installButton.setOnClickListener {
+                installButton.isEnabled = false
+                installButton.text = "Installing..."
+                
+                applicationContext.components.addonManager.installAddon(
+                    url = addon.downloadUrl,
+                    installationMethod = mozilla.components.concept.engine.webextension.InstallationMethod.MANAGER,
+                    onSuccess = { installedAddon ->
+                        runOnUiThread {
+                            installButton.isEnabled = true
+                            installButton.text = "Install"
+                            android.widget.Toast.makeText(
+                                this,
+                                "Successfully installed ${installedAddon.translateName(this)}",
+                                android.widget.Toast.LENGTH_SHORT
+                            ).show()
+                            finish()
+                        }
+                    },
+                    onError = { error ->
+                        runOnUiThread {
+                            installButton.isEnabled = true
+                            installButton.text = "Install"
+                            // Only show error if not cancelled by user
+                            if (error !is java.util.concurrent.CancellationException) {
+                                android.widget.Toast.makeText(
+                                    this,
+                                    "Failed to install ${addon.translateName(this)}",
+                                    android.widget.Toast.LENGTH_SHORT
+                                ).show()
+                            }
+                        }
+                    }
+                )
+            }
         }
     }
 
