@@ -16,7 +16,7 @@
         android:layout_height="48dp"
         android:layout_weight="1"
         android:background="?attr/selectableItemBackgroundBorderless"
-        android:src="@drawable/mozac_ic_back_24"
+        android:src="@drawable/ic_ios_back"
         android:contentDescription="Back"
         android:scaleType="centerInside"
         app:tint="?attr/colorOnSurface" />
@@ -27,7 +27,7 @@
         android:layout_height="48dp"
         android:layout_weight="1"
         android:background="?attr/selectableItemBackgroundBorderless"
-        android:src="@drawable/mozac_ic_forward_24"
+        android:src="@drawable/ic_ios_forward"
         android:contentDescription="Forward"
         android:scaleType="centerInside"
         app:tint="?attr/colorOnSurface" />
@@ -49,7 +49,7 @@
         android:layout_height="48dp"
         android:layout_weight="1"
         android:background="?attr/selectableItemBackgroundBorderless"
-        android:src="@drawable/ic_baseline_share"
+        android:src="@drawable/ios_share_24"
         android:contentDescription="Share"
         android:scaleType="centerInside"
         app:tint="?attr/colorOnSurface" />

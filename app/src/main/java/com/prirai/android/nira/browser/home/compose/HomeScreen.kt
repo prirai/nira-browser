@@ -326,7 +326,7 @@ fun ShortcutsSection(
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = "Add shortcuts by bookmarking sites",
+                    text = "Add your go-to sites here",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                     textAlign = TextAlign.Center
@@ -473,7 +473,7 @@ fun BookmarksSection(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "No bookmarks yet. Add bookmarks while browsing.",
+                        text = "No bookmarks yet. Add bookmarks while browsing, from the menu or import them in settings.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                         textAlign = TextAlign.Center

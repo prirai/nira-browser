@@ -1,11 +1,13 @@
-<?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<?xml version="1.0" encoding="utf-8" ?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="?attr/colorSurface">
+    android:background="?attr/colorSurface"
+>
 
     <com.google.android.material.appbar.MaterialToolbar
         android:id="@+id/toolbar"
@@ -13,8 +15,9 @@
         android:layout_height="?attr/actionBarSize"
         android:background="?attr/colorSurface"
         app:titleTextColor="?attr/colorOnSurface"
-        app:navigationIcon="@drawable/ic_arrow_back"
-        app:navigationIconTint="?attr/colorOnSurface" />
+        app:navigationIcon="@drawable/ic_ios_back"
+        app:navigationIconTint="?attr/colorOnSurface"
+    />
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/webAppsRecyclerView"
@@ -22,7 +25,8 @@
         android:layout_height="match_parent"
         android:clipToPadding="false"
         android:padding="8dp"
-        tools:listitem="@layout/item_webapp_setting" />
+        tools:listitem="@layout/item_webapp_setting"
+    />
 
     <LinearLayout
         android:id="@+id/emptyState"
@@ -31,14 +35,16 @@
         android:orientation="vertical"
         android:gravity="center"
         android:visibility="gone"
-        android:padding="24dp">
+        android:padding="24dp"
+    >
 
         <ImageView
             android:layout_width="120dp"
             android:layout_height="120dp"
             android:src="@drawable/ic_language"
             android:tint="?attr/colorOnSurfaceVariant"
-            android:layout_gravity="center_horizontal" />
+            android:layout_gravity="center_horizontal"
+        />
 
         <TextView
             android:layout_width="wrap_content"
@@ -47,7 +53,8 @@
             android:textSize="18sp"
             android:textColor="?attr/colorOnSurface"
             android:layout_marginTop="16dp"
-            android:layout_gravity="center_horizontal" />
+            android:layout_gravity="center_horizontal"
+        />
 
         <TextView
             android:layout_width="wrap_content"
@@ -56,6 +63,7 @@
             android:textSize="14sp"
             android:textColor="?attr/colorOnSurfaceVariant"
             android:layout_marginTop="8dp"
-            android:layout_gravity="center_horizontal" />
+            android:layout_gravity="center_horizontal"
+        />
     </LinearLayout>
 </LinearLayout>
