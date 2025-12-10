@@ -11,15 +11,19 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_margin="16dp"
-        app:cardElevation="4dp"
-        app:cardCornerRadius="8dp">
+        style="@style/Widget.Material3.CardView.Elevated"
+        app:cardBackgroundColor="?attr/colorSurfaceContainerHigh"
+        app:cardElevation="2dp"
+        app:cardCornerRadius="28dp">
 
         <SearchView
             android:id="@+id/searchView"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:queryHint="@string/search_tabs_bookmarks_history"
-            android:iconifiedByDefault="false" />
+            android:iconifiedByDefault="false"
+            android:background="@android:color/transparent"
+            android:queryBackground="@android:color/transparent" />
 
     </com.google.android.material.card.MaterialCardView>
 
@@ -31,6 +35,7 @@
         android:layout_weight="1"
         android:paddingHorizontal="8dp"
         android:clipToPadding="false"
+        android:background="?attr/colorSurface"
         android:visibility="gone" />
 
     <!-- Empty State -->
@@ -49,15 +54,15 @@
             android:src="@drawable/ic_search"
             android:alpha="0.6"
             android:contentDescription="@string/search"
-            app:tint="?android:attr/textColorSecondary" />
+            app:tint="?attr/colorOnSurfaceVariant" />
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
             android:text="@string/search_tabs_bookmarks_history"
-            android:textSize="16sp"
-            android:textColor="?android:attr/textColorSecondary"
+            android:textAppearance="@style/TextAppearance.Material3.BodyLarge"
+            android:textColor="?attr/colorOnSurface"
             android:textAlignment="center" />
 
         <TextView
@@ -65,8 +70,8 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
             android:text="@string/search_tabs_description"
-            android:textSize="14sp"
-            android:textColor="?android:attr/textColorTertiary"
+            android:textAppearance="@style/TextAppearance.Material3.BodyMedium"
+            android:textColor="?attr/colorOnSurfaceVariant"
             android:textAlignment="center" />
 
     </LinearLayout>

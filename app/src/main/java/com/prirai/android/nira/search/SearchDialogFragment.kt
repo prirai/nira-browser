@@ -78,15 +78,34 @@ class SearchDialogFragment : AppCompatDialogFragment(), UserInteractionHandler {
             val userPreferences = UserPreferences(requireContext())
             val isDarkTheme = com.prirai.android.nira.theme.ThemeManager.isDarkMode(requireContext())
             
-            // Apply proper background color with AMOLED support
-            val bgColor = if (userPreferences.amoledMode && isDarkTheme) {
-                Color.BLACK
+            // Apply dynamic colors if enabled (Material You on Android 12+)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && userPreferences.dynamicColors) {
+                // Dynamic colors will be applied via theme inheritance
+                // Just ensure we're using the right context
+                val dynamicContext = com.google.android.material.color.DynamicColors.wrapContextIfAvailable(requireContext())
+                
+                // Get colors from dynamic context
+                val typedValue = android.util.TypedValue()
+                dynamicContext.theme.resolveAttribute(com.google.android.material.R.attr.colorSurface, typedValue, true)
+                val bgColor = if (userPreferences.amoledMode && isDarkTheme) {
+                    Color.BLACK
+                } else {
+                    typedValue.data
+                }
+                
+                win.decorView.setBackgroundColor(bgColor)
+                win.navigationBarColor = bgColor
             } else {
-                requireContext().getColorFromAttr(com.google.android.material.R.attr.colorSurface)
+                // Apply proper background color with AMOLED support
+                val bgColor = if (userPreferences.amoledMode && isDarkTheme) {
+                    Color.BLACK
+                } else {
+                    requireContext().getColorFromAttr(com.google.android.material.R.attr.colorSurface)
+                }
+                
+                win.decorView.setBackgroundColor(bgColor)
+                win.navigationBarColor = bgColor
             }
-            
-            win.decorView.setBackgroundColor(bgColor)
-            win.navigationBarColor = bgColor
             
             win.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS)
             WindowCompat.getInsetsController(win, win.decorView).isAppearanceLightStatusBars = !isDarkTheme
@@ -94,7 +113,15 @@ class SearchDialogFragment : AppCompatDialogFragment(), UserInteractionHandler {
     }
 
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
-        return object : Dialog(requireContext(), this.theme) {
+        // Apply dynamic colors to dialog context if enabled
+        val userPreferences = UserPreferences(requireContext())
+        val dialogContext = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && userPreferences.dynamicColors) {
+            com.google.android.material.color.DynamicColors.wrapContextIfAvailable(requireContext())
+        } else {
+            requireContext()
+        }
+        
+        return object : Dialog(dialogContext, this.theme) {
             override fun onBackPressed() {
                 this@SearchDialogFragment.onBackPressed()
             }
@@ -107,7 +134,17 @@ class SearchDialogFragment : AppCompatDialogFragment(), UserInteractionHandler {
         savedInstanceState: Bundle?
     ): View {
         val args by navArgs<SearchDialogFragmentArgs>()
-        _binding = FragmentSearchDialogBinding.inflate(inflater, container, false)
+        
+        // Use dynamic color context if available
+        val userPreferences = UserPreferences(requireContext())
+        val contextForInflater = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && userPreferences.dynamicColors) {
+            com.google.android.material.color.DynamicColors.wrapContextIfAvailable(requireContext())
+        } else {
+            requireContext()
+        }
+        
+        val themedInflater = inflater.cloneInContext(contextForInflater)
+        _binding = FragmentSearchDialogBinding.inflate(themedInflater, container, false)
         val view = binding.root
         val activity = requireActivity() as BrowserActivity
         val isPrivate = activity.browsingModeManager.mode.isPrivate

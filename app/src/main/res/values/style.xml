@@ -106,11 +106,19 @@
         >?android:attr/textColorPrimary</item>
     </style>
 
-    <style name="SearchDialogStyle">
+    <style name="SearchDialogStyle" parent="Theme.Material3.DayNight.NoActionBar">
         <item name="android:windowAnimationStyle">@null</item>
-        <item name="android:textAppearance">@style/TextAppearance.AppCompat</item>
-        <!-- Material 3 dynamic colors -->
-        <item name="android:colorControlNormal">?attr/colorPrimary</item>
+        <item name="android:textAppearance">@style/TextAppearance.Material3.BodyLarge</item>
+        <!-- Material 3 dynamic colors will be inherited from parent theme -->
+        <item name="colorPrimary">@color/m3_primary</item>
+        <item name="colorOnPrimary">@color/m3_on_primary</item>
+        <item name="colorPrimaryContainer">@color/m3_primary_container</item>
+        <item name="colorOnPrimaryContainer">@color/m3_on_primary_container</item>
+        <item name="colorSurface">@color/m3_surface</item>
+        <item name="colorOnSurface">@color/m3_on_surface</item>
+        <item name="colorSurfaceVariant">@color/m3_surface_variant</item>
+        <item name="colorOnSurfaceVariant">@color/m3_on_surface_variant</item>
+        <item name="android:colorControlNormal">?attr/colorOnSurfaceVariant</item>
         <item name="android:colorControlActivated">?attr/colorPrimary</item>
         <item name="android:colorControlHighlight">?attr/colorPrimaryContainer</item>
         <item name="android:windowBackground">?attr/colorSurface</item>

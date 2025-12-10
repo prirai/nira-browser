@@ -60,7 +60,8 @@
             android:textAppearance="@style/TextAppearance.Material3.BodyMedium"
             android:textColor="?android:attr/textColorSecondary"
             android:ellipsize="end"
-            android:maxLines="4"
+            android:maxLines="10"
+            android:singleLine="false"
         />
 
     </LinearLayout>
