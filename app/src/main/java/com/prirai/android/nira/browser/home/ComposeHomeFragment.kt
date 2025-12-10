@@ -413,6 +413,13 @@ class ComposeHomeFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
         updateToolbarStyling()
         restoreLastMode()
+
+        // Prevent back gesture from leaving the home fragment
+        requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner, object : androidx.activity.OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                // Do nothing to consume the back press
+            }
+        })
     }
 
     override fun onResume() {

@@ -78,6 +78,8 @@ class SearchDialogFragment : AppCompatDialogFragment(), UserInteractionHandler {
             val userPreferences = UserPreferences(requireContext())
             val isDarkTheme = com.prirai.android.nira.theme.ThemeManager.isDarkMode(requireContext())
             
+            val bgColor: Int // Declare bgColor here
+            
             // Apply dynamic colors if enabled (Material You on Android 12+)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && userPreferences.dynamicColors) {
                 // Dynamic colors will be applied via theme inheritance
@@ -87,25 +89,23 @@ class SearchDialogFragment : AppCompatDialogFragment(), UserInteractionHandler {
                 // Get colors from dynamic context
                 val typedValue = android.util.TypedValue()
                 dynamicContext.theme.resolveAttribute(com.google.android.material.R.attr.colorSurface, typedValue, true)
-                val bgColor = if (userPreferences.amoledMode && isDarkTheme) {
+                bgColor = if (userPreferences.amoledMode && isDarkTheme) {
                     Color.BLACK
                 } else {
                     typedValue.data
                 }
-                
-                win.decorView.setBackgroundColor(bgColor)
-                win.navigationBarColor = bgColor
             } else {
                 // Apply proper background color with AMOLED support
-                val bgColor = if (userPreferences.amoledMode && isDarkTheme) {
+                bgColor = if (userPreferences.amoledMode && isDarkTheme) {
                     Color.BLACK
                 } else {
                     requireContext().getColorFromAttr(com.google.android.material.R.attr.colorSurface)
                 }
-                
-                win.decorView.setBackgroundColor(bgColor)
-                win.navigationBarColor = bgColor
             }
+            
+            win.decorView.setBackgroundColor(bgColor)
+            win.navigationBarColor = bgColor
+            win.statusBarColor = bgColor
             
             win.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS)
             WindowCompat.getInsetsController(win, win.decorView).isAppearanceLightStatusBars = !isDarkTheme
