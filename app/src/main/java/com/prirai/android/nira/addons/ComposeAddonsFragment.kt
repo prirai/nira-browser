@@ -269,28 +269,34 @@ fun AddonsScreen(
             }
         }
         
-        // Sort dropdown menu (positioned at top right)
-        DropdownMenu(
-            expanded = showSortMenu.value,
-            onDismissRequest = { showSortMenu.value = false },
-            modifier = Modifier.align(Alignment.TopEnd)
+        // Sort dropdown menu
+        Box(
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(top = 56.dp, end = 16.dp) // Position below toolbar
         ) {
-            listOf("Name", "Rating", "Recently Updated").forEach { sort ->
-                DropdownMenuItem(
-                    text = { Text(sort) },
-                    onClick = {
-                        selectedSort.value = sort
-                        showSortMenu.value = false
-                    },
-                    leadingIcon = {
-                        if (selectedSort.value == sort) {
-                            Icon(
-                                painter = painterResource(id = android.R.drawable.checkbox_on_background),
-                                contentDescription = null
-                            )
+            DropdownMenu(
+                expanded = showSortMenu.value,
+                onDismissRequest = { showSortMenu.value = false }
+            ) {
+                listOf("Name", "Rating", "Recently Updated").forEach { sort ->
+                    DropdownMenuItem(
+                        text = { Text(sort) },
+                        onClick = {
+                            selectedSort.value = sort
+                            showSortMenu.value = false
+                        },
+                        trailingIcon = {
+                            if (selectedSort.value == sort) {
+                                Icon(
+                                    painter = painterResource(id = R.drawable.ic_check_circle),
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                            }
                         }
-                    }
-                )
+                    )
+                }
             }
         }
     }
