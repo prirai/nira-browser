@@ -423,17 +423,20 @@ class ComposeHomeFragment : Fragment() {
         restoreLastMode()
 
         // Observe tab state changes
-        components.store.flowScoped(viewLifecycleOwner) { flow ->
+        val store = components.store
+        store.flowScoped(viewLifecycleOwner) { flow ->
             flow.map { state -> state.selectedTabId }
                 .distinctUntilChanged()
                 .collect { selectedTabId ->
                     // If a tab is selected and its URL is not about:homepage, navigate to browser
                     selectedTabId?.let { tabId ->
-                        val tab = components.store.state.tabs.find { it.id == tabId }
+                        val tab = store.state.tabs.find { it.id == tabId }
                         val url = tab?.content?.url
                         if (url != null && url != "about:homepage" && url != "about:privatebrowsing") {
                             // Navigate to browser fragment to show the tab
-                            findNavController().navigate(R.id.browserFragment)
+                            if (isAdded && view != null) {
+                                findNavController().navigate(R.id.browserFragment)
+                            }
                         }
                     }
                 }

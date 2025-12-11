@@ -652,19 +652,50 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
             )
         )
         
-        // Add to Favorites
+        // Add to Bookmarks
+        menuItems.add(
+            com.prirai.android.nira.components.menu.Material3BrowserMenu.MenuItem.Action(
+                id = "add_to_bookmarks",
+                title = "Add to Bookmarks",
+                iconRes = R.drawable.ic_baseline_bookmark_add,
+                onClick = {
+                    selectedTab?.let { tab ->
+                        val title = tab.content.title.ifEmpty { tab.content.url }
+                        val url = tab.content.url
+                        
+                        val dialog = com.prirai.android.nira.browser.bookmark.ui.AddBookmarkSiteDialog(
+                            requireActivity(), 
+                            title, 
+                            url
+                        )
+                        dialog.setOnClickListener { _, _ ->
+                            // Save changes to persistent storage
+                            com.prirai.android.nira.browser.bookmark.repository.BookmarkManager.getInstance(requireContext()).save()
+                            android.widget.Toast.makeText(
+                                requireContext(),
+                                "Bookmark added",
+                                android.widget.Toast.LENGTH_SHORT
+                            ).show()
+                        }
+                        dialog.show()
+                    }
+                }
+            )
+        )
+        
+        // Add to Favorites (Shortcuts)
         menuItems.add(
             com.prirai.android.nira.components.menu.Material3BrowserMenu.MenuItem.Action(
                 id = "add_to_favorites",
                 title = "Add to Favorites",
-                iconRes = R.drawable.ic_baseline_bookmark_add,
+                iconRes = R.drawable.ic_baseline_star_24,
                 onClick = {
                     selectedTab?.let { tab ->
-                        android.widget.Toast.makeText(
-                            requireContext(),
-                            "Added to favorites",
-                            android.widget.Toast.LENGTH_SHORT
-                        ).show()
+                        val title = tab.content.title.ifEmpty { tab.content.url }
+                        val url = tab.content.url
+                        
+                        val dialog = com.prirai.android.nira.browser.shortcuts.AddShortcutDialogFragment.newInstance(url, title)
+                        dialog.show(parentFragmentManager, com.prirai.android.nira.browser.shortcuts.AddShortcutDialogFragment.TAG)
                     }
                 }
             )

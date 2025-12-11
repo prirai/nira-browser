@@ -676,10 +676,12 @@ fun PrivateInfoSection(
 fun AddShortcutDialog(
     onDismiss: () -> Unit,
     onSave: (url: String, title: String) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    initialUrl: String = "",
+    initialTitle: String = ""
 ) {
-    var url by remember { mutableStateOf("") }
-    var title by remember { mutableStateOf("") }
+    var url by remember { mutableStateOf(initialUrl) }
+    var title by remember { mutableStateOf(initialTitle) }
     var urlError by remember { mutableStateOf(false) }
     
     AlertDialog(
