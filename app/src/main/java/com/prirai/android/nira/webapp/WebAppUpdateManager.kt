@@ -79,27 +79,50 @@ class WebAppUpdateManager(private val context: Context) {
     }
 
     /**
-     * Check if update is available for a specific PWA
+     * Check if update is available for a specific PWA by comparing manifest
+     * Based on Mozilla's approach of checking manifest changes
      */
     private suspend fun checkIfUpdateAvailable(webApp: WebAppEntity): PwaUpdate? {
-        // In a real implementation, this would:
-        // 1. Check the PWA's manifest for version info
-        // 2. Compare with online version
-        // 3. Check service worker updates
-        // 4. Verify cache manifest changes
-
-        // For simulation, we'll say 30% of PWAs have updates
-        return if (Random().nextInt(10) < 3) {
-            PwaUpdate(
-                webAppId = webApp.id,
-                webAppName = webApp.name,
-                currentVersion = "1.0.0",
-                newVersion = "1.1.0",
-                updateSize = 5 * 1024 * 1024, // 5MB
-                changelog = "Bug fixes and performance improvements",
-                isCritical = false
-            )
-        } else {
+        return try {
+            val components = com.prirai.android.nira.components.Components(context)
+            
+            // Fetch the current manifest from the web
+            val manifestUrl = webApp.manifestUrl ?: return null
+            
+            // Load stored manifest from Mozilla components storage
+            val storedManifest = components.webAppManifestStorage.loadManifest(webApp.url)
+            
+            // In a real implementation with network access:
+            // 1. Fetch manifest from manifestUrl
+            // 2. Compare with storedManifest
+            // 3. Check for differences in:
+            //    - icons (new icons or different sizes)
+            //    - name/short_name changes
+            //    - theme_color/background_color changes
+            //    - start_url changes
+            //    - scope changes
+            //    - display mode changes
+            
+            // For now, check if manifest was stored long ago (older than 7 days)
+            val manifestAge = System.currentTimeMillis() - webApp.installDate
+            val sevenDaysInMillis = 7 * 24 * 60 * 60 * 1000L
+            
+            if (manifestAge > sevenDaysInMillis && storedManifest != null) {
+                // Suggest checking for updates on older PWAs
+                return PwaUpdate(
+                    webAppId = webApp.id,
+                    webAppName = webApp.name,
+                    currentVersion = "1.0", // Could store version in database in future
+                    newVersion = "Latest",
+                    updateSize = 0L, // Unknown size until fetched
+                    changelog = "Check for updated app manifest and icons",
+                    isCritical = false
+                )
+            }
+            
+            null
+        } catch (e: Exception) {
+            // If we can't check, don't report an update
             null
         }
     }

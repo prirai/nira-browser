@@ -2,6 +2,7 @@ package com.prirai.android.nira.customtabs
 
 import android.os.Bundle
 import androidx.annotation.VisibleForTesting
+import androidx.browser.customtabs.CustomTabsIntent
 import androidx.navigation.fragment.NavHostFragment
 import mozilla.components.browser.state.action.CustomTabListAction
 import mozilla.components.browser.state.selector.findCustomTab
@@ -28,6 +29,9 @@ open class ExternalAppBrowserActivity : BrowserActivity() {
         super.onCreate(savedInstanceState)
         hasCalledOnCreate = true
         
+        // Apply custom tab theming from intent
+        applyCustomTabTheming()
+        
         // Create a custom tab session from the intent
         val safeIntent = SafeIntent(intent)
         val url = safeIntent.dataString
@@ -45,11 +49,99 @@ open class ExternalAppBrowserActivity : BrowserActivity() {
                 val bundle = Bundle().apply {
                     putString("activeSessionId", customTab.id)
                     putString(EXTRA_SESSION_ID, customTab.id)
+                    // Pass toolbar color to fragment
+                    intent.extras?.let { extras ->
+                        putAll(extras)
+                    }
                 }
                 host.navController.navigate(R.id.externalAppBrowserFragment, bundle)
             }
         }
     }
+    
+    /**
+     * Apply custom tab theming to status bar and navigation bar based on intent extras.
+     */
+    private fun applyCustomTabTheming() {
+        val safeIntent = SafeIntent(intent)
+        
+        // Get toolbar color from intent (standard Custom Tabs extra)
+        val toolbarColor = safeIntent.getIntExtra(CustomTabsIntent.EXTRA_TOOLBAR_COLOR, -1)
+        
+        // Get navigation bar color from intent
+        val navBarColor = safeIntent.getIntExtra(CustomTabsIntent.EXTRA_NAVIGATION_BAR_COLOR, -1)
+        
+        // Apply status bar color (same as toolbar for consistency)
+        if (toolbarColor != -1) {
+            window.statusBarColor = toolbarColor
+            
+            // Determine if we need light or dark icons based on toolbar color
+            val isLightToolbar = isColorLight(toolbarColor)
+            updateSystemBarsAppearance(lightStatusBar = isLightToolbar, lightNavBar = false)
+        }
+        
+        // Apply navigation bar color
+        if (navBarColor != -1) {
+            window.navigationBarColor = navBarColor
+            
+            // Update navigation bar appearance
+            val isLightNavBar = isColorLight(navBarColor)
+            updateSystemBarsAppearance(lightStatusBar = toolbarColor != -1 && isColorLight(toolbarColor), lightNavBar = isLightNavBar)
+        }
+    }
+    
+    /**
+     * Determines if a color is light (requires dark text/icons) or dark (requires light text/icons).
+     * Uses the WCAG formula for relative luminance.
+     */
+    private fun isColorLight(color: Int): Boolean {
+        val red = android.graphics.Color.red(color) / 255.0
+        val green = android.graphics.Color.green(color) / 255.0
+        val blue = android.graphics.Color.blue(color) / 255.0
+        
+        // Calculate relative luminance
+        val r = if (red <= 0.03928) red / 12.92 else Math.pow((red + 0.055) / 1.055, 2.4)
+        val g = if (green <= 0.03928) green / 12.92 else Math.pow((green + 0.055) / 1.055, 2.4)
+        val b = if (blue <= 0.03928) blue / 12.92 else Math.pow((blue + 0.055) / 1.055, 2.4)
+        
+        val luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b
+        
+        // If luminance > 0.5, it's a light color
+        return luminance > 0.5
+    }
+    
+    /**
+     * Updates the appearance of system bars (light or dark icons).
+     */
+    private fun updateSystemBarsAppearance(lightStatusBar: Boolean, lightNavBar: Boolean) {
+        val insetsController = window.insetsController ?: return
+        
+        if (lightStatusBar) {
+            insetsController.setSystemBarsAppearance(
+                android.view.WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS,
+                android.view.WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS
+            )
+        } else {
+            insetsController.setSystemBarsAppearance(
+                0,
+                android.view.WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS
+            )
+        }
+        
+        if (lightNavBar) {
+            insetsController.setSystemBarsAppearance(
+                android.view.WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS,
+                android.view.WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS
+            )
+        } else {
+            insetsController.setSystemBarsAppearance(
+                0,
+                android.view.WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS
+            )
+        }
+    }
+    
+
 
     override fun onResume() {
         super.onResume()

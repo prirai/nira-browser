@@ -9,6 +9,7 @@ import android.widget.ImageButton
 import android.widget.LinearLayout
 import android.widget.PopupMenu
 import android.widget.TextView
+import androidx.browser.customtabs.CustomTabsIntent
 import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.flow.mapNotNull
@@ -19,6 +20,7 @@ import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
 import android.widget.EditText
 import androidx.core.content.ContextCompat
+import androidx.core.content.res.ResourcesCompat
 import com.google.android.material.card.MaterialCardView
 import com.google.android.material.textview.MaterialTextView
 import mozilla.components.browser.state.selector.findCustomTab
@@ -28,6 +30,7 @@ import mozilla.components.concept.engine.EngineSession
 import mozilla.components.feature.customtabs.CustomTabWindowFeature
 import mozilla.components.lib.state.ext.flowScoped
 import mozilla.components.support.base.feature.ViewBoundFeatureWrapper
+import mozilla.components.support.utils.SafeIntent
 import com.prirai.android.nira.BrowserActivity
 import com.prirai.android.nira.R
 import com.prirai.android.nira.components.FindInPageComponent
@@ -52,9 +55,28 @@ class ExternalAppBrowserFragment : CustomTabBrowserFragment() {
     // Find in Page component
     private var findInPageComponent: FindInPageComponent? = null
     
+    // Custom tab theming colors
+    private var toolbarColor: Int = -1
+    private var textColor: Int = -1
+    
     override fun onCreate(savedInstanceState: Bundle?) {
         // Set customTabSessionId from arguments before calling super
         customTabSessionId = arguments?.getString("activeSessionId")
+        
+        // Extract toolbar color from arguments (passed from activity intent)
+        toolbarColor = arguments?.getInt(CustomTabsIntent.EXTRA_TOOLBAR_COLOR, -1) ?: -1
+        
+        // Calculate appropriate text color based on toolbar color
+        if (toolbarColor != -1) {
+            textColor = if (isColorLight(toolbarColor)) {
+                // Light background needs dark text
+                android.graphics.Color.parseColor("#000000")
+            } else {
+                // Dark background needs light text
+                android.graphics.Color.parseColor("#FFFFFF")
+            }
+        }
+        
         super.onCreate(savedInstanceState)
     }
 
@@ -171,6 +193,9 @@ class ExternalAppBrowserFragment : CustomTabBrowserFragment() {
         customTabUrl = headerView.findViewById(R.id.customTabUrl)
         customTabMenuButton = headerView.findViewById(R.id.customTabMenuButton)
         customTabCloseButton = headerView.findViewById(R.id.customTabCloseButton)
+        
+        // Apply custom tab theming if provided
+        applyCustomTabTheming()
         
         // Set up close button - just finish the activity without opening main app
         customTabCloseButton?.setOnClickListener {
@@ -304,5 +329,43 @@ class ExternalAppBrowserFragment : CustomTabBrowserFragment() {
     override fun onDestroyView() {
         findInPageComponent?.destroy()
         super.onDestroyView()
+    }
+    
+    /**
+     * Applies custom tab theming to the toolbar based on intent colors.
+     */
+    private fun applyCustomTabTheming() {
+        if (toolbarColor == -1) return
+        
+        // Apply background color to header
+        customTabHeader?.setBackgroundColor(toolbarColor)
+        
+        // Apply text colors
+        customTabTitle?.setTextColor(textColor)
+        customTabUrl?.setTextColor(textColor)
+        
+        // Apply icon tints
+        customTabCloseButton?.setColorFilter(textColor)
+        customTabMenuButton?.setColorFilter(textColor)
+    }
+    
+    /**
+     * Determines if a color is light (requires dark text/icons) or dark (requires light text/icons).
+     * Uses the WCAG formula for relative luminance.
+     */
+    private fun isColorLight(color: Int): Boolean {
+        val red = android.graphics.Color.red(color) / 255.0
+        val green = android.graphics.Color.green(color) / 255.0
+        val blue = android.graphics.Color.blue(color) / 255.0
+        
+        // Calculate relative luminance
+        val r = if (red <= 0.03928) red / 12.92 else Math.pow((red + 0.055) / 1.055, 2.4)
+        val g = if (green <= 0.03928) green / 12.92 else Math.pow((green + 0.055) / 1.055, 2.4)
+        val b = if (blue <= 0.03928) blue / 12.92 else Math.pow((blue + 0.055) / 1.055, 2.4)
+        
+        val luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b
+        
+        // If luminance > 0.5, it's a light color
+        return luminance > 0.5
     }
 }
