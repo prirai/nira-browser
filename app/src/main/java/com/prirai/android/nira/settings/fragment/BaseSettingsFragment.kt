@@ -68,8 +68,8 @@ abstract class BaseSettingsFragment : PreferenceFragmentCompat() {
             val isCategory = adapter.getItemViewType(position) == 0 // PreferenceCategory type
             
             if (isCategory) {
-                // Categories get spacing above them
-                outRect.top = (16 * resources.displayMetrics.density).toInt()
+                // Categories get spacing above them, but not for the first category
+                outRect.top = if (position > 0) (16 * resources.displayMetrics.density).toInt() else 0
                 return
             }
             
@@ -84,8 +84,9 @@ abstract class BaseSettingsFragment : PreferenceFragmentCompat() {
             outRect.right = horizontalMargin
             
             // Vertical margins only for first and last in group
+            // But for the very first item, don't add top margin
             val verticalMargin = (8 * resources.displayMetrics.density).toInt()
-            outRect.top = if (isFirstInGroup) verticalMargin else 0
+            outRect.top = if (isFirstInGroup && position > 0) verticalMargin else 0
             outRect.bottom = if (isLastInGroup) verticalMargin else 0
             
             // Apply background based on position

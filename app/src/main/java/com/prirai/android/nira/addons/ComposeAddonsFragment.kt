@@ -3,6 +3,9 @@ package com.prirai.android.nira.addons
 import android.content.Intent
 import android.os.Bundle
 import android.view.LayoutInflater
+import android.view.Menu
+import android.view.MenuInflater
+import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
 import androidx.compose.foundation.background
@@ -43,6 +46,34 @@ import mozilla.components.feature.addons.ui.translateName
 
 class ComposeAddonsFragment : Fragment() {
 
+    private var showSortMenuTrigger: (() -> Unit)? = null
+    private var showSearchTrigger: (() -> Unit)? = null
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setHasOptionsMenu(true)
+    }
+
+    override fun onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) {
+        menu.clear()
+        inflater.inflate(R.menu.addons_menu, menu)
+        super.onCreateOptionsMenu(menu, inflater)
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        return when (item.itemId) {
+            R.id.action_search -> {
+                showSearchTrigger?.invoke()
+                true
+            }
+            R.id.action_sort -> {
+                showSortMenuTrigger?.invoke()
+                true
+            }
+            else -> super.onOptionsItemSelected(item)
+        }
+    }
+
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -67,7 +98,10 @@ class ComposeAddonsFragment : Fragment() {
                     amoledMode = prefs.amoledMode,
                     dynamicColor = prefs.dynamicColors
                 ) {
-                    AddonsScreen()
+                    AddonsScreen(
+                        onSearchTriggerReady = { trigger -> showSearchTrigger = trigger },
+                        onSortMenuTriggerReady = { trigger -> showSortMenuTrigger = trigger }
+                    )
                 }
             }
         }
@@ -76,7 +110,10 @@ class ComposeAddonsFragment : Fragment() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AddonsScreen() {
+fun AddonsScreen(
+    onSearchTriggerReady: ((()-> Unit) -> Unit)? = null,
+    onSortMenuTriggerReady: ((()-> Unit) -> Unit)? = null
+) {
     val context = LocalContext.current
     val allAddonsOriginal = remember { mutableStateOf<List<Addon>>(emptyList()) }
     val recommendedAddons = remember { mutableStateOf<List<Addon>>(emptyList()) }
@@ -84,6 +121,17 @@ fun AddonsScreen() {
     val isLoading = remember { mutableStateOf(true) }
     val selectedSort = remember { mutableStateOf("Name") }
     val showSortMenu = remember { mutableStateOf(false) }
+    
+    // Wire menu triggers
+    LaunchedEffect(Unit) {
+        onSearchTriggerReady?.invoke {
+            val searchSheet = SearchExtensionsBottomSheet()
+            searchSheet.show((context as androidx.fragment.app.FragmentActivity).supportFragmentManager, "search_extensions")
+        }
+        onSortMenuTriggerReady?.invoke {
+            showSortMenu.value = true
+        }
+    }
 
     LaunchedEffect(Unit) {
         withContext(Dispatchers.IO) {
@@ -132,82 +180,21 @@ fun AddonsScreen() {
         result
     }
 
-    Scaffold(
-        topBar = {
-            Column {
-                TopAppBar(
-                    title = {
-                        Text(
-                            "Extensions",
-                            style = MaterialTheme.typography.headlineMedium,
-                            fontWeight = FontWeight.Bold
-                        )
-                    },
-                    actions = {
-                        IconButton(onClick = { 
-                                val searchSheet = SearchExtensionsBottomSheet()
-                                searchSheet.show((context as androidx.fragment.app.FragmentActivity).supportFragmentManager, "search_extensions")
-                            }) {
-                                Icon(
-                                    painter = painterResource(id = R.drawable.ic_ios_search),
-                                    contentDescription = "Search",
-                                    tint = MaterialTheme.colorScheme.onSurface
-                                )
-                            }
-                            
-                            // Sort button
-                            Box {
-                                IconButton(onClick = { showSortMenu.value = true }) {
-                                    Icon(
-                                        painter = painterResource(id = R.drawable.ic_baseline_sort),
-                                        contentDescription = "Sort",
-                                        tint = MaterialTheme.colorScheme.onSurface
-                                    )
-                                }
-                                
-                                DropdownMenu(
-                                    expanded = showSortMenu.value,
-                                    onDismissRequest = { showSortMenu.value = false }
-                                ) {
-                                    listOf("Name", "Rating", "Recently Updated").forEach { sort ->
-                                        DropdownMenuItem(
-                                            text = { Text(sort) },
-                                            onClick = {
-                                                selectedSort.value = sort
-                                                showSortMenu.value = false
-                                            },
-                                            leadingIcon = {
-                                                if (selectedSort.value == sort) {
-                                                    Icon(
-                                                        painter = painterResource(id = android.R.drawable.checkbox_on_background),
-                                                        contentDescription = null
-                                                    )
-                                                }
-                                            }
-                                        )
-                                    }
-                                }
-                            }
-                    },
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.surface
-                    )
-                )
-            }
-        },
-        containerColor = MaterialTheme.colorScheme.surface
-    ) { paddingValues ->
-        if (isLoading.value) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues),
-                contentAlignment = Alignment.Center
-            ) {
-                CircularProgressIndicator()
-            }
-        } else {
-            LazyColumn(
+    Box {
+        Scaffold(
+            containerColor = MaterialTheme.colorScheme.surface
+        ) { paddingValues ->
+            if (isLoading.value) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(paddingValues),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator()
+                }
+            } else {
+                LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(paddingValues),
@@ -244,6 +231,23 @@ fun AddonsScreen() {
                     }
                 }
                 
+                // "All extensions" link
+                item {
+                    TextButton(
+                        onClick = {
+                            val intent = Intent(Intent.ACTION_VIEW, android.net.Uri.parse("https://addons.mozilla.org/android/"))
+                            context.startActivity(intent)
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            text = "All extensions",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
+                
                 // Empty state
                 if (filteredEnabled.isEmpty() && filteredRecommended.isEmpty() && !isLoading.value) {
                     item {
@@ -261,6 +265,32 @@ fun AddonsScreen() {
                         }
                     }
                 }
+                }
+            }
+        }
+        
+        // Sort dropdown menu (positioned at top right)
+        DropdownMenu(
+            expanded = showSortMenu.value,
+            onDismissRequest = { showSortMenu.value = false },
+            modifier = Modifier.align(Alignment.TopEnd)
+        ) {
+            listOf("Name", "Rating", "Recently Updated").forEach { sort ->
+                DropdownMenuItem(
+                    text = { Text(sort) },
+                    onClick = {
+                        selectedSort.value = sort
+                        showSortMenu.value = false
+                    },
+                    leadingIcon = {
+                        if (selectedSort.value == sort) {
+                            Icon(
+                                painter = painterResource(id = android.R.drawable.checkbox_on_background),
+                                contentDescription = null
+                            )
+                        }
+                    }
+                )
             }
         }
     }

@@ -216,6 +216,8 @@ class InstalledAddonDetailsActivity : AppCompatActivity() {
             this.components.addonManager.uninstallAddon(
                     addon,
                     onSuccess = {
+                        // Clear the cache so the bottom sheet shows updated data
+                        ExtensionsBottomSheetFragment.clearCache()
                         Toast.makeText(
                                 this,
                                 getString(R.string.mozac_feature_addons_successfully_uninstalled, addon.translateName(this)),

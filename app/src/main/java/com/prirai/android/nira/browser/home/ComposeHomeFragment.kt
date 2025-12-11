@@ -13,7 +13,11 @@ import androidx.coordinatorlayout.widget.CoordinatorLayout
 import androidx.core.graphics.toColorInt
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
+import mozilla.components.lib.state.ext.flowScoped
 import androidx.room.Room
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
@@ -364,12 +368,17 @@ class ComposeHomeFragment : Fragment() {
                 val contextId = if (isPrivateMode) "private" else "profile_${currentProfile.id}"
                 
                 // Create new tab with about:homepage
-                components.tabsUseCases.addTab(
+                val newTabId = components.tabsUseCases.addTab(
                     url = "about:homepage",
                     selectTab = true,
                     private = isPrivateMode,
                     contextId = contextId
                 )
+                
+                // Navigate to browser fragment to show the new tab
+                if (newTabId != null) {
+                    findNavController().navigate(R.id.browserFragment)
+                }
             }
 
             override fun onTabCountClicked() {
@@ -412,6 +421,23 @@ class ComposeHomeFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
         updateToolbarStyling()
         restoreLastMode()
+
+        // Observe tab state changes
+        components.store.flowScoped(viewLifecycleOwner) { flow ->
+            flow.map { state -> state.selectedTabId }
+                .distinctUntilChanged()
+                .collect { selectedTabId ->
+                    // If a tab is selected and its URL is not about:homepage, navigate to browser
+                    selectedTabId?.let { tabId ->
+                        val tab = components.store.state.tabs.find { it.id == tabId }
+                        val url = tab?.content?.url
+                        if (url != null && url != "about:homepage" && url != "about:privatebrowsing") {
+                            // Navigate to browser fragment to show the tab
+                            findNavController().navigate(R.id.browserFragment)
+                        }
+                    }
+                }
+        }
 
         // Handle double back press to exit app
         requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner, object : androidx.activity.OnBackPressedCallback(true) {

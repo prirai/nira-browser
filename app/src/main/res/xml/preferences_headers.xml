@@ -39,7 +39,7 @@
     
     <!-- Extensions -->
     <androidx.preference.Preference
-        android:fragment="com.prirai.android.nira.addons.AddonsFragment"
+        android:key="addons_settings"
         android:icon="@drawable/mozac_ic_extension_24"
         android:title="@string/settings_addons"
         android:singleLineTitle="false"

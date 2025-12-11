@@ -97,10 +97,30 @@ class ContextualBottomToolbar @JvmOverloads constructor(
             button.setPadding(scaledPadding, scaledPadding, scaledPadding, scaledPadding)
         }
         
-        // Also update tab count button height
+        // Update tab count button height and scale the icon inside
         val tabCountParams = tabCountButton.layoutParams
         tabCountParams.height = scaledHeight
         tabCountButton.layoutParams = tabCountParams
+        
+        // Scale the tab count icon and text
+        val baseIconSize = (28 * context.resources.displayMetrics.density).toInt()
+        val scaledIconSize = (baseIconSize * iconScale).toInt()
+        
+        val tabCountBackground = tabCountButton.findViewById<ImageView>(R.id.tab_count_background)
+        val tabCountTextParams = tabCountText.layoutParams
+        val tabCountBgParams = tabCountBackground?.layoutParams
+        
+        tabCountTextParams?.width = scaledIconSize
+        tabCountTextParams?.height = scaledIconSize
+        tabCountText.layoutParams = tabCountTextParams
+        
+        tabCountBgParams?.width = scaledIconSize
+        tabCountBgParams?.height = scaledIconSize
+        tabCountBackground?.layoutParams = tabCountBgParams
+        
+        // Scale text size
+        val baseTextSize = 13f
+        tabCountText.textSize = baseTextSize * iconScale
     }
 
     private fun setupClickListeners() {

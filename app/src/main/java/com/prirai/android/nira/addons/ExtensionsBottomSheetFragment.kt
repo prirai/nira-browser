@@ -26,9 +26,9 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.fragment.app.DialogFragment
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import com.prirai.android.nira.R
 import com.prirai.android.nira.ext.components
 import com.prirai.android.nira.preferences.UserPreferences
@@ -47,18 +47,26 @@ private fun Context.getColorFromAttr(attr: Int): Int {
     return typedValue.data
 }
 
-class ExtensionsBottomSheetFragment : DialogFragment() {
+class ExtensionsBottomSheetFragment : BottomSheetDialogFragment() {
 
     private var installedAddons: List<Addon> = emptyList()
 
     companion object {
         const val TAG = "ExtensionsBottomSheet"
+        private var cachedAddons: List<Addon>? = null
+        private var lastCacheTime: Long = 0
+        private const val CACHE_DURATION = 5000L // 5 seconds
+        
         fun newInstance() = ExtensionsBottomSheetFragment()
+        
+        fun clearCache() {
+            cachedAddons = null
+        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        // Use regular bottom sheet style
+        setStyle(STYLE_NORMAL, R.style.AppBottomSheetDialogTheme)
     }
 
     override fun onCreateView(
@@ -71,20 +79,32 @@ class ExtensionsBottomSheetFragment : DialogFragment() {
             setContent {
                 val context = androidx.compose.ui.platform.LocalContext.current
                 val addons = remember { mutableStateOf<List<Addon>>(emptyList()) }
-                val isLoading = remember { mutableStateOf(true) }
+                val isLoading = remember { mutableStateOf(cachedAddons == null) }
 
                 LaunchedEffect(Unit) {
-                    withContext(Dispatchers.IO) {
-                        try {
-                            // Get all addons (this loads icons properly)
-                            val allAddons = context.components.addonManager.getAddons()
-                            // Filter for installed and enabled ones
-                            installedAddons = allAddons.filter { it.isInstalled() && it.isEnabled() }
-                            addons.value = installedAddons
-                        } catch (e: Exception) {
-                            addons.value = emptyList()
-                        } finally {
-                            isLoading.value = false
+                    val currentTime = System.currentTimeMillis()
+                    
+                    // Use cache if available and not expired
+                    if (cachedAddons != null && (currentTime - lastCacheTime) < CACHE_DURATION) {
+                        addons.value = cachedAddons!!
+                        installedAddons = cachedAddons!!
+                        isLoading.value = false
+                    } else {
+                        withContext(Dispatchers.IO) {
+                            try {
+                                // Get all addons (this loads icons properly)
+                                val allAddons = context.components.addonManager.getAddons()
+                                // Filter for installed and enabled ones
+                                installedAddons = allAddons.filter { it.isInstalled() && it.isEnabled() }
+                                addons.value = installedAddons
+                                // Update cache
+                                cachedAddons = installedAddons
+                                lastCacheTime = currentTime
+                            } catch (e: Exception) {
+                                addons.value = emptyList()
+                            } finally {
+                                isLoading.value = false
+                            }
                         }
                     }
                 }
@@ -164,16 +184,7 @@ class ExtensionsBottomSheetFragment : DialogFragment() {
         }
     }
 
-    override fun onStart() {
-        super.onStart()
-        // Let bottom sheet size itself based on content
-        dialog?.window?.let { window ->
-            window.setLayout(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT
-            )
-        }
-    }
+
 
     override fun onResume() {
         super.onResume()

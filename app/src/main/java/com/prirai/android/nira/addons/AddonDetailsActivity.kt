@@ -174,6 +174,8 @@ class AddonDetailsActivity : AppCompatActivity() {
                         runOnUiThread {
                             installButton.isEnabled = true
                             installButton.text = "Install"
+                            // Clear the cache so the bottom sheet shows updated data
+                            ExtensionsBottomSheetFragment.clearCache()
                             android.widget.Toast.makeText(
                                 this,
                                 "Successfully installed ${installedAddon.translateName(this)}",
