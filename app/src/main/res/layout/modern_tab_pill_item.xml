@@ -13,16 +13,16 @@
     app:cardElevation="4dp"
 >
 
-    <RelativeLayout
-        android:layout_width="wrap_content"
-        android:layout_height="match_parent"
-        android:minHeight="36dp"
-        android:minWidth="120dp"
-        android:paddingStart="8dp"
-        android:paddingTop="4dp"
-        android:paddingEnd="6dp"
-        android:paddingBottom="4dp"
-    >
+        <RelativeLayout
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:minHeight="36dp"
+            android:minWidth="120dp"
+            android:paddingStart="8dp"
+            android:paddingTop="4dp"
+            android:paddingEnd="6dp"
+            android:paddingBottom="4dp"
+        >
 
         <!-- Selection indicator - REMOVED -->
         <View
@@ -72,6 +72,6 @@
             android:contentDescription="@string/close_tab"
         />
 
-    </RelativeLayout>
+        </RelativeLayout>
 
 </androidx.cardview.widget.CardView>

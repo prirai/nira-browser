@@ -630,10 +630,34 @@ class EnhancedTabGroupView @JvmOverloads constructor(
             }
 
             if (position >= 0) {
+                val layoutMgr = layoutManager as? LinearLayoutManager ?: return@post
+                
+                // Calculate offset to center the item
+                val viewWidth = width
+                val itemView = layoutMgr.findViewByPosition(position)
+                val itemWidth = itemView?.width ?: (viewWidth / 3) // Estimate if not laid out
+                
+                // Center position with intelligent gap handling
+                val centerOffset = (viewWidth - itemWidth) / 2
+                
+                // Adjust for first/last items to keep natural gaps
+                val isFirstItem = position == 0
+                val isLastItem = position == displayItems.size - 1
+                
+                val offset = when {
+                    isFirstItem -> 0 // Keep left gap for first item
+                    isLastItem -> viewWidth - itemWidth // Keep right gap for last item
+                    else -> centerOffset // Center all other items
+                }
+                
                 if (animate) {
                     smoothScrollToPosition(position)
+                    // After smooth scroll completes, adjust centering
+                    postDelayed({
+                        layoutMgr.scrollToPositionWithOffset(position, offset)
+                    }, 300) // Wait for smooth scroll animation
                 } else {
-                    scrollToPosition(position)
+                    layoutMgr.scrollToPositionWithOffset(position, offset)
                 }
             }
         }

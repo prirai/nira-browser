@@ -50,8 +50,12 @@ class TabsAdapter(
             // Set selected state
             cardView.isSelected = tab.id == selectedId
 
-            // Set title
-            val title = tab.content.title.ifBlank { "New Tab" }
+            // Show title with fallback to URL
+            val title = when {
+                tab.content.title.isNotBlank() -> tab.content.title
+                tab.content.url.startsWith("about:homepage") || tab.content.url.startsWith("about:privatebrowsing") -> "New Tab"
+                else -> tab.content.url.ifBlank { "" }
+            }
             tabTitle.text = title
 
             // Set URL

@@ -49,13 +49,11 @@ class TabListViewHolder(
         this.tab = tab
         this.styling = styling
 
-        val isRealUrl = tab.content.url.isNotEmpty() &&
-                !tab.content.url.startsWith("about:")
+        // Show title with fallback to URL
         val title = when {
             tab.content.title.isNotEmpty() -> tab.content.title
-            tab.content.loading && isRealUrl -> "Loading..."
-            tab.content.url.isNotEmpty() && !tab.content.url.startsWith("about:") -> tab.content.url
-            else -> "New Tab"
+            tab.content.url.startsWith("about:homepage") || tab.content.url.startsWith("about:privatebrowsing") -> "New Tab"
+            else -> tab.content.url.ifEmpty { "" }
         }
 
         titleView.text = title
