@@ -141,19 +141,19 @@ class ComposeHomeFragment : Fragment() {
                     val tabContextId = selectedTab?.contextId
                     when {
                         tabContextId == "private" || isPrivateMode -> {
-                            ProfileInfo("private", "Private", "🕵️", true)
+                            ProfileInfo("private", "Private", "🕵️", true, 0)
                         }
 
                         tabContextId != null && tabContextId.startsWith("profile_") -> {
                             val profileId = tabContextId.removePrefix("profile_")
                             val profile = profileManager.getAllProfiles().find { it.id == profileId }
                                 ?: profileManager.getActiveProfile()
-                            ProfileInfo(profile.id, profile.name, profile.emoji, false)
+                            ProfileInfo(profile.id, profile.name, profile.emoji, false, profile.color)
                         }
 
                         else -> {
                             val profile = profileManager.getActiveProfile()
-                            ProfileInfo(profile.id, profile.name, profile.emoji, false)
+                            ProfileInfo(profile.id, profile.name, profile.emoji, false, profile.color)
                         }
                     }
                 }
@@ -181,9 +181,9 @@ class ComposeHomeFragment : Fragment() {
                         isBookmarkExpanded = isBookmarkExpanded,
                         tabCount = tabCount,
                         currentProfile = currentProfile,
+                        onProfileClick = { showProfileSwitcher() },
                         backgroundImageUrl = backgroundImageUrl,
                         isToolbarAtTop = isToolbarAtTop,
-                        onProfileClick = { showProfileSwitcher() },
                         onShortcutClick = { shortcut ->
                             components.sessionUseCases.loadUrl(shortcut.url)
                         },
@@ -210,7 +210,9 @@ class ComposeHomeFragment : Fragment() {
                         },
                         onBookmarkToggle = { viewModel.toggleBookmarkSection() },
                         onSearchClick = {
-                            val directions = NavGraphDirections.actionGlobalSearchDialog(sessionId = null)
+                            // Pass current selected tab ID for proper context
+                            val sessionId = components.store.state.selectedTabId
+                            val directions = NavGraphDirections.actionGlobalSearchDialog(sessionId = sessionId)
                             findNavController().navigate(directions)
                         },
                         onBookmarksButtonClick = {
@@ -260,7 +262,9 @@ class ComposeHomeFragment : Fragment() {
         // Create toolbar interactor
         val toolbarInteractor = object : BrowserToolbarViewInteractor {
             override fun onBrowserToolbarPaste(text: String) {
-                val directions = NavGraphDirections.actionGlobalSearchDialog(sessionId = null)
+                // Pass current selected tab ID so search dialog knows the context
+                val sessionId = components.store.state.selectedTabId
+                val directions = NavGraphDirections.actionGlobalSearchDialog(sessionId = sessionId)
                 findNavController().navigate(directions)
             }
 
@@ -269,7 +273,9 @@ class ComposeHomeFragment : Fragment() {
             }
 
             override fun onBrowserToolbarClicked() {
-                val directions = NavGraphDirections.actionGlobalSearchDialog(sessionId = null)
+                // Pass current selected tab ID so search dialog knows the context
+                val sessionId = components.store.state.selectedTabId
+                val directions = NavGraphDirections.actionGlobalSearchDialog(sessionId = sessionId)
                 findNavController().navigate(directions)
             }
 
@@ -356,7 +362,9 @@ class ComposeHomeFragment : Fragment() {
             }
 
             override fun onSearchClicked() {
-                val directions = NavGraphDirections.actionGlobalSearchDialog(sessionId = null)
+                // Pass current selected tab ID for proper context
+                val sessionId = components.store.state.selectedTabId
+                val directions = NavGraphDirections.actionGlobalSearchDialog(sessionId = sessionId)
                 findNavController().navigate(directions)
             }
 
@@ -528,52 +536,32 @@ class ComposeHomeFragment : Fragment() {
 
         MaterialAlertDialogBuilder(requireContext())
             .setTitle("Switch Profile")
+            .setMessage("Select profile context for new tabs from this page")
             .setItems(items.toTypedArray()) { _, which ->
                 if (which == items.size - 1) {
+                    // Switch to private mode
                     browsingModeManager.mode = BrowsingMode.Private
+                    profileManager.setPrivateMode(true)
                     saveLastMode(isPrivate = true, profileId = null)
-
+                    
+                    // Update current tab's contextId to private if it's homepage
                     val store = components.store
-                    val privateTabs = store.state.tabs.filter { it.content.private }
-
-                    if (privateTabs.isEmpty()) {
-                        components.tabsUseCases.addTab(
-                            url = "about:blank",
-                            private = true,
-                            contextId = "private"
-                        )
-                    } else {
-                        components.tabsUseCases.selectTab(privateTabs.first().id)
+                    val selectedTab = store.state.selectedTab
+                    if (selectedTab?.content?.url == "about:homepage") {
+                        // Just change the mode, don't create new tabs
+                        // New tabs created from search/shortcuts will use private contextId
                     }
                 } else {
                     val selectedProfile = allProfiles[which]
                     browsingModeManager.mode = BrowsingMode.Normal
                     profileManager.setActiveProfile(selectedProfile)
+                    profileManager.setPrivateMode(false)
                     saveLastMode(isPrivate = false, profileId = selectedProfile.id)
-
-                    val store = components.store
-                    val contextId = "profile_${selectedProfile.id}"
-                    val profileTabs = store.state.tabs.filter {
-                        it.contextId == contextId && !it.content.private
-                    }
-
-                    if (profileTabs.isEmpty()) {
-                        components.tabsUseCases.addTab(
-                            url = "about:blank",
-                            private = false,
-                            contextId = contextId
-                        )
-                    } else {
-                        components.tabsUseCases.selectTab(profileTabs.first().id)
-                    }
                 }
-
-                try {
-                    findNavController().navigate(R.id.homeFragment)
-                } catch (e: Exception) {
-                    viewModel.loadShortcuts()
-                    viewModel.loadBookmarks()
-                }
+                
+                // Refresh the UI to show updated profile
+                viewModel.loadShortcuts()
+                viewModel.loadBookmarks()
             }
             .show()
     }

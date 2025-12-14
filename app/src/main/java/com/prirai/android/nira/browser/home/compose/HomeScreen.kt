@@ -51,7 +51,8 @@ data class ProfileInfo(
     val id: String,
     val name: String,
     val emoji: String,
-    val isPrivate: Boolean = false
+    val isPrivate: Boolean = false,
+    val color: Int = 0
 )
 
 @Composable
@@ -60,6 +61,8 @@ fun HomeScreen(
     shortcuts: List<ShortcutItem>,
     bookmarks: List<BookmarkItem>,
     isBookmarkExpanded: Boolean,
+    currentProfile: ProfileInfo,
+    onProfileClick: () -> Unit,
     onShortcutClick: (ShortcutItem) -> Unit,
     onShortcutDelete: (ShortcutItem) -> Unit,
     onShortcutAdd: () -> Unit,
@@ -71,8 +74,6 @@ fun HomeScreen(
     onTabCountClick: () -> Unit,
     onMenuClick: () -> Unit,
     tabCount: Int,
-    currentProfile: ProfileInfo,
-    onProfileClick: () -> Unit,
     backgroundImageUrl: String? = null,
     isToolbarAtTop: Boolean = false,
     modifier: Modifier = Modifier
@@ -126,7 +127,7 @@ fun HomeScreen(
             ),
             verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
-            // Logo section with profile selector
+            // Logo section with profile switcher
             item {
                 LogoSection(
                     isPrivateMode = isPrivateMode,
@@ -206,7 +207,11 @@ fun LogoSection(
             // Profile emoji selector (clickable)
             Surface(
                 shape = CircleShape,
-                color = MaterialTheme.colorScheme.primaryContainer,
+                color = if (currentProfile.color != 0) {
+                    Color(currentProfile.color)
+                } else {
+                    MaterialTheme.colorScheme.primaryContainer
+                },
                 modifier = Modifier
                     .size(40.dp)
                     .clickable(onClick = onProfileClick)
@@ -764,57 +769,5 @@ fun AddShortcutDialog(
             }
         }
     )
-}
-
-@Composable
-fun ProfileSelector(
-    currentProfile: ProfileInfo,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .clickable(onClick = onClick)
-            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Surface(
-            shape = CircleShape,
-            color = MaterialTheme.colorScheme.primaryContainer,
-            modifier = Modifier.size(40.dp)
-        ) {
-            Box(contentAlignment = Alignment.Center) {
-                Text(
-                    text = currentProfile.emoji,
-                    style = MaterialTheme.typography.titleLarge,
-                    fontSize = 24.sp
-                )
-            }
-        }
-        
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = currentProfile.name,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            Text(
-                text = if (currentProfile.isPrivate) "Private Browsing" else "Current Profile",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-            )
-        }
-        
-        Icon(
-            imageVector = Icons.Default.KeyboardArrowDown,
-            contentDescription = "Change Profile",
-            tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-        )
-    }
 }
 

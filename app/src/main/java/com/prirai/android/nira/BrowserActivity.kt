@@ -131,6 +131,9 @@ open class BrowserActivity : LocaleAwareAppCompatActivity(), ComponentCallbacks2
         val initialProfile = profileManager.getActiveProfile()
         val isPrivate = UserPreferences(this).lastKnownPrivate
         
+        // Sync ProfileManager's private mode state with BrowsingModeManager
+        profileManager.setPrivateMode(isPrivate)
+        
         browsingModeManager = createBrowsingModeManager(
             if (isPrivate) BrowsingMode.Private else BrowsingMode.Normal,
             initialProfile
@@ -269,8 +272,9 @@ open class BrowserActivity : LocaleAwareAppCompatActivity(), ComponentCallbacks2
             { newMode ->
                 // Update current theme but don't recreate - profile switching handles UI updates
                 currentTheme = newMode
-                // Save the private mode state
+                // Save the private mode state to both preferences for consistency
                 UserPreferences(this).lastKnownPrivate = newMode.isPrivate
+                com.prirai.android.nira.browser.profile.ProfileManager.getInstance(this).setPrivateMode(newMode.isPrivate)
             },
             { newProfile ->
                 // Profile changed - save to ProfileManager
@@ -480,16 +484,21 @@ open class BrowserActivity : LocaleAwareAppCompatActivity(), ComponentCallbacks2
         
         if ((!forceSearch && searchTermOrURL.isUrl()) || engine == null) {
             if (newTab) {
+                // Determine contextId for proper tab grouping and visibility
+                val contextId = getContextIdForNewTab(isPrivateMode, selectedTab)
                 components.tabsUseCases.addTab.invoke(
                     searchTermOrURL.toNormalizedUrl(),
                     flags = flags,
                     private = isPrivateMode,
+                    contextId = contextId
                 )
             } else {
                 components.sessionUseCases.loadUrl.invoke(searchTermOrURL.toNormalizedUrl(), flags)
             }
         } else {
             if (newTab) {
+                // For search, use newTabSearch but set contextId via middleware after tab creation
+                // The ProfileMiddleware will set contextId based on private mode
                 components.searchUseCases.newTabSearch
                     .invoke(
                         searchTermOrURL,
@@ -499,6 +508,27 @@ open class BrowserActivity : LocaleAwareAppCompatActivity(), ComponentCallbacks2
                     )
             } else {
                 components.searchUseCases.defaultSearch.invoke(searchTermOrURL, engine)
+            }
+        }
+    }
+    
+    /**
+     * Get the appropriate contextId for new tabs based on browsing mode and current profile.
+     * This ensures tabs are properly grouped and visible in tab bar/sheet.
+     */
+    private fun getContextIdForNewTab(isPrivateMode: Boolean, selectedTab: SessionState?): String {
+        return if (isPrivateMode) {
+            "private"
+        } else {
+            // Try to use contextId from selected tab if available
+            val tabContextId = selectedTab?.contextId
+            if (tabContextId != null && tabContextId.startsWith("profile_")) {
+                tabContextId
+            } else {
+                // Fall back to active profile
+                val profileManager = com.prirai.android.nira.browser.profile.ProfileManager.getInstance(this)
+                val currentProfile = profileManager.getActiveProfile()
+                "profile_${currentProfile.id}"
             }
         }
     }

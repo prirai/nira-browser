@@ -50,13 +50,34 @@ class SearchDialogController(
         clearToolbarFocus()
 
         val searchEngine = fragmentStore.state.searchEngineSource.searchEngine
+        
+        // Determine if we need a new tab based on current tab state
+        val shouldCreateNewTab = shouldCreateNewTabForSearch()
 
         activity.openToBrowserAndLoad(
             searchTermOrURL = url,
-            newTab = false,
+            newTab = shouldCreateNewTab,
             from = BrowserDirection.FromSearchDialog,
             engine = searchEngine
         )
+    }
+    
+    /**
+     * Determines if a new tab should be created for the search.
+     * Creates a new tab ONLY when no tab is selected.
+     * Otherwise, reuses the current tab (including homepage tabs).
+     * 
+     * This ensures:
+     * - Searching from home page navigates that tab (replaces homepage)
+     * - Searching from an existing content tab reuses that tab
+     * - Only creates new tab when there's no tab at all
+     */
+    private fun shouldCreateNewTabForSearch(): Boolean {
+        val tabId = fragmentStore.state.tabId
+        
+        // Only create new tab if no tab is selected
+        // Otherwise, always reuse the current tab (even if it's showing homepage)
+        return tabId == null
     }
 
     override fun handleEditingCancelled() {
@@ -83,10 +104,12 @@ class SearchDialogController(
 
     override fun handleUrlTapped(url: String) {
         clearToolbarFocus()
+        
+        val shouldCreateNewTab = shouldCreateNewTabForSearch()
 
         activity.openToBrowserAndLoad(
             searchTermOrURL = url,
-            newTab = false,
+            newTab = shouldCreateNewTab,
             from = BrowserDirection.FromSearchDialog
         )
     }
@@ -95,10 +118,11 @@ class SearchDialogController(
         clearToolbarFocus()
 
         val searchEngine = fragmentStore.state.searchEngineSource.searchEngine
+        val shouldCreateNewTab = shouldCreateNewTabForSearch()
 
         activity.openToBrowserAndLoad(
             searchTermOrURL = searchTerms,
-            newTab = false,
+            newTab = shouldCreateNewTab,
             from = BrowserDirection.FromSearchDialog,
             engine = searchEngine,
             forceSearch = true

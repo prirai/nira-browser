@@ -167,9 +167,8 @@ class TabGroupWithProfileSwitcher @JvmOverloads constructor(
             updateProfileIcon(currentProfile)
         }
         
-        // Check user preference for profile switcher visibility
-        val prefs = com.prirai.android.nira.preferences.UserPreferences(context)
-        setProfileSwitcherVisible(prefs.showProfileSwitcher)
+        // Profile switcher permanently hidden
+        setProfileSwitcherVisible(false)
     }
     
     fun setProfileSwitcherVisible(visible: Boolean) {
@@ -235,6 +234,10 @@ class TabGroupWithProfileSwitcher @JvmOverloads constructor(
     }
 
     private fun showProfileSwitcherMenu() {
+        // Profile switcher permanently disabled - function not used
+        return
+        
+        /* Commented out unused code
         val profileManager = ProfileManager.getInstance(context)
         val profiles = profileManager.getAllProfiles()
         val currentProfile = profileManager.getActiveProfile()
@@ -294,6 +297,7 @@ class TabGroupWithProfileSwitcher @JvmOverloads constructor(
             .create()
             
         dialog.show()
+        */
     }
     
     private data class ProfileSwitcherItem(

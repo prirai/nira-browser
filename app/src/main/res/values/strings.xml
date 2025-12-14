@@ -49,7 +49,6 @@
   <string name="key_hide_url_bar" translatable="false">hide_url_bar</string>
   <string name="key_show_contextual_toolbar" translatable="false">show_contextual_toolbar</string>
   <string name="key_show_tab_group_bar" translatable="false">show_tab_group_bar</string>
-  <string name="key_show_profile_switcher" translatable="false">show_profile_switcher</string>
     <string name="key_swap_drawers" translatable="false">swap_drawers</string>
   <string
         name="key_stack_from_bottom"
@@ -223,8 +222,6 @@
   <string name="show_contextual_toolbar_desc">Display bottom toolbar with navigation buttons</string>
   <string name="show_tab_group_bar">Show tab group bar</string>
   <string name="show_tab_group_bar_desc">Display tab island bar above address bar</string>
-  <string name="show_profile_switcher">Show profile switcher</string>
-  <string name="show_profile_switcher_desc">Display profile switcher button in tab bar</string>
 
     <string name="search">Search or enter address</string>
   <string name="no_results">No results</string>
@@ -683,8 +680,5 @@
   <string name="web_light_theme_description">Request websites to use light theme</string>
   <string name="web_dark_theme_description">Request websites to use dark theme</string>
   <string name="web_system_theme_description">Follow system theme preference</string>
-  
-  <!-- Profile switcher -->
-  <string name="switch_profile">Switch Profile</string>
 
 </resources>
