@@ -529,28 +529,27 @@ class ComposeHomeFragment : Fragment() {
         val profileManager =
             com.prirai.android.nira.browser.profile.ProfileManager.getInstance(requireContext())
         val allProfiles = profileManager.getAllProfiles()
-        val privateProfile = "🕵️ Private"
+        val currentProfile = profileManager.getActiveProfile()
+        val isPrivate = profileManager.isPrivateMode()
 
         val items = allProfiles.map { "${it.emoji} ${it.name}" }.toMutableList()
-        items.add(privateProfile)
+        items.add("🕵️ Private")
+
+        // Find currently selected index
+        val selectedIndex = if (isPrivate) {
+            items.size - 1
+        } else {
+            allProfiles.indexOfFirst { it.id == currentProfile.id }.takeIf { it >= 0 } ?: 0
+        }
 
         MaterialAlertDialogBuilder(requireContext())
             .setTitle("Switch Profile")
-            .setMessage("Select profile context for new tabs from this page")
-            .setItems(items.toTypedArray()) { _, which ->
+            .setSingleChoiceItems(items.toTypedArray(), selectedIndex) { dialog, which ->
                 if (which == items.size - 1) {
                     // Switch to private mode
                     browsingModeManager.mode = BrowsingMode.Private
                     profileManager.setPrivateMode(true)
                     saveLastMode(isPrivate = true, profileId = null)
-                    
-                    // Update current tab's contextId to private if it's homepage
-                    val store = components.store
-                    val selectedTab = store.state.selectedTab
-                    if (selectedTab?.content?.url == "about:homepage") {
-                        // Just change the mode, don't create new tabs
-                        // New tabs created from search/shortcuts will use private contextId
-                    }
                 } else {
                     val selectedProfile = allProfiles[which]
                     browsingModeManager.mode = BrowsingMode.Normal
@@ -559,9 +558,7 @@ class ComposeHomeFragment : Fragment() {
                     saveLastMode(isPrivate = false, profileId = selectedProfile.id)
                 }
                 
-                // Refresh the UI to show updated profile
-                viewModel.loadShortcuts()
-                viewModel.loadBookmarks()
+                dialog.dismiss()
             }
             .show()
     }

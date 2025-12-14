@@ -289,15 +289,15 @@ class ModernTabPillAdapter(
             val tab = item.session
             currentTabId = tab.id
 
-            // Set title with smart truncation
-            // Show title if available, only show "Loading..." when actively loading a real URL
-            val isRealUrl = !tab.content.url.isNullOrBlank() &&
-                    !tab.content.url.startsWith("about:")
+            // Show title with fallback to URL, and "New Tab" for homepage
             val title = when {
                 !tab.content.title.isNullOrBlank() -> tab.content.title
-                tab.content.loading && isRealUrl -> "Loading..."
-                !tab.content.url.isNullOrBlank() && !tab.content.url.startsWith("about:") -> tab.content.url
-                else -> "New Tab"
+                tab.content.url.startsWith("about:homepage") || tab.content.url.startsWith("about:privatebrowsing") -> "New Tab"
+                !tab.content.url.isNullOrBlank() && !tab.content.url.startsWith("about:") -> {
+                    // Use URL as fallback if no title yet
+                    tab.content.url.take(30)
+                }
+                else -> ""
             }
             titleView.text = title
 
@@ -350,30 +350,29 @@ class ModernTabPillAdapter(
                         localIsDragging = false
                         hasMoved = false
                         isDragging = false // Reset class-level isDragging
-                        
-                        // Post a delayed check to set isDragging=true if touch is still down
-                        // This prevents long-press menu from showing during drag
-                        cardView.postDelayed({
-                            if (!localIsDragging && !hasMoved) {
-                                // Touch is being held without movement
-                                // Don't set isDragging to allow long-press to proceed
-                            }
-                        }, 100)
-                        false
+                        false // Let RecyclerView handle scrolling
                     }
 
                     android.view.MotionEvent.ACTION_MOVE -> {
                         val deltaY = startY - event.rawY
                         val deltaX = Math.abs(event.rawX - startX)
                         
-                        // Mark as moved if finger moved significantly
-                        if (deltaX > 20 || Math.abs(deltaY) > 20) {
+                        // Detect horizontal scrolling and mark as moved
+                        if (deltaX > 5) {
                             hasMoved = true
-                            isDragging = true // Set class-level flag to prevent long-press menu
+                            isDragging = true // Prevent long-press menu
+                            // Don't consume event - let RecyclerView scroll
+                            return@setOnTouchListener false
+                        }
+                        
+                        // Detect any movement for long-press prevention
+                        if (Math.abs(deltaY) > 5) {
+                            hasMoved = true
+                            isDragging = true
                         }
 
-                        // Only start dragging if moving up, not sideways
-                        if (deltaY > 20 && deltaX < 50 && !localIsDragging) {
+                        // Only start vertical dragging if moving up, not sideways
+                        if (deltaY > 20 && deltaX < 30 && !localIsDragging) {
                             localIsDragging = true
                             isDragging = true
                             v.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS)
@@ -1163,18 +1162,13 @@ class ModernTabPillAdapter(
             var startX = 0f
             var isDragging = false
             var hasMoved = false
-            var longPressTimer: android.os.Handler? = null
             var dragClone: View? = null
             var decorView: ViewGroup? = null
+            val handler = android.os.Handler(android.os.Looper.getMainLooper())
+            var longPressRunnable: Runnable? = null
 
-            // Add long-press for context menu
-            tabContent.setOnLongClickListener {
-                if (!isDragging && !hasMoved) {
-                    it.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS)
-                    showTabContextMenu(tabView, tabId, islandId)
-                }
-                true
-            }
+            // Disable default long-click listener - we'll handle it manually
+            tabContent.isLongClickable = false
 
             tabContent.setOnTouchListener { v, event ->
                 when (event.action) {
@@ -1184,21 +1178,41 @@ class ModernTabPillAdapter(
                         isDragging = false
                         hasMoved = false
                         
-                        // Don't start long press timer - we don't want menu on drag
-                        false
+                        // Start manual long-press timer
+                        longPressRunnable = Runnable {
+                            if (!hasMoved && !isDragging) {
+                                // Still no movement after long-press duration
+                                v.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS)
+                                showTabContextMenu(tabView, tabId, islandId)
+                            }
+                        }
+                        handler.postDelayed(longPressRunnable!!, android.view.ViewConfiguration.getLongPressTimeout().toLong())
+                        
+                        false // Let parent handle scrolling
                     }
 
                     android.view.MotionEvent.ACTION_MOVE -> {
                         val deltaY = startY - event.rawY
                         val deltaX = Math.abs(event.rawX - startX)
                         
-                        // Mark as moved if finger moved significantly
-                        if (deltaX > 20 || Math.abs(deltaY) > 20) {
+                        // Detect horizontal scrolling and mark as moved
+                        if (deltaX > 5) {
                             hasMoved = true
+                            isDragging = true // Prevent long-press menu
+                            longPressRunnable?.let { handler.removeCallbacks(it) }
+                            // Don't consume event - let RecyclerView scroll
+                            return@setOnTouchListener false
+                        }
+                        
+                        // Detect any movement for long-press prevention
+                        if (Math.abs(deltaY) > 5) {
+                            hasMoved = true
+                            isDragging = true
+                            longPressRunnable?.let { handler.removeCallbacks(it) }
                         }
 
                         // Check if user is trying to swipe up for delete
-                        if (deltaY > 20 && deltaX < 50 && !isDragging) {
+                        if (deltaY > 20 && deltaX < 30 && !isDragging) {
                             isDragging = true
                             v.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS)
                             
@@ -1247,7 +1261,8 @@ class ModernTabPillAdapter(
                     }
 
                     android.view.MotionEvent.ACTION_UP, android.view.MotionEvent.ACTION_CANCEL -> {
-                        longPressTimer?.removeCallbacksAndMessages(null)
+                        longPressRunnable?.let { handler.removeCallbacks(it) }
+                        longPressRunnable = null
                         
                         if (isDragging) {
                             val deltaY = startY - event.rawY

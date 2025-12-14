@@ -270,15 +270,11 @@ class TabIslandsVerticalAdapter(
             // Hide divider for first tab
             divider.visibility = if (isFirst) View.GONE else View.VISIBLE
 
-            // Set tab title
-            // Show title if available, only show "Loading..." when actively loading a real URL
-            val isRealUrl = tab.content.url.isNotBlank() &&
-                    !tab.content.url.startsWith("about:")
+            // Show title with fallback to URL
             val displayTitle = when {
                 tab.content.title.isNotBlank() -> tab.content.title
-                tab.content.loading && isRealUrl -> "Loading..."
-                tab.content.url.isNotBlank() && !tab.content.url.startsWith("about:") -> URLStringUtils.toDisplayUrl(tab.content.url)
-                else -> "New Tab"
+                tab.content.url.startsWith("about:homepage") || tab.content.url.startsWith("about:privatebrowsing") -> "New Tab"
+                else -> URLStringUtils.toDisplayUrl(tab.content.url).ifBlank { "" }
             }
             tabTitle.text = displayTitle
 
@@ -345,15 +341,11 @@ class TabIslandsVerticalAdapter(
         fun bind(tab: TabSessionState, island: TabIsland?) {
             val isSelected = tab.id == selectedTabId
 
-            // Set tab title
-            // Show title if available, only show "Loading..." when actively loading a real URL
-            val isRealUrl = tab.content.url.isNotBlank() &&
-                    !tab.content.url.startsWith("about:")
+            // Show title with fallback to URL
             val displayTitle = when {
                 tab.content.title.isNotBlank() -> tab.content.title
-                tab.content.loading && isRealUrl -> "Loading..."
-                tab.content.url.isNotBlank() && !tab.content.url.startsWith("about:") -> URLStringUtils.toDisplayUrl(tab.content.url)
-                else -> "New Tab"
+                tab.content.url.startsWith("about:homepage") || tab.content.url.startsWith("about:privatebrowsing") -> "New Tab"
+                else -> URLStringUtils.toDisplayUrl(tab.content.url).ifBlank { "" }
             }
             tabTitle.text = displayTitle
 

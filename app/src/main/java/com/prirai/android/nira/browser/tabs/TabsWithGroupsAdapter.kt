@@ -57,7 +57,30 @@ class GroupTabsAdapter(
             val isSelected = tab.id == selectedId
             cardView.isSelected = isSelected
 
-            val title = tab.content.title.ifBlank { "New Tab" }
+            // Improved title logic
+            val isRealUrl = tab.content.url.isNotEmpty() &&
+                    !tab.content.url.startsWith("about:")
+            
+            val title = when {
+                tab.content.title.isNotBlank() -> tab.content.title
+                isRealUrl -> {
+                    val url = tab.content.url
+                    when {
+                        url.contains("duckduckgo.com/") && url.contains("q=") -> {
+                            java.net.URLDecoder.decode(
+                                url.substringAfter("q=").substringBefore("&"), "UTF-8"
+                            )
+                        }
+                        url.contains("google.com/search") && url.contains("q=") -> {
+                            java.net.URLDecoder.decode(
+                                url.substringAfter("q=").substringBefore("&"), "UTF-8"
+                            )
+                        }
+                        else -> url
+                    }
+                }
+                else -> "New Tab"
+            }
             tabTitle.text = title
             tabUrl.text = tab.content.url
             
@@ -421,7 +444,12 @@ class TabsWithGroupsAdapter(
             val isSelected = tab.id == selectedId
             cardView.isSelected = isSelected
 
-            val title = tab.content.title.ifBlank { "New Tab" }
+            // Show title with fallback to URL
+            val title = when {
+                tab.content.title.isNotBlank() -> tab.content.title
+                tab.content.url.startsWith("about:homepage") || tab.content.url.startsWith("about:privatebrowsing") -> "New Tab"
+                else -> tab.content.url.ifBlank { "" }
+            }
             tabTitle.text = title
             tabUrl.text = tab.content.url
             
