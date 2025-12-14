@@ -304,6 +304,9 @@ class ComposeHomeFragment : Fragment() {
             store = components.store
         )
         
+        // Add swipe gesture support to toolbar for tab switching
+        setupToolbarGestureHandler(coordinatorLayout)
+        
         // For TOP toolbar mode, add bottom components directly to fragment layout
         if (prefs.toolbarPosition == ToolbarPosition.TOP.ordinal) {
             val bottomContainer = unifiedToolbar?.getBottomComponentsContainer()
@@ -558,6 +561,9 @@ class ComposeHomeFragment : Fragment() {
                     saveLastMode(isPrivate = false, profileId = selectedProfile.id)
                 }
                 
+                // Update the UI to reflect profile change
+                updateProfileUI()
+                
                 dialog.dismiss()
             }
             .show()
@@ -570,6 +576,11 @@ class ComposeHomeFragment : Fragment() {
             putString("last_profile_id", profileId)
             apply()
         }
+    }
+    
+    private fun updateProfileUI() {
+        // Compose UI is reactive - profile changes will be reflected automatically
+        // when tabs are created with the new profile context
     }
 
     private fun restoreLastMode() {
@@ -586,6 +597,80 @@ class ComposeHomeFragment : Fragment() {
             val profile = profileManager.getAllProfiles().find { it.id == lastProfileId }
                 ?: com.prirai.android.nira.browser.profile.BrowserProfile.getDefaultProfile()
             profileManager.setActiveProfile(profile)
+        }
+    }
+
+    private fun setupToolbarGestureHandler(coordinatorLayout: CoordinatorLayout) {
+        val toolbar = unifiedToolbar?.getBrowserToolbar() ?: return
+        
+        // Create a fake tab for preview (will not be visible on homepage)
+        val fakeTab = com.prirai.android.nira.browser.FakeTab(requireContext())
+        fakeTab.visibility = View.GONE
+        coordinatorLayout.addView(fakeTab)
+        
+        // Create gesture handler for home page
+        val gestureHandler = com.prirai.android.nira.browser.toolbar.HomeToolbarGestureHandler(
+            activity = requireActivity(),
+            contentLayout = coordinatorLayout,
+            tabPreview = fakeTab,
+            toolbarLayout = toolbar,
+            store = components.store,
+            selectTabUseCase = components.tabsUseCases.selectTab
+        )
+        
+        // Create gesture detector for toolbar
+        val gestureDetector = androidx.core.view.GestureDetectorCompat(
+            requireContext(),
+            object : android.view.GestureDetector.SimpleOnGestureListener() {
+                private var activeListener: com.prirai.android.nira.browser.SwipeGestureListener? = null
+                private var handledInitialScroll = false
+                
+                override fun onDown(e: android.view.MotionEvent): Boolean = true
+                
+                override fun onScroll(
+                    e1: android.view.MotionEvent?,
+                    e2: android.view.MotionEvent,
+                    distanceX: Float,
+                    distanceY: Float
+                ): Boolean {
+                    val start = e1?.let { android.graphics.PointF(it.rawX, it.rawY) } 
+                        ?: return false
+                    val next = android.graphics.PointF(e2.rawX, e2.rawY)
+                    
+                    if (activeListener == null && !handledInitialScroll) {
+                        if (gestureHandler.onSwipeStarted(start, next)) {
+                            activeListener = gestureHandler
+                        }
+                        handledInitialScroll = true
+                    }
+                    activeListener?.onSwipeUpdate(distanceX, distanceY)
+                    return activeListener != null
+                }
+                
+                override fun onFling(
+                    e1: android.view.MotionEvent?,
+                    e2: android.view.MotionEvent,
+                    velocityX: Float,
+                    velocityY: Float
+                ): Boolean {
+                    activeListener?.onSwipeFinished(velocityX, velocityY)
+                    val handled = activeListener != null
+                    activeListener = null
+                    handledInitialScroll = false
+                    return handled
+                }
+            }
+        )
+        
+        // Set touch listener on toolbar
+        toolbar.setOnTouchListener { _, event ->
+            when (event.actionMasked) {
+                android.view.MotionEvent.ACTION_CANCEL,
+                android.view.MotionEvent.ACTION_UP -> {
+                    gestureDetector.onTouchEvent(event)
+                }
+                else -> gestureDetector.onTouchEvent(event)
+            }
         }
     }
 

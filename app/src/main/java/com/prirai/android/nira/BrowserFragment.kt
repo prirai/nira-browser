@@ -117,6 +117,8 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
     }
 
     private fun observeTabChangesForToolbar() {
+        val lruManager = com.prirai.android.nira.browser.tabs.TabLRUManager.getInstance(requireContext())
+        
         // Observe browser state changes to update toolbar in real-time
         viewLifecycleOwner.lifecycleScope.launch {
             requireContext().components.store.flowScoped { flow ->
@@ -139,10 +141,56 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
             }
         }
 
+        // Track tab removals for LRU
+        viewLifecycleOwner.lifecycleScope.launch {
+            var lastTabIds = requireContext().components.store.state.tabs.map { it.id }.toSet()
+            requireContext().components.store.flowScoped(viewLifecycleOwner) { flow ->
+                flow.mapNotNull { state -> 
+                    if (!isAdded) return@mapNotNull null
+                    state.tabs.map { it.id }.toSet() 
+                }.distinctUntilChangedBy { it.hashCode() }
+                .collect { currentTabIds: Set<String> ->
+                    val removedTabIds = lastTabIds - currentTabIds
+                    removedTabIds.forEach { tabId: String ->
+                        lruManager.onTabClosed(tabId)
+                    }
+                    lastTabIds = currentTabIds
+                }
+            }
+        }
+
         // Also observe tab selection changes
         viewLifecycleOwner.lifecycleScope.launch {
             requireContext().components.store.flowScoped { flow ->
                 flow.distinctUntilChangedBy { it.selectedTabId }.collect { state ->
+                    // Track tab selection in LRU manager
+                    state.selectedTabId?.let { tabId ->
+                        lruManager.onTabSelected(tabId)
+                    }
+                    
+                    // Update toolbar profile context based on selected tab
+                    val selectedTab = state.tabs.find { it.id == state.selectedTabId }
+                    selectedTab?.let { tab ->
+                        // Get the profile for this tab
+                        val tabContextId = tab.contextId
+                        val profileManager = com.prirai.android.nira.browser.profile.ProfileManager.getInstance(requireContext())
+                        
+                        // Extract profile ID from contextId (format: "profile_X")
+                        val profileId = tabContextId?.removePrefix("profile_")
+                        
+                        if (profileId != null) {
+                            val allProfiles = profileManager.getAllProfiles()
+                            val profile = allProfiles.find { it.id == profileId }
+                            val currentProfile = profileManager.getActiveProfile()
+                            
+                            if (profile != null && currentProfile.id != profileId) {
+                                // Switch to this profile context in the toolbar
+                                profileManager.setActiveProfile(profile)
+                                unifiedToolbar?.getTabGroupBar()?.updateProfileIcon(profile)
+                            }
+                        }
+                    }
+                    
                     // Navigate to ComposeHomeFragment when about:homepage tab is selected
                     if (isAdded && view != null) {
                         // Toolbar updates handled automatically by UnifiedToolbar
