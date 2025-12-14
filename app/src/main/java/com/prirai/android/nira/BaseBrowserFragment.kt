@@ -133,6 +133,9 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
     private var findInPageComponent: FindInPageComponent? = null
     private val sitePermissionsFeature = ViewBoundFeatureWrapper<SitePermissionsFeature>()
     private val fullScreenFeature = ViewBoundFeatureWrapper<FullScreenFeature>()
+    
+    // Web content position manager for toolbar and keyboard handling
+    private var webContentPositionManager: com.prirai.android.nira.browser.WebContentPositionManager? = null
     private val swipeRefreshFeature = ViewBoundFeatureWrapper<SwipeRefreshFeature>()
     private val webExtensionPromptFeature = ViewBoundFeatureWrapper<WebExtensionPromptFeature>()
     private var fullScreenMediaSessionFeature =
@@ -936,37 +939,23 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
     
     /**
      * Setup edge-to-edge for the fragment.
-     * Ensures proper inset handling for web content while allowing toolbars to handle their own insets.
+     * Ensures proper inset handling for web content including:
+     * - System bars (status bar, navigation bar)
+     * - Toolbars (address bar, tab bar, contextual bar)
+     * - Keyboard (IME)
      */
     private fun setupEdgeToEdgeForFragment() {
-        // Setup insets for the swipeRefresh (web content container)
-        // This ensures web content doesn't render behind system bars
-        ViewCompat.setOnApplyWindowInsetsListener(binding.swipeRefresh) { view, insets ->
-            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            
-            // Apply padding to prevent web content from going behind system bars
-            // Top padding: Always add status bar height
-            // Bottom padding: Add navigation bar height (toolbar is on top of this via CoordinatorLayout)
-            view.setPadding(
-                0,
-                systemBars.top,  // Status bar
-                0,
-                systemBars.bottom  // Navigation bar
-            )
-            
-            // Pass insets through for other views (toolbars) to consume
-            insets
-        }
+        // Initialize web content position manager for comprehensive handling
+        webContentPositionManager = com.prirai.android.nira.browser.WebContentPositionManager(
+            engineView = binding.engineView,
+            rootView = binding.root,
+            unifiedToolbar = _unifiedToolbar
+        )
+        webContentPositionManager?.initialize()
         
         // Make browserLayout pass insets through to children
         ViewCompat.setOnApplyWindowInsetsListener(binding.browserLayout) { _, insets ->
             insets
-        }
-        
-        // CRITICAL: Request insets to be applied immediately
-        // This ensures the listener is triggered even on first load
-        binding.swipeRefresh.post {
-            ViewCompat.requestApplyInsets(binding.swipeRefresh)
         }
     }
 
@@ -986,6 +975,8 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
 
         findInPageComponent?.destroy()
         findInPageComponent = null
+        webContentPositionManager?.destroy()
+        webContentPositionManager = null
         binding.engineView.setActivityContext(null)
         _browserInteractor = null
         _unifiedToolbar = null
