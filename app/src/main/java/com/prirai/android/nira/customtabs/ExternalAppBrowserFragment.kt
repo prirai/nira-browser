@@ -102,27 +102,25 @@ class ExternalAppBrowserFragment : CustomTabBrowserFragment() {
      * This adds extra top padding on top of the status bar padding.
      */
     private fun setupCustomTabContentPadding(view: View) {
+        // Apply bottom padding for nav bar on the engine view
         val engineView = binding.engineView.asView()
-        val headerHeight = resources.getDimensionPixelSize(R.dimen.custom_tab_header_height)
-        
-        // Listen for insets and add header height to the top padding
         androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(engineView) { v, insets ->
             val systemBars = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars())
-            
-            // Apply padding: status bar + header height at top, nav bar at bottom
-            v.setPadding(
-                0,
-                systemBars.top + headerHeight,  // Status bar + custom header
-                0,
-                systemBars.bottom               // Navigation bar
-            )
-            
+            v.setPadding(0, 0, 0, systemBars.bottom)
             insets
         }
         
-        // Force apply insets
-        engineView.post {
-            androidx.core.view.ViewCompat.requestApplyInsets(engineView)
+        // Apply top padding to browserLayout to make space for header
+        val browserWindow = view.findViewById<ViewGroup>(R.id.browserWindow) ?: return
+        val browserLayout = binding.browserLayout
+        
+        browserWindow.post {
+            val headerWrapper = browserWindow.findViewWithTag<View>("customTabHeaderWrapper")
+            if (headerWrapper != null) {
+                // Measure header and apply padding to browserLayout
+                val headerHeight = headerWrapper.height
+                browserLayout.setPadding(0, headerHeight, 0, 0)
+            }
         }
     }
     
@@ -150,39 +148,43 @@ class ExternalAppBrowserFragment : CustomTabBrowserFragment() {
         val headerView = LayoutInflater.from(requireContext())
             .inflate(R.layout.custom_tab_header, null)
         
-        // Find the browser layout container (CoordinatorLayout)
-        val browserLayout = view.findViewById<ViewGroup>(R.id.browserLayout) ?: return
+        // Find the main constraint layout (browserWindow), not browserLayout
+        val browserWindow = view.findViewById<ViewGroup>(R.id.browserWindow) ?: return
         
-        // Set layout params for the header
-        val layoutParams = androidx.coordinatorlayout.widget.CoordinatorLayout.LayoutParams(
+        // Set layout params to overlay at the top with proper z-index
+        val layoutParams = androidx.constraintlayout.widget.ConstraintLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT,
             ViewGroup.LayoutParams.WRAP_CONTENT
         ).apply {
-            gravity = android.view.Gravity.TOP
+            topToTop = androidx.constraintlayout.widget.ConstraintLayout.LayoutParams.PARENT_ID
+            startToStart = androidx.constraintlayout.widget.ConstraintLayout.LayoutParams.PARENT_ID
+            endToEnd = androidx.constraintlayout.widget.ConstraintLayout.LayoutParams.PARENT_ID
         }
         headerView.layoutParams = layoutParams
-        
-        // Add header at the top with proper z-index
         headerView.elevation = 8f
-        val insertIndex = if (browserLayout.childCount > 0) 0 else 0
-        browserLayout.addView(headerView, insertIndex)
+        headerView.tag = "customTabHeaderWrapper"
+        headerView.id = View.generateViewId()  // Generate ID for constraint reference
         
-        // Setup window insets for the header to account for status bar
+        // Add header to the browserWindow (sibling to browserLayout)
+        browserWindow.addView(headerView)
+        
+        // Setup window insets for the header - apply padding to FrameLayout wrapper
         androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(headerView) { v, insets ->
             val systemBars = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars())
             
-            // Apply top padding for status bar
+            // Apply top padding for status bar to the wrapper (FrameLayout)
+            // This expands the wrapper to include status bar space
             v.setPadding(
-                v.paddingLeft,
+                0,
                 systemBars.top,  // Status bar height
-                v.paddingRight,
-                v.paddingBottom
+                0,
+                0
             )
             
             insets
         }
         
-        // Force apply insets immediately
+        // Force apply insets
         headerView.post {
             androidx.core.view.ViewCompat.requestApplyInsets(headerView)
         }
