@@ -1,16 +1,11 @@
 package com.prirai.android.nira.browser.toolbar
 
-import android.animation.Animator
-import android.animation.AnimatorListenerAdapter
 import android.animation.ValueAnimator
 import android.app.Activity
 import android.graphics.PointF
-import android.graphics.Rect
 import android.view.View
 import android.view.ViewConfiguration
 import androidx.core.animation.doOnEnd
-import androidx.core.graphics.contains
-import androidx.core.graphics.toPoint
 import androidx.core.view.isVisible
 import androidx.interpolator.view.animation.LinearOutSlowInInterpolator
 import androidx.navigation.findNavController
@@ -27,14 +22,14 @@ import mozilla.components.browser.state.selector.selectedTab
 import mozilla.components.browser.state.state.TabSessionState
 import mozilla.components.browser.state.store.BrowserStore
 import mozilla.components.feature.tabs.TabsUseCases
-import mozilla.components.support.ktx.android.view.getRectWithViewLocation
+import androidx.core.graphics.contains
+import androidx.core.graphics.toPoint
 import com.prirai.android.nira.components.toolbar.ToolbarPosition
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
 
-@Suppress("LargeClass", "TooManyFunctions")
-class ToolbarGestureHandler(
+class HomeToolbarGestureHandler(
     private val activity: Activity,
     private val contentLayout: View,
     private val tabPreview: FakeTab,
@@ -115,8 +110,6 @@ class ToolbarGestureHandler(
                 }
             }
             is Destination.None -> {
-                // If there is no "next" tab to swipe to in the gesture direction, only do a
-                // partial animation to show that we are at the end of the tab list
                 val maxContentHidden = contentLayout.width * OVERSCROLL_HIDE_PERCENT
                 contentLayout.translationX = when (gestureDirection) {
                     GestureDirection.RIGHT_TO_LEFT -> max(
@@ -132,10 +125,7 @@ class ToolbarGestureHandler(
         }
     }
 
-    override fun onSwipeFinished(
-        velocityX: Float,
-        velocityY: Float
-    ) {
+    override fun onSwipeFinished(velocityX: Float, velocityY: Float) {
         val destination = getDestination()
         if (destination is Destination.Tab && isGestureComplete(velocityX)) {
             animateToNextTab(destination.tab)
@@ -146,28 +136,14 @@ class ToolbarGestureHandler(
 
     private fun getDestination(): Destination {
         val isLtr = activity.resources.configuration.layoutDirection == View.LAYOUT_DIRECTION_LTR
-        val currentTab = store.state.selectedTab ?: return Destination.None
+        val currentTab = store.state.selectedTab
+        val isPrivateMode = currentTab?.content?.private ?: false
         
-        // Right swipe = go back to newer tab (offset -1)
-        // Left swipe = go forward to older tab (offset +1)
-        val nextTabId = when (gestureDirection) {
-            GestureDirection.RIGHT_TO_LEFT -> if (isLtr) {
-                // Swiping left in LTR = go forward to older tab
-                lruManager.getTabAtLRUOffset(currentTab.id, -1)
-            } else {
-                lruManager.getTabAtLRUOffset(currentTab.id, 1)
-            }
-            GestureDirection.LEFT_TO_RIGHT -> if (isLtr) {
-                // Swiping right in LTR = go back to newer tab
-                lruManager.getTabAtLRUOffset(currentTab.id, 1)
-            } else {
-                lruManager.getTabAtLRUOffset(currentTab.id, -1)
-            }
-        }
+        val nextTabId = lruManager.getMostRecentTab()
         
         if (nextTabId == null) return Destination.None
         
-        val tabs = store.state.getNormalOrPrivateTabs(currentTab.content.private)
+        val tabs = store.state.getNormalOrPrivateTabs(isPrivateMode)
         val nextTab = tabs.find { it.id == nextTabId }
         
         return if (nextTab != null) {
@@ -193,15 +169,19 @@ class ToolbarGestureHandler(
     }
 
     private fun isGestureComplete(velocityX: Float): Boolean {
-        val previewWidth = tabPreview.getRectWithViewLocation().visibleWidth.toDouble()
         val velocityMatchesDirection = when (gestureDirection) {
             GestureDirection.RIGHT_TO_LEFT -> velocityX <= 0
             GestureDirection.LEFT_TO_RIGHT -> velocityX >= 0
         }
-        val reverseFling =
-            abs(velocityX) >= minimumFlingVelocity && !velocityMatchesDirection
+        val reverseFling = abs(velocityX) >= minimumFlingVelocity && !velocityMatchesDirection
 
-        return !reverseFling && (previewWidth / windowWidth >= GESTURE_FINISH_PERCENT ||
+        val visibleWidth = if (tabPreview.translationX < 0) {
+            windowWidth + tabPreview.translationX
+        } else {
+            windowWidth - tabPreview.translationX
+        }
+
+        return !reverseFling && (visibleWidth / windowWidth >= GESTURE_FINISH_PERCENT ||
             abs(velocityX) >= minimumFlingVelocity)
     }
 
@@ -230,14 +210,10 @@ class ToolbarGestureHandler(
             doOnEnd {
                 contentLayout.translationX = 0f
 
-                val currentTab = store.state.selectedTab ?: return@doOnEnd
-                if(currentTab.content.url == "about:homepage" && tab.content.url != "about:homepage") {
+                if(tab.content.url != "about:homepage") {
                     activity.findNavController(R.id.container).navigate(R.id.browserFragment)
-                } else if(tab.content.url == "about:homepage" && currentTab.content.url != "about:homepage") {
-                    activity.findNavController(R.id.container).navigate(R.id.homeFragment)
                 }
 
-                // Mark this as swipe navigation before selecting
                 lruManager.markAsSwipeNavigation(tab.id)
                 selectTabUseCase(tab.id)
 
@@ -246,11 +222,9 @@ class ToolbarGestureHandler(
                 tabPreview.animate()
                     .alpha(0f)
                     .setDuration(shortAnimationDuration.toLong())
-                    .setListener(object : AnimatorListenerAdapter() {
-                        override fun onAnimationEnd(animation: Animator) {
-                            tabPreview.isVisible = false
-                        }
-                    })
+                    .withEndAction {
+                        tabPreview.isVisible = false
+                    }
             }
         }.start()
     }
@@ -271,8 +245,6 @@ class ToolbarGestureHandler(
 
     private fun PointF.isInToolbar(): Boolean {
         val toolbarLocation = toolbarLayout.getRectWithScreenLocation()
-        // In Android 10, the system gesture touch area overlaps the bottom of the toolbar, so
-        // lets make our swipe area taller by that amount
         activity.window.decorView.getWindowInsets()?.let { insets ->
             if (UserPreferences(activity).toolbarPosition == ToolbarPosition.BOTTOM.ordinal) {
                 toolbarLocation.top -= (insets.mandatorySystemGestureInsets.bottom - insets.stableInsetBottom)
@@ -281,39 +253,11 @@ class ToolbarGestureHandler(
         return toolbarLocation.contains(toPoint())
     }
 
-    private val Rect.visibleWidth: Int
-        get() = if (left < 0) {
-            right
-        } else {
-            windowWidth - left
-        }
-
     companion object {
-        /**
-         * The percentage of the tab preview that needs to be visible to consider the
-         * tab switching gesture complete.
-         */
         private const val GESTURE_FINISH_PERCENT = 0.25
-
-        /**
-         * The percentage of the content view that can be hidden by the tab switching gesture if
-         * there is not tab available to switch to
-         */
         private const val OVERSCROLL_HIDE_PERCENT = 0.20
-
-        /**
-         * Animation duration when switching to another tab
-         */
         private const val FINISHED_GESTURE_ANIMATION_DURATION = 250L
-
-        /**
-         * Animation duration gesture is canceled due to the swipe not being far enough
-         */
         private const val CANCELED_GESTURE_ANIMATION_DURATION = 200L
-
-        /**
-         * Animation duration gesture is canceled due to a swipe in the opposite direction
-         */
         private const val CANCELED_FLING_ANIMATION_DURATION = 150L
     }
 }
