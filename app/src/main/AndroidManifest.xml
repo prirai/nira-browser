@@ -45,6 +45,7 @@
         android:launchMode="singleTask"
         android:resizeableActivity="true"
         android:supportsPictureInPicture="true"
+        android:windowSoftInputMode="adjustResize"
         android:configChanges="keyboard|keyboardHidden|mcc|mnc|orientation|screenSize|locale|layoutDirection|smallestScreenSize|screenLayout"
         android:exported="true">
       <intent-filter>

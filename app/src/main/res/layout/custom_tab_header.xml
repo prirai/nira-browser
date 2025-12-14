@@ -1,12 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="?android:attr/colorBackground">
+
+<LinearLayout
     android:id="@+id/customTabHeader"
     android:layout_width="match_parent"
     android:layout_height="56dp"
     android:orientation="horizontal"
     android:background="?android:attr/colorBackground"
-    android:elevation="4dp"
     android:paddingStart="8dp"
     android:paddingEnd="8dp"
     android:gravity="center_vertical">
@@ -69,3 +73,4 @@
         android:padding="12dp" />
 
 </LinearLayout>
+</FrameLayout>
