@@ -16,17 +16,11 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
 
-    <com.google.android.material.tabs.TabLayout
-        android:id="@+id/tabLayout"
+    <com.prirai.android.nira.onboarding.PageIndicatorView
+        android:id="@+id/pageIndicator"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="16dp"
-        app:tabBackground="@drawable/tab_indicator_selector"
-        app:tabIndicatorHeight="0dp"
-        app:tabGravity="center"
-        app:tabPaddingStart="4dp"
-        app:tabPaddingEnd="4dp"
-        app:tabMinWidth="12dp"
+        android:layout_marginBottom="24dp"
         app:layout_constraintBottom_toTopOf="@+id/buttonLayout"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />

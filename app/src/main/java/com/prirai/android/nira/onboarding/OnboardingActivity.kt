@@ -5,8 +5,6 @@ import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import androidx.viewpager2.widget.ViewPager2
 import com.google.android.material.button.MaterialButton
-import com.google.android.material.tabs.TabLayout
-import com.google.android.material.tabs.TabLayoutMediator
 import com.prirai.android.nira.BrowserActivity
 import com.prirai.android.nira.R
 import com.prirai.android.nira.preferences.UserPreferences
@@ -14,7 +12,7 @@ import com.prirai.android.nira.preferences.UserPreferences
 class OnboardingActivity : AppCompatActivity() {
 
     private lateinit var viewPager: ViewPager2
-    private lateinit var tabLayout: TabLayout
+    private lateinit var pageIndicator: PageIndicatorView
     private lateinit var skipButton: MaterialButton
     private lateinit var nextButton: MaterialButton
     private lateinit var finishButton: MaterialButton
@@ -29,7 +27,7 @@ class OnboardingActivity : AppCompatActivity() {
         userPreferences = UserPreferences(this)
         
         viewPager = findViewById(R.id.viewPager)
-        tabLayout = findViewById(R.id.tabLayout)
+        pageIndicator = findViewById(R.id.pageIndicator)
         skipButton = findViewById(R.id.skipButton)
         nextButton = findViewById(R.id.nextButton)
         finishButton = findViewById(R.id.finishButton)
@@ -37,11 +35,13 @@ class OnboardingActivity : AppCompatActivity() {
         adapter = OnboardingPagerAdapter(this)
         viewPager.adapter = adapter
         
-        TabLayoutMediator(tabLayout, viewPager) { _, _ -> }.attach()
+        pageIndicator.setPageCount(adapter.itemCount)
+        pageIndicator.setCurrentPage(0)
         
         viewPager.registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
             override fun onPageSelected(position: Int) {
                 super.onPageSelected(position)
+                pageIndicator.setCurrentPage(position)
                 updateButtons(position)
             }
         })
