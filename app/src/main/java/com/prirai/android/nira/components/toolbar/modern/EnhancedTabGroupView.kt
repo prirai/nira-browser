@@ -621,41 +621,98 @@ class EnhancedTabGroupView @JvmOverloads constructor(
     private fun scrollToSelectedTab(selectedId: String, animate: Boolean = true) {
         post {
             val displayItems = islandManager.createDisplayItems(currentTabs)
-            val position = displayItems.indexOfFirst { item ->
-                when (item) {
-                    is TabPillItem.Tab -> item.session.id == selectedId
-                    is TabPillItem.ExpandedIslandGroup -> item.tabs.any { it.id == selectedId }
-                    else -> false
+            var position = -1
+            var isInGroup = false
+            var tabIndexInGroup = -1
+            
+            // Find the position - could be a standalone tab or inside a group
+            for (i in displayItems.indices) {
+                when (val item = displayItems[i]) {
+                    is TabPillItem.Tab -> {
+                        if (item.session.id == selectedId) {
+                            position = i
+                            break
+                        }
+                    }
+                    is TabPillItem.ExpandedIslandGroup -> {
+                        val tabIndex = item.tabs.indexOfFirst { it.id == selectedId }
+                        if (tabIndex >= 0) {
+                            position = i
+                            isInGroup = true
+                            tabIndexInGroup = tabIndex
+                            break
+                        }
+                    }
+                    else -> {}
                 }
             }
 
             if (position >= 0) {
                 val layoutMgr = layoutManager as? LinearLayoutManager ?: return@post
-                
-                // Calculate offset to center the item
                 val viewWidth = width
-                val itemView = layoutMgr.findViewByPosition(position)
-                val itemWidth = itemView?.width ?: (viewWidth / 3) // Estimate if not laid out
                 
-                // Center position with intelligent gap handling
+                // Get the group container view if tab is in a group
+                val containerView = layoutMgr.findViewByPosition(position)
+                
+                if (isInGroup && containerView != null) {
+                    // Tab is inside an expanded group - need to find the specific tab view
+                    // The group container has a LinearLayout with tab pills
+                    val tabsContainer = containerView.findViewById<android.view.ViewGroup>(
+                        com.prirai.android.nira.R.id.islandTabsContainer
+                    )
+                    
+                    if (tabsContainer != null && tabIndexInGroup < tabsContainer.childCount) {
+                        // Get the specific tab view within the group
+                        val tabView = tabsContainer.getChildAt(tabIndexInGroup)
+                        
+                        if (tabView != null) {
+                            // Calculate the offset to center the specific tab
+                            val tabViewLocation = IntArray(2)
+                            tabView.getLocationInWindow(tabViewLocation)
+                            
+                            val containerLocation = IntArray(2)
+                            containerView.getLocationInWindow(containerLocation)
+                            
+                            // Offset of the tab within the container
+                            val tabOffsetInContainer = tabViewLocation[0] - containerLocation[0]
+                            val tabWidth = tabView.width
+                            
+                            // Calculate centering offset
+                            val centerOffset = (viewWidth - tabWidth) / 2
+                            val totalOffset = centerOffset - tabOffsetInContainer
+                            
+                            if (animate) {
+                                smoothScrollToPosition(position)
+                                postDelayed({
+                                    layoutMgr.scrollToPositionWithOffset(position, totalOffset)
+                                }, 300)
+                            } else {
+                                layoutMgr.scrollToPositionWithOffset(position, totalOffset)
+                            }
+                            return@post
+                        }
+                    }
+                }
+                
+                // Fallback: Regular tab or group container (if we couldn't find the specific tab)
+                val itemView = containerView
+                val itemWidth = itemView?.width ?: (viewWidth / 3)
+                
                 val centerOffset = (viewWidth - itemWidth) / 2
-                
-                // Adjust for first/last items to keep natural gaps
                 val isFirstItem = position == 0
                 val isLastItem = position == displayItems.size - 1
                 
                 val offset = when {
-                    isFirstItem -> 0 // Keep left gap for first item
-                    isLastItem -> viewWidth - itemWidth // Keep right gap for last item
-                    else -> centerOffset // Center all other items
+                    isFirstItem -> 0
+                    isLastItem -> viewWidth - itemWidth
+                    else -> centerOffset
                 }
                 
                 if (animate) {
                     smoothScrollToPosition(position)
-                    // After smooth scroll completes, adjust centering
                     postDelayed({
                         layoutMgr.scrollToPositionWithOffset(position, offset)
-                    }, 300) // Wait for smooth scroll animation
+                    }, 300)
                 } else {
                     layoutMgr.scrollToPositionWithOffset(position, offset)
                 }
