@@ -156,7 +156,7 @@
     <string name="trust_third_party_certs">Üçüncü taraf CA sertifikalarına güven</string>
     <string name="custom_search_engine">Özel arama motoru</string>
     <string name="custom_search_engine_details">Sorgu yerine \'{searchTerms}\' ile URL girin</string>
-    <string name="custom_search_engine_error">Arama URL'si \'{searchTerms}\' içermiyor</string>
+    <string name="custom_search_engine_error">Arama URL\'si \'{searchTerms}\' içermiyor</string>
     <string name="clear">Temizle</string>
     <string name="name">Ad</string>
     <string name="none">Hiçbiri</string>
@@ -174,7 +174,7 @@
     <string name="menu">Menü</string>
     <string name="tabs_count_description">%d sekme açık</string>
     <string name="sort_by_name">Ada göre sırala</string>
-    <string name="sort_by_url">URL'ye göre sırala</string>
+    <string name="sort_by_url">URL\'ye göre sırala</string>
     <string name="sort_by_date_added">Eklenme Tarihine göre sırala</string>
     <string name="no_bookmarks">Yer işareti yok</string>
     <string name="no_bookmarks_description">Yer işleriniz burada görünecek</string>
@@ -198,13 +198,13 @@
     <string name="tab_description">Sekme: %1$s, %2$s %3$s</string>
     <string name="close_tab_button">%1$s kapat</string>
     <string name="ungrouped_tabs_header_description">Gruplandırılmamış sekmeler bölümü</string>
-    <string name="browser_menu_open_in_nira">Nira Tarayıcı'da aç</string>
+    <string name="browser_menu_open_in_nira">Nira Tarayıcı\'da aç</string>
     <string name="browser_menu_find_in_page">Sayfada bul</string>
     <string name="powered_by_nira">Nira tarafından desteklenmektedir</string>
     <string name="skip">Atla</string>
     <string name="next">İleri</string>
     <string name="get_started">Başla</string>
-    <string name="welcome_to_nira">Nira Tarayıcı'ya hoş geldiniz</string>
+    <string name="welcome_to_nira">Nira Tarayıcı\'ya hoş geldiniz</string>
     <string name="welcome_subtitle">Size özel tasarlanmış hızlı, gizli ve özelleştirilebilir bir tarayıcı</string>
     <string name="privacy">Gizlilik</string>
     <string name="privacy_first">Gizlilik Önceliği</string>
