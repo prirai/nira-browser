@@ -148,17 +148,17 @@ class ToolbarGestureHandler(
         val isLtr = activity.resources.configuration.layoutDirection == View.LAYOUT_DIRECTION_LTR
         val currentTab = store.state.selectedTab ?: return Destination.None
         
-        // Right swipe = go back to newer tab (offset -1)
-        // Left swipe = go forward to older tab (offset +1)
+        // Left swipe = go to newer tabs (smaller LRU offset: -1)
+        // Right swipe = go to older tabs (larger LRU offset: +1)
         val nextTabId = when (gestureDirection) {
             GestureDirection.RIGHT_TO_LEFT -> if (isLtr) {
-                // Swiping left in LTR = go forward to older tab
+                // Swiping left in LTR = go to newer tab
                 lruManager.getTabAtLRUOffset(currentTab.id, -1)
             } else {
                 lruManager.getTabAtLRUOffset(currentTab.id, 1)
             }
             GestureDirection.LEFT_TO_RIGHT -> if (isLtr) {
-                // Swiping right in LTR = go back to newer tab
+                // Swiping right in LTR = go to older tab
                 lruManager.getTabAtLRUOffset(currentTab.id, 1)
             } else {
                 lruManager.getTabAtLRUOffset(currentTab.id, -1)
