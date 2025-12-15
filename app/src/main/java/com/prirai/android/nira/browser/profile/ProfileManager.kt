@@ -7,6 +7,7 @@ import com.squareup.moshi.Moshi
 import com.squareup.moshi.Types
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import androidx.core.content.edit
+import com.prirai.android.nira.ext.components
 
 /**
  * Manages browser profiles - creation, deletion, and persistence
@@ -162,5 +163,73 @@ class ProfileManager(private val context: Context) {
      */
     fun getProfileStorageDir(profileId: String): String {
         return context.getDir("profile_$profileId", Context.MODE_PRIVATE).absolutePath
+    }
+    
+    /**
+     * Migrate a tab to another profile by updating its contextId
+     * @param tabId The ID of the tab to migrate
+     * @param targetProfileId The ID of the target profile ("private" for private mode)
+     * @return true if migration was successful
+     */
+    fun migrateTabToProfile(tabId: String, targetProfileId: String): Boolean {
+        val store = context.components.store
+        val tab = store.state.tabs.find { it.id == tabId } ?: return false
+        
+        // Don't migrate if already in the target profile
+        val currentContextId = tab.contextId
+        val targetContextId = if (targetProfileId == "private") "private" else "profile_$targetProfileId"
+        if (currentContextId == targetContextId) return false
+        
+        // Check if migrating between private and normal
+        val isCurrentlyPrivate = tab.content.private
+        val isTargetPrivate = targetProfileId == "private"
+        
+        // Always recreate the tab with the new context and privacy mode
+        val url = tab.content.url
+        val title = tab.content.title
+        val isSelected = store.state.selectedTabId == tabId
+        
+        // Remove old tab
+        context.components.tabsUseCases.removeTab(tabId)
+        
+        // Create new tab with correct context
+        context.components.tabsUseCases.addTab(
+            url = url,
+            private = isTargetPrivate,
+            contextId = targetContextId,
+            selectTab = isSelected,
+            title = title
+        )
+        
+        return true
+    }
+    
+    /**
+     * Migrate multiple tabs to another profile
+     * @param tabIds List of tab IDs to migrate
+     * @param targetProfileId The ID of the target profile ("private" for private mode)
+     * @return Number of tabs successfully migrated
+     */
+    fun migrateTabsToProfile(tabIds: List<String>, targetProfileId: String): Int {
+        var successCount = 0
+        tabIds.forEach { tabId ->
+            if (migrateTabToProfile(tabId, targetProfileId)) {
+                successCount++
+            }
+        }
+        return successCount
+    }
+    
+    /**
+     * Migrate a tab group to another profile
+     * This migrates all tabs in the group to the target profile
+     * @param groupId The ID of the group to migrate
+     * @param targetProfileId The ID of the target profile ("private" for private mode)
+     * @return Number of tabs successfully migrated
+     */
+    suspend fun migrateGroupToProfile(groupId: String, targetProfileId: String): Int {
+        val tabGroupManager = context.components.tabGroupManager
+        val groupData = tabGroupManager.groupsState.value.find { it.id == groupId } ?: return 0
+        return migrateTabsToProfile(groupData.tabIds, targetProfileId)
     }
 }
