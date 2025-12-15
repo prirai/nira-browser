@@ -165,8 +165,8 @@ class TabsBottomSheetFragment : DialogFragment() {
                 showGroupOptionsMenu(groupId, view)
             },
             onTabLongPress = { tabId, view ->
-                // No menu for ungrouped tabs
-                false
+                showUngroupedTabOptionsMenu(tabId, view)
+                true
             },
             onGroupTabLongPress = { tabId, groupId, view ->
                 showGroupTabOptionsMenu(tabId, groupId, view)
@@ -381,9 +381,27 @@ class TabsBottomSheetFragment : DialogFragment() {
         return com.prirai.android.nira.theme.ColorConstants.TabGroups.parseColor(colorString)
     }
 
+    private fun showUngroupedTabOptionsMenu(tabId: String, view: View) {
+        val popup = androidx.appcompat.widget.PopupMenu(requireContext(), view)
+        popup.menu.add(0, 1, 0, "Move to Profile")
+        
+        popup.setOnMenuItemClickListener { item ->
+            when (item.itemId) {
+                1 -> {
+                    showMoveToProfileDialog(listOf(tabId))
+                    true
+                }
+                else -> false
+            }
+        }
+        
+        popup.show()
+    }
+
     private fun showGroupTabOptionsMenu(tabId: String, groupId: String, view: View) {
         val popup = androidx.appcompat.widget.PopupMenu(requireContext(), view)
         popup.menu.add(0, 1, 0, "Remove from group")
+        popup.menu.add(0, 2, 1, "Move to Profile")
         
         popup.setOnMenuItemClickListener { item ->
             when (item.itemId) {
@@ -391,6 +409,10 @@ class TabsBottomSheetFragment : DialogFragment() {
                     lifecycleScope.launch {
                         unifiedGroupManager.removeTabFromGroup(tabId)
                     }
+                    true
+                }
+                2 -> {
+                    showMoveToProfileDialog(listOf(tabId))
                     true
                 }
                 else -> false
@@ -406,8 +428,9 @@ class TabsBottomSheetFragment : DialogFragment() {
         // Add menu items to match tab bar options
         popup.menu.add(0, 1, 0, "Rename Island")
         popup.menu.add(0, 2, 1, "Change Color")
-        popup.menu.add(0, 3, 2, "Ungroup All Tabs")
-        popup.menu.add(0, 4, 3, "Close All Tabs")
+        popup.menu.add(0, 3, 2, "Move Group to Profile")
+        popup.menu.add(0, 4, 3, "Ungroup All Tabs")
+        popup.menu.add(0, 5, 4, "Close All Tabs")
         
         popup.setOnMenuItemClickListener { item ->
             when (item.itemId) {
@@ -419,14 +442,23 @@ class TabsBottomSheetFragment : DialogFragment() {
                     showChangeGroupColorDialog(groupId)
                     true
                 }
-                3 -> { // Ungroup All Tabs
+                3 -> { // Move Group to Profile
+                    lifecycleScope.launch {
+                        val group = unifiedGroupManager.getGroup(groupId)
+                        group?.tabIds?.let { tabIds ->
+                            showMoveToProfileDialog(tabIds, isGroup = true)
+                        }
+                    }
+                    true
+                }
+                4 -> { // Ungroup All Tabs
                     lifecycleScope.launch {
                         unifiedGroupManager.deleteGroup(groupId)
                         updateTabsDisplay()
                     }
                     true
                 }
-                4 -> { // Close All Tabs
+                5 -> { // Close All Tabs
                     lifecycleScope.launch {
                         val group = unifiedGroupManager.getGroup(groupId)
                         group?.tabIds?.forEach { tabId ->
@@ -442,6 +474,40 @@ class TabsBottomSheetFragment : DialogFragment() {
         }
         
         popup.show()
+    }
+    
+    private fun showMoveToProfileDialog(tabIds: List<String>, isGroup: Boolean = false) {
+        val profileManager = com.prirai.android.nira.browser.profile.ProfileManager.getInstance(requireContext())
+        val profiles = profileManager.getAllProfiles()
+        
+        val items = profiles.map { "${it.emoji} ${it.name}" }.toMutableList()
+        items.add("🕵️ Private")
+        
+        val tabWord = if (isGroup) "group" else if (tabIds.size > 1) "tabs" else "tab"
+        
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle("Move $tabWord to Profile")
+            .setItems(items.toTypedArray()) { _, which ->
+                val targetProfileId = if (which == items.size - 1) {
+                    "private"
+                } else {
+                    profiles[which].id
+                }
+                
+                // Migrate tabs
+                val migratedCount = profileManager.migrateTabsToProfile(tabIds, targetProfileId)
+                
+                // Show confirmation
+                android.widget.Toast.makeText(
+                    requireContext(),
+                    "Moved $migratedCount $tabWord to ${items[which]}",
+                    android.widget.Toast.LENGTH_SHORT
+                ).show()
+                
+                updateTabsDisplay()
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
     }
 
     private fun showRenameGroupDialog(groupId: String) {

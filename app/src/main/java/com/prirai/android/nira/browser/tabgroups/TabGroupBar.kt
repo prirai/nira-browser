@@ -157,31 +157,8 @@ class TabGroupBar @JvmOverloads constructor(
                 }
             })
 
-            // Intercept touch events to prevent clicks during scroll
-            addOnItemTouchListener(object : RecyclerView.SimpleOnItemTouchListener() {
-                private var startX = 0f
-                private var startY = 0f
-
-                override fun onInterceptTouchEvent(rv: RecyclerView, e: MotionEvent): Boolean {
-                    when (e.action) {
-                        MotionEvent.ACTION_DOWN -> {
-                            startX = e.x
-                            startY = e.y
-                        }
-
-                        MotionEvent.ACTION_MOVE -> {
-                            val deltaX = kotlin.math.abs(e.x - startX)
-                            val deltaY = kotlin.math.abs(e.y - startY)
-
-                            // If horizontal movement is detected, we're scrolling
-                            if (deltaX > 10 && deltaX > deltaY) {
-                                isScrolling = true
-                            }
-                        }
-                    }
-                    return false // Don't actually intercept, just monitor
-                }
-            })
+            // Remove the touch interceptor - let child views handle their own gestures
+            // This allows vertical swipe gestures on pills to work properly
         }
     }
 

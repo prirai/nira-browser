@@ -906,6 +906,7 @@ class EnhancedTabGroupView @JvmOverloads constructor(
                 arrayOf(
                     "Rename Island",
                     "Change Color",
+                    "Move Group to Profile",
                     "Ungroup All Tabs",
                     "Close All Tabs"
                 )
@@ -913,8 +914,9 @@ class EnhancedTabGroupView @JvmOverloads constructor(
                 when (which) {
                     0 -> showRenameIslandDialog(islandId)
                     1 -> showChangeColorDialog(islandId)
-                    2 -> ungroupIsland(islandId)
-                    3 -> closeAllTabsInIsland(islandId)
+                    2 -> showMoveGroupToProfileDialog(islandId)
+                    3 -> ungroupIsland(islandId)
+                    4 -> closeAllTabsInIsland(islandId)
                 }
             }
             .create()
@@ -1036,6 +1038,39 @@ class EnhancedTabGroupView @JvmOverloads constructor(
         // Clean up island
         islandManager.deleteIsland(islandId)
         refreshDisplay()
+    }
+    
+    private fun showMoveGroupToProfileDialog(islandId: String) {
+        val island = islandManager.getIsland(islandId) ?: return
+        val profileManager = com.prirai.android.nira.browser.profile.ProfileManager.getInstance(context)
+        val profiles = profileManager.getAllProfiles()
+        
+        val items = profiles.map { "${it.emoji} ${it.name}" }.toMutableList()
+        items.add("🕵️ Private")
+        
+        com.google.android.material.dialog.MaterialAlertDialogBuilder(context)
+            .setTitle("Move group to Profile")
+            .setItems(items.toTypedArray()) { _, which ->
+                val targetProfileId = if (which == items.size - 1) {
+                    "private"
+                } else {
+                    profiles[which].id
+                }
+                
+                // Migrate all tabs in the group
+                val migratedCount = profileManager.migrateTabsToProfile(island.tabIds, targetProfileId)
+                
+                // Show confirmation
+                android.widget.Toast.makeText(
+                    context,
+                    "Moved $migratedCount tabs to ${items[which]}",
+                    android.widget.Toast.LENGTH_SHORT
+                ).show()
+                
+                refreshDisplay()
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
     }
 
 

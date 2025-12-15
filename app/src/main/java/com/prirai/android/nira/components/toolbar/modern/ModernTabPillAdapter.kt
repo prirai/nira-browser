@@ -487,8 +487,11 @@ class ModernTabPillAdapter(
             // Add menu items for standalone tabs with icons
             val duplicateItem = popupMenu.menu.add(0, 1, 0, "Duplicate Tab")
             duplicateItem.setIcon(android.R.drawable.ic_menu_add)
+            
+            val moveToProfileItem = popupMenu.menu.add(0, 2, 1, "Move to Profile")
+            moveToProfileItem.setIcon(android.R.drawable.ic_menu_manage)
 
-            val closeItem = popupMenu.menu.add(0, 2, 1, "Close Tab")
+            val closeItem = popupMenu.menu.add(0, 3, 2, "Close Tab")
             closeItem.setIcon(android.R.drawable.ic_menu_close_clear_cancel)
 
             // Force icons to show
@@ -511,6 +514,12 @@ class ModernTabPillAdapter(
                         true
                     }
                     2 -> {
+                        // Move to Profile
+                        itemView.performHapticFeedback(android.view.HapticFeedbackConstants.VIRTUAL_KEY)
+                        showMoveToProfileDialog(listOf(tabId))
+                        true
+                    }
+                    3 -> {
                         // Close tab with animation
                         itemView.performHapticFeedback(android.view.HapticFeedbackConstants.VIRTUAL_KEY)
                         animateStandaloneTabDelete()
@@ -523,6 +532,36 @@ class ModernTabPillAdapter(
             // Show menu above the anchor view
             popupMenu.gravity = android.view.Gravity.TOP
             popupMenu.show()
+        }
+        
+        private fun showMoveToProfileDialog(tabIds: List<String>) {
+            val profileManager = com.prirai.android.nira.browser.profile.ProfileManager.getInstance(itemView.context)
+            val profiles = profileManager.getAllProfiles()
+            
+            val items = profiles.map { "${it.emoji} ${it.name}" }.toMutableList()
+            items.add("🕵️ Private")
+            
+            com.google.android.material.dialog.MaterialAlertDialogBuilder(itemView.context)
+                .setTitle("Move tab to Profile")
+                .setItems(items.toTypedArray()) { _, which ->
+                    val targetProfileId = if (which == items.size - 1) {
+                        "private"
+                    } else {
+                        profiles[which].id
+                    }
+                    
+                    // Migrate tabs
+                    val migratedCount = profileManager.migrateTabsToProfile(tabIds, targetProfileId)
+                    
+                    // Show confirmation
+                    android.widget.Toast.makeText(
+                        itemView.context,
+                        "Moved $migratedCount tab to ${items[which]}",
+                        android.widget.Toast.LENGTH_SHORT
+                    ).show()
+                }
+                .setNegativeButton("Cancel", null)
+                .show()
         }
 
         private fun createTabClone(): View {
@@ -1195,24 +1234,25 @@ class ModernTabPillAdapter(
                         val deltaY = startY - event.rawY
                         val deltaX = Math.abs(event.rawX - startX)
                         
-                        // Detect horizontal scrolling and mark as moved
-                        if (deltaX > 5) {
-                            hasMoved = true
-                            isDragging = true // Prevent long-press menu
+                        // Cancel long-press if any movement
+                        if (deltaX > 10 || Math.abs(deltaY) > 10) {
                             longPressRunnable?.let { handler.removeCallbacks(it) }
+                        }
+                        
+                        // Detect horizontal scrolling
+                        if (deltaX > 20 && deltaX > Math.abs(deltaY)) {
+                            hasMoved = true
                             // Don't consume event - let RecyclerView scroll
                             return@setOnTouchListener false
                         }
                         
-                        // Detect any movement for long-press prevention
+                        // Detect vertical movement for swipe
                         if (Math.abs(deltaY) > 5) {
                             hasMoved = true
-                            isDragging = true
-                            longPressRunnable?.let { handler.removeCallbacks(it) }
                         }
 
                         // Check if user is trying to swipe up for delete
-                        if (deltaY > 20 && deltaX < 30 && !isDragging) {
+                        if (deltaY > 30 && deltaX < 20 && !isDragging) {
                             isDragging = true
                             v.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS)
                             
@@ -1328,7 +1368,10 @@ class ModernTabPillAdapter(
             val removeItem = popupMenu.menu.add(0, 2, 1, "Remove from Group")
             removeItem.setIcon(android.R.drawable.ic_menu_revert)
             
-            val closeItem = popupMenu.menu.add(0, 3, 2, "Close Tab")
+            val moveToProfileItem = popupMenu.menu.add(0, 3, 2, "Move to Profile")
+            moveToProfileItem.setIcon(android.R.drawable.ic_menu_manage)
+            
+            val closeItem = popupMenu.menu.add(0, 4, 3, "Close Tab")
             closeItem.setIcon(android.R.drawable.ic_menu_close_clear_cancel)
             
             // Force icons to show
@@ -1357,6 +1400,12 @@ class ModernTabPillAdapter(
                         true
                     }
                     3 -> {
+                        // Move to Profile
+                        itemView.performHapticFeedback(android.view.HapticFeedbackConstants.VIRTUAL_KEY)
+                        showMoveToProfileDialog(listOf(tabId))
+                        true
+                    }
+                    4 -> {
                         // Close tab
                         itemView.performHapticFeedback(android.view.HapticFeedbackConstants.VIRTUAL_KEY)
                         onTabClose(tabId)
@@ -1369,6 +1418,36 @@ class ModernTabPillAdapter(
             // Show menu above the anchor view
             popupMenu.gravity = android.view.Gravity.TOP
             popupMenu.show()
+        }
+        
+        private fun showMoveToProfileDialog(tabIds: List<String>) {
+            val profileManager = com.prirai.android.nira.browser.profile.ProfileManager.getInstance(itemView.context)
+            val profiles = profileManager.getAllProfiles()
+            
+            val items = profiles.map { "${it.emoji} ${it.name}" }.toMutableList()
+            items.add("🕵️ Private")
+            
+            com.google.android.material.dialog.MaterialAlertDialogBuilder(itemView.context)
+                .setTitle("Move tab to Profile")
+                .setItems(items.toTypedArray()) { _, which ->
+                    val targetProfileId = if (which == items.size - 1) {
+                        "private"
+                    } else {
+                        profiles[which].id
+                    }
+                    
+                    // Migrate tabs
+                    val migratedCount = profileManager.migrateTabsToProfile(tabIds, targetProfileId)
+                    
+                    // Show confirmation
+                    android.widget.Toast.makeText(
+                        itemView.context,
+                        "Moved $migratedCount tab to ${items[which]}",
+                        android.widget.Toast.LENGTH_SHORT
+                    ).show()
+                }
+                .setNegativeButton("Cancel", null)
+                .show()
         }
 
         private fun animateTabDelete(tabView: View, tabId: String) {
