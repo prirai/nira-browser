@@ -6,11 +6,11 @@
         android:id="@+id/action_search"
         android:icon="@drawable/ic_ios_search"
         android:title="Search"
-        app:showAsAction="always" />
+        app:showAsAction="ifRoom" />
     
     <item
         android:id="@+id/action_sort"
         android:icon="@drawable/ic_baseline_sort"
         android:title="Sort"
-        app:showAsAction="always" />
+        app:showAsAction="ifRoom" />
 </menu>
