@@ -136,7 +136,7 @@
                     android:layout_height="24dp"
                     android:src="@drawable/ic_palette"
                     android:contentDescription="@string/customization"
-                    android:tint="?attr/colorPrimary" />
+                    app:tint="?attr/colorPrimary" />
 
                 <TextView
                     android:layout_width="0dp"
