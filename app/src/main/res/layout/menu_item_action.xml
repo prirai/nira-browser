@@ -16,7 +16,7 @@
         android:id="@+id/menu_item_icon"
         android:layout_width="24dp"
         android:layout_height="24dp"
-        android:tint="?attr/colorOnSurface"
+        app:tint="?attr/colorOnSurface"
         tools:src="@drawable/ic_round_settings" />
 
     <com.google.android.material.textview.MaterialTextView
