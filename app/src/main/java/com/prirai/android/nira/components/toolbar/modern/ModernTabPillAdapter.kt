@@ -24,6 +24,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlin.math.abs
 
 /**
  * Enhanced adapter for Tab Islands with beautiful tab pills, island headers,
@@ -486,13 +487,13 @@ class ModernTabPillAdapter(
 
             // Add menu items for standalone tabs with icons
             val duplicateItem = popupMenu.menu.add(0, 1, 0, "Duplicate Tab")
-            duplicateItem.setIcon(android.R.drawable.ic_menu_add)
+            duplicateItem.setIcon(R.drawable.control_point_duplicate_24px)
             
             val moveToProfileItem = popupMenu.menu.add(0, 2, 1, "Move to Profile")
-            moveToProfileItem.setIcon(android.R.drawable.ic_menu_manage)
+            moveToProfileItem.setIcon(R.drawable.move_item_24px)
 
             val closeItem = popupMenu.menu.add(0, 3, 2, "Close Tab")
-            closeItem.setIcon(android.R.drawable.ic_menu_close_clear_cancel)
+            closeItem.setIcon(R.drawable.ic_round_close)
 
             // Force icons to show
             try {
@@ -1232,7 +1233,7 @@ class ModernTabPillAdapter(
 
                     android.view.MotionEvent.ACTION_MOVE -> {
                         val deltaY = startY - event.rawY
-                        val deltaX = Math.abs(event.rawX - startX)
+                        val deltaX = abs(event.rawX - startX)
                         
                         // Cancel long-press if any movement
                         if (deltaX > 10 || Math.abs(deltaY) > 10) {
@@ -1360,19 +1361,18 @@ class ModernTabPillAdapter(
             val wrapper = android.view.ContextThemeWrapper(itemView.context, R.style.RoundedPopupMenu)
             val popupMenu = android.widget.PopupMenu(wrapper, anchorView, android.view.Gravity.NO_GRAVITY,
                 0, R.style.RoundedPopupMenu)
-            
-            // Add menu items with icons
+
             val duplicateItem = popupMenu.menu.add(0, 1, 0, "Duplicate Tab")
-            duplicateItem.setIcon(android.R.drawable.ic_menu_add)
-            
+            duplicateItem.setIcon(R.drawable.control_point_duplicate_24px)
+
             val removeItem = popupMenu.menu.add(0, 2, 1, "Remove from Group")
-            removeItem.setIcon(android.R.drawable.ic_menu_revert)
-            
-            val moveToProfileItem = popupMenu.menu.add(0, 3, 2, "Move to Profile")
-            moveToProfileItem.setIcon(android.R.drawable.ic_menu_manage)
-            
-            val closeItem = popupMenu.menu.add(0, 4, 3, "Close Tab")
-            closeItem.setIcon(android.R.drawable.ic_menu_close_clear_cancel)
+            removeItem.setIcon(R.drawable.ungroup_24px)
+
+            val moveToProfileItem = popupMenu.menu.add(0, 2, 1, "Move to Profile")
+            moveToProfileItem.setIcon(R.drawable.move_item_24px)
+
+            val closeItem = popupMenu.menu.add(0, 3, 2, "Close Tab")
+            closeItem.setIcon(R.drawable.ic_round_close)
             
             // Force icons to show
             try {
