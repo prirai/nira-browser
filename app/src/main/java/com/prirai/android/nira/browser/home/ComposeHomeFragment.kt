@@ -5,6 +5,8 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.State
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.platform.ComposeView
@@ -17,7 +19,10 @@ import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
+import mozilla.components.browser.state.state.BrowserState
+import mozilla.components.browser.state.store.BrowserStore
 import mozilla.components.lib.state.ext.flowScoped
+import mozilla.components.lib.state.ext.observeAsComposableState
 import androidx.room.Room
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
@@ -118,7 +123,11 @@ class ComposeHomeFragment : Fragment() {
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
             setContent {
                 val store = requireContext().components.store
-                val selectedTab = store.state.selectedTabId?.let { id ->
+                
+                // Observe selected tab to trigger recomposition when it changes (which happens during profile switch)
+                val selectedTabId by store.observeAsComposableState { state -> state.selectedTabId }
+                
+                val selectedTab = selectedTabId?.let { id ->
                     store.state.tabs.find { it.id == id }
                 }
 
@@ -548,17 +557,46 @@ class ComposeHomeFragment : Fragment() {
         MaterialAlertDialogBuilder(requireContext())
             .setTitle("Switch Profile")
             .setSingleChoiceItems(items.toTypedArray(), selectedIndex) { dialog, which ->
+                val currentSelectedTab = components.store.state.selectedTab
+                
                 if (which == items.size - 1) {
                     // Switch to private mode
                     browsingModeManager.mode = BrowsingMode.Private
                     profileManager.setPrivateMode(true)
                     saveLastMode(isPrivate = true, profileId = null)
+                    
+                    // Migrate current tab to private mode if it exists and is not already private
+                    if (currentSelectedTab != null && !currentSelectedTab.content.private) {
+                        profileManager.migrateTabToProfile(currentSelectedTab.id, "private")
+                    } else if (currentSelectedTab == null) {
+                        // No tab to migrate, create a new private tab
+                        components.tabsUseCases.addTab(
+                            url = "about:homepage",
+                            selectTab = true,
+                            private = true,
+                            contextId = "private"
+                        )
+                    }
                 } else {
                     val selectedProfile = allProfiles[which]
                     browsingModeManager.mode = BrowsingMode.Normal
                     profileManager.setActiveProfile(selectedProfile)
                     profileManager.setPrivateMode(false)
                     saveLastMode(isPrivate = false, profileId = selectedProfile.id)
+                    
+                    // Migrate current tab to the new profile if it exists
+                    if (currentSelectedTab != null) {
+                        profileManager.migrateTabToProfile(currentSelectedTab.id, selectedProfile.id)
+                    } else {
+                        // No tab to migrate, create a new tab for this profile
+                        val profileContextId = "profile_${selectedProfile.id}"
+                        components.tabsUseCases.addTab(
+                            url = "about:homepage",
+                            selectTab = true,
+                            private = false,
+                            contextId = profileContextId
+                        )
+                    }
                 }
                 
                 // Update the UI to reflect profile change
@@ -579,8 +617,24 @@ class ComposeHomeFragment : Fragment() {
     }
     
     private fun updateProfileUI() {
-        // Compose UI is reactive - profile changes will be reflected automatically
-        // when tabs are created with the new profile context
+        // Update toolbar styling to reflect the new mode (private/normal)
+        updateToolbarStyling()
+        
+        // The Compose UI is reactive and observes store.state.selectedTabId
+        // When we select/create a tab with the new profile context above,
+        // the Compose HomeScreen will automatically recompose and show the correct profile info
+        // because it reads from store.state.selectedTab?.contextId in its setContent block
+        
+        // Update the unified toolbar's tab count and private mode state
+        val isPrivate = browsingModeManager.mode.isPrivate
+        unifiedToolbar?.applyPrivateMode(isPrivate)
+        unifiedToolbar?.updateContextualToolbar(
+            tab = null,
+            canGoBack = false,
+            canGoForward = false,
+            tabCount = components.store.state.tabs.size,
+            isHomepage = true
+        )
     }
 
     private fun restoreLastMode() {

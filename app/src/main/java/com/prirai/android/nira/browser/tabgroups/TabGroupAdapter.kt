@@ -129,7 +129,215 @@ class TabGroupAdapter(
                 tabsUseCases.removeTab(tab.id)
             }
 
+            // Add swipe-up gesture for delete with animation
+            setupSwipeToCloseGesture(pillView, tab.id, context)
+
             container.addView(pillView)
+        }
+
+        private fun setupSwipeToCloseGesture(
+            pillView: com.google.android.material.card.MaterialCardView,
+            tabId: String,
+            context: android.content.Context
+        ) {
+            var startY = 0f
+            var startX = 0f
+            var isDragging = false
+            var hasMoved = false
+            var dragClone: View? = null
+            var decorView: ViewGroup? = null
+
+            pillView.setOnTouchListener { v, event ->
+                when (event.action) {
+                    MotionEvent.ACTION_DOWN -> {
+                        startY = event.rawY
+                        startX = event.rawX
+                        isDragging = false
+                        hasMoved = false
+                        // Return false to let RecyclerView handle scrolling, but we still get MOVE events
+                        false
+                    }
+
+                    MotionEvent.ACTION_MOVE -> {
+                        val deltaY = startY - event.rawY
+                        val deltaX = abs(event.rawX - startX)
+                        
+                        // Detect horizontal scrolling and mark as moved
+                        if (deltaX > 5) {
+                            hasMoved = true
+                            // Don't consume event - let RecyclerView scroll
+                            return@setOnTouchListener false
+                        }
+                        
+                        // Detect any movement for long-press prevention
+                        if (abs(deltaY) > 5) {
+                            hasMoved = true
+                        }
+
+                        // Only start vertical dragging if moving up, not sideways
+                        if (deltaY > 20 && deltaX < 30 && !isDragging) {
+                            isDragging = true
+                            v.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS)
+                            
+                            // Create clone and add to DecorView
+                            val activity = context as? android.app.Activity
+                            decorView = activity?.window?.decorView as? ViewGroup
+                            
+                            if (decorView != null) {
+                                // Hide original
+                                pillView.alpha = 0f
+                                
+                                // Create clone
+                                dragClone = createTabClone(pillView, context)
+                                
+                                // Position clone at original location
+                                val location = IntArray(2)
+                                pillView.getLocationInWindow(location)
+                                dragClone?.x = location[0].toFloat()
+                                dragClone?.y = location[1].toFloat()
+                                
+                                // Add to decorView
+                                decorView?.addView(dragClone, ViewGroup.LayoutParams(
+                                    pillView.width,
+                                    pillView.height
+                                ))
+                            }
+                        }
+
+                        if (isDragging && dragClone != null) {
+                            // Update clone position to follow finger
+                            val location = IntArray(2)
+                            pillView.getLocationInWindow(location)
+                            
+                            dragClone?.y = location[1].toFloat() - deltaY
+                            
+                            // Visual feedback during drag
+                            val progress = (deltaY / 100f).coerceIn(0f, 1f)
+                            dragClone?.scaleX = 1f - (progress * 0.2f)
+                            dragClone?.scaleY = 1f - (progress * 0.2f)
+                            dragClone?.rotation = -progress * 10f
+                            dragClone?.alpha = 1f - (progress * 0.3f)
+                            true
+                        } else {
+                            false
+                        }
+                    }
+
+                    MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                        if (isDragging) {
+                            val deltaY = startY - event.rawY
+                            if (deltaY > 100) {
+                                // Animate clone flying away
+                                dragClone?.animate()
+                                    ?.translationY(-500f)
+                                    ?.rotation(-30f)
+                                    ?.scaleX(0.3f)
+                                    ?.scaleY(0.3f)
+                                    ?.alpha(0f)
+                                    ?.setDuration(250)
+                                    ?.withEndAction {
+                                        decorView?.removeView(dragClone)
+                                        dragClone = null
+                                        // Trigger actual delete
+                                        val tabsUseCases = context.components.tabsUseCases
+                                        tabsUseCases.removeTab(tabId)
+                                    }
+                                    ?.start()
+                            } else {
+                                // Spring back - animate clone back and show original
+                                dragClone?.animate()
+                                    ?.scaleX(1f)
+                                    ?.scaleY(1f)
+                                    ?.rotation(0f)
+                                    ?.alpha(0f)
+                                    ?.setDuration(200)
+                                    ?.withEndAction {
+                                        decorView?.removeView(dragClone)
+                                        dragClone = null
+                                        pillView.alpha = 1f
+                                    }
+                                    ?.start()
+                            }
+                            isDragging = false
+                            hasMoved = false
+                            true
+                        } else if (hasMoved) {
+                            // Finger moved but didn't drag up - don't trigger click
+                            hasMoved = false
+                            true
+                        } else {
+                            // No movement - allow click to proceed
+                            false
+                        }
+                    }
+
+                    else -> false
+                }
+            }
+        }
+
+        private fun createTabClone(
+            pillView: com.google.android.material.card.MaterialCardView,
+            context: android.content.Context
+        ): View {
+            // Create a clone of the pill with same appearance
+            val clone = FrameLayout(context).apply {
+                layoutParams = ViewGroup.LayoutParams(pillView.width, pillView.height)
+                elevation = 16f
+            }
+            
+            // Clone the card appearance
+            val clonedCard = com.google.android.material.card.MaterialCardView(context).apply {
+                layoutParams = ViewGroup.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.MATCH_PARENT
+                )
+                radius = pillView.radius
+                cardElevation = pillView.cardElevation
+                background = pillView.background?.constantState?.newDrawable()?.mutate()
+                
+                // Clone content layout
+                val content = LinearLayout(context).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    gravity = android.view.Gravity.CENTER_VERTICAL
+                    val padding = (12 * context.resources.displayMetrics.density).toInt()
+                    setPadding(padding, (8 * context.resources.displayMetrics.density).toInt(), 
+                              (8 * context.resources.displayMetrics.density).toInt(), 
+                              (8 * context.resources.displayMetrics.density).toInt())
+                }
+                
+                // Clone favicon
+                val originalFavicon = pillView.findViewById<ImageView>(R.id.faviconImage)
+                val clonedFavicon = ImageView(context).apply {
+                    val size = (20 * context.resources.displayMetrics.density).toInt()
+                    layoutParams = LinearLayout.LayoutParams(size, size).apply {
+                        marginEnd = (8 * context.resources.displayMetrics.density).toInt()
+                    }
+                    setImageDrawable(originalFavicon.drawable)
+                }
+                content.addView(clonedFavicon)
+                
+                // Clone title
+                val originalTitle = pillView.findViewById<android.widget.TextView>(R.id.tabTitle)
+                val clonedTitle = android.widget.TextView(context).apply {
+                    layoutParams = LinearLayout.LayoutParams(
+                        0,
+                        ViewGroup.LayoutParams.WRAP_CONTENT,
+                        1f
+                    )
+                    text = originalTitle.text
+                    textSize = 14f
+                    setTextColor(originalTitle.currentTextColor)
+                    maxLines = 1
+                    ellipsize = android.text.TextUtils.TruncateAt.END
+                }
+                content.addView(clonedTitle)
+                
+                addView(content)
+            }
+            
+            clone.addView(clonedCard)
+            return clone
         }
 
         /**
