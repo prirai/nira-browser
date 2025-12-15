@@ -3,11 +3,11 @@ package com.prirai.android.nira.browser.profile
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.SharedPreferences
+import androidx.core.content.edit
+import com.prirai.android.nira.ext.components
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.Types
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
-import androidx.core.content.edit
-import com.prirai.android.nira.ext.components
 
 /**
  * Manages browser profiles - creation, deletion, and persistence
@@ -157,14 +157,7 @@ class ProfileManager(private val context: Context) {
         val profileDir = context.getDir("profile_$profileId", Context.MODE_PRIVATE)
         profileDir.deleteRecursively()
     }
-    
-    /**
-     * Get the directory for profile-specific storage
-     */
-    fun getProfileStorageDir(profileId: String): String {
-        return context.getDir("profile_$profileId", Context.MODE_PRIVATE).absolutePath
-    }
-    
+
     /**
      * Migrate a tab to another profile by updating its contextId
      * @param tabId The ID of the tab to migrate
@@ -181,7 +174,7 @@ class ProfileManager(private val context: Context) {
         if (currentContextId == targetContextId) return false
         
         // Check if migrating between private and normal
-        val isCurrentlyPrivate = tab.content.private
+        tab.content.private
         val isTargetPrivate = targetProfileId == "private"
         
         // Always recreate the tab with the new context and privacy mode
@@ -218,18 +211,5 @@ class ProfileManager(private val context: Context) {
             }
         }
         return successCount
-    }
-    
-    /**
-     * Migrate a tab group to another profile
-     * This migrates all tabs in the group to the target profile
-     * @param groupId The ID of the group to migrate
-     * @param targetProfileId The ID of the target profile ("private" for private mode)
-     * @return Number of tabs successfully migrated
-     */
-    suspend fun migrateGroupToProfile(groupId: String, targetProfileId: String): Int {
-        val tabGroupManager = context.components.tabGroupManager
-        val groupData = tabGroupManager.groupsState.value.find { it.id == groupId } ?: return 0
-        return migrateTabsToProfile(groupData.tabIds, targetProfileId)
     }
 }
