@@ -1,6 +1,5 @@
 package com.prirai.android.nira.browser.home.compose
 
-import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -17,7 +16,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 class HomeViewModel(
-    private val context: Context,
     private val bookmarkManager: BookmarkManager,
     private val shortcutDao: ShortcutDao
 ) : ViewModel() {
@@ -73,7 +71,7 @@ class HomeViewModel(
                                     BookmarkItem(
                                         id = item.id.toString(),
                                         title = item.title ?: "",
-                                        url = item.url ?: "",
+                                        url = item.url,
                                         icon = null,
                                         isFolder = false
                                     )
@@ -147,14 +145,13 @@ class HomeViewModel(
 }
 
 class HomeViewModelFactory(
-    private val context: Context,
     private val bookmarkManager: BookmarkManager,
     private val shortcutDao: ShortcutDao
 ) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(HomeViewModel::class.java)) {
-            return HomeViewModel(context, bookmarkManager, shortcutDao) as T
+            return HomeViewModel(bookmarkManager, shortcutDao) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }
