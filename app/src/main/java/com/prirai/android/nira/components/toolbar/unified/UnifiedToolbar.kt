@@ -70,6 +70,9 @@ class UnifiedToolbar @JvmOverloads constructor(
     // Tab selection callback
     private var onTabSelectedCallback: ((String) -> Unit)? = null
     
+    // Expansion state callback
+    private var onExpansionStateChanged: ((Boolean) -> Unit)? = null
+    
     // Reload/Stop button integration
     private var reloadStopIntegration: com.prirai.android.nira.integration.ReloadStopButtonIntegration? = null
     
@@ -135,6 +138,8 @@ class UnifiedToolbar @JvmOverloads constructor(
         }
         // Update status bar color to show toolbar through it (top toolbar only)
         updateStatusBarForToolbarState(expanded = true)
+        // Notify expansion state changed
+        onExpansionStateChanged?.invoke(true)
     }
     
     override fun collapse() {
@@ -155,6 +160,8 @@ class UnifiedToolbar @JvmOverloads constructor(
         }
         // Update status bar color to hide toolbar (top toolbar only)
         updateStatusBarForToolbarState(expanded = false)
+        // Notify expansion state changed
+        onExpansionStateChanged?.invoke(false)
     }
 
     /**
@@ -476,21 +483,18 @@ class UnifiedToolbar @JvmOverloads constructor(
      * This creates a separate bottom container for these components
      */
     private fun addBottomComponentsForTopToolbar(store: BrowserStore, lifecycleOwner: LifecycleOwner) {
-        // For top toolbar mode, create components but don't add them to the toolbar system
-        // They will be retrieved via getBottomComponentsContainer() and positioned separately
-        
-        // Always create contextual toolbar for the container (it might be hidden)
-        contextualToolbar = ContextualBottomToolbar(context).apply {
-            if (!showContextualToolbar) {
-                visibility = GONE
-            }
-        }
+        // For top toolbar mode, create components but don't add them to a container yet
+        // The container will be created lazily in getBottomComponentsContainer()
         
         // Create tab group bar if enabled
         if (showTabGroupBar) {
             createTabGroupBar(store, lifecycleOwner)
         }
         
+        // Always create contextual toolbar (it might be hidden)
+        contextualToolbar = ContextualBottomToolbar(context).apply {
+            visibility = if (showContextualToolbar) VISIBLE else GONE
+        }
     }
 
     /**
@@ -701,6 +705,13 @@ class UnifiedToolbar @JvmOverloads constructor(
     }
 
     /**
+     * Set listener for toolbar expansion state changes (expanded = true, collapsed = false)
+     */
+    fun setOnExpansionStateChangedListener(listener: (Boolean) -> Unit) {
+        onExpansionStateChanged = listener
+    }
+
+    /**
      * Get the browser toolbar component
      */
     fun getBrowserToolbar(): BrowserToolbar? = browserToolbar
@@ -731,36 +742,28 @@ class UnifiedToolbar @JvmOverloads constructor(
             return null
         }
         
-        // Create a container for bottom components
-        val container = android.widget.LinearLayout(context).apply {
-            orientation = android.widget.LinearLayout.VERTICAL
-            layoutParams = ViewGroup.LayoutParams(
-                LayoutParams.MATCH_PARENT,
-                LayoutParams.WRAP_CONTENT
-            )
-            // No padding - the toolbars will handle their own spacing
+        // Create container lazily
+        if (bottomComponentsContainer == null) {
+            val container = android.widget.LinearLayout(context).apply {
+                orientation = android.widget.LinearLayout.VERTICAL
+                layoutParams = android.widget.FrameLayout.LayoutParams(
+                    android.widget.FrameLayout.LayoutParams.MATCH_PARENT,
+                    android.widget.FrameLayout.LayoutParams.WRAP_CONTENT
+                ).apply {
+                    gravity = android.view.Gravity.BOTTOM
+                }
+            }
+            
+            // Add tab bar if it exists
+            tabGroupBar?.let { container.addView(it) }
+            
+            // Add contextual toolbar if it exists
+            contextualToolbar?.let { container.addView(it) }
+            
+            bottomComponentsContainer = container
         }
         
-        // Add tab bar first (at top of bottom container)
-        tabGroupBar?.let {
-            container.addView(it, ViewGroup.LayoutParams(
-                LayoutParams.MATCH_PARENT,
-                LayoutParams.WRAP_CONTENT
-            ))
-        }
-        
-        // Add contextual toolbar below tab bar
-        contextualToolbar?.let {
-            container.addView(it, ViewGroup.LayoutParams(
-                LayoutParams.MATCH_PARENT,
-                LayoutParams.WRAP_CONTENT
-            ))
-        }
-        
-        // Store reference for expand/collapse operations
-        bottomComponentsContainer = container
-        
-        return if (container.isNotEmpty()) container else null
+        return bottomComponentsContainer
     }
 
     /**

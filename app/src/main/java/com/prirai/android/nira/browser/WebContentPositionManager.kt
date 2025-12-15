@@ -1,160 +1,126 @@
 package com.prirai.android.nira.browser
 
 import android.view.View
-import android.view.ViewGroup
+import androidx.coordinatorlayout.widget.CoordinatorLayout
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsAnimationCompat
 import androidx.core.view.WindowInsetsCompat
-import androidx.core.view.isVisible
 import mozilla.components.concept.engine.EngineView
 
 /**
  * Manages web content positioning to prevent overlap with toolbars and keyboard.
+ * Based on Firefox's approach: uses margins on swipeRefreshLayout to position content.
  * 
- * Responsibilities:
- * - Measure all visible toolbars (top and bottom)
- * - Apply appropriate padding to EngineView
- * - Handle keyboard (IME) appearance
- * - Adjust for system bars (status bar, navigation bar)
- * - Support both top and bottom toolbar modes
- * - Handle toolbar auto-hide/show animations
+ * This manager:
+ * - Sets top/bottom margins on swipeRefreshLayout to avoid toolbar overlap
+ * - Accounts for system bars (status bar, navigation bar)
+ * - Handles keyboard (IME) appearance with smooth animations
+ * - Automatically recalculates when toolbar visibility changes
  */
 class WebContentPositionManager(
     private val engineView: EngineView,
+    private val swipeRefreshView: View,
     private val rootView: View,
-    private val unifiedToolbar: View?
+    private val getTopToolbarHeight: () -> Int,
+    private val getBottomToolbarHeight: () -> Int
 ) {
     
-    private var lastTopInset = 0
-    private var lastBottomInset = 0
-    private var lastKeyboardInset = 0
+    private var lastTopMargin = 0
+    private var lastBottomMargin = 0
+    private var lastImeInset = 0
+    private var statusBarHeight = 0
+    private var navigationBarHeight = 0
+    
+    private var isDestroyed = false
+    private val drawListener = android.view.ViewTreeObserver.OnDrawListener {
+        if (!isDestroyed) {
+            updateMargins()
+        }
+    }
     
     /**
      * Initialize window insets handling for web content positioning
      */
     fun initialize() {
-        val view = engineView.asView()
-        
-        // Listen to all insets changes
-        ViewCompat.setOnApplyWindowInsetsListener(view) { v, insets ->
-            updateWebContentPadding(v, insets)
+        // Listen to window insets for system bars and keyboard (IME) changes
+        ViewCompat.setOnApplyWindowInsetsListener(rootView) { _, insets ->
+            handleWindowInsets(insets)
             insets
         }
         
         // Setup IME (keyboard) animation listener for smooth transitions
-        setupKeyboardAnimation(view)
+        setupKeyboardAnimation()
+        
+        // Listen for draw events to detect toolbar position changes during scroll
+        rootView.viewTreeObserver.addOnDrawListener(drawListener)
         
         // Force initial insets application
-        view.post {
-            ViewCompat.requestApplyInsets(view)
-        }
-        
-        // Listen to toolbar visibility changes
-        unifiedToolbar?.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
-            view.post {
-                ViewCompat.requestApplyInsets(view)
-            }
+        rootView.post {
+            ViewCompat.requestApplyInsets(rootView)
         }
     }
     
     /**
-     * Update web content padding based on all insets and toolbar positions
+     * Update engine view padding to position web content correctly.
+     * Apply padding to prevent web content from drawing under system bars.
      */
-    private fun updateWebContentPadding(view: View, insets: WindowInsetsCompat) {
+    private fun updateMargins() {
+        val engineViewInstance = (engineView as? View) ?: return
+        
+        // Apply padding to engine view to prevent content under system bars
+        // Status bar at top, navigation bar at bottom
+        engineViewInstance.setPadding(
+            0,
+            statusBarHeight,  // Top padding for status bar
+            0,
+            navigationBarHeight  // Bottom padding for navigation bar
+        )
+    }
+    
+    /**
+     * Handle window insets for keyboard (IME) and system bars
+     */
+    private fun handleWindowInsets(insets: WindowInsetsCompat) {
+        // Get system bars insets (status bar at top, navigation bar at bottom)
         val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+        statusBarHeight = systemBars.top
+        navigationBarHeight = systemBars.bottom
+        
+        // Update engine view padding with system bar insets
+        updateMargins()
+        
+        // Get keyboard (IME) insets
         val ime = insets.getInsets(WindowInsetsCompat.Type.ime())
         
-        // Calculate toolbar heights
-        val (topToolbarHeight, bottomToolbarHeight) = measureToolbarHeights()
-        
-        // Top padding: status bar + top toolbars
-        val topPadding = systemBars.top + topToolbarHeight
-        
-        // Bottom padding: max of (navigation bar + bottom toolbars, keyboard)
-        // When keyboard is shown, it replaces bottom toolbars
-        val bottomNavAndToolbars = systemBars.bottom + bottomToolbarHeight
-        val bottomPadding = maxOf(bottomNavAndToolbars, ime.bottom)
-        
-        // Only update if changed to avoid unnecessary relayout
-        if (topPadding != lastTopInset || bottomPadding != lastBottomInset) {
-            view.setPadding(0, topPadding, 0, bottomPadding)
-            lastTopInset = topPadding
-            lastBottomInset = bottomPadding
+        // When keyboard appears, temporarily increase bottom margin
+        // to push content above keyboard
+        if (ime.bottom > 0 && ime.bottom != lastImeInset) {
+            val layoutParams = swipeRefreshView.layoutParams as? CoordinatorLayout.LayoutParams ?: return
+            layoutParams.bottomMargin = ime.bottom
+            swipeRefreshView.layoutParams = layoutParams
+            lastImeInset = ime.bottom
+        } else if (ime.bottom == 0 && lastImeInset > 0) {
+            // Keyboard hidden, restore to no margin
+            val layoutParams = swipeRefreshView.layoutParams as? CoordinatorLayout.LayoutParams ?: return
+            layoutParams.bottomMargin = 0
+            swipeRefreshView.layoutParams = layoutParams
+            lastImeInset = 0
         }
-        
-        lastKeyboardInset = ime.bottom
-    }
-    
-    /**
-     * Measure the combined height of all visible toolbars at top and bottom
-     * Returns Pair<topHeight, bottomHeight>
-     */
-    private fun measureToolbarHeights(): Pair<Int, Int> {
-        var topHeight = 0
-        var bottomHeight = 0
-        
-        unifiedToolbar?.let { toolbar ->
-            if (toolbar.isVisible && toolbar.height > 0) {
-                // Check if toolbar is positioned at top or bottom
-                // This is determined by the toolbar's layout params or parent position
-                val toolbarParent = toolbar.parent as? ViewGroup
-                val isAtTop = isToolbarAtTop(toolbar, toolbarParent)
-                
-                if (isAtTop) {
-                    topHeight += toolbar.height
-                } else {
-                    bottomHeight += toolbar.height
-                }
-            }
-        }
-        
-        return Pair(topHeight, bottomHeight)
-    }
-    
-    /**
-     * Determine if a toolbar is positioned at the top of the screen
-     */
-    private fun isToolbarAtTop(toolbar: View, parent: ViewGroup?): Boolean {
-        parent ?: return false
-        
-        // Check layout gravity or position
-        val layoutParams = toolbar.layoutParams
-        if (layoutParams is androidx.coordinatorlayout.widget.CoordinatorLayout.LayoutParams) {
-            val gravity = layoutParams.gravity
-            return (gravity and android.view.Gravity.TOP) == android.view.Gravity.TOP
-        }
-        
-        if (layoutParams is android.widget.FrameLayout.LayoutParams) {
-            val gravity = layoutParams.gravity
-            return (gravity and android.view.Gravity.TOP) == android.view.Gravity.TOP
-        }
-        
-        // Default: check if toolbar Y position is near top
-        return toolbar.y < parent.height / 2
     }
     
     /**
      * Setup smooth keyboard animation handling
      */
-    private fun setupKeyboardAnimation(view: View) {
+    private fun setupKeyboardAnimation() {
         ViewCompat.setWindowInsetsAnimationCallback(
-            view,
+            swipeRefreshView,
             object : WindowInsetsAnimationCompat.Callback(DISPATCH_MODE_CONTINUE_ON_SUBTREE) {
                 override fun onProgress(
                     insets: WindowInsetsCompat,
                     runningAnimations: List<WindowInsetsAnimationCompat>
                 ): WindowInsetsCompat {
-                    // Update padding during animation for smooth keyboard appearance
-                    val ime = insets.getInsets(WindowInsetsCompat.Type.ime())
-                    val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-                    
-                    val (topToolbarHeight, bottomToolbarHeight) = measureToolbarHeights()
-                    val topPadding = systemBars.top + topToolbarHeight
-                    val bottomNavAndToolbars = systemBars.bottom + bottomToolbarHeight
-                    val bottomPadding = maxOf(bottomNavAndToolbars, ime.bottom)
-                    
-                    view.setPadding(0, topPadding, 0, bottomPadding)
-                    
+                    // Smooth animation during keyboard appearance
+                    handleWindowInsets(insets)
                     return insets
                 }
             }
@@ -162,21 +128,19 @@ class WebContentPositionManager(
     }
     
     /**
-     * Manually trigger padding update (useful when toolbar visibility changes)
+     * Manually trigger margin update (useful when toolbar visibility changes)
      */
     fun requestUpdate() {
-        val view = engineView.asView()
-        view.post {
-            ViewCompat.requestApplyInsets(view)
-        }
+        updateMargins()
     }
     
     /**
      * Clean up resources
      */
     fun destroy() {
-        val view = engineView.asView()
-        ViewCompat.setOnApplyWindowInsetsListener(view, null)
-        ViewCompat.setWindowInsetsAnimationCallback(view, null)
+        isDestroyed = true
+        rootView.viewTreeObserver.removeOnDrawListener(drawListener)
+        ViewCompat.setOnApplyWindowInsetsListener(rootView, null)
+        ViewCompat.setWindowInsetsAnimationCallback(swipeRefreshView, null)
     }
 }

@@ -946,10 +946,13 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
      */
     private fun setupEdgeToEdgeForFragment() {
         // Initialize web content position manager for comprehensive handling
+        // Uses callback functions to get toolbar heights dynamically
         webContentPositionManager = com.prirai.android.nira.browser.WebContentPositionManager(
             engineView = binding.engineView,
+            swipeRefreshView = binding.swipeRefresh,
             rootView = binding.root,
-            unifiedToolbar = _unifiedToolbar
+            getTopToolbarHeight = { getTopToolbarHeight() },
+            getBottomToolbarHeight = { getBottomToolbarHeight() }
         )
         webContentPositionManager?.initialize()
         
@@ -957,6 +960,77 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
         ViewCompat.setOnApplyWindowInsetsListener(binding.browserLayout) { _, insets ->
             insets
         }
+    }
+    
+    /**
+     * Get the current VISIBLE height of top toolbars (accounting for scroll/collapse)
+     */
+    private fun getTopToolbarHeight(): Int {
+        val prefs = UserPreferences(requireContext())
+        return if (prefs.toolbarPosition == com.prirai.android.nira.components.toolbar.ToolbarPosition.TOP.ordinal) {
+            val toolbarView = unifiedToolbar?.getToolbarView()
+            if (toolbarView != null && toolbarView.height > 0) {
+                // Account for translationY - when toolbar scrolls up, translationY is negative
+                val visibleHeight = toolbarView.height + toolbarView.translationY.toInt()
+                // Ensure we don't return negative values
+                maxOf(0, visibleHeight)
+            } else {
+                resources.getDimensionPixelSize(R.dimen.browser_toolbar_height)
+            }
+        } else {
+            0
+        }
+    }
+    
+    /**
+     * Get the current height of bottom toolbars
+     */
+    private fun getBottomToolbarHeight(): Int {
+        val prefs = UserPreferences(requireContext())
+        val isTopToolbar = prefs.toolbarPosition != com.prirai.android.nira.components.toolbar.ToolbarPosition.BOTTOM.ordinal
+        
+        return if (isTopToolbar) {
+            // In TOP mode: only bottom components (tab bar + contextual toolbar) are at bottom
+            var height = 0
+            unifiedToolbar?.getTabGroupBar()?.takeIf { it.visibility == View.VISIBLE }?.let {
+                height += it.height
+            }
+            unifiedToolbar?.getContextualToolbar()?.takeIf { it.visibility == View.VISIBLE }?.let {
+                height += it.height
+            }
+            
+            // If not measured yet, estimate
+            if (height == 0) {
+                resources.getDimensionPixelSize(R.dimen.contextual_toolbar_height)
+            } else {
+                height
+            }
+        } else {
+            // In BOTTOM mode: address bar + tab bar + contextual toolbar all at bottom
+            var height = 0
+            unifiedToolbar?.getToolbarView()?.let { height += it.height }
+            unifiedToolbar?.getTabGroupBar()?.takeIf { it.visibility == View.VISIBLE }?.let {
+                height += it.height
+            }
+            unifiedToolbar?.getContextualToolbar()?.takeIf { it.visibility == View.VISIBLE }?.let {
+                height += it.height
+            }
+            
+            // If not measured yet, estimate
+            if (height == 0) {
+                resources.getDimensionPixelSize(R.dimen.browser_toolbar_height) +
+                resources.getDimensionPixelSize(R.dimen.contextual_toolbar_height)
+            } else {
+                height
+            }
+        }
+    }
+    
+    /**
+     * Request web content position update - should be called when toolbar visibility/size changes
+     */
+    protected fun requestWebContentPositionUpdate() {
+        webContentPositionManager?.requestUpdate()
     }
 
     /*

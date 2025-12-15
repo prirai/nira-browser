@@ -243,6 +243,14 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
             // Set engine view for scroll behavior
             unifiedToolbar?.setEngineView(binding.engineView)
 
+            // Add layout listener to update web content positioning once toolbar is measured
+            unifiedToolbar?.getToolbarView()?.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
+                requestWebContentPositionUpdate()
+            }
+            unifiedToolbar?.getBottomComponentsContainer()?.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
+                requestWebContentPositionUpdate()
+            }
+
             // For TOP toolbar mode, add bottom components directly to fragment layout
             if (prefs.toolbarPosition == com.prirai.android.nira.components.toolbar.ToolbarPosition.TOP.ordinal) {
                 val bottomContainer = unifiedToolbar?.getBottomComponentsContainer()
@@ -278,6 +286,11 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
             // Set tab selection listener
             unifiedToolbar?.setOnTabSelectedListener { tabId ->
                 requireContext().components.tabsUseCases.selectTab(tabId)
+            }
+            
+            // Set expansion state listener to update web content positioning
+            unifiedToolbar?.setOnExpansionStateChangedListener { expanded ->
+                requestWebContentPositionUpdate()
             }
 
             // Set contextual toolbar listener
