@@ -22,6 +22,6 @@
         android:background="?attr/selectableItemBackground"
         android:contentDescription="@string/add"
         android:paddingTop="18dp"
-        android:paddingRight="8dp"
+        android:paddingEnd="8dp"
         android:src="@drawable/ic_round_add" />
 </LinearLayout>

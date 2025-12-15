@@ -648,7 +648,7 @@
   <string name="no_suggested_webapps">Browse websites to see suggestions</string>
     <string name="launch">Launch</string>
   <string name="installation_failed">Installation Failed</string>
-  <string name="loading_suggestions">Loading suggestions...</string>
+  <string name="loading_suggestions">Loading suggestions…</string>
   <string name="shortcut_added">Shortcut Added</string>
   <string name="shortcut_added_message">Shortcut for \"%1$s\" has been added to your home screen</string>
   <string name="shortcut_failed">Shortcut Failed</string>
