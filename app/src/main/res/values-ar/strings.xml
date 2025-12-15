@@ -3,11 +3,6 @@
     <string name="more">المزيد من المعلومات</string>
     <string name="version">إصدار التطبيق</string>
     <string name="licenses">تراخيص البرامج مفتوحة المصدر</string>
-    <string name="mpl_license">رخصة موزيلا العامة 2.0</string>
-    <string name="apache">ترخيص اباتشي 2.0</string>
-    <string name="mozac">مكونات موزيلا أندرويد</string>
-    <string name="android_open_source_project">مشروع أندرويد مفتوح المصدر</string>
-    <string name="geckoview">GeckoView</string>
     <string name="custom">مخصص</string>
     <string name="tabs">التبويبات</string>
     <string name="tab_grid">إظهار علامات التبويب في الشبكة</string>

@@ -69,8 +69,8 @@
         android:src="@drawable/ic_more_vert"
         android:background="?attr/selectableItemBackgroundBorderless"
         android:contentDescription="@string/menu"
-        android:tint="?android:attr/textColorPrimary"
-        android:padding="12dp" />
+        android:padding="12dp"
+        app:tint="?android:attr/textColorPrimary" />
 
 </LinearLayout>
 </FrameLayout>

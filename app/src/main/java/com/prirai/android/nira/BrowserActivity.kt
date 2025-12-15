@@ -717,11 +717,7 @@ open class BrowserActivity : LocaleAwareAppCompatActivity(), ComponentCallbacks2
         // Setup system bar appearance
         val insetsController = WindowCompat.getInsetsController(window, window.decorView)
         insetsController.isAppearanceLightStatusBars = !isDark
-
-        // Set navigation bar to dark/light mode
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-            insetsController.isAppearanceLightNavigationBars = !isDark
-        }
+        insetsController.isAppearanceLightNavigationBars = !isDark
     }
     
     /**

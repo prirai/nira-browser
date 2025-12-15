@@ -30,10 +30,9 @@
             android:layout_height="16dp"
             android:layout_marginEnd="6dp"
             android:src="@drawable/ic_tab"
-            android:tint="@android:color/white"
             android:contentDescription="@string/island_icon"
             android:scaleType="centerInside"
-        />
+            app:tint="@android:color/white" />
 
         <!-- Island name -->
         <TextView

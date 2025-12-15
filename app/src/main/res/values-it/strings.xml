@@ -3,10 +3,6 @@
     <string name="more">Ulteriori informazioni</string>
     <string name="version">Versione applicazione</string>
     <string name="licenses">Licenze Open-Source</string>
-    <string name="mpl_license">Licenza Pubblica Mozilla 2.0</string>
-    <string name="apache">Licenza Apache 2.0</string>
-    <string name="mozac">Componenti Android Mozilla</string>
-    <string name="android_open_source_project">Progetto Android Open-Source</string>
     <string name="geckoview">GeckoView</string>
     <string name="custom">Personalizzato</string>
     <string name="tabs">Schede</string>

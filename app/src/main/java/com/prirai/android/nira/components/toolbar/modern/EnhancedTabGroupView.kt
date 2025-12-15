@@ -658,7 +658,7 @@ class EnhancedTabGroupView @JvmOverloads constructor(
                     // Tab is inside an expanded group - need to find the specific tab view
                     // The group container has a LinearLayout with tab pills
                     val tabsContainer = containerView.findViewById<android.view.ViewGroup>(
-                        com.prirai.android.nira.R.id.islandTabsContainer
+                        R.id.islandTabsContainer
                     )
                     
                     if (tabsContainer != null && tabIndexInGroup < tabsContainer.childCount) {

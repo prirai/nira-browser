@@ -10,7 +10,6 @@ import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
-import com.prirai.android.nira.R
 
 /**
  * Manager for PWA notification channels and permissions
@@ -34,18 +33,16 @@ class WebAppNotificationManager(private val context: Context) {
      * Create notification channels for PWAs
      */
     private fun createNotificationChannels() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(
-                PWA_NOTIFICATION_CHANNEL_ID,
-                PWA_NOTIFICATION_CHANNEL_NAME,
-                NotificationManager.IMPORTANCE_DEFAULT
-            ).apply {
-                description = "Notifications from installed web apps"
-                setShowBadge(true)
-            }
-
-            notificationManager.createNotificationChannel(channel)
+        val channel = NotificationChannel(
+            PWA_NOTIFICATION_CHANNEL_ID,
+            PWA_NOTIFICATION_CHANNEL_NAME,
+            NotificationManager.IMPORTANCE_DEFAULT
+        ).apply {
+            description = "Notifications from installed web apps"
+            setShowBadge(true)
         }
+
+        notificationManager.createNotificationChannel(channel)
     }
 
     /**
@@ -74,7 +71,7 @@ class WebAppNotificationManager(private val context: Context) {
      * Request notification permission for a PWA
      * Note: This method should be called from an Activity or Fragment
      * that implements the permission request handling via Activity Result API.
-     * 
+     *
      * For WebAppActivity/WebAppFragment usage:
      * - Call hasNotificationPermission() first to check if permission is already granted
      * - If not granted, use Activity's requestPermissions() or registerForActivityResult()
@@ -92,7 +89,7 @@ class WebAppNotificationManager(private val context: Context) {
 
     /**
      * Show a notification from a PWA
-     * 
+     *
      * @return true if notification was shown, false if permission is missing
      */
     fun showPwaNotification(
@@ -150,7 +147,7 @@ class WebAppNotificationManager(private val context: Context) {
         if (!hasNotificationPermission()) {
             return false
         }
-        
+
         // Check if this specific PWA has notification permission granted
         // This would integrate with GeckoView's permission system or
         // a custom permission storage for PWAs

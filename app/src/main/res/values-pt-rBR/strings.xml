@@ -3,10 +3,6 @@
   <string name="more">Mais Informações</string>
   <string name="version">Versão do aplicativo</string>
   <string name="licenses">Licenças de Código Aberto</string>
-  <string name="mpl_license">Mozilla Public License 2.0</string>
-  <string name="apache">Apache License 2.0</string>
-    <string name="mozac">Mozilla Android Components</string>
-  <string name="android_open_source_project">Android Open Source Project</string>
   <string name="geckoview">GeckoView</string>
     <string name="custom">Personalizado</string>
   <string name="tabs">Abas</string>

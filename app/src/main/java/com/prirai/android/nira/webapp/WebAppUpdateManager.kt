@@ -87,7 +87,7 @@ class WebAppUpdateManager(private val context: Context) {
             val components = com.prirai.android.nira.components.Components(context)
             
             // Fetch the current manifest from the web
-            val manifestUrl = webApp.manifestUrl ?: return null
+            webApp.manifestUrl ?: return null
             
             // Load stored manifest from Mozilla components storage
             val storedManifest = components.webAppManifestStorage.loadManifest(webApp.url)

@@ -135,7 +135,7 @@ class HomeToolbarGestureHandler(
     }
 
     private fun getDestination(): Destination {
-        val isLtr = activity.resources.configuration.layoutDirection == View.LAYOUT_DIRECTION_LTR
+        activity.resources.configuration.layoutDirection == View.LAYOUT_DIRECTION_LTR
         val currentTab = store.state.selectedTab
         val isPrivateMode = currentTab?.content?.private ?: false
         

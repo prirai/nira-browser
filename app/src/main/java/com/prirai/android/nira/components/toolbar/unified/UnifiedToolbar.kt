@@ -746,9 +746,9 @@ class UnifiedToolbar @JvmOverloads constructor(
         if (bottomComponentsContainer == null) {
             val container = android.widget.LinearLayout(context).apply {
                 orientation = android.widget.LinearLayout.VERTICAL
-                layoutParams = android.widget.FrameLayout.LayoutParams(
-                    android.widget.FrameLayout.LayoutParams.MATCH_PARENT,
-                    android.widget.FrameLayout.LayoutParams.WRAP_CONTENT
+                layoutParams = LayoutParams(
+                    LayoutParams.MATCH_PARENT,
+                    LayoutParams.WRAP_CONTENT
                 ).apply {
                     gravity = android.view.Gravity.BOTTOM
                 }

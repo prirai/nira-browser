@@ -157,7 +157,7 @@ object ThemeManager {
                 if (isDark || isPrivateMode) 0 else android.view.WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS,
                 android.view.WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS
             )
-        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+        } else {
             @Suppress("DEPRECATION")
             val isDark = isDarkMode(context)
             if (isDark || isPrivateMode) {

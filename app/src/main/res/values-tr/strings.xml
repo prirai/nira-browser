@@ -3,11 +3,6 @@
     <string name="more">Daha Fazla Bilgi</string>
     <string name="version">Uygulama sürümü</string>
     <string name="licenses">Açık Kaynak Lisansları</string>
-    <string name="mpl_license">Mozilla Kamu Lisansı 2.0</string>
-    <string name="apache">Apache Lisansı 2.0</string>
-    <string name="mozac">Mozilla Android Bileşenleri</string>
-    <string name="android_open_source_project">Android Açık Kaynak Projesi</string>
-    <string name="geckoview">GeckoView</string>
     <string name="custom">Özel</string>
     <string name="tabs">Sekmeler</string>
     <string name="tab_grid">Sekmeleri ızgarada göster</string>

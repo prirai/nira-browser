@@ -967,7 +967,7 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
      */
     private fun getTopToolbarHeight(): Int {
         val prefs = UserPreferences(requireContext())
-        return if (prefs.toolbarPosition == com.prirai.android.nira.components.toolbar.ToolbarPosition.TOP.ordinal) {
+        return if (prefs.toolbarPosition == ToolbarPosition.TOP.ordinal) {
             val toolbarView = unifiedToolbar?.getToolbarView()
             if (toolbarView != null && toolbarView.height > 0) {
                 // Account for translationY - when toolbar scrolls up, translationY is negative
@@ -987,7 +987,7 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
      */
     private fun getBottomToolbarHeight(): Int {
         val prefs = UserPreferences(requireContext())
-        val isTopToolbar = prefs.toolbarPosition != com.prirai.android.nira.components.toolbar.ToolbarPosition.BOTTOM.ordinal
+        val isTopToolbar = prefs.toolbarPosition != ToolbarPosition.BOTTOM.ordinal
         
         return if (isTopToolbar) {
             // In TOP mode: only bottom components (tab bar + contextual toolbar) are at bottom
