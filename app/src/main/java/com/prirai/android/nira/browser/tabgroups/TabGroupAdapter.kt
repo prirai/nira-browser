@@ -7,7 +7,6 @@ import android.view.ViewGroup
 import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
-import androidx.core.view.isVisible
 import androidx.recyclerview.widget.RecyclerView
 import com.prirai.android.nira.R
 import com.prirai.android.nira.databinding.TabGroupItemBinding
@@ -66,7 +65,7 @@ class TabGroupAdapter(
                 val faviconCache = binding.root.context.components.faviconCache
 
                 // Create pill-shaped tab for each tab in the group (maintain original order)
-                groupWithTabs.tabIds.forEachIndexed { index, tabId ->
+                groupWithTabs.tabIds.forEachIndexed { _, tabId ->
                     val tab = store.state.tabs.find { it.id == tabId }
                     if (tab != null) {
                         createTabPill(faviconContainer, tab, tabId == selectedTabId, faviconCache)
@@ -82,8 +81,9 @@ class TabGroupAdapter(
             faviconCache: com.prirai.android.nira.utils.FaviconCache
         ) {
             val context = container.context
-            val pillView = LayoutInflater.from(context)
-                .inflate(R.layout.tab_pill_item, container, false) as com.google.android.material.card.MaterialCardView
+            val pillView = LayoutInflater.from(context).inflate(
+                R.layout.tab_pill_item, container, false
+            ) as com.google.android.material.card.MaterialCardView
 
             val faviconImage = pillView.findViewById<ImageView>(R.id.faviconImage)
             val tabTitle = pillView.findViewById<android.widget.TextView>(R.id.tabTitle)
@@ -140,52 +140,55 @@ class TabGroupAdapter(
 
             container.addView(pillView)
         }
-        
-        private fun showTabPillContextMenu(view: View, tabId: String, context: android.content.Context) {
+
+        private fun showTabPillContextMenu(
+            view: View, tabId: String, context: android.content.Context
+        ) {
             val popup = androidx.appcompat.widget.PopupMenu(context, view)
             popup.menu.add(0, 1, 0, "Move to Profile")
-            
+
             popup.setOnMenuItemClickListener { item ->
                 when (item.itemId) {
                     1 -> {
                         showMoveToProfileDialog(context, listOf(tabId))
                         true
                     }
+
                     else -> false
                 }
             }
-            
+
             popup.show()
         }
-        
-        private fun showMoveToProfileDialog(context: android.content.Context, tabIds: List<String>) {
-            val profileManager = com.prirai.android.nira.browser.profile.ProfileManager.getInstance(context)
+
+        private fun showMoveToProfileDialog(
+            context: android.content.Context, tabIds: List<String>
+        ) {
+            val profileManager =
+                com.prirai.android.nira.browser.profile.ProfileManager.getInstance(context)
             val profiles = profileManager.getAllProfiles()
-            
+
             val items = profiles.map { "${it.emoji} ${it.name}" }.toMutableList()
             items.add("🕵️ Private")
-            
+
             com.google.android.material.dialog.MaterialAlertDialogBuilder(context)
-                .setTitle("Move tab to Profile")
-                .setItems(items.toTypedArray()) { _, which ->
+                .setTitle("Move tab to Profile").setItems(items.toTypedArray()) { _, which ->
                     val targetProfileId = if (which == items.size - 1) {
                         "private"
                     } else {
                         profiles[which].id
                     }
-                    
+
                     // Migrate tabs
                     val migratedCount = profileManager.migrateTabsToProfile(tabIds, targetProfileId)
-                    
+
                     // Show confirmation
                     android.widget.Toast.makeText(
                         context,
                         "Moved $migratedCount tab to ${items[which]}",
                         android.widget.Toast.LENGTH_SHORT
                     ).show()
-                }
-                .setNegativeButton("Cancel", null)
-                .show()
+                }.setNegativeButton("Cancel", null).show()
         }
 
         private fun setupSwipeToCloseGesture(
@@ -193,8 +196,8 @@ class TabGroupAdapter(
             tabId: String,
             context: android.content.Context
         ) {
-            var startY = 0f
-            var startX = 0f
+            val startY = 0f
+            val startX = 0f
             var isDragging = false
             var shadowClone: View? = null
             var decorView: ViewGroup? = null
@@ -204,10 +207,8 @@ class TabGroupAdapter(
             pillView.setOnTouchListener { v, event ->
                 when (event.action) {
                     MotionEvent.ACTION_DOWN -> {
-                        startY = event.rawY
-                        startX = event.rawX
                         isDragging = false
-                        
+
                         // Start long-press timer
                         longPressRunnable = Runnable {
                             if (!isDragging) {
@@ -215,61 +216,65 @@ class TabGroupAdapter(
                                 v.performLongClick()
                             }
                         }
-                        longPressHandler.postDelayed(longPressRunnable!!, android.view.ViewConfiguration.getLongPressTimeout().toLong())
+                        longPressHandler.postDelayed(
+                            longPressRunnable,
+                            android.view.ViewConfiguration.getLongPressTimeout().toLong()
+                        )
                         false
                     }
 
                     MotionEvent.ACTION_MOVE -> {
                         val deltaY = startY - event.rawY
                         val deltaX = abs(event.rawX - startX)
-                        
+
                         // Cancel long-press if moved
                         if (abs(deltaY) > 10 || deltaX > 10) {
                             longPressRunnable?.let { longPressHandler.removeCallbacks(it) }
                         }
-                        
+
                         // Only start vertical dragging if clearly moving up
                         if (deltaY > 30 && deltaX < 20 && !isDragging) {
                             isDragging = true
                             v.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS)
-                            
+
                             // Request parent to not intercept
                             var parent = v.parent
                             while (parent != null && parent !is RecyclerView) {
                                 parent = parent.parent
                             }
-                            (parent as? RecyclerView)?.requestDisallowInterceptTouchEvent(true)
-                            
+                            parent?.requestDisallowInterceptTouchEvent(true)
+
                             // Create shadow clone visible above the pill
                             val activity = context as? android.app.Activity
                             decorView = activity?.window?.decorView as? ViewGroup
-                            
+
                             if (decorView != null) {
                                 shadowClone = createShadowClone(pillView, context)
-                                
+
                                 val location = IntArray(2)
                                 pillView.getLocationInWindow(location)
-                                shadowClone?.x = location[0].toFloat()
-                                shadowClone?.y = location[1].toFloat()
-                                
-                                decorView?.addView(shadowClone, ViewGroup.LayoutParams(
-                                    pillView.width,
-                                    pillView.height
-                                ))
+                                shadowClone.x = location[0].toFloat()
+                                shadowClone.y = location[1].toFloat()
+
+                                decorView?.addView(
+                                    shadowClone, ViewGroup.LayoutParams(
+                                        pillView.width, pillView.height
+                                    )
+                                )
                             }
                         }
 
                         if (isDragging && shadowClone != null) {
                             val location = IntArray(2)
                             pillView.getLocationInWindow(location)
-                            shadowClone?.y = location[1].toFloat() - deltaY
-                            
+                            shadowClone.y = location[1].toFloat() - deltaY
+
                             // Visual feedback - stronger animation
                             val progress = (deltaY / 120f).coerceIn(0f, 1f)
-                            shadowClone?.scaleX = 1f - (progress * 0.15f)
-                            shadowClone?.scaleY = 1f - (progress * 0.15f)
-                            shadowClone?.rotation = -progress * 8f
-                            shadowClone?.alpha = 1f - (progress * 0.2f)
+                            shadowClone.scaleX = 1f - (progress * 0.15f)
+                            shadowClone.scaleY = 1f - (progress * 0.15f)
+                            shadowClone.rotation = -progress * 8f
+                            shadowClone.alpha = 1f - (progress * 0.2f)
                             true
                         } else {
                             false
@@ -279,57 +284,41 @@ class TabGroupAdapter(
                     MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
                         // Cancel long-press timer
                         longPressRunnable?.let { longPressHandler.removeCallbacks(it) }
-                        
+
                         // Restore parent interception
                         var parent = v.parent
                         while (parent != null && parent !is RecyclerView) {
                             parent = parent.parent
                         }
-                        (parent as? RecyclerView)?.requestDisallowInterceptTouchEvent(false)
-                        
+                        parent?.requestDisallowInterceptTouchEvent(false)
+
                         if (isDragging) {
                             val deltaY = startY - event.rawY
                             if (deltaY > 120) {
                                 // Threshold reached - delete tab
-                                shadowClone?.animate()
-                                    ?.translationY(-600f)
-                                    ?.rotation(-35f)
-                                    ?.scaleX(0.2f)
-                                    ?.scaleY(0.2f)
-                                    ?.alpha(0f)
-                                    ?.setDuration(300)
+                                shadowClone?.animate()?.translationY(-600f)?.rotation(-35f)
+                                    ?.scaleX(0.2f)?.scaleY(0.2f)?.alpha(0f)?.setDuration(300)
                                     ?.withEndAction {
                                         decorView?.removeView(shadowClone)
-                                        shadowClone = null
                                         context.components.tabsUseCases.removeTab(tabId)
-                                    }
-                                    ?.start()
+                                    }?.start()
                             } else {
                                 // Spring back
-                                shadowClone?.animate()
-                                    ?.scaleX(1f)
-                                    ?.scaleY(1f)
-                                    ?.rotation(0f)
-                                    ?.alpha(0f)
-                                    ?.setDuration(200)
-                                    ?.withEndAction {
+                                shadowClone?.animate()?.scaleX(1f)?.scaleY(1f)?.rotation(0f)
+                                    ?.alpha(0f)?.setDuration(200)?.withEndAction {
                                         decorView?.removeView(shadowClone)
-                                        shadowClone = null
-                                    }
-                                    ?.start()
+                                    }?.start()
                             }
-                            isDragging = false
                             true
                         } else {
                             false
                         }
                     }
-
                     else -> false
                 }
             }
         }
-        
+
         private fun createShadowClone(
             pillView: com.google.android.material.card.MaterialCardView,
             context: android.content.Context
@@ -339,44 +328,50 @@ class TabGroupAdapter(
                 layoutParams = ViewGroup.LayoutParams(pillView.width, pillView.height)
                 elevation = 20f // Higher elevation for shadow effect
             }
-            
+
             val clonedCard = com.google.android.material.card.MaterialCardView(context).apply {
                 layoutParams = ViewGroup.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT,
-                    ViewGroup.LayoutParams.MATCH_PARENT
+                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT
                 )
                 radius = 20f * context.resources.displayMetrics.density // Same as ungrouped pills
                 cardElevation = 8f * context.resources.displayMetrics.density
-                
+
                 // Use primary color for border like ungrouped tabs
                 val theme = context.theme
                 val primaryTypedValue = android.util.TypedValue()
-                val primaryColor = if (theme.resolveAttribute(android.R.attr.colorPrimary, primaryTypedValue, true)) {
+                val primaryColor = if (theme.resolveAttribute(
+                        android.R.attr.colorPrimary, primaryTypedValue, true
+                    )
+                ) {
                     primaryTypedValue.data
                 } else {
-                    androidx.core.content.ContextCompat.getColor(context, com.prirai.android.nira.R.color.m3_primary)
+                    androidx.core.content.ContextCompat.getColor(context, R.color.m3_primary)
                 }
-                
+
                 val borderWidth = (3 * context.resources.displayMetrics.density).toInt()
-                setCardBackgroundColor(androidx.core.content.ContextCompat.getColor(
-                    context, 
-                    com.prirai.android.nira.R.color.m3_surface_container_background
-                ))
+                setCardBackgroundColor(
+                    androidx.core.content.ContextCompat.getColor(
+                        context, R.color.m3_surface_container_background
+                    )
+                )
                 strokeColor = primaryColor
                 strokeWidth = borderWidth
-                
+
                 // Clone content layout
                 val content = LinearLayout(context).apply {
                     orientation = LinearLayout.HORIZONTAL
                     gravity = android.view.Gravity.CENTER_VERTICAL
                     val padding = (12 * context.resources.displayMetrics.density).toInt()
-                    setPadding(padding, (8 * context.resources.displayMetrics.density).toInt(), 
-                              (8 * context.resources.displayMetrics.density).toInt(), 
-                              (8 * context.resources.displayMetrics.density).toInt())
+                    setPadding(
+                        padding,
+                        (8 * context.resources.displayMetrics.density).toInt(),
+                        (8 * context.resources.displayMetrics.density).toInt(),
+                        (8 * context.resources.displayMetrics.density).toInt()
+                    )
                 }
-                
+
                 // Clone favicon
-                val originalFavicon = pillView.findViewById<ImageView>(com.prirai.android.nira.R.id.faviconImage)
+                val originalFavicon = pillView.findViewById<ImageView>(R.id.faviconImage)
                 val clonedFavicon = ImageView(context).apply {
                     val size = (20 * context.resources.displayMetrics.density).toInt()
                     layoutParams = LinearLayout.LayoutParams(size, size).apply {
@@ -385,14 +380,12 @@ class TabGroupAdapter(
                     setImageDrawable(originalFavicon.drawable)
                 }
                 content.addView(clonedFavicon)
-                
+
                 // Clone title
-                val originalTitle = pillView.findViewById<android.widget.TextView>(com.prirai.android.nira.R.id.tabTitle)
+                val originalTitle = pillView.findViewById<android.widget.TextView>(R.id.tabTitle)
                 val clonedTitle = android.widget.TextView(context).apply {
                     layoutParams = LinearLayout.LayoutParams(
-                        0,
-                        ViewGroup.LayoutParams.WRAP_CONTENT,
-                        1f
+                        0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f
                     )
                     text = originalTitle.text
                     textSize = 14f
@@ -401,72 +394,12 @@ class TabGroupAdapter(
                     ellipsize = android.text.TextUtils.TruncateAt.END
                 }
                 content.addView(clonedTitle)
-                
+
                 addView(content)
             }
-            
+
             clone.addView(clonedCard)
             return clone
         }
-
-
-
-        /**
-         * Creates a touch listener that only triggers on tap, not during drag/scroll.
-         */
-        private fun createTapOnlyTouchListener(tabId: String): View.OnTouchListener {
-            var downX = 0f
-            var downY = 0f
-            var downTime = 0L
-            val tapTimeout = 200L // Max time for a tap in milliseconds
-            val tapSlop = 10f // Max movement in pixels to still be considered a tap
-
-            return View.OnTouchListener { v, event ->
-                when (event.action) {
-                    MotionEvent.ACTION_DOWN -> {
-                        downX = event.x
-                        downY = event.y
-                        downTime = System.currentTimeMillis()
-                        v.isPressed = true
-                        true
-                    }
-
-                    MotionEvent.ACTION_MOVE -> {
-                        val deltaX = abs(event.x - downX)
-                        val deltaY = abs(event.y - downY)
-
-                        // If moved too much, cancel the tap
-                        if (deltaX > tapSlop || deltaY > tapSlop) {
-                            v.isPressed = false
-                        }
-                        true
-                    }
-
-                    MotionEvent.ACTION_UP -> {
-                        val deltaX = abs(event.x - downX)
-                        val deltaY = abs(event.y - downY)
-                        val deltaTime = System.currentTimeMillis() - downTime
-
-                        // Only trigger click if it's a tap (minimal movement and quick)
-                        if (deltaX <= tapSlop && deltaY <= tapSlop && deltaTime <= tapTimeout && v.isPressed) {
-                            v.isPressed = false
-                            v.performClick()
-                            onTabClick(tabId)
-                        } else {
-                            v.isPressed = false
-                        }
-                        true
-                    }
-
-                    MotionEvent.ACTION_CANCEL -> {
-                        v.isPressed = false
-                        true
-                    }
-
-                    else -> false
-                }
-            }
-        }
-
     }
 }
