@@ -35,7 +35,7 @@ Nira (निरा) means pure — शुद्ध / absolute — पूर्�
 
 ### Complete feature-set
 
-- **Tab Groups** support with multiple view modes: grid, list, and islands with groups
+- **Tab Groups** support with multiple view modes: list, and bar with groups
 - **Bookmark** support with import/export and folder organization
 - **WebExtension** Support including sideloading from URLs or files (XPI support)
 - **Theming** options including light, dark, material 3 dynamic color themes and amoled
@@ -48,6 +48,7 @@ Nira (निरा) means pure — शुद्ध / absolute — पूर्�
 - Convert any **webpage to PDF** with one tap
 - **Custom Tab integration** when opening links from other apps
 - Built-in **download manager** with external downloader support
+- LRU tab navigation by swiping left or right to backward to navigation tabs by their order of recency
 - **Background audio/video** with media session controls
 - **Multiple Language support** - Support for Arabic, French, Italian, Japanese, Polish, Portuguese (BR & PT), Russian, Turkish, Vietnamese, Chinese (CN)
 - Create separate profiles for work, personal, shopping, or any use case with full cookie and data isolation and a unique color and emoji to easily identify profiles
