@@ -16,7 +16,6 @@ import android.widget.ImageView
 import android.widget.TextView
 import androidx.cardview.widget.CardView
 import androidx.core.content.ContextCompat
-import androidx.core.graphics.ColorUtils
 import androidx.recyclerview.widget.RecyclerView
 import com.prirai.android.nira.R
 import mozilla.components.browser.state.state.SessionState
@@ -474,7 +473,6 @@ class ModernTabPillAdapter(
                             false
                         }
                     }
-
                     else -> false
                 }
             }
@@ -672,7 +670,7 @@ class ModernTabPillAdapter(
                     val faviconCache = com.prirai.android.nira.utils.FaviconCache.getInstance(context)
 
                     // This will check memory cache first, then disk cache
-                    val cachedFavicon = faviconCache.loadFavicon(tab.content.url ?: "")
+                    val cachedFavicon = faviconCache.loadFavicon(tab.content.url)
 
                     if (cachedFavicon != null) {
                         faviconView.setImageBitmap(cachedFavicon)
@@ -808,13 +806,6 @@ class ModernTabPillAdapter(
         }
 
         fun isTabId(tabId: String): Boolean = currentTabId == tabId
-
-        private fun isDarkMode(): Boolean {
-            return when (itemView.resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) {
-                android.content.res.Configuration.UI_MODE_NIGHT_YES -> true
-                else -> false
-            }
-        }
     }
 
     // ViewHolder for island headers
@@ -1450,66 +1441,6 @@ class ModernTabPillAdapter(
                 .show()
         }
 
-        private fun animateTabDelete(tabView: View, tabId: String) {
-            android.util.Log.d("ModernTabPillAdapter", "animateTabDelete called for tab: $tabId")
-            // Multi-stage "breaking apart" animation optimized for visibility
-            // Even if clipped by EngineView, the shake and scale are visible
-            
-            // Stage 1: Shake left with scale
-            tabView.animate()
-                .translationX(-15f)
-                .scaleX(0.95f)
-                .scaleY(0.95f)
-                .rotation(-8f)
-                .setDuration(80)
-                .withEndAction {
-                    // Stage 2: Shake right harder
-                    tabView.animate()
-                        .translationX(15f)
-                        .rotation(8f)
-                        .scaleX(0.9f)
-                        .scaleY(0.9f)
-                        .setDuration(80)
-                        .withEndAction {
-                            // Stage 3: Break apart - dramatic scale down with rotation
-                            tabView.animate()
-                                .translationY(-400f)
-                                .translationX(0f)
-                                .rotation(-45f)
-                                .scaleX(0.2f)
-                                .scaleY(0.2f)
-                                .alpha(0f)
-                                .setDuration(250)
-                                .setInterpolator(android.view.animation.AccelerateInterpolator())
-                                .withEndAction {
-                                    android.util.Log.d("ModernTabPillAdapter", "Deleting grouped tab: $tabId")
-                                    onTabClose(tabId)
-                                }
-                                .start()
-                        }
-                        .start()
-                }
-                .start()
-        }
-
-        private fun resetTabVisualState(tabView: View) {
-            // Properly reset all visual properties to default state
-            tabView.animate()
-                .translationY(0f)
-                .translationX(0f)
-                .alpha(1f)
-                .scaleX(1f)
-                .scaleY(1f)
-                .rotation(0f)
-                .setDuration(200)
-                .setInterpolator(android.view.animation.OvershootInterpolator())
-                .withEndAction {
-                    // Reset elevation to default
-                    tabView.elevation = 4f * tabView.resources.displayMetrics.density
-                }
-                .start()
-        }
-
         private fun animateHeaderClick() {
             headerSection.animate()
                 .scaleX(0.95f)
@@ -1539,15 +1470,6 @@ class ModernTabPillAdapter(
                 }
                 .start()
         }
-
-        private fun isDarkMode(): Boolean {
-            return when (itemView.resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) {
-                android.content.res.Configuration.UI_MODE_NIGHT_YES -> true
-                else -> false
-            }
-        }
-
-
     }
 
     /**
