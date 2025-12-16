@@ -173,21 +173,23 @@ class BookmarksBottomSheetFragment : BottomSheetDialogFragment(), BookmarkAdapte
             }
         }
         
-        // Multiselect toolbar actions
-        binding.root.findViewById<android.widget.ImageButton>(R.id.closeMultiSelectButton)?.setOnClickListener {
-            exitMultiSelectMode()
-        }
-        
-        binding.root.findViewById<android.widget.ImageButton>(R.id.openInBackgroundButton)?.setOnClickListener {
-            openSelectedInBackground()
-        }
-        
-        binding.root.findViewById<android.widget.ImageButton>(R.id.moveSelectedButton)?.setOnClickListener {
-            moveSelectedItems()
-        }
-        
-        binding.root.findViewById<android.widget.ImageButton>(R.id.deleteSelectedButton)?.setOnClickListener {
-            deleteSelectedItems()
+        // Multiselect toolbar actions - set up after view is inflated
+        view?.post {
+            view?.findViewById<android.widget.ImageButton>(R.id.closeMultiSelectButton)?.setOnClickListener {
+                exitMultiSelectMode()
+            }
+            
+            view?.findViewById<android.widget.LinearLayout>(R.id.openInBackgroundButton)?.setOnClickListener {
+                openSelectedInBackground()
+            }
+            
+            view?.findViewById<android.widget.LinearLayout>(R.id.moveSelectedButton)?.setOnClickListener {
+                moveSelectedItems()
+            }
+            
+            view?.findViewById<android.widget.LinearLayout>(R.id.deleteSelectedButton)?.setOnClickListener {
+                deleteSelectedItems()
+            }
         }
     }
 

@@ -52,6 +52,15 @@ class ComposeHomeFragment : Fragment() {
 
     private lateinit var viewModel: HomeViewModel
     private var unifiedToolbar: UnifiedToolbar? = null
+    
+    companion object {
+        // Flag to prevent automatic navigation back to browser when explicitly navigating to home
+        private var shouldPreventAutoNavigation = false
+        
+        fun navigateToHome() {
+            shouldPreventAutoNavigation = true
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -427,24 +436,35 @@ class ComposeHomeFragment : Fragment() {
         updateToolbarStyling()
         restoreLastMode()
 
-        // Observe tab state changes
+        // Observe tab state changes - only navigate when URL actually changes to non-homepage
         val store = components.store
         store.flowScoped(viewLifecycleOwner) { flow ->
-            flow.map { state -> state.selectedTabId }
-                .distinctUntilChanged()
-                .collect { selectedTabId ->
-                    // If a tab is selected and its URL is not about:homepage, navigate to browser
-                    selectedTabId?.let { tabId ->
-                        val tab = store.state.tabs.find { it.id == tabId }
-                        val url = tab?.content?.url
-                        if (url != null && url != "about:homepage" && url != "about:privatebrowsing") {
-                            // Navigate to browser fragment to show the tab
-                            if (isAdded) {
-                                findNavController().navigate(R.id.browserFragment)
-                            }
+            flow.map { state -> 
+                state.selectedTabId?.let { tabId ->
+                    val tab = state.tabs.find { it.id == tabId }
+                    tab?.content?.url
+                }
+            }.distinctUntilChanged()
+            .collect { url ->
+                // Don't auto-navigate if we explicitly navigated to home from browser
+                if (shouldPreventAutoNavigation) {
+                    shouldPreventAutoNavigation = false
+                    return@collect
+                }
+                
+                // Only navigate to browser when URL changes to a non-homepage URL
+                // This prevents automatic navigation back when user explicitly navigates to home
+                if (url != null && url != "about:homepage" && url != "about:privatebrowsing") {
+                    // Navigate to browser fragment to show the tab
+                    if (isAdded && view != null) {
+                        try {
+                            findNavController().navigate(R.id.browserFragment)
+                        } catch (e: Exception) {
+                            // Navigation failed, ignore
                         }
                     }
                 }
+            }
         }
 
         // Handle double back press to exit app
