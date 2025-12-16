@@ -187,6 +187,12 @@ class ComposeHomeFragment : Fragment() {
                         isToolbarAtTop = isToolbarAtTop,
                         onShortcutClick = { shortcut ->
                             components.sessionUseCases.loadUrl(shortcut.url)
+                            // Navigate to browser to show the loaded page
+                            try {
+                                findNavController().navigate(R.id.browserFragment)
+                            } catch (e: Exception) {
+                                // Ignore navigation errors
+                            }
                         },
                         onShortcutDelete = { shortcut ->
                             MaterialAlertDialogBuilder(requireContext())
@@ -207,6 +213,12 @@ class ComposeHomeFragment : Fragment() {
                                 bookmarksBottomSheet.show(parentFragmentManager, "BookmarksBottomSheet")
                             } else {
                                 components.sessionUseCases.loadUrl(bookmark.url)
+                                // Navigate to browser to show the loaded page
+                                try {
+                                    findNavController().navigate(R.id.browserFragment)
+                                } catch (e: Exception) {
+                                    // Ignore navigation errors
+                                }
                             }
                         },
                         onBookmarkToggle = { viewModel.toggleBookmarkSection() },

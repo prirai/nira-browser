@@ -247,10 +247,16 @@
     <string name="move_bookmark">Move to folder</string>
     <string name="delete_bookmark">Delete bookmark</string>
   <string name="delete_folder">Delete folder</string>
+  <string name="flatten_folder">Flatten folder</string>
+  <string name="flatten_folder_confirm">Flatten \"%1$s\"? All items inside will be moved to the current folder and the folder will be deleted.</string>
   <string name="open">Open</string>
   <string name="open_new">Open in new tab</string>
   <string name="open_new_private">Open in new private tab</string>
   <string name="open_bg">Open in background tab</string>
+  <string name="multiselect_mode">%1$d selected</string>
+  <string name="delete_selected">Delete selected</string>
+  <string name="move_selected">Move to folder</string>
+  <string name="open_in_background_tabs">Open in background tabs</string>
 
     <string name="successful">Successful</string>
   <string name="failed">Failed</string>

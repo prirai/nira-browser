@@ -24,6 +24,7 @@ class BookmarksBottomSheetFragment : BottomSheetDialogFragment(), BookmarkAdapte
     private lateinit var bookmarkAdapter: BookmarkAdapter
     private lateinit var manager: BookmarkManager
     private lateinit var currentFolder: BookmarkFolderItem
+    private var isMultiSelectMode = false
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -157,6 +158,11 @@ class BookmarksBottomSheetFragment : BottomSheetDialogFragment(), BookmarkAdapte
             showSortDialog()
         }
         
+        binding.multiselectButton.setOnClickListener {
+            // Toggle multiselect mode
+            bookmarkAdapter.startMultiSelectMode()
+        }
+        
         binding.backButton.setOnClickListener {
             // Navigate back to parent folder
             currentFolder.parent?.let { parentFolder ->
@@ -165,6 +171,23 @@ class BookmarksBottomSheetFragment : BottomSheetDialogFragment(), BookmarkAdapte
                 // Already at root, go back to root
                 setBookmarkList(manager.root)
             }
+        }
+        
+        // Multiselect toolbar actions
+        binding.root.findViewById<android.widget.ImageButton>(R.id.closeMultiSelectButton)?.setOnClickListener {
+            exitMultiSelectMode()
+        }
+        
+        binding.root.findViewById<android.widget.ImageButton>(R.id.openInBackgroundButton)?.setOnClickListener {
+            openSelectedInBackground()
+        }
+        
+        binding.root.findViewById<android.widget.ImageButton>(R.id.moveSelectedButton)?.setOnClickListener {
+            moveSelectedItems()
+        }
+        
+        binding.root.findViewById<android.widget.ImageButton>(R.id.deleteSelectedButton)?.setOnClickListener {
+            deleteSelectedItems()
         }
     }
 
@@ -270,6 +293,12 @@ class BookmarksBottomSheetFragment : BottomSheetDialogFragment(), BookmarkAdapte
                 }
                 R.id.deleteBookmark -> {
                     deleteBookmark(item, position)
+                    true
+                }
+                R.id.flattenFolder -> {
+                    if (item is BookmarkFolderItem) {
+                        flattenFolder(item)
+                    }
                     true
                 }
                 R.id.open -> {
@@ -470,6 +499,193 @@ class BookmarksBottomSheetFragment : BottomSheetDialogFragment(), BookmarkAdapte
                 android.widget.Toast.LENGTH_SHORT
             ).show()
         }
+    }
+
+    override fun onMultiSelectModeChanged(isEnabled: Boolean, selectedCount: Int) {
+        isMultiSelectMode = isEnabled
+        
+        val multiselectToolbar = binding.root.findViewById<android.view.View>(R.id.multiselectToolbar)
+        
+        if (isEnabled) {
+            // Show multiselect toolbar, hide normal header
+            multiselectToolbar?.visibility = android.view.View.VISIBLE
+            binding.headerLayout.visibility = android.view.View.GONE
+            
+            // Update selected count text
+            val countText = getString(R.string.multiselect_mode, selectedCount)
+            binding.root.findViewById<android.widget.TextView>(R.id.selectedCountText)?.text = countText
+        } else {
+            // Hide multiselect toolbar, show normal header
+            multiselectToolbar?.visibility = android.view.View.GONE
+            binding.headerLayout.visibility = android.view.View.VISIBLE
+        }
+    }
+
+    private fun exitMultiSelectMode() {
+        bookmarkAdapter.exitMultiSelectMode()
+    }
+
+    private fun openSelectedInBackground() {
+        val selectedItems = bookmarkAdapter.getSelectedBookmarkItems()
+        val siteItems = selectedItems.filterIsInstance<BookmarkSiteItem>()
+        
+        if (siteItems.isEmpty()) {
+            android.widget.Toast.makeText(
+                requireContext(),
+                "No bookmark sites selected",
+                android.widget.Toast.LENGTH_SHORT
+            ).show()
+            return
+        }
+        
+        // Open all selected bookmarks in background tabs
+        siteItems.forEach { site ->
+            requireContext().components.tabsUseCases.addTab.invoke(
+                url = site.url,
+                selectTab = false
+            )
+        }
+        
+        android.widget.Toast.makeText(
+            requireContext(),
+            "Opened ${siteItems.size} tabs in background",
+            android.widget.Toast.LENGTH_SHORT
+        ).show()
+        
+        exitMultiSelectMode()
+    }
+
+    private fun moveSelectedItems() {
+        val selectedItems = bookmarkAdapter.getSelectedBookmarkItems()
+        
+        if (selectedItems.isEmpty()) {
+            return
+        }
+        
+        // Show folder selection dialog for moving multiple items
+        val folderSelectionSheet = FolderSelectionBottomSheetFragment.newInstance()
+            .setManager(manager)
+            .setInitialFolder(manager.root)
+            .setExcludeItems(selectedItems) // Prevent moving folders into themselves
+            .setOnFolderSelectedListener { targetFolder ->
+                moveItemsToFolder(selectedItems, targetFolder)
+            }
+        
+        folderSelectionSheet.show(parentFragmentManager, "MoveMultipleFolderSelectionBottomSheet")
+    }
+
+    private fun moveItemsToFolder(items: List<BookmarkItem>, targetFolder: BookmarkFolderItem) {
+        try {
+            items.forEach { item ->
+                // Remove from current parent
+                currentFolder.itemList.remove(item)
+                
+                // Add to new parent
+                targetFolder.add(item)
+                
+                // Update parent reference for folders
+                if (item is BookmarkFolderItem) {
+                    item.parent = targetFolder
+                }
+            }
+            
+            // Save changes to persistent storage
+            manager.save()
+            
+            // Refresh the current view
+            setBookmarkList(currentFolder)
+            
+            // Show success message
+            android.widget.Toast.makeText(
+                requireContext(),
+                "Moved ${items.size} items to \"${if (targetFolder == manager.root) "Root" else targetFolder.title}\"",
+                android.widget.Toast.LENGTH_SHORT
+            ).show()
+            
+            exitMultiSelectMode()
+            
+        } catch (e: Exception) {
+            android.widget.Toast.makeText(
+                requireContext(),
+                "Error moving items",
+                android.widget.Toast.LENGTH_SHORT
+            ).show()
+        }
+    }
+
+    private fun deleteSelectedItems() {
+        val selectedItems = bookmarkAdapter.getSelectedBookmarkItems()
+        
+        if (selectedItems.isEmpty()) {
+            return
+        }
+        
+        // Show confirmation dialog
+        androidx.appcompat.app.AlertDialog.Builder(requireContext())
+            .setTitle(R.string.delete_confirm_title)
+            .setMessage("Delete ${selectedItems.size} items?")
+            .setPositiveButton(android.R.string.ok) { _, _ ->
+                try {
+                    selectedItems.forEach { item ->
+                        currentFolder.itemList.remove(item)
+                    }
+                    
+                    // Save changes to persistent storage
+                    manager.save()
+                    
+                    // Refresh the bookmark list
+                    setBookmarkList(currentFolder)
+                    
+                    android.widget.Toast.makeText(
+                        requireContext(),
+                        "Deleted ${selectedItems.size} items",
+                        android.widget.Toast.LENGTH_SHORT
+                    ).show()
+                    
+                    exitMultiSelectMode()
+                } catch (e: Exception) {
+                    android.widget.Toast.makeText(
+                        requireContext(),
+                        "Error deleting items",
+                        android.widget.Toast.LENGTH_SHORT
+                    ).show()
+                }
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
+    private fun flattenFolder(folder: BookmarkFolderItem) {
+        // Show confirmation dialog
+        androidx.appcompat.app.AlertDialog.Builder(requireContext())
+            .setTitle(R.string.flatten_folder)
+            .setMessage(getString(R.string.flatten_folder_confirm, folder.title ?: ""))
+            .setPositiveButton(android.R.string.ok) { _, _ ->
+                try {
+                    // Flatten the folder
+                    manager.flattenFolder(currentFolder, folder)
+                    
+                    // Save changes to persistent storage
+                    manager.save()
+                    
+                    // Refresh the bookmark list
+                    setBookmarkList(currentFolder)
+                    
+                    android.widget.Toast.makeText(
+                        requireContext(),
+                        "Flattened \"${folder.title}\"",
+                        android.widget.Toast.LENGTH_SHORT
+                    ).show()
+                } catch (e: Exception) {
+                    android.widget.Toast.makeText(
+                        requireContext(),
+                        "Error flattening folder",
+                        android.widget.Toast.LENGTH_SHORT
+                    ).show()
+                }
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
     }
 
     override fun onDestroyView() {
