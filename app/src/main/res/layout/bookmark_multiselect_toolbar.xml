@@ -4,7 +4,7 @@
     android:id="@+id/multiselectToolbar"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:background="?android:attr/colorPrimary"
+    android:background="@color/m3_surface_container_high"
     android:elevation="4dp"
     android:visibility="gone"
     android:padding="8dp">
@@ -24,7 +24,7 @@
             android:background="?android:attr/selectableItemBackgroundBorderless"
             android:src="@drawable/ic_round_close"
             android:contentDescription="@string/close"
-            app:tint="?android:attr/textColorPrimary" />
+            app:tint="@color/m3_on_surface" />
 
         <TextView
             android:id="@+id/selectedCountText"
@@ -34,7 +34,7 @@
             android:text="0 selected"
             android:textSize="18sp"
             android:textStyle="bold"
-            android:textColor="?android:attr/textColorPrimary" />
+            android:textColor="@color/m3_on_surface" />
 
     </LinearLayout>
 
@@ -46,32 +46,86 @@
         android:orientation="horizontal"
         android:gravity="center_vertical">
 
-        <ImageButton
+        <LinearLayout
             android:id="@+id/openInBackgroundButton"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:padding="8dp"
             android:background="?android:attr/selectableItemBackgroundBorderless"
-            android:src="@drawable/mozac_ic_tab_new_24"
-            android:contentDescription="@string/open_in_background_tabs"
-            app:tint="?android:attr/textColorPrimary" />
+            android:clickable="true"
+            android:focusable="true">
 
-        <ImageButton
+            <ImageView
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:src="@drawable/mozac_ic_tab_new_24"
+                android:contentDescription="@string/open_in_background_tabs"
+                app:tint="@color/m3_on_surface" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Open"
+                android:textSize="10sp"
+                android:textColor="@color/m3_on_surface_variant"
+                android:layout_marginTop="2dp" />
+        </LinearLayout>
+
+        <LinearLayout
             android:id="@+id/moveSelectedButton"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:padding="8dp"
             android:background="?android:attr/selectableItemBackgroundBorderless"
-            android:src="@drawable/move_item_24px"
-            android:contentDescription="@string/move_selected"
-            app:tint="?android:attr/textColorPrimary" />
+            android:clickable="true"
+            android:focusable="true">
 
-        <ImageButton
+            <ImageView
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:src="@drawable/move_item_24px"
+                android:contentDescription="@string/move_selected"
+                app:tint="@color/m3_on_surface" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Move"
+                android:textSize="10sp"
+                android:textColor="@color/m3_on_surface_variant"
+                android:layout_marginTop="2dp" />
+        </LinearLayout>
+
+        <LinearLayout
             android:id="@+id/deleteSelectedButton"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:padding="8dp"
             android:background="?android:attr/selectableItemBackgroundBorderless"
-            android:src="@drawable/ic_delete_24"
-            android:contentDescription="@string/delete_selected"
-            app:tint="?android:attr/textColorPrimary" />
+            android:clickable="true"
+            android:focusable="true">
+
+            <ImageView
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:src="@drawable/ic_delete_24"
+                android:contentDescription="@string/delete_selected"
+                app:tint="@color/m3_on_surface" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Delete"
+                android:textSize="10sp"
+                android:textColor="@color/m3_on_surface_variant"
+                android:layout_marginTop="2dp" />
+        </LinearLayout>
 
     </LinearLayout>
 

@@ -161,8 +161,17 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
 
         // Also observe tab selection changes
         viewLifecycleOwner.lifecycleScope.launch {
-            requireContext().components.store.flowScoped { flow ->
-                flow.distinctUntilChangedBy { it.selectedTabId }.collect { state ->
+            requireContext().components.store.flowScoped(viewLifecycleOwner) { flow ->
+                flow.mapNotNull { state ->
+                    // Safety check: ensure fragment is still attached
+                    if (!isAdded) return@mapNotNull null
+                    state
+                }.distinctUntilChangedBy { it.selectedTabId }.collect { state ->
+                    // Safety check before accessing context
+                    if (!isAdded || context == null) return@collect
+                    
+                    val fragmentContext = requireContext()
+                    
                     // Track tab selection in LRU manager
                     state.selectedTabId?.let { tabId ->
                         lruManager.onTabSelected(tabId)
@@ -173,7 +182,7 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
                     selectedTab?.let { tab ->
                         // Get the profile for this tab
                         val tabContextId = tab.contextId
-                        val profileManager = com.prirai.android.nira.browser.profile.ProfileManager.getInstance(requireContext())
+                        val profileManager = com.prirai.android.nira.browser.profile.ProfileManager.getInstance(fragmentContext)
                         
                         // Extract profile ID from contextId (format: "profile_X")
                         val profileId = tabContextId?.removePrefix("profile_")
@@ -867,5 +876,34 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
                 menuItems
             ).show(it, preferBottom)
         }
+    }
+
+    override fun onBackPressed(): Boolean {
+        // First, try the default back handling (reader mode, find in page, fullscreen, etc.)
+        val handled = super.onBackPressed()
+        
+        if (!handled) {
+            // If nothing handled the back press, check if we can go back in browser history
+            val store = requireContext().components.store
+            val selectedTab = store.state.tabs.find { it.id == store.state.selectedTabId }
+            
+            // If we can't go back in history, navigate to home fragment
+            if (selectedTab != null && !selectedTab.content.canGoBack) {
+                try {
+                    val navController = androidx.navigation.fragment.NavHostFragment.findNavController(this)
+                    // Only navigate if we're not already on home fragment
+                    if (navController.currentDestination?.id != R.id.homeFragment) {
+                        // Signal to home fragment to prevent auto-navigation back
+                        com.prirai.android.nira.browser.home.ComposeHomeFragment.navigateToHome()
+                        navController.navigate(R.id.homeFragment)
+                        return true
+                    }
+                } catch (e: Exception) {
+                    // Navigation failed, let system handle it
+                }
+            }
+        }
+        
+        return handled
     }
 }
