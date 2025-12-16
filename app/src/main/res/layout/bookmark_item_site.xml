@@ -7,6 +7,18 @@
     android:descendantFocusability="blocksDescendants"
     android:maxHeight="@dimen/item_height">
 
+    <CheckBox
+        android:id="@+id/selectionCheckbox"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_marginStart="8dp"
+        android:visibility="gone"
+        android:clickable="false"
+        android:focusable="false"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"/>
+
     <ImageButton
         android:id="@+id/imageButton"
         android:layout_width="48dp"
@@ -22,7 +34,7 @@
         android:scaleType="fitCenter"
         android:src="@drawable/ic_baseline_bookmark"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintStart_toEndOf="@id/selectionCheckbox"
         app:layout_constraintTop_toTopOf="parent"/>
 
     <TextView

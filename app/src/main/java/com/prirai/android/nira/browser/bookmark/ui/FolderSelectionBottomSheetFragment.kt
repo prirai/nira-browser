@@ -22,6 +22,7 @@ class FolderSelectionBottomSheetFragment : BottomSheetDialogFragment() {
     private lateinit var currentFolder: BookmarkFolderItem
     private var selectedFolder: BookmarkFolderItem? = null
     private var excludeItem: BookmarkItem? = null
+    private var excludeItems: List<BookmarkItem>? = null
     private var onFolderSelectedListener: ((BookmarkFolderItem) -> Unit)? = null
 
     override fun onCreateView(
@@ -152,7 +153,21 @@ class FolderSelectionBottomSheetFragment : BottomSheetDialogFragment() {
         return this
     }
 
+    fun setExcludeItems(items: List<BookmarkItem>): FolderSelectionBottomSheetFragment {
+        this.excludeItems = items
+        return this
+    }
+
     private fun shouldExcludeFolder(folder: BookmarkFolderItem): Boolean {
+        // Check multiple excluded items if present
+        excludeItems?.let { items ->
+            for (item in items) {
+                if (folder == item) return true
+                if (item is BookmarkFolderItem && isDescendantOf(folder, item)) return true
+            }
+        }
+        
+        // Check single excluded item
         if (excludeItem == null) return false
         
         // Exclude the item itself if it's a folder

@@ -108,6 +108,25 @@ class BookmarkManager private constructor(context: Context) : Serializable {
         }
     }
 
+    fun flattenFolder(parentFolder: BookmarkFolderItem, folderToFlatten: BookmarkFolderItem) {
+        // Get all items from the folder to be flattened
+        val itemsToMove = ArrayList(folderToFlatten.list)
+        
+        // Move all items to parent folder
+        itemsToMove.forEach { item ->
+            folderToFlatten.list.remove(item)
+            parentFolder.add(item)
+            
+            // Update parent reference for folders
+            if (item is BookmarkFolderItem) {
+                item.parent = parentFolder
+            }
+        }
+        
+        // Remove the now-empty folder from parent
+        parentFolder.list.remove(folderToFlatten)
+    }
+
     private fun recursiveRemove(folder: BookmarkFolderItem, item: BookmarkItem): Boolean {
         val it = folder.list.iterator()
         while (it.hasNext()) {

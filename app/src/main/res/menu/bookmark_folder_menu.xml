@@ -9,6 +9,10 @@
         android:title="@string/move_bookmark" />
 
     <item
+        android:id="@+id/flattenFolder"
+        android:title="@string/flatten_folder" />
+
+    <item
         android:id="@+id/deleteBookmark"
         android:title="@string/delete_folder" />
 </menu>

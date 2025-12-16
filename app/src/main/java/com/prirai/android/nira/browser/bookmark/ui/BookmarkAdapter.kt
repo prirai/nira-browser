@@ -27,16 +27,67 @@ open class BookmarkAdapter(
     private val bookmarkItemListener: OnBookmarkRecyclerListener
 ) : ArrayRecyclerAdapter<BookmarkItem, BookmarkAdapter.BookmarkItemHolder>(context, list, null) {
 
+    var isMultiSelectMode = false
+        private set
+    private val multiSelectedItems = mutableSetOf<BookmarkItem>()
+
     init {
         setRecyclerListener(object : BookmarkRecyclerViewClickInterface {
             override fun onRecyclerItemClicked(v: View, position: Int) {
-                bookmarkItemListener.onRecyclerItemClicked(v, position)
+                if (isMultiSelectMode) {
+                    toggleItemSelection(position)
+                } else {
+                    bookmarkItemListener.onRecyclerItemClicked(v, position)
+                }
             }
 
             override fun onRecyclerItemLongClicked(v: View, position: Int): Boolean {
+                if (!isMultiSelectMode) {
+                    startMultiSelectMode()
+                    toggleItemSelection(position)
+                    return true
+                }
                 return bookmarkItemListener.onRecyclerItemLongClicked(v, position)
             }
         })
+    }
+
+    fun startMultiSelectMode() {
+        if (!isMultiSelectMode) {
+            isMultiSelectMode = true
+            multiSelectedItems.clear()
+            notifyDataSetChanged()
+            bookmarkItemListener.onMultiSelectModeChanged(true, 0)
+        }
+    }
+
+    fun exitMultiSelectMode() {
+        if (isMultiSelectMode) {
+            isMultiSelectMode = false
+            multiSelectedItems.clear()
+            notifyDataSetChanged()
+            bookmarkItemListener.onMultiSelectModeChanged(false, 0)
+        }
+    }
+
+    fun toggleItemSelection(position: Int) {
+        val item = get(position)
+        if (multiSelectedItems.contains(item)) {
+            multiSelectedItems.remove(item)
+        } else {
+            multiSelectedItems.add(item)
+        }
+        notifyItemChanged(position)
+        bookmarkItemListener.onMultiSelectModeChanged(true, multiSelectedItems.size)
+    }
+
+    fun getSelectedBookmarkItems(): List<BookmarkItem> = multiSelectedItems.toList()
+
+    fun isItemSelected(item: BookmarkItem): Boolean = multiSelectedItems.contains(item)
+
+    fun clearSelection() {
+        multiSelectedItems.clear()
+        notifyDataSetChanged()
     }
 
     override fun onBindViewHolder(holder: BookmarkItemHolder, item: BookmarkItem, position: Int) {
@@ -87,20 +138,31 @@ open class BookmarkAdapter(
         val url: TextView = itemView.findViewById(R.id.urlTextView)
     }
 
-    open class BookmarkItemHolder(itemView: View, adapter: BookmarkAdapter) : ArrayViewHolder<BookmarkItem>(itemView, adapter) {
+    open class BookmarkItemHolder(itemView: View, private val bookmarkAdapter: BookmarkAdapter) : ArrayViewHolder<BookmarkItem>(itemView, bookmarkAdapter) {
         val title: TextView = itemView.findViewById(R.id.titleTextView)
         val icon: ImageButton = itemView.findViewById(R.id.imageButton)
         val more: ImageButton = itemView.findViewById(R.id.dropdownBookmark)
+        val checkbox: android.widget.CheckBox = itemView.findViewById(R.id.selectionCheckbox)
 
         init {
             more.setOnClickListener {
-                adapter.onOverflowButtonClick(more, adapterPosition, item)
+                bookmarkAdapter.onOverflowButtonClick(more, adapterPosition, item)
             }
         }
 
         override fun setUp(item: BookmarkItem) {
             super.setUp(item)
             title.text = item.title
+            
+            // Update checkbox visibility and state based on multiselect mode
+            if (bookmarkAdapter.isMultiSelectMode) {
+                checkbox.visibility = View.VISIBLE
+                checkbox.isChecked = bookmarkAdapter.isItemSelected(item)
+                more.visibility = View.GONE
+            } else {
+                checkbox.visibility = View.GONE
+                more.visibility = View.VISIBLE
+            }
         }
     }
 
@@ -119,6 +181,8 @@ open class BookmarkAdapter(
         fun onShowMenu(v: View, position: Int)
 
         fun onSelectionStateChange(items: Int)
+
+        fun onMultiSelectModeChanged(isEnabled: Boolean, selectedCount: Int)
     }
 
     companion object {
