@@ -644,6 +644,16 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
                                 activity.browsingModeManager.mode.isPrivate
                             )
                         if (tabs.isEmpty() || store.state.selectedTabId == null) {
+                            // Navigate to home fragment first
+                            try {
+                                if (navController.currentDestination?.id != R.id.homeFragment) {
+                                    navController.navigate(R.id.homeFragment)
+                                }
+                            } catch (e: Exception) {
+                                // Navigation failed, create tab as fallback
+                            }
+                            
+                            // Then create a new tab based on homepage preference
                             when (UserPreferences(requireContext()).homepageType) {
                                 HomepageChoice.VIEW.ordinal -> {
                                     // Load about:homepage in BrowserFragment (HTML homepage)
@@ -651,7 +661,6 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
                                         "about:homepage",
                                         selectTab = true
                                     )
-                                    // Navigation not needed - tab already created and selected
                                 }
 
                                 HomepageChoice.BLANK_PAGE.ordinal -> {
@@ -686,6 +695,46 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
                 .collect {
                     handleTabSelected(it)
                 }
+        }
+        
+        // Also observe when all tabs are closed
+        val activity = activity as? BrowserActivity
+        consumeFlow(store) { flow ->
+            flow.map { state -> 
+                state.getNormalOrPrivateTabs(
+                    activity?.browsingModeManager?.mode?.isPrivate ?: false
+                ).size
+            }
+            .distinctUntilChanged()
+            .collect { tabCount ->
+                if (tabCount == 0 && isAdded && view != null) {
+                    // All tabs closed, navigate to home and create a new tab
+                    try {
+                        val navController = findNavController()
+                        if (navController.currentDestination?.id != R.id.homeFragment) {
+                            navController.navigate(R.id.homeFragment)
+                        }
+                        
+                        // Create a new tab
+                        when (UserPreferences(requireContext()).homepageType) {
+                            HomepageChoice.VIEW.ordinal -> {
+                                components.tabsUseCases.addTab.invoke("about:homepage", selectTab = true)
+                            }
+                            HomepageChoice.BLANK_PAGE.ordinal -> {
+                                components.tabsUseCases.addTab.invoke("about:blank", selectTab = true)
+                            }
+                            HomepageChoice.CUSTOM_PAGE.ordinal -> {
+                                components.tabsUseCases.addTab.invoke(
+                                    UserPreferences(requireContext()).customHomepageUrl,
+                                    selectTab = true
+                                )
+                            }
+                        }
+                    } catch (e: Exception) {
+                        // Ignore navigation errors
+                    }
+                }
+            }
         }
     }
 
