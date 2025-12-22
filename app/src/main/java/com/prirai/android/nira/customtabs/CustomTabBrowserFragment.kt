@@ -29,6 +29,7 @@ abstract class CustomTabBrowserFragment : Fragment(), mozilla.components.support
     
     private val sessionFeature = ViewBoundFeatureWrapper<SessionFeature>()
     private val customTabWindowFeature = ViewBoundFeatureWrapper<CustomTabWindowFeature>()
+    private val downloadsFeature = ViewBoundFeatureWrapper<mozilla.components.feature.downloads.DownloadsFeature>()
     
     protected var engineView: EngineView? = null
 
@@ -53,32 +54,12 @@ abstract class CustomTabBrowserFragment : Fragment(), mozilla.components.support
     
     /**
      * Setup edge-to-edge for custom tab fragment.
-     * Same as BaseBrowserFragment but for custom tabs.
+     * Simplified inset handling for custom tabs.
      */
     private fun setupEdgeToEdgeForCustomTab() {
-        // Setup insets for the engineView (web content container)
-        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(binding.engineView.asView()) { view, insets ->
-            val systemBars = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars())
-            
-            // Apply padding to prevent web content from going behind system bars
-            view.setPadding(
-                0,
-                systemBars.top,      // Status bar
-                0,
-                systemBars.bottom    // Navigation bar
-            )
-            
-            insets
-        }
-        
-        // Make browserLayout pass insets through to children
+        // Don't apply any padding to browserLayout - let children handle their own insets
         androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(binding.browserLayout) { _, insets ->
             insets
-        }
-        
-        // Request insets to be applied immediately
-        binding.engineView.asView().post {
-            androidx.core.view.ViewCompat.requestApplyInsets(binding.engineView.asView())
         }
     }
     
@@ -108,6 +89,32 @@ abstract class CustomTabBrowserFragment : Fragment(), mozilla.components.support
                 activity = requireActivity(),
                 store = requireContext().components.store,
                 sessionId = sessionId
+            ),
+            owner = this,
+            view = binding.root
+        )
+        
+        // Set up downloads feature for custom tabs
+        val components = requireContext().components
+        downloadsFeature.set(
+            feature = mozilla.components.feature.downloads.DownloadsFeature(
+                requireContext().applicationContext,
+                store = components.store,
+                useCases = components.downloadsUseCases,
+                fragmentManager = childFragmentManager,
+                shouldForwardToThirdParties = { 
+                    com.prirai.android.nira.preferences.UserPreferences(requireContext()).promptExternalDownloader 
+                },
+                downloadManager = mozilla.components.feature.downloads.manager.FetchDownloadManager(
+                    requireContext().applicationContext,
+                    components.store,
+                    com.prirai.android.nira.downloads.DownloadService::class,
+                    notificationsDelegate = components.notificationsDelegate
+                ),
+                tabId = sessionId,
+                onNeedToRequestPermissions = { permissions ->
+                    requestPermissions(permissions, REQUEST_CODE_DOWNLOAD_PERMISSIONS)
+                }
             ),
             owner = this,
             view = binding.root
@@ -143,5 +150,21 @@ abstract class CustomTabBrowserFragment : Fragment(), mozilla.components.support
         // If no back history, finish the activity to return to calling app
         requireActivity().finish()
         return true
+    }
+    
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<String>,
+        grantResults: IntArray
+    ) {
+        when (requestCode) {
+            REQUEST_CODE_DOWNLOAD_PERMISSIONS -> {
+                downloadsFeature.get()?.onPermissionsResult(permissions, grantResults)
+            }
+        }
+    }
+    
+    companion object {
+        private const val REQUEST_CODE_DOWNLOAD_PERMISSIONS = 1
     }
 }
