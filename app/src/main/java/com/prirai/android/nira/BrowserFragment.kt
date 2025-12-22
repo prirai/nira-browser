@@ -117,11 +117,14 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
     }
 
     private fun observeTabChangesForToolbar() {
+        // Safety check: ensure fragment is attached before accessing context
+        if (!isAdded) return
+        
         val lruManager = com.prirai.android.nira.browser.tabs.TabLRUManager.getInstance(requireContext())
         
         // Observe browser state changes to update toolbar in real-time
         viewLifecycleOwner.lifecycleScope.launch {
-            requireContext().components.store.flowScoped { flow ->
+            requireContext().components.store.flowScoped(viewLifecycleOwner) { flow ->
                 flow.mapNotNull { state ->
                     // Safety check: ensure fragment is still attached
                     if (!isAdded) return@mapNotNull null
@@ -143,6 +146,9 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
 
         // Track tab removals for LRU
         viewLifecycleOwner.lifecycleScope.launch {
+            // Safety check before accessing context
+            if (!isAdded) return@launch
+            
             var lastTabIds = requireContext().components.store.state.tabs.map { it.id }.toSet()
             requireContext().components.store.flowScoped(viewLifecycleOwner) { flow ->
                 flow.mapNotNull { state -> 
