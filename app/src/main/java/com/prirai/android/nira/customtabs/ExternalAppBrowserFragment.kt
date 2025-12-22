@@ -99,25 +99,16 @@ class ExternalAppBrowserFragment : CustomTabBrowserFragment() {
     
     /**
      * Setup content padding for custom tabs to account for the custom header.
-     * This adds extra top padding on top of the status bar padding.
+     * Simplified version that avoids complex inset calculations.
      */
     private fun setupCustomTabContentPadding(view: View) {
-        // Apply bottom padding for nav bar on the engine view
-        val engineView = binding.engineView.asView()
-        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(engineView) { v, insets ->
-            val systemBars = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars())
-            v.setPadding(0, 0, 0, systemBars.bottom)
-            insets
-        }
-        
-        // Apply top padding to browserLayout to make space for header
         val browserWindow = view.findViewById<ViewGroup>(R.id.browserWindow) ?: return
         val browserLayout = binding.browserLayout
         
+        // Apply padding to browserLayout once header is measured
         browserWindow.post {
             val headerWrapper = browserWindow.findViewWithTag<View>("customTabHeaderWrapper")
             if (headerWrapper != null) {
-                // Measure header and apply padding to browserLayout
                 val headerHeight = headerWrapper.height
                 browserLayout.setPadding(0, headerHeight, 0, 0)
             }
@@ -168,18 +159,12 @@ class ExternalAppBrowserFragment : CustomTabBrowserFragment() {
         // Add header to the browserWindow (sibling to browserLayout)
         browserWindow.addView(headerView)
         
-        // Setup window insets for the header - apply padding to FrameLayout wrapper
+        // Setup window insets for the header wrapper
         androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(headerView) { v, insets ->
             val systemBars = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars())
             
-            // Apply top padding for status bar to the wrapper (FrameLayout)
-            // This expands the wrapper to include status bar space
-            v.setPadding(
-                0,
-                systemBars.top,  // Status bar height
-                0,
-                0
-            )
+            // Apply top padding for status bar to the wrapper
+            v.setPadding(0, systemBars.top, 0, 0)
             
             insets
         }
