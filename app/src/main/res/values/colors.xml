@@ -3,7 +3,7 @@
     <!-- Legacy colors (deprecated - use Material 3 attributes instead) -->
     <color name="colorPrimary">#6650a4</color>
     <color name="colorPrimaryDark">#4F378B</color>
-    <color name="colorAccent">#D81B60</color>
+    <color name="colorAccent">#6650a4</color>
     <color name="purple_500">#6650a4</color>
     <color name="white">#FFFFFF</color>
     
@@ -76,7 +76,6 @@
     <color name="separator_color">@color/m3_outline_variant</color>
     <color name="tab_count_badge_background">@color/m3_primary</color>
     <color name="tab_count_badge_text">@color/m3_on_primary</color>
-    <color name="progress_bar_color">@color/m3_primary</color>
     <color name="secure_icon_color">#4CAF50</color>
     <color name="insecure_icon_color">@color/m3_error</color>
     

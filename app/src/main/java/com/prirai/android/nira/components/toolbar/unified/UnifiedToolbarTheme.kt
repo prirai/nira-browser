@@ -157,10 +157,18 @@ class UnifiedToolbarTheme(private val context: Context) {
         get() = (2 * context.resources.displayMetrics.density).toInt()
 
     /**
-     * Progress bar color
+     * Progress bar color (supports dynamic colors)
      */
     val progressBarColor: Int
-        get() = ContextCompat.getColor(context, R.color.progress_bar_color)
+        get() {
+            val typedValue = android.util.TypedValue()
+            context.theme.resolveAttribute(
+                android.R.attr.colorPrimary, 
+                typedValue, 
+                true
+            )
+            return typedValue.data
+        }
 
     /**
      * Security indicator colors

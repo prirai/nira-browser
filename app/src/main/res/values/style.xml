@@ -42,7 +42,7 @@
         <item name="colorOutlineVariant">@color/m3_outline_variant</item>
         
         <!-- Legacy color support -->
-        <item name="colorAccent">@color/m3_primary</item>
+        <item name="colorAccent">?attr/colorPrimary</item>
         
         <!-- System bars -->
         <item name="android:statusBarColor">@color/m3_surface_container</item>
