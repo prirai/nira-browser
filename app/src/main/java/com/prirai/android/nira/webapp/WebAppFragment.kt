@@ -38,7 +38,7 @@ class WebAppFragment : Fragment(), EngineSession.Observer {
     private var engineSession: EngineSession? = null
     private var profileId: String = "default"
     private var startUrl: String? = null
-    private var navigationHistorySize: Int = 0
+    private var canGoBack: Boolean = false
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -64,8 +64,6 @@ class WebAppFragment : Fragment(), EngineSession.Observer {
         }
         
         // Create a session with the specified profile context
-        // This ensures cookies and data are isolated per profile
-        // Browser uses "profile_${profileId}" format for contextId
         lifecycleScope.launch {
             try {
                 val engine = requireContext().components.engine
@@ -80,14 +78,14 @@ class WebAppFragment : Fragment(), EngineSession.Observer {
                     url
                 }
                 
-                // Register this session with the request interceptor to handle external links
+                // Register this session with the request interceptor
                 requireContext().components.appRequestInterceptor.registerWebAppSession(
                     engineSession!!,
                     webappDomain,
                     profileId
                 )
                 
-                // Register as observer to track navigation state and history
+                // Register as observer to track navigation
                 engineSession?.register(this@WebAppFragment)
                 
                 // Link the engine session to the view
@@ -97,7 +95,6 @@ class WebAppFragment : Fragment(), EngineSession.Observer {
                 engineSession?.loadUrl(url)
                 
             } catch (e: Exception) {
-                // Failed to create session
                 activity?.finish()
             }
         }
@@ -105,7 +102,6 @@ class WebAppFragment : Fragment(), EngineSession.Observer {
 
     override fun onDestroyView() {
         super.onDestroyView()
-        // Unregister from request interceptor
         engineSession?.let {
             try {
                 requireContext().components.appRequestInterceptor.unregisterWebAppSession(it)
@@ -113,24 +109,10 @@ class WebAppFragment : Fragment(), EngineSession.Observer {
                 // Context might be detached
             }
         }
-        // Unregister observer
         engineSession?.unregister(this)
-        // Release the engine view
         engineView.release()
         engineSession?.close()
         engineSession = null
-    }
-    
-    override fun onLoadRequest(
-        url: String,
-        triggeredByRedirect: Boolean,
-        triggeredByWebContent: Boolean
-    ) {
-        // Track navigation events - when a new page is being loaded
-        if (triggeredByWebContent && !triggeredByRedirect) {
-            // User clicked a link or navigated within the webapp
-            navigationHistorySize++
-        }
     }
     
     override fun onWindowRequest(windowRequest: WindowRequest) {
@@ -149,25 +131,27 @@ class WebAppFragment : Fragment(), EngineSession.Observer {
         }
     }
 
+    override fun onNavigationStateChange(canGoBack: Boolean?, canGoForward: Boolean?) {
+        // Track navigation state
+        canGoBack?.let { this.canGoBack = it }
+    }
+
     fun handleBackPressed(): Boolean {
-        // Handle back button - go back in web history if we have navigated within the app
-        // Only close if we're at the initial start URL (no history to go back to)
+        // Check if we can go back in navigation history
         val session = engineSession ?: return false
         
-        // If we have navigation history (navigated away from start URL), go back
-        if (navigationHistorySize > 0) {
+        // Use tracked canGoBack state
+        return if (this.canGoBack) {
             session.goBack()
-            navigationHistorySize = maxOf(0, navigationHistorySize - 1)
-            return true
+            true
+        } else {
+            // No history to go back to - let the activity close the webapp
+            false
         }
-        
-        // No history to go back to - let the activity close the webapp
-        return false
     }
     
     private fun openInCustomTab(url: String, profileId: String) {
         try {
-            // Open in custom tab with the same profile context
             val customTabIntent = androidx.browser.customtabs.CustomTabsIntent.Builder().build()
             customTabIntent.intent.putExtra("PROFILE_ID", profileId)
             customTabIntent.launchUrl(requireContext(), url.toUri())
@@ -203,44 +187,21 @@ class WebAppFragment : Fragment(), EngineSession.Observer {
 
     /**
      * Request notification permission for this PWA
-     * This is a helper method that can be called when the PWA needs to show notifications
-     * 
-     * Example usage:
-     * ```
-     * requestNotificationPermissionIfNeeded { granted ->
-     *     if (granted) {
-     *         // Show notification
-     *         val notificationManager = WebAppNotificationManager(requireContext())
-     *         notificationManager.showPwaNotification(
-     *             webAppId = "example_pwa",
-     *             webAppName = "Example PWA",
-     *             title = "Hello",
-     *             message = "This is a test notification",
-     *             notificationId = 1
-     *         )
-     *     } else {
-     *         // Handle permission denied
-     *     }
-     * }
-     * ```
      */
     fun requestNotificationPermissionIfNeeded(callback: (Boolean) -> Unit) {
         val notificationManager = WebAppNotificationManager(requireContext())
         
-        // Check if permission is already granted
         if (notificationManager.hasNotificationPermission()) {
             callback(true)
             return
         }
         
-        // Request permission from the activity
         val webAppActivity = activity as? WebAppActivity
         if (webAppActivity != null) {
             webAppActivity.requestNotificationPermission { granted ->
                 callback(granted)
             }
         } else {
-            // Not running in WebAppActivity, cannot request permission
             callback(false)
         }
     }

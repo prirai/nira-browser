@@ -734,6 +734,14 @@ open class BrowserActivity : LocaleAwareAppCompatActivity(), ComponentCallbacks2
         }
     }
 
+    /**
+     * Get current active profile ID
+     */
+    fun getCurrentProfileId(): String {
+        val profileManager = com.prirai.android.nira.browser.profile.ProfileManager.getInstance(this)
+        return profileManager.getActiveProfile().id
+    }
+
 
     companion object {
         const val OPEN_TO_BROWSER = "open_to_browser"

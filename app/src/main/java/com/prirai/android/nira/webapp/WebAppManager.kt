@@ -7,6 +7,7 @@ import androidx.room.*
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import java.util.*
+import java.net.URL
 
 /**
  * Manager for Progressive Web Apps (PWAs)
@@ -66,6 +67,20 @@ class WebAppManager(private val context: Context) {
      */
     suspend fun getWebAppByUrl(url: String): WebAppEntity? {
         return webAppDatabase.webAppDao().getByUrl(url)
+    }
+
+    /**
+     * Get PWA by URL and profile
+     */
+    suspend fun getWebAppByUrlAndProfile(url: String, profileId: String): WebAppEntity? {
+        return webAppDatabase.webAppDao().getByUrlAndProfile(url, profileId)
+    }
+
+    /**
+     * Check if web app exists with URL and profile
+     */
+    suspend fun webAppExists(url: String, profileId: String): Boolean {
+        return webAppDatabase.webAppDao().getByUrlAndProfile(url, profileId) != null
     }
 
     /**
@@ -202,6 +217,20 @@ class WebAppManager(private val context: Context) {
         // For now, return null
         return null
     }
+
+    companion object {
+        /**
+         * Extract base URL from a full URL (scheme + host)
+         */
+        fun getBaseUrl(url: String): String {
+            return try {
+                val parsed = URL(url)
+                "${parsed.protocol}://${parsed.host}"
+            } catch (e: Exception) {
+                url
+            }
+        }
+    }
 }
 
 private suspend fun WebAppDao.getAllSynchronously(): List<WebAppEntity> {
@@ -258,6 +287,9 @@ interface WebAppDao {
 
     @Query("SELECT * FROM web_apps WHERE url = :url")
     suspend fun getByUrl(url: String): WebAppEntity?
+
+    @Query("SELECT * FROM web_apps WHERE url = :url AND profileId = :profileId")
+    suspend fun getByUrlAndProfile(url: String, profileId: String): WebAppEntity?
 
     @Query("DELETE FROM web_apps WHERE id = :id")
     suspend fun deleteById(id: String)

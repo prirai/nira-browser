@@ -321,8 +321,19 @@ class UnifiedWebAppFragment : Fragment() {
     private fun startInstallation(pwa: PwaSuggestionManager.PwaSuggestion, profileId: String) {
         viewLifecycleOwner.lifecycleScope.launch {
             try {
-                // Install using WebAppManager with profile
                 val webAppManager = Components(requireContext()).webAppManager
+                
+                // Check if already installed with same profile
+                if (webAppManager.webAppExists(pwa.url, profileId)) {
+                    androidx.appcompat.app.AlertDialog.Builder(requireContext())
+                        .setTitle(R.string.already_installed)
+                        .setMessage(getString(R.string.web_app_already_installed_profile))
+                        .setPositiveButton(android.R.string.ok, null)
+                        .show()
+                    return@launch
+                }
+
+                // Install using WebAppManager with profile
                 webAppManager.installWebApp(
                     url = pwa.url,
                     name = pwa.name,
@@ -333,9 +344,27 @@ class UnifiedWebAppFragment : Fragment() {
                     profileId = profileId
                 )
 
-                // Create shortcut using WebAppInstaller
-                // Note: We need to create a minimal session state for this
-                // For now, just install to database and show success
+                // Create shortcut
+                val intent = Intent(requireContext(), WebAppActivity::class.java).apply {
+                    action = Intent.ACTION_VIEW
+                    data = pwa.url.toUri()
+                    putExtra(WebAppActivity.EXTRA_WEB_APP_URL, pwa.url)
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or 
+                            Intent.FLAG_ACTIVITY_NEW_DOCUMENT or 
+                            Intent.FLAG_ACTIVITY_MULTIPLE_TASK
+                }
+
+                val shortcut = androidx.core.content.pm.ShortcutInfoCompat.Builder(requireContext(), pwa.url)
+                    .setShortLabel(pwa.name)
+                    .setLongLabel(pwa.name)
+                    .setIntent(intent)
+                    .setIcon(androidx.core.graphics.drawable.IconCompat.createWithResource(
+                        requireContext(), 
+                        R.drawable.ic_language
+                    ))
+                    .build()
+
+                androidx.core.content.pm.ShortcutManagerCompat.requestPinShortcut(requireContext(), shortcut, null)
                 
                 androidx.appcompat.app.AlertDialog.Builder(requireContext())
                     .setTitle(getString(R.string.app_installed))
