@@ -54,17 +54,18 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="32dp"
-        android:hint="@string/select_profile"
         style="@style/Widget.Material3.TextInputLayout.FilledBox.ExposedDropdownMenu"
         app:boxCornerRadiusTopStart="12dp"
         app:boxCornerRadiusTopEnd="12dp"
         app:boxCornerRadiusBottomStart="12dp"
-        app:boxCornerRadiusBottomEnd="12dp">
+        app:boxCornerRadiusBottomEnd="12dp"
+        app:hintEnabled="false">
 
         <AutoCompleteTextView
             android:id="@+id/profileDropdown"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:hint="@string/select_profile"
             android:inputType="none"
             android:textAppearance="@style/TextAppearance.Material3.BodyLarge"
             android:textColor="?attr/colorOnSurface"

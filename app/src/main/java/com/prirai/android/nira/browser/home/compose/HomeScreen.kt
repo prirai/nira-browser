@@ -421,7 +421,7 @@ fun ShortcutItem(
                     if (domain != null) {
                         AsyncImage(
                             model = ImageRequest.Builder(LocalContext.current)
-                                .data("https://www.google.com/s2/favicons?domain=$domain&sz=128")
+                                .data(com.prirai.android.nira.utils.FaviconLoader.getGoogleFaviconUrl(domain, 128))
                                 .crossfade(true)
                                 .build(),
                             contentDescription = null,
@@ -576,7 +576,7 @@ fun BookmarkItem(
                     if (domain != null) {
                         AsyncImage(
                             model = ImageRequest.Builder(LocalContext.current)
-                                .data("https://www.google.com/s2/favicons?domain=$domain&sz=128")
+                                .data(com.prirai.android.nira.utils.FaviconLoader.getGoogleFaviconUrl(domain, 128))
                                 .crossfade(true)
                                 .build(),
                             contentDescription = null,

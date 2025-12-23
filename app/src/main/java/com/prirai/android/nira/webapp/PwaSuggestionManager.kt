@@ -4,8 +4,7 @@ import android.content.Context
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import com.prirai.android.nira.R
-import com.prirai.android.nira.components.Components
-import com.prirai.android.nira.utils.FaviconCache
+import com.prirai.android.nira.utils.FaviconLoader
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -287,40 +286,9 @@ class PwaSuggestionManager(private val context: Context) {
     private suspend fun preloadFavicons() {
         highQualityPwas.forEach { pwa ->
             try {
-                // Check if favicon is already in cache
-                val cached = FaviconCache.getInstance(context).loadFavicon(pwa.url)
-                if (cached == null) {
-                    // Extract domain
-                    val domain = try {
-                        java.net.URL(pwa.url).host
-                    } catch (e: Exception) {
-                        pwa.url
-                    }
-
-                    // Try Google's favicon service first (fastest and most reliable)
-                    try {
-                        val faviconUrl = "https://www.google.com/s2/favicons?domain=$domain&sz=128"
-                        val connection = java.net.URL(faviconUrl).openConnection()
-                        connection.connectTimeout = 5000
-                        connection.readTimeout = 5000
-                        val inputStream = connection.getInputStream()
-                        val bitmap = android.graphics.BitmapFactory.decodeStream(inputStream)
-                        inputStream.close()
-
-                        if (bitmap != null) {
-                            FaviconCache.getInstance(context).saveFavicon(pwa.url, bitmap)
-                        }
-                    } catch (e: Exception) {
-                        // Fallback to browser icons
-                        val iconRequest = mozilla.components.browser.icons.IconRequest(url = pwa.url)
-                        val icon = Components(context).icons.loadIcon(iconRequest).await()
-                        icon.bitmap?.let {
-                            FaviconCache.getInstance(context).saveFavicon(pwa.url, it)
-                        }
-                    }
-                }
+                FaviconLoader.loadFavicon(context, pwa.url)
             } catch (e: Exception) {
-                // Silently ignore errors for individual favicons
+                // Silently ignore errors
             }
         }
     }
