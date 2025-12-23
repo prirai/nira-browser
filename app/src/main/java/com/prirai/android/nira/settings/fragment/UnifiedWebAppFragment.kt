@@ -14,6 +14,8 @@ import com.prirai.android.nira.webapp.*
 import com.prirai.android.nira.components.Components
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.Dispatchers
 import android.content.Intent
 import android.graphics.Bitmap
 import androidx.core.net.toUri
@@ -298,24 +300,23 @@ class UnifiedWebAppFragment : Fragment() {
 
     // Suggested Apps Actions
     private fun installSuggestedPwa(pwa: PwaSuggestionManager.PwaSuggestion) {
-        // Get available profiles
+        // Get current profile as default
         val profileManager = com.prirai.android.nira.browser.profile.ProfileManager.getInstance(requireContext())
-        val profiles = profileManager.getAllProfiles()
-        val profileNames = profiles.map { it.name }.toTypedArray()
+        val currentProfile = profileManager.getActiveProfile()
         
-        var selectedProfileId = profiles.first().id // Default to first profile
+        // Show Material 3 dialog with profile selection (icon loads inside dialog)
+        val dialog = WebAppInstallDialog(
+            context = requireContext(),
+            lifecycleOwner = viewLifecycleOwner,
+            appName = pwa.name,
+            appUrl = pwa.url,
+            appDescription = pwa.description,
+            defaultProfileId = currentProfile.id
+        ) { selectedProfileId ->
+            startInstallation(pwa, selectedProfileId)
+        }
         
-        androidx.appcompat.app.AlertDialog.Builder(requireContext())
-            .setTitle(getString(R.string.install_suggested_pwa))
-            .setMessage(pwa.description)
-            .setSingleChoiceItems(profileNames, 0) { _, which ->
-                selectedProfileId = profiles[which].id
-            }
-            .setPositiveButton(R.string.install) { _, _ ->
-                startInstallation(pwa, selectedProfileId)
-            }
-            .setNegativeButton(R.string.cancel, null)
-            .show()
+        dialog.show()
     }
 
     private fun startInstallation(pwa: PwaSuggestionManager.PwaSuggestion, profileId: String) {
@@ -333,18 +334,52 @@ class UnifiedWebAppFragment : Fragment() {
                     return@launch
                 }
 
+                // Load icon for installation (using same method as dialog)
+                val icon: Bitmap? = withContext(Dispatchers.IO) {
+                    try {
+                        val domain = try {
+                            java.net.URL(pwa.url).host
+                        } catch (e: Exception) {
+                            pwa.url
+                        }
+                        
+                        com.prirai.android.nira.utils.FaviconCache.getInstance(requireContext()).loadFavicon(pwa.url) ?: run {
+                            try {
+                                val faviconUrl = "https://www.google.com/s2/favicons?domain=$domain&sz=128"
+                                val connection = java.net.URL(faviconUrl).openConnection()
+                                connection.connectTimeout = 5000
+                                connection.readTimeout = 5000
+                                val inputStream = connection.getInputStream()
+                                val bitmap = android.graphics.BitmapFactory.decodeStream(inputStream)
+                                inputStream.close()
+                                
+                                if (bitmap != null) {
+                                    com.prirai.android.nira.utils.FaviconCache.getInstance(requireContext()).saveFavicon(pwa.url, bitmap)
+                                    bitmap
+                                } else {
+                                    null
+                                }
+                            } catch (e: Exception) {
+                                null
+                            }
+                        }
+                    } catch (e: Exception) {
+                        null
+                    }
+                }
+
                 // Install using WebAppManager with profile
                 webAppManager.installWebApp(
                     url = pwa.url,
                     name = pwa.name,
                     manifestUrl = null,
-                    icon = null,
+                    icon = icon,
                     themeColor = null,
                     backgroundColor = null,
                     profileId = profileId
                 )
 
-                // Create shortcut
+                // Create shortcut with the same icon
                 val intent = Intent(requireContext(), WebAppActivity::class.java).apply {
                     action = Intent.ACTION_VIEW
                     data = pwa.url.toUri()
@@ -358,10 +393,16 @@ class UnifiedWebAppFragment : Fragment() {
                     .setShortLabel(pwa.name)
                     .setLongLabel(pwa.name)
                     .setIntent(intent)
-                    .setIcon(androidx.core.graphics.drawable.IconCompat.createWithResource(
-                        requireContext(), 
-                        R.drawable.ic_language
-                    ))
+                    .apply {
+                        if (icon != null) {
+                            setIcon(androidx.core.graphics.drawable.IconCompat.createWithBitmap(icon))
+                        } else {
+                            setIcon(androidx.core.graphics.drawable.IconCompat.createWithResource(
+                                requireContext(), 
+                                R.drawable.ic_language
+                            ))
+                        }
+                    }
                     .build()
 
                 androidx.core.content.pm.ShortcutManagerCompat.requestPinShortcut(requireContext(), shortcut, null)

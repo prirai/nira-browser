@@ -668,6 +668,8 @@
   <string name="clone">Clone</string>
   
   <!-- Web App Installation Profile Selection -->
+  <string name="select_profile">Select Profile</string>
+  <string name="profile">Profile</string>
   <string name="install_web_app_profile_selection">Select Profile for Web App</string>
   <string name="install_web_app_profile_message">Choose which profile to associate with this web app. Each profile has separate cookies and data.</string>
   <string name="web_app_already_installed">This web app is already installed for this profile</string>
