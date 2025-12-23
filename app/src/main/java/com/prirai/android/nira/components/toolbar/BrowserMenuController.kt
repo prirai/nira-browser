@@ -88,42 +88,58 @@ class DefaultBrowserToolbarMenuController(
 
             is ToolbarMenu.Item.InstallWebApp -> {
                 currentSession?.let { session ->
-                    MainScope().launch {
-                        // Get icon
-                        val icon = activity.components.icons.loadIcon(
-                            mozilla.components.browser.icons.IconRequest(
-                                url = session.content.url
-                            )
-                        ).await()?.bitmap
-
-                         // Install PWA using our custom installer
-                        com.prirai.android.nira.webapp.WebAppInstaller.installPwa(
-                            activity,
-                            session,
-                            null, // manifest not needed for basic install
-                            icon
-                        )
-
-                         // Also update the WebAppManager
-                        try {
-                            activity.components.webAppManager.installWebApp(
-                                url = session.content.url,
-                                name = session.content.title ?: session.content.url,
-                                manifestUrl = null,
-                                icon = icon,
-                                themeColor = null,
-                                backgroundColor = null
-                            )
-                        } catch (e: Exception) {
-                            // Handle error
+                    // Show profile selection dialog first
+                    val profileManager = com.prirai.android.nira.browser.profile.ProfileManager.getInstance(activity)
+                    val profiles = profileManager.getAllProfiles()
+                    val profileNames = profiles.map { it.name }.toTypedArray()
+                    
+                    // Get current profile as default
+                    val currentProfileId = activity.getCurrentProfileId()
+                    val currentIndex = profiles.indexOfFirst { it.id == currentProfileId }.coerceAtLeast(0)
+                    
+                    var selectedProfileId = profiles[currentIndex].id
+                    
+                    androidx.appcompat.app.AlertDialog.Builder(activity)
+                        .setTitle(activity.getString(R.string.install_web_app_profile_selection))
+                        .setMessage(activity.getString(R.string.install_web_app_profile_message))
+                        .setSingleChoiceItems(profileNames, currentIndex) { _, which ->
+                            selectedProfileId = profiles[which].id
                         }
+                        .setPositiveButton(R.string.install) { _, _ ->
+                            MainScope().launch {
+                                // Get icon
+                                val icon = activity.components.icons.loadIcon(
+                                    mozilla.components.browser.icons.IconRequest(
+                                        url = session.content.url
+                                    )
+                                ).await()?.bitmap
 
-                         android.widget.Toast.makeText(
-                            activity,
-                            activity.getString(R.string.app_installed),
-                            android.widget.Toast.LENGTH_SHORT
-                        ).show()
-                    }
+                                // Install PWA using our custom installer
+                                val installed = com.prirai.android.nira.webapp.WebAppInstaller.installPwa(
+                                    activity,
+                                    session,
+                                    null, // manifest not needed for basic install
+                                    icon,
+                                    selectedProfileId
+                                )
+
+                                if (installed) {
+                                    android.widget.Toast.makeText(
+                                        activity,
+                                        activity.getString(R.string.app_installed),
+                                        android.widget.Toast.LENGTH_SHORT
+                                    ).show()
+                                } else {
+                                    android.widget.Toast.makeText(
+                                        activity,
+                                        activity.getString(R.string.web_app_already_installed),
+                                        android.widget.Toast.LENGTH_SHORT
+                                    ).show()
+                                }
+                            }
+                        }
+                        .setNegativeButton(R.string.cancel, null)
+                        .show()
                 }
             }
 

@@ -666,6 +666,13 @@
   <string name="clone_webapp_dialog_title">Clone Web App</string>
   <string name="clone_webapp_dialog_message">Create a copy of \"%1$s\" with a different profile?</string>
   <string name="clone">Clone</string>
+  
+  <!-- Web App Installation Profile Selection -->
+  <string name="install_web_app_profile_selection">Select Profile for Web App</string>
+  <string name="install_web_app_profile_message">Choose which profile to associate with this web app. Each profile has separate cookies and data.</string>
+  <string name="web_app_already_installed">This web app is already installed for this profile</string>
+  <string name="already_installed">Already Installed</string>
+  <string name="web_app_already_installed_profile">This web app is already installed for the selected profile</string>
 
   <!-- Tab Search Strings -->
   <string name="search_tabs">Search tabs</string>

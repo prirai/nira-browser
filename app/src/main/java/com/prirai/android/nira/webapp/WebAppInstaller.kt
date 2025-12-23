@@ -9,6 +9,8 @@ import androidx.core.graphics.drawable.IconCompat
 import mozilla.components.browser.state.state.SessionState
 import mozilla.components.concept.engine.manifest.WebAppManifest
 import androidx.core.net.toUri
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 /**
  * Helper for installing PWAs as shortcuts that launch in WebAppActivity
@@ -17,29 +19,50 @@ object WebAppInstaller {
 
     /**
      * Install a PWA that opens in fullscreen WebAppActivity
+     * @param profileId Profile to associate with this web app
+     * @return true if installed successfully, false if duplicate detected
      */
     suspend fun installPwa(
         context: Context,
         session: SessionState,
         manifest: WebAppManifest?,
-        icon: Bitmap?
-    ) {
-        val url = session.content.url
-        // Ensure we always have a non-empty title
-        val title = (manifest?.name ?: manifest?.shortName ?: session.content.title)?.takeIf { it.isNotBlank() } ?: url
+        icon: Bitmap?,
+        profileId: String = "default"
+    ): Boolean = withContext(Dispatchers.IO) {
+        // Extract base URL instead of using current page URL
+        val baseUrl = WebAppManager.getBaseUrl(session.content.url)
+        val title = (manifest?.name ?: manifest?.shortName ?: session.content.title)?.takeIf { it.isNotBlank() } ?: baseUrl
+
+        val webAppManager = com.prirai.android.nira.components.Components(context).webAppManager
+
+        // Check if already installed with same URL and profile
+        if (webAppManager.webAppExists(baseUrl, profileId)) {
+            return@withContext false
+        }
 
         // Store PWA in database using WebAppManager
-        val webAppManager = com.prirai.android.nira.components.Components(context).webAppManager
         webAppManager.installWebApp(
-            url = url,
+            url = baseUrl,
             name = title,
             manifestUrl = manifest?.startUrl?.toString(),
             icon = icon,
             themeColor = manifest?.themeColor?.toString(),
-            backgroundColor = manifest?.backgroundColor?.toString()
+            backgroundColor = manifest?.backgroundColor?.toString(),
+            profileId = profileId
         )
 
-        // Create intent that launches WebAppActivity
+        // Create shortcut intent
+        withContext(Dispatchers.Main) {
+            createShortcut(context, baseUrl, title, icon)
+        }
+
+        true
+    }
+
+    /**
+     * Create home screen shortcut
+     */
+    private fun createShortcut(context: Context, url: String, title: String, icon: Bitmap?) {
         val intent = Intent(context, WebAppActivity::class.java).apply {
             action = Intent.ACTION_VIEW
             data = url.toUri()
@@ -49,7 +72,6 @@ object WebAppInstaller {
                     Intent.FLAG_ACTIVITY_MULTIPLE_TASK
         }
 
-        // Create shortcut
         val shortcut = ShortcutInfoCompat.Builder(context, url)
             .setShortLabel(title)
             .setLongLabel(title)
@@ -58,13 +80,11 @@ object WebAppInstaller {
                 if (icon != null) {
                     setIcon(IconCompat.createWithBitmap(icon))
                 } else {
-                    // Use app icon as fallback
                     setIcon(IconCompat.createWithResource(context, com.prirai.android.nira.R.mipmap.ic_launcher))
                 }
             }
             .build()
 
-        // Add shortcut to launcher
         ShortcutManagerCompat.requestPinShortcut(context, shortcut, null)
     }
     
@@ -77,17 +97,14 @@ object WebAppInstaller {
         icon: Bitmap?
     ) {
         val url = session.content.url
-        // Ensure we always have a non-empty title
         val title = session.content.title?.takeIf { it.isNotBlank() } ?: url
         
-        // Create intent that launches main BrowserActivity
         val intent = Intent(context, com.prirai.android.nira.BrowserActivity::class.java).apply {
             action = Intent.ACTION_VIEW
             data = url.toUri()
             flags = Intent.FLAG_ACTIVITY_NEW_TASK
         }
         
-        // Create shortcut
         val shortcut = ShortcutInfoCompat.Builder(context, "shortcut_$url")
             .setShortLabel(title)
             .setLongLabel(title)
@@ -101,7 +118,6 @@ object WebAppInstaller {
             }
             .build()
         
-        // Add shortcut to launcher
         ShortcutManagerCompat.requestPinShortcut(context, shortcut, null)
     }
 }
