@@ -204,17 +204,34 @@ class WebAppManager(private val context: Context) {
      * Save icon bitmap to file and return path
      */
     private fun saveIconToFile(icon: Bitmap): String {
-        // This would save the bitmap to internal storage and return the path
-        // For now, we'll return a placeholder
-        return "icon_${UUID.randomUUID()}.png"
+        try {
+            val iconDir = context.getDir("webapp_icons", Context.MODE_PRIVATE)
+            val iconFile = java.io.File(iconDir, "icon_${UUID.randomUUID()}.png")
+            val outputStream = java.io.FileOutputStream(iconFile)
+            icon.compress(Bitmap.CompressFormat.PNG, 100, outputStream)
+            outputStream.flush()
+            outputStream.close()
+            return iconFile.absolutePath
+        } catch (e: Exception) {
+            return "icon_${UUID.randomUUID()}.png"
+        }
     }
 
     /**
      * Load icon from file path
      */
     fun loadIconFromFile(iconPath: String?): Bitmap? {
-        // This would load the bitmap from the file path
-        // For now, return null
+        if (iconPath.isNullOrEmpty()) return null
+        
+        try {
+            val iconFile = java.io.File(iconPath)
+            if (iconFile.exists()) {
+                return android.graphics.BitmapFactory.decodeFile(iconPath)
+            }
+        } catch (e: Exception) {
+            // Ignore
+        }
+        
         return null
     }
 

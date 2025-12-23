@@ -50,14 +50,40 @@ class WebAppActivity : AppCompatActivity() {
         val url = extractUrlFromIntent(intent)
         
         if (url.isNullOrEmpty()) {
-            // No valid URL, close activity
             finish()
             return
         }
         
-        // Load profile ID asynchronously to avoid blocking main thread
+        // Load profile ID and setup the fragment
         lifecycleScope.launch {
             val profileId = getProfileIdForUrl(url)
+            
+            // Load web app details to set task description with icon
+            val webApp = com.prirai.android.nira.components.Components(this@WebAppActivity)
+                .webAppManager.getWebAppByUrl(url)
+            
+            // Set task description with app name and icon for recents
+            webApp?.let { app ->
+                // Try to load icon from saved file
+                val icon = com.prirai.android.nira.components.Components(this@WebAppActivity)
+                    .webAppManager.loadIconFromFile(app.iconUrl)
+                
+                if (icon != null) {
+                    @Suppress("DEPRECATION")
+                    val taskDescription = android.app.ActivityManager.TaskDescription(app.name, icon)
+                    setTaskDescription(taskDescription)
+                } else {
+                    // Try to load from favicon cache as fallback
+                    val cachedIcon = com.prirai.android.nira.utils.FaviconCache.getInstance(this@WebAppActivity)
+                        .loadFavicon(url)
+                    
+                    if (cachedIcon != null) {
+                        @Suppress("DEPRECATION")
+                        val taskDescription = android.app.ActivityManager.TaskDescription(app.name, cachedIcon)
+                        setTaskDescription(taskDescription)
+                    }
+                }
+            }
             
             // Load the web app fragment if not already added
             if (savedInstanceState == null) {
@@ -73,7 +99,6 @@ class WebAppActivity : AppCompatActivity() {
             override fun handleOnBackPressed() {
                 val fragment = supportFragmentManager.findFragmentById(R.id.webapp_container) as? WebAppFragment
                 if (fragment?.handleBackPressed() != true) {
-                    // If can't go back in history, finish and remove from recents
                     finishAndRemoveTask()
                 }
             }
