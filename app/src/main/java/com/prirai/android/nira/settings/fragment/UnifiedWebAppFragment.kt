@@ -12,10 +12,9 @@ import com.prirai.android.nira.R
 import com.prirai.android.nira.databinding.FragmentUnifiedWebappBinding
 import com.prirai.android.nira.webapp.*
 import com.prirai.android.nira.components.Components
+import com.prirai.android.nira.utils.FaviconLoader
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import kotlinx.coroutines.Dispatchers
 import android.content.Intent
 import android.graphics.Bitmap
 import androidx.core.net.toUri
@@ -334,39 +333,8 @@ class UnifiedWebAppFragment : Fragment() {
                     return@launch
                 }
 
-                // Load icon for installation (using same method as dialog)
-                val icon: Bitmap? = withContext(Dispatchers.IO) {
-                    try {
-                        val domain = try {
-                            java.net.URL(pwa.url).host
-                        } catch (e: Exception) {
-                            pwa.url
-                        }
-                        
-                        com.prirai.android.nira.utils.FaviconCache.getInstance(requireContext()).loadFavicon(pwa.url) ?: run {
-                            try {
-                                val faviconUrl = "https://www.google.com/s2/favicons?domain=$domain&sz=128"
-                                val connection = java.net.URL(faviconUrl).openConnection()
-                                connection.connectTimeout = 5000
-                                connection.readTimeout = 5000
-                                val inputStream = connection.getInputStream()
-                                val bitmap = android.graphics.BitmapFactory.decodeStream(inputStream)
-                                inputStream.close()
-                                
-                                if (bitmap != null) {
-                                    com.prirai.android.nira.utils.FaviconCache.getInstance(requireContext()).saveFavicon(pwa.url, bitmap)
-                                    bitmap
-                                } else {
-                                    null
-                                }
-                            } catch (e: Exception) {
-                                null
-                            }
-                        }
-                    } catch (e: Exception) {
-                        null
-                    }
-                }
+                // Load icon for installation using centralized FaviconLoader
+                val icon: Bitmap? = FaviconLoader.loadFavicon(requireContext(), pwa.url)
 
                 // Install using WebAppManager with profile
                 webAppManager.installWebApp(

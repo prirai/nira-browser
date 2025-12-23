@@ -13,13 +13,9 @@ import com.prirai.android.nira.browser.profile.BrowserProfile
 import com.prirai.android.nira.browser.profile.ProfileManager
 import com.prirai.android.nira.databinding.DialogWebappInstallBinding
 import com.prirai.android.nira.theme.ThemeManager
-import com.prirai.android.nira.components.Components
-import com.prirai.android.nira.utils.FaviconCache
 import com.prirai.android.nira.preferences.UserPreferences
-import kotlinx.coroutines.Dispatchers
+import com.prirai.android.nira.utils.FaviconLoader
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import mozilla.components.browser.icons.IconRequest
 
 /**
  * Material 3 dialog for installing web apps with profile selection
@@ -132,54 +128,10 @@ class WebAppInstallDialog(
     }
     
     /**
-     * Load favicon using the same approach as PwaSuggestionsAdapter
+     * Load favicon using centralized FaviconLoader
      */
     private suspend fun loadFavicon(url: String): Bitmap? {
-        return withContext(Dispatchers.IO) {
-            try {
-                // Extract domain from URL
-                val domain = try {
-                    java.net.URL(url).host
-                } catch (e: Exception) {
-                    url
-                }
-                
-                // 1. Try favicon cache first
-                FaviconCache.getInstance(context).loadFavicon(url)?.let { return@withContext it }
-                
-                // 2. Try Google's favicon service (most reliable)
-                try {
-                    val faviconUrl = "https://www.google.com/s2/favicons?domain=$domain&sz=128"
-                    val connection = java.net.URL(faviconUrl).openConnection()
-                    connection.connectTimeout = 5000
-                    connection.readTimeout = 5000
-                    val inputStream = connection.getInputStream()
-                    val bitmap = android.graphics.BitmapFactory.decodeStream(inputStream)
-                    inputStream.close()
-                    
-                    if (bitmap != null) {
-                        // Save to cache for future use
-                        FaviconCache.getInstance(context).saveFavicon(url, bitmap)
-                        return@withContext bitmap
-                    }
-                } catch (e: Exception) {
-                    // Fallback to browser icons
-                }
-                
-                // 3. Try fetching from browser icons as final fallback
-                val iconRequest = IconRequest(url = url)
-                val icon = Components(context).icons.loadIcon(iconRequest).await()
-                icon.bitmap?.let {
-                    // Save to cache for future use
-                    FaviconCache.getInstance(context).saveFavicon(url, it)
-                    return@withContext it
-                }
-                
-                null
-            } catch (e: Exception) {
-                null
-            }
-        }
+        return FaviconLoader.loadFavicon(context, url)
     }
 }
 
