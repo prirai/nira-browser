@@ -506,20 +506,20 @@ class BookmarksBottomSheetFragment : BottomSheetDialogFragment(), BookmarkAdapte
     override fun onMultiSelectModeChanged(isEnabled: Boolean, selectedCount: Int) {
         isMultiSelectMode = isEnabled
         
-        val multiselectToolbar = binding.root.findViewById<android.view.View>(R.id.multiselectToolbar)
+        val multiselectToolbar = binding.root.findViewById<View>(R.id.multiselectToolbar)
         
         if (isEnabled) {
             // Show multiselect toolbar, hide normal header
-            multiselectToolbar?.visibility = android.view.View.VISIBLE
-            binding.headerLayout.visibility = android.view.View.GONE
+            multiselectToolbar?.visibility = View.VISIBLE
+            binding.headerLayout.visibility = View.GONE
             
             // Update selected count text
             val countText = getString(R.string.multiselect_mode, selectedCount)
             binding.root.findViewById<android.widget.TextView>(R.id.selectedCountText)?.text = countText
         } else {
             // Hide multiselect toolbar, show normal header
-            multiselectToolbar?.visibility = android.view.View.GONE
-            binding.headerLayout.visibility = android.view.View.VISIBLE
+            multiselectToolbar?.visibility = View.GONE
+            binding.headerLayout.visibility = View.VISIBLE
         }
     }
 

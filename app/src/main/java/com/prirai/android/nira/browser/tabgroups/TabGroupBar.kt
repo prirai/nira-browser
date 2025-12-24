@@ -219,7 +219,7 @@ class TabGroupBar @JvmOverloads constructor(
     }
 
     private fun setupScrollBehaviorIfNeeded() {
-        val prefs = com.prirai.android.nira.preferences.UserPreferences(context)
+        com.prirai.android.nira.preferences.UserPreferences(context)
         // Always enable scroll behavior now
         if (height > 0) {
             (layoutParams as? androidx.coordinatorlayout.widget.CoordinatorLayout.LayoutParams)?.apply {

@@ -753,7 +753,7 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
      */
     private fun adjustWebContentMarginsForFullscreen(isFullscreen: Boolean) {
         val prefs = UserPreferences(requireContext())
-        if (prefs.toolbarPosition != com.prirai.android.nira.components.toolbar.ToolbarPosition.TOP.ordinal) {
+        if (prefs.toolbarPosition != ToolbarPosition.TOP.ordinal) {
             return // Bottom toolbar doesn't need margin adjustment
         }
         
@@ -787,7 +787,7 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
             swipeRefreshParams.topMargin = 0
         } else {
             // Top toolbar: margin = address bar height only (not full toolbar height)
-            val addressBarHeight = resources.getDimensionPixelSize(com.prirai.android.nira.R.dimen.browser_toolbar_height)
+            val addressBarHeight = resources.getDimensionPixelSize(R.dimen.browser_toolbar_height)
             swipeRefreshParams.topMargin = addressBarHeight
             swipeRefreshParams.bottomMargin = 0
         }

@@ -74,6 +74,11 @@ android {
     lint {
         abortOnError = false
     }
+    packaging {
+        jniLibs {
+            useLegacyPackaging true
+        }
+    }
 }
 
 def abiBaseMap = ["arm64-v8a"  : 1,
