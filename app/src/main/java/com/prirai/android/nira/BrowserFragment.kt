@@ -262,10 +262,8 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
             unifiedToolbar?.setEngineView(binding.engineView)
 
             // Add layout listener to update web content positioning once toolbar is measured
+            // Only for the main toolbar view, not bottom components to avoid jank
             unifiedToolbar?.getToolbarView()?.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
-                requestWebContentPositionUpdate()
-            }
-            unifiedToolbar?.getBottomComponentsContainer()?.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
                 requestWebContentPositionUpdate()
             }
 
@@ -314,6 +312,8 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
             // Set toolbar offset listener for smooth margin adjustment (top toolbar only)
             unifiedToolbar?.setOnToolbarOffsetChangedListener { currentOffset, totalHeight ->
                 adjustWebContentMarginsForToolbarOffset(currentOffset, totalHeight)
+                // Also adjust fullscreen button position to follow toolbar
+                adjustFullscreenButtonPosition(currentOffset, totalHeight)
             }
 
             // Set contextual toolbar listener
@@ -584,7 +584,7 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
         )
         
         fullscreenButton?.let { button ->
-            // Position button above bottom toolbars
+            // Position button to attach to bottom toolbars (U-shape)
             positionFullscreenButtonAboveToolbars()
             
             // Set click listener
@@ -596,12 +596,45 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
             unifiedToolbar?.getToolbarView()?.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
                 positionFullscreenButtonAboveToolbars()
             }
+            
+            // For top toolbar mode, also listen to bottom components movement
+            val prefs = UserPreferences(requireContext())
+            if (prefs.toolbarPosition == com.prirai.android.nira.components.toolbar.ToolbarPosition.TOP.ordinal) {
+                unifiedToolbar?.getBottomComponentsContainer()?.let { bottomContainer ->
+                    // Track when bottom components translate (hide/show)
+                    bottomContainer.viewTreeObserver.addOnPreDrawListener {
+                        val currentTranslation = bottomContainer.translationY
+                        if (currentTranslation != 0f) {
+                            fullscreenButton.translationY = currentTranslation
+                        }
+                        true
+                    }
+                }
+            }
+            
+            // Apply rounded top corners only (U-shape attachment)
+            applyUShapeToButton(button)
         }
     }
     
     /**
-     * Position fullscreen button above bottom toolbars at the right
-     * Position it on top of all bottom components (tab bar + contextual toolbar)
+     * Apply U-shape styling to button (rounded top, flat bottom for attachment)
+     */
+    private fun applyUShapeToButton(button: com.google.android.material.floatingactionbutton.FloatingActionButton) {
+        // Create shape with only top corners rounded
+        val shapeModel = com.google.android.material.shape.ShapeAppearanceModel.builder()
+            .setTopLeftCorner(com.google.android.material.shape.CornerFamily.ROUNDED, 28f * resources.displayMetrics.density)
+            .setTopRightCorner(com.google.android.material.shape.CornerFamily.ROUNDED, 28f * resources.displayMetrics.density)
+            .setBottomLeftCorner(com.google.android.material.shape.CornerFamily.ROUNDED, 0f)
+            .setBottomRightCorner(com.google.android.material.shape.CornerFamily.ROUNDED, 0f)
+            .build()
+        
+        button.shapeAppearanceModel = shapeModel
+    }
+    
+    /**
+     * Position fullscreen button to attach to bottom toolbars (U-shape)
+     * No gap - button sits directly on toolbar creating inverted U shape
      */
     private fun positionFullscreenButtonAboveToolbars() {
         val fullscreenButton = view?.findViewById<com.google.android.material.floatingactionbutton.FloatingActionButton>(
@@ -611,43 +644,115 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
         val prefs = UserPreferences(requireContext())
         val layoutParams = fullscreenButton.layoutParams as? android.widget.FrameLayout.LayoutParams ?: return
         
-        // Calculate bottom margin to position above ALL bottom bars
+        // Get navigation bar height (system insets)
+        val windowInsets = androidx.core.view.ViewCompat.getRootWindowInsets(fullscreenButton)
+        val navBarHeight = windowInsets?.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars())?.bottom ?: 0
+        
+        // No extra spacing - attach directly to toolbar (U-shape)
+        // Calculate bottom margin to attach to the TOPMOST bottom component
         val bottomMargin = if (prefs.toolbarPosition == com.prirai.android.nira.components.toolbar.ToolbarPosition.BOTTOM.ordinal) {
-            // For bottom toolbar, we need to position above:
-            // 1. Address bar (at bottom in BOTTOM mode)
-            // 2. Tab bar (if present)
-            // 3. Contextual toolbar (if present)
+            // For BOTTOM toolbar mode, components are stacked from bottom to top:
+            // Navigation bar (system)
+            // Bottom: Contextual toolbar (if enabled)
+            // Middle: Address bar (always present)
+            // Top: Tab bar (if enabled) - THIS IS WHERE BUTTON SHOULD ATTACH
             
-            // Get the total height of all bottom components
-            val toolbarView = unifiedToolbar?.getToolbarView()
-            val bottomComponentsContainer = unifiedToolbar?.getBottomComponentsContainer()
+            // We need to sum heights of ALL components in the unified toolbar + navigation bar
+            val tabGroupBar = unifiedToolbar?.getTabGroupBar()
+            val browserToolbar = unifiedToolbar?.getBrowserToolbar()
+            val contextualToolbar = unifiedToolbar?.getContextualToolbar()
             
-            val addressBarHeight = toolbarView?.height ?: 0
-            val bottomComponentsHeight = bottomComponentsContainer?.height ?: 0
+            var totalHeight = navBarHeight // Start with navigation bar height
             
-            val totalHeight = addressBarHeight + bottomComponentsHeight
+            // Add contextual toolbar height (bottom-most)
+            contextualToolbar?.let { toolbar ->
+                if (prefs.showContextualToolbar && toolbar.visibility == View.VISIBLE) {
+                    totalHeight += toolbar.height
+                }
+            }
             
-            if (totalHeight > 0) {
-                totalHeight + (16 * resources.displayMetrics.density).toInt()
+            // Add address bar height (middle)
+            browserToolbar?.let { toolbar ->
+                totalHeight += toolbar.asView()?.height ?: 0
+            }
+            
+            // Add tab bar height (top-most - where button attaches)
+            tabGroupBar?.let { bar ->
+                if (prefs.showTabGroupBar && bar.visibility == View.VISIBLE) {
+                    totalHeight += bar.height
+                }
+            }
+            
+            if (totalHeight > navBarHeight) {
+                totalHeight // Attach to top of tab bar
             } else {
-                // Fallback: address bar (~56dp) + tab bar (~48dp) + contextual (~56dp) = ~160dp
-                (160 * resources.displayMetrics.density).toInt() + (16 * resources.displayMetrics.density).toInt()
+                // Fallback
+                (160 * resources.displayMetrics.density).toInt() + navBarHeight
             }
         } else {
-            // For top toolbar, bottom components are at bottom, position above them
-            val bottomComponentsContainer = unifiedToolbar?.getBottomComponentsContainer()
-            val bottomComponentsHeight = bottomComponentsContainer?.height ?: 0
+            // For TOP toolbar mode, address bar is at top
+            // Bottom components (tab bar + contextual) are at bottom in a separate container
+            // They sit above the navigation bar
             
-            if (bottomComponentsHeight > 0) {
-                bottomComponentsHeight + (16 * resources.displayMetrics.density).toInt()
+            // Calculate manually by summing individual component heights + navigation bar
+            val tabGroupBar = unifiedToolbar?.getTabGroupBar()
+            val contextualToolbar = unifiedToolbar?.getContextualToolbar()
+            
+            var totalHeight = navBarHeight // Start with navigation bar height
+            
+            // Add contextual toolbar height (bottom-most in the bottom container)
+            contextualToolbar?.let { toolbar ->
+                if (prefs.showContextualToolbar && toolbar.visibility == View.VISIBLE) {
+                    totalHeight += toolbar.height
+                }
+            }
+            
+            // Add tab bar height (top-most in the bottom container - where button attaches)
+            tabGroupBar?.let { bar ->
+                if (prefs.showTabGroupBar && bar.visibility == View.VISIBLE) {
+                    totalHeight += bar.height
+                }
+            }
+            
+            if (totalHeight > navBarHeight) {
+                totalHeight // Attach to top of tab bar in bottom container
             } else {
-                // Fallback: default margin
-                (16 * resources.displayMetrics.density).toInt()
+                // No bottom components - attach to navigation bar
+                navBarHeight
             }
         }
         
         layoutParams.bottomMargin = bottomMargin
         fullscreenButton.layoutParams = layoutParams
+    }
+    
+    /**
+     * Adjust fullscreen button position as toolbar hides/shows
+     * Button follows toolbar to maintain U-shape attachment
+     */
+    private fun adjustFullscreenButtonPosition(currentOffset: Int, totalHeight: Int) {
+        val fullscreenButton = view?.findViewById<com.google.android.material.floatingactionbutton.FloatingActionButton>(
+            R.id.fullscreenToggleButton
+        ) ?: return
+        
+        val prefs = UserPreferences(requireContext())
+        
+        if (prefs.toolbarPosition == com.prirai.android.nira.components.toolbar.ToolbarPosition.BOTTOM.ordinal) {
+            // Bottom toolbar: button moves down as toolbar hides
+            // Translation reduces the bottom margin visually
+            fullscreenButton.translationY = currentOffset.toFloat()
+        } else {
+            // Top toolbar: bottom components at bottom
+            // Button needs to move DOWN as bottom components hide/move
+            // Get the bottom components container to check its translation
+            val bottomComponentsContainer = unifiedToolbar?.getBottomComponentsContainer()
+            
+            // Bottom components don't have scroll behavior in TOP mode, they're static
+            // So button should stay attached to them (no translation needed)
+            // However, if there's a hiding mechanism, follow it
+            val bottomTranslation = bottomComponentsContainer?.translationY ?: 0f
+            fullscreenButton.translationY = bottomTranslation
+        }
     }
 
     /**
@@ -678,7 +783,7 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
             fullscreenButton.scaleX = 0f
             fullscreenButton.scaleY = 0f
             fullscreenButton.animate()
-                .alpha(0.7f)
+                .alpha(0.5f)
                 .scaleX(1f)
                 .scaleY(1f)
                 .setDuration(200)
