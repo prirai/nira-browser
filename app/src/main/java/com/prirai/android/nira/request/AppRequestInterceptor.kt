@@ -49,9 +49,36 @@ class AppRequestInterceptor(val context: Context) : RequestInterceptor {
         isDirectNavigation: Boolean,
         isSubframeRequest: Boolean
     ): InterceptionResponse? {
-        // Redirect about:blank to compose homepage
-        if (uri == "about:blank") {
-            return InterceptionResponse.Url("about:homepage")
+        // Handle homepage type preference
+        if (uri == "about:homepage" || uri == "about:blank") {
+            val prefs = UserPreferences(context)
+            return when (prefs.homepageType) {
+                com.prirai.android.nira.settings.HomepageChoice.BLANK_PAGE.ordinal -> {
+                    // Blank page - load about:blank
+                    if (uri != "about:blank") {
+                        InterceptionResponse.Url("about:blank")
+                    } else {
+                        null
+                    }
+                }
+                com.prirai.android.nira.settings.HomepageChoice.CUSTOM_PAGE.ordinal -> {
+                    // Custom page - redirect to custom URL
+                    val customUrl = prefs.customHomepageUrl
+                    if (customUrl.isNotEmpty() && uri != customUrl) {
+                        InterceptionResponse.Url(customUrl)
+                    } else {
+                        null
+                    }
+                }
+                else -> {
+                    // VIEW mode - use about:homepage (default)
+                    if (uri == "about:blank") {
+                        InterceptionResponse.Url("about:homepage")
+                    } else {
+                        null
+                    }
+                }
+            }
         }
         
         // Check if this is a webapp session

@@ -342,23 +342,39 @@ class ImportExportSettingsFragment : BaseSettingsFragment() {
     }
 
     private fun exportSettings(uri: Uri) {
-        val userPref = requireActivity().getSharedPreferences(SCW_PREFERENCES, 0)
-        val allEntries: Map<String, *> = userPref!!.all
-        var string = "{"
-        for (entry in allEntries.entries) {
-            string += "\"${entry.key}\"=\"${entry.value}\","
-        }
-
-        string = string.substring(0, string.length - 1) + "}"
-
         try {
-            val output: OutputStream? = requireActivity().contentResolver.openOutputStream(uri)
+            val userPref = requireActivity().getSharedPreferences(SCW_PREFERENCES, 0)
+            val allEntries: Map<String, *> = userPref.all
+            
+            // Create JSON object with metadata
+            val jsonObj = JSONObject()
+            jsonObj.put("_version", 1) // Version for migration handling
+            jsonObj.put("_timestamp", System.currentTimeMillis())
+            
+            for (entry in allEntries.entries) {
+                // Skip internal keys
+                if (entry.key.startsWith("_")) continue
+                
+                when (val value = entry.value) {
+                    is Boolean -> jsonObj.put(entry.key, value)
+                    is Int -> jsonObj.put(entry.key, value)
+                    is Long -> jsonObj.put(entry.key, value)
+                    is Float -> jsonObj.put(entry.key, value)
+                    is String -> jsonObj.put(entry.key, value)
+                    else -> jsonObj.put(entry.key, value.toString())
+                }
+            }
 
-            output?.write(string.toByteArray())
-            output?.flush()
-            output?.close()
-        } catch (e: IOException) {
-            Log.e("Exception", "File write failed: " + e.toString())
+            val output: OutputStream? = requireActivity().contentResolver.openOutputStream(uri)
+            output?.use {
+                it.write(jsonObj.toString(2).toByteArray()) // Pretty print with indent
+                it.flush()
+            }
+            
+            Toast.makeText(context, R.string.successful, Toast.LENGTH_SHORT).show()
+        } catch (e: Exception) {
+            Log.e("ImportExportSettings", "Error exporting settings", e)
+            Toast.makeText(context, R.string.error, Toast.LENGTH_LONG).show()
         }
     }
 
@@ -366,84 +382,122 @@ class ImportExportSettingsFragment : BaseSettingsFragment() {
         try {
             val input: InputStream? = requireActivity().contentResolver.openInputStream(uri)
             input?.use { stream ->
-                val bufferSize = 1024
-                val buffer = CharArray(bufferSize)
-                val out = StringBuilder()
-                val reader: Reader = InputStreamReader(stream, "UTF-8")
-                reader.use {
-                    while (true) {
-                        val rsz = it.read(buffer, 0, buffer.size)
-                        if (rsz < 0) break
-                        out.appendRange(buffer, 0, rsz)
-                    }
+                val content = stream.bufferedReader().use { it.readText() }
+                
+                // Try to parse as JSON
+                val jsonObj = try {
+                    JSONObject(content)
+                } catch (e: Exception) {
+                    // Try legacy format: {"key"="value",...}
+                    parseLegacySettings(content)
                 }
 
-                val content = out.toString()
-                val answer = JSONObject(content)
-                val keys: JSONArray = answer.names() ?: JSONArray()
                 val userPref = requireActivity().getSharedPreferences(SCW_PREFERENCES, 0)
                 
-                // Apply settings in a batch
+                // Get version for migration
+                val version = try {
+                    jsonObj.getInt("_version")
+                } catch (e: Exception) {
+                    0 // Legacy or no version
+                }
+                
+                // Apply settings with migration
                 with(userPref.edit()) {
-                    for (i in 0 until keys.length()) {
-                        val key: String = keys.getString(i)
-                        val valueStr: String = answer.getString(key)
+                    val keys = jsonObj.keys()
+                    while (keys.hasNext()) {
+                        val key = keys.next()
                         
-                        // Try to determine the type and save accordingly
-                        when {
-                            // Check for boolean
-                            valueStr == "true" || valueStr == "false" -> {
-                                putBoolean(key, valueStr.toBoolean())
-                            }
-                            // Check for integer
-                            valueStr.matches("-?\\d+".toRegex()) -> {
-                                try {
-                                    // Try long first, then int
-                                    val longValue = valueStr.toLong()
-                                    if (longValue > Int.MAX_VALUE || longValue < Int.MIN_VALUE) {
-                                        putLong(key, longValue)
-                                    } else {
-                                        putInt(key, longValue.toInt())
+                        // Skip metadata keys
+                        if (key.startsWith("_")) continue
+                        
+                        // Apply migrations if needed
+                        val migratedKey = migrateSettingKey(key, version)
+                        if (migratedKey == null) continue // Skip obsolete settings
+                        
+                        // Get value and determine type
+                        val value = jsonObj.get(key)
+                        
+                        when (value) {
+                            is Boolean -> putBoolean(migratedKey, value)
+                            is Int -> putInt(migratedKey, value)
+                            is Long -> putLong(migratedKey, value)
+                            is Double -> putFloat(migratedKey, value.toFloat())
+                            is String -> {
+                                // Try to infer type from string value
+                                when {
+                                    value == "true" || value == "false" -> 
+                                        putBoolean(migratedKey, value.toBoolean())
+                                    value.matches("-?\\d+".toRegex()) -> {
+                                        val longValue = value.toLongOrNull()
+                                        if (longValue != null) {
+                                            if (longValue > Int.MAX_VALUE || longValue < Int.MIN_VALUE) {
+                                                putLong(migratedKey, longValue)
+                                            } else {
+                                                putInt(migratedKey, longValue.toInt())
+                                            }
+                                        } else {
+                                            putString(migratedKey, value)
+                                        }
                                     }
-                                } catch (e: NumberFormatException) {
-                                    putString(key, valueStr)
+                                    value.matches("-?\\d+\\.\\d+".toRegex()) ->
+                                        putFloat(migratedKey, value.toFloatOrNull() ?: 1.0f)
+                                    else ->
+                                        putString(migratedKey, value)
                                 }
                             }
-                            // Check for float
-                            valueStr.matches("-?\\d+\\.\\d+".toRegex()) -> {
-                                try {
-                                    putFloat(key, valueStr.toFloat())
-                                } catch (e: NumberFormatException) {
-                                    putString(key, valueStr)
-                                }
-                            }
-                            // Default to string
-                            else -> {
-                                putString(key, valueStr)
-                            }
+                            else -> putString(migratedKey, value.toString())
                         }
                     }
                     apply()
                 }
                 
-                // Show success toast
-                Toast.makeText(
-                    context,
-                    R.string.successful,
-                    Toast.LENGTH_SHORT
-                ).show()
-                
-                // Restart activity to apply changes
+                // Show success and restart
+                Toast.makeText(context, R.string.successful, Toast.LENGTH_SHORT).show()
                 requireActivity().recreate()
             }
         } catch (e: Exception) {
             Log.e("ImportExportSettings", "Error importing settings", e)
-            Toast.makeText(
-                context,
-                R.string.error,
-                Toast.LENGTH_LONG
-            ).show()
+            Toast.makeText(context, R.string.error, Toast.LENGTH_LONG).show()
         }
+    }
+    
+    /**
+     * Parse legacy settings format: {"key"="value",...}
+     */
+    private fun parseLegacySettings(content: String): JSONObject {
+        val jsonObj = JSONObject()
+        
+        // Remove surrounding braces
+        val trimmed = content.trim().removeSurrounding("{", "}")
+        
+        // Split by comma
+        val pairs = trimmed.split(",")
+        
+        for (pair in pairs) {
+            val parts = pair.split("=", limit = 2)
+            if (parts.size == 2) {
+                val key = parts[0].trim().removeSurrounding("\"")
+                val value = parts[1].trim().removeSurrounding("\"")
+                jsonObj.put(key, value)
+            }
+        }
+        
+        return jsonObj
+    }
+    
+    /**
+     * Migrate setting keys from old versions to new versions
+     * Returns null if setting is obsolete and should be skipped
+     */
+    private fun migrateSettingKey(key: String, fromVersion: Int): String? {
+        // Add migrations here as needed
+        // Example:
+        // if (fromVersion < 1) {
+        //     if (key == "old_key_name") return "new_key_name"
+        // }
+        
+        // For now, just return the same key
+        return key
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {

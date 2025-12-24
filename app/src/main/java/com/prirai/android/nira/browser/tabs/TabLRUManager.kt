@@ -56,10 +56,23 @@ class TabLRUManager private constructor(context: Context) {
         if (currentIndex == -1) return null
         
         val targetIndex = currentIndex + offset
-        return if (targetIndex >= 0 && targetIndex < lruQueue.size) {
-            lruQueue[targetIndex]
-        } else {
-            null
+        
+        // Handle rollover: if at the end (most recent) and swiping right (-1),
+        // wrap around to the oldest tab (last in queue)
+        return when {
+            targetIndex < 0 -> {
+                // Swiping to newer tabs, but already at newest
+                // Rollover to oldest tab
+                lruQueue.lastOrNull()
+            }
+            targetIndex >= lruQueue.size -> {
+                // Swiping to older tabs, but already at oldest
+                // Rollover to newest tab
+                lruQueue.firstOrNull()
+            }
+            else -> {
+                lruQueue[targetIndex]
+            }
         }
     }
     
@@ -73,7 +86,7 @@ class TabLRUManager private constructor(context: Context) {
         val saved = prefs.getString("lru_order", "") ?: ""
         if (saved.isNotEmpty()) {
             lruQueue.clear()
-            lruQueue.addAll(saved.split(","))
+            lruQueue.addAll(saved.split(",").filter { it.isNotEmpty() })
         }
     }
     

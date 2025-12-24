@@ -815,13 +815,7 @@ class ComposeHomeFragment : Fragment() {
             )
         )
         
-        // Find menu button as anchor
-        val menuButton = view?.findViewById<android.widget.ImageButton>(R.id.menu_button)
-        menuButton?.let {
-            com.prirai.android.nira.components.menu.Material3BrowserMenu(
-                requireContext(),
-                menuItems
-            ).show(it)
-        }
+        // Show menu from UnifiedToolbar's menu button
+        unifiedToolbar?.showMenu(menuItems)
     }
 }

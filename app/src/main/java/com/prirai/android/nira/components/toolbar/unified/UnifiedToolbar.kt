@@ -163,6 +163,20 @@ class UnifiedToolbar @JvmOverloads constructor(
         // Notify expansion state changed
         onExpansionStateChanged?.invoke(false)
     }
+    
+    /**
+     * Show menu from the toolbar's menu button
+     */
+    fun showMenu(menuItems: List<com.prirai.android.nira.components.menu.Material3BrowserMenu.MenuItem>) {
+        // Use the browser toolbar view as anchor for the menu
+        val toolbarView = browserToolbarView?.view
+        if (toolbarView != null) {
+            com.prirai.android.nira.components.menu.Material3BrowserMenu(
+                context,
+                menuItems
+            ).show(toolbarView)
+        }
+    }
 
     /**
      * Setup the unified toolbar with all components.
