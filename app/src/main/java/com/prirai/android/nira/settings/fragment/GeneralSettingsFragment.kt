@@ -75,11 +75,13 @@ class GeneralSettingsFragment : BaseSettingsFragment() {
                 .setNeutralButton(resources.getString(R.string.cancel)) { _, _ ->
                     UserPreferences(requireContext()).homepageType = startingChoice
                 }
-                .setPositiveButton(resources.getString(R.string.mozac_feature_prompts_ok)) { _, _ ->}
+                .setPositiveButton(resources.getString(R.string.mozac_feature_prompts_ok)) { _, _ ->
+                    Toast.makeText(context, requireContext().resources.getText(R.string.app_restart), Toast.LENGTH_LONG).show()
+                }
                 .setSingleChoiceItems(singleItems.toTypedArray(), checkedItem) { dialog, which ->
                     UserPreferences(requireContext()).homepageType = which
                     if(UserPreferences(requireContext()).homepageType == HomepageChoice.CUSTOM_PAGE.ordinal){
-                        val builder = AlertDialog.Builder(context)
+                        val builder = MaterialAlertDialogBuilder(requireContext())
                         builder.setTitle(R.string.custom_page)
 
                         val input = EditText(context)
@@ -89,15 +91,16 @@ class GeneralSettingsFragment : BaseSettingsFragment() {
                         input.setText(UserPreferences(requireContext()).customHomepageUrl)
 
                         builder.setPositiveButton(
-                            "OK"
-                        ) { dialog, which ->
+                            resources.getString(R.string.mozac_feature_prompts_ok)
+                        ) { innerDialog, _ ->
                             UserPreferences(requireContext()).customHomepageUrl = input.text.toString()
-                            Toast.makeText(context, requireContext().resources.getText(R.string.app_restart), Toast.LENGTH_LONG).show()
+                            innerDialog.dismiss()
                         }
                         builder.setNegativeButton(
-                            "Cancel"
-                        ) { dialog, which ->
-
+                            resources.getString(R.string.cancel)
+                        ) { innerDialog, _ ->
+                            UserPreferences(requireContext()).homepageType = startingChoice
+                            innerDialog.dismiss()
                         }
 
                         builder.show()

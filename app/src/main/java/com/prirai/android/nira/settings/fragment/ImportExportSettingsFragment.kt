@@ -363,43 +363,87 @@ class ImportExportSettingsFragment : BaseSettingsFragment() {
     }
 
     private fun importSettings(uri: Uri) {
-        val input: InputStream? = requireActivity().contentResolver.openInputStream(uri)
-
-        val bufferSize = 1024
-        val buffer = CharArray(bufferSize)
-        val out = StringBuilder()
-        val `in`: Reader = InputStreamReader(input, "UTF-8")
-        while (true) {
-            val rsz = `in`.read(buffer, 0, buffer.size)
-            if (rsz < 0) break
-            out.appendRange(buffer, 0, rsz)
-        }
-
-        val content = out.toString()
-
-        val answer = JSONObject(content)
-        val keys: JSONArray = answer.names()
-        val userPref = requireActivity().getSharedPreferences(SCW_PREFERENCES, 0)
-        for (i in 0 until keys.length()) {
-            val key: String = keys.getString(i) // Here's your key
-            val value: String = answer.getString(key) // Here's your value
-            with(userPref.edit()) {
-                if (value.matches("-?\\d+".toRegex())) {
-                    putInt(key, value.toInt())
-                } else if (value == "true" || value == "false") {
-                    putBoolean(key, value.toBoolean())
-                } else {
-                    putString(key, value)
+        try {
+            val input: InputStream? = requireActivity().contentResolver.openInputStream(uri)
+            input?.use { stream ->
+                val bufferSize = 1024
+                val buffer = CharArray(bufferSize)
+                val out = StringBuilder()
+                val reader: Reader = InputStreamReader(stream, "UTF-8")
+                reader.use {
+                    while (true) {
+                        val rsz = it.read(buffer, 0, buffer.size)
+                        if (rsz < 0) break
+                        out.appendRange(buffer, 0, rsz)
+                    }
                 }
-                apply()
-            }
 
+                val content = out.toString()
+                val answer = JSONObject(content)
+                val keys: JSONArray = answer.names() ?: JSONArray()
+                val userPref = requireActivity().getSharedPreferences(SCW_PREFERENCES, 0)
+                
+                // Apply settings in a batch
+                with(userPref.edit()) {
+                    for (i in 0 until keys.length()) {
+                        val key: String = keys.getString(i)
+                        val valueStr: String = answer.getString(key)
+                        
+                        // Try to determine the type and save accordingly
+                        when {
+                            // Check for boolean
+                            valueStr == "true" || valueStr == "false" -> {
+                                putBoolean(key, valueStr.toBoolean())
+                            }
+                            // Check for integer
+                            valueStr.matches("-?\\d+".toRegex()) -> {
+                                try {
+                                    // Try long first, then int
+                                    val longValue = valueStr.toLong()
+                                    if (longValue > Int.MAX_VALUE || longValue < Int.MIN_VALUE) {
+                                        putLong(key, longValue)
+                                    } else {
+                                        putInt(key, longValue.toInt())
+                                    }
+                                } catch (e: NumberFormatException) {
+                                    putString(key, valueStr)
+                                }
+                            }
+                            // Check for float
+                            valueStr.matches("-?\\d+\\.\\d+".toRegex()) -> {
+                                try {
+                                    putFloat(key, valueStr.toFloat())
+                                } catch (e: NumberFormatException) {
+                                    putString(key, valueStr)
+                                }
+                            }
+                            // Default to string
+                            else -> {
+                                putString(key, valueStr)
+                            }
+                        }
+                    }
+                    apply()
+                }
+                
+                // Show success toast
+                Toast.makeText(
+                    context,
+                    R.string.successful,
+                    Toast.LENGTH_SHORT
+                ).show()
+                
+                // Restart activity to apply changes
+                requireActivity().recreate()
+            }
+        } catch (e: Exception) {
+            Log.e("ImportExportSettings", "Error importing settings", e)
+            Toast.makeText(
+                context,
+                R.string.error,
+                Toast.LENGTH_LONG
+            ).show()
         }
-        Toast.makeText(
-            context,
-            requireContext().resources.getText(R.string.app_restart),
-            Toast.LENGTH_LONG
-        ).show()
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
