@@ -415,9 +415,7 @@ class ImportExportSettingsFragment : BaseSettingsFragment() {
                         if (migratedKey == null) continue // Skip obsolete settings
                         
                         // Get value and determine type
-                        val value = jsonObj.get(key)
-                        
-                        when (value) {
+                        when (val value = jsonObj.get(key)) {
                             is Boolean -> putBoolean(migratedKey, value)
                             is Int -> putInt(migratedKey, value)
                             is Long -> putLong(migratedKey, value)
@@ -489,7 +487,7 @@ class ImportExportSettingsFragment : BaseSettingsFragment() {
      * Migrate setting keys from old versions to new versions
      * Returns null if setting is obsolete and should be skipped
      */
-    private fun migrateSettingKey(key: String, fromVersion: Int): String? {
+    private fun migrateSettingKey(key: String, fromVersion: Int): String {
         // Add migrations here as needed
         // Example:
         // if (fromVersion < 1) {
