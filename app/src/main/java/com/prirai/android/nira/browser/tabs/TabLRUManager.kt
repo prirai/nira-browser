@@ -33,6 +33,24 @@ class TabLRUManager private constructor(context: Context) {
         saveToPrefs()
     }
     
+    /**
+     * Synchronize LRU queue with current tabs after restore.
+     * Removes stale IDs and adds new tabs to the end.
+     */
+    fun synchronizeWithTabs(currentTabIds: List<String>) {
+        // Remove tab IDs that no longer exist
+        lruQueue.retainAll(currentTabIds.toSet())
+        
+        // Add new tabs that aren't in the queue yet (at the end)
+        for (tabId in currentTabIds) {
+            if (!lruQueue.contains(tabId)) {
+                lruQueue.addLast(tabId)
+            }
+        }
+        
+        saveToPrefs()
+    }
+    
     fun getTabAtLRUOffset(currentTabId: String, offset: Int): String? {
         val currentIndex = lruQueue.indexOf(currentTabId)
         if (currentIndex == -1) return null

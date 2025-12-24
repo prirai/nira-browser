@@ -639,6 +639,11 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
                 .distinctUntilChanged()
                 .collect { restored ->
                     if (restored) {
+                        // Synchronize LRU manager with restored tabs
+                        val lruManager = com.prirai.android.nira.browser.tabs.TabLRUManager.getInstance(requireContext())
+                        val currentTabIds = store.state.tabs.map { it.id }
+                        lruManager.synchronizeWithTabs(currentTabIds)
+                        
                         val tabs =
                             store.state.getNormalOrPrivateTabs(
                                 activity.browsingModeManager.mode.isPrivate
@@ -796,12 +801,21 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
 
     @CallSuper
     override fun onBackPressed(): Boolean {
-        return readerViewFeature.onBackPressed() ||
-                (findInPageComponent?.onBackPressed() ?: false) ||
-                fullScreenFeature.onBackPressed() ||
-                promptsFeature.onBackPressed() ||
-                sessionFeature.onBackPressed() ||
-                removeSessionIfNeeded()
+        // Check features in order of priority
+        if (readerViewFeature.onBackPressed()) return true
+        if (findInPageComponent?.onBackPressed() == true) return true
+        if (fullScreenFeature.onBackPressed()) return true
+        if (promptsFeature.onBackPressed()) return true
+        if (sessionFeature.onBackPressed()) return true
+        
+        // As fallback, check if current tab can go back and handle it manually
+        val currentTab = requireContext().components.store.state.findTabOrCustomTabOrSelectedTab(customTabSessionId)
+        if (currentTab?.content?.canGoBack == true) {
+            requireContext().components.sessionUseCases.goBack.invoke(currentTab.id)
+            return true
+        }
+        
+        return removeSessionIfNeeded()
     }
 
     /**

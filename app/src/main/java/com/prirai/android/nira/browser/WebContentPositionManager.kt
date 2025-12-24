@@ -92,18 +92,23 @@ class WebContentPositionManager(
         // Get keyboard (IME) insets
         val ime = insets.getInsets(WindowInsetsCompat.Type.ime())
         
-        // When keyboard appears, temporarily increase bottom margin
-        // to push content above keyboard
-        if (ime.bottom > 0 && ime.bottom != lastImeInset) {
+        // Calculate visible keyboard height (IME minus navigation bar)
+        val visibleImeHeight = maxOf(0, ime.bottom - navigationBarHeight)
+        
+        // When keyboard appears, set bottom padding on swipeRefreshView
+        // to push content above keyboard without black bar
+        if (visibleImeHeight > 0 && visibleImeHeight != lastImeInset) {
             val layoutParams = swipeRefreshView.layoutParams as? CoordinatorLayout.LayoutParams ?: return
-            layoutParams.bottomMargin = ime.bottom
+            layoutParams.bottomMargin = visibleImeHeight
             swipeRefreshView.layoutParams = layoutParams
-            lastImeInset = ime.bottom
-        } else if (ime.bottom == 0 && lastImeInset > 0) {
+            swipeRefreshView.requestLayout()
+            lastImeInset = visibleImeHeight
+        } else if (visibleImeHeight == 0 && lastImeInset > 0) {
             // Keyboard hidden, restore to no margin
             val layoutParams = swipeRefreshView.layoutParams as? CoordinatorLayout.LayoutParams ?: return
             layoutParams.bottomMargin = 0
             swipeRefreshView.layoutParams = layoutParams
+            swipeRefreshView.requestLayout()
             lastImeInset = 0
         }
     }
