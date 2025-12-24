@@ -48,11 +48,7 @@
             app:singleLineTitle="false"
             app:defaultValue="false" />
 
-        <com.prirai.android.nira.settings.MaterialSwitchPreference
-            app:key="@string/key_hide_url_bar"
-            app:title="@string/hide_url_bar"
-            app:singleLineTitle="false"
-            app:defaultValue="true" />
+
 
         <com.prirai.android.nira.settings.MaterialSwitchPreference
             app:key="@string/key_show_contextual_toolbar"

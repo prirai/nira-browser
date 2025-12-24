@@ -48,8 +48,6 @@ class UserPreferences(appContext: Context) : mozilla.components.support.ktx.andr
     var autoFontSize by booleanPreference(AUTO_FONT_SIZE, true)
     var fontSizeFactor by floatPreference(FONT_SIZE_FACTOR, 1f)
 
-    // Always enabled for bottom toolbar to prevent black bar at top
-    var hideBarWhileScrolling by booleanPreference(HIDE_URL_BAR, true)
     var stackFromBottom by booleanPreference(STACK_FROM_BOTTOM, false)
     var showTabsInGrid by booleanPreference(SHOW_TABS_IN_GRID, false)
     var showContextualToolbar by booleanPreference(SHOW_CONTEXTUAL_TOOLBAR, true)
