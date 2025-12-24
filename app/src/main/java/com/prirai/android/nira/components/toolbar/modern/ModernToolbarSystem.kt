@@ -194,14 +194,14 @@ class ModernToolbarSystem @JvmOverloads constructor(
             ToolbarPosition.BOTTOM -> currentOffset.toFloat()  // Positive moves DOWN (hiding)
         }
 
+        // Notify listener for smooth margin adjustment (for both TOP and BOTTOM modes)
+        onOffsetChangedListener?.invoke(currentOffset, totalHeight)
+
         // No clipping needed - we use margins instead
         if (toolbarPosition == ToolbarPosition.TOP) {
             // Keep toolbar visible but translated for smooth animation
             visibility = VISIBLE
             alpha = 1f
-            
-            // Notify listener for smooth margin adjustment
-            onOffsetChangedListener?.invoke(currentOffset, totalHeight)
         } else {
             // Bottom toolbar - normal fade behavior
             alpha = if (totalHeight > 0) {
