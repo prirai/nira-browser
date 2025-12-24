@@ -139,11 +139,11 @@ object ThemeManager {
                 true
             )
             window.statusBarColor = typedValue.data
-            window.navigationBarColor = typedValue.data
+            window.navigationBarColor = android.graphics.Color.TRANSPARENT
         } else if (isAmoledActive(context)) {
             // Pure black for AMOLED
             window.statusBarColor = android.graphics.Color.BLACK
-            window.navigationBarColor = android.graphics.Color.BLACK
+            window.navigationBarColor = android.graphics.Color.TRANSPARENT
         } else {
             // Surface color for normal mode
             window.statusBarColor = getSurfaceColor(context)

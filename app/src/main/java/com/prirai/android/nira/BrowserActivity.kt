@@ -673,7 +673,7 @@ open class BrowserActivity : LocaleAwareAppCompatActivity(), ComponentCallbacks2
             val purpleColor = com.prirai.android.nira.theme.ColorConstants.PrivateMode.PURPLE
             toolbar?.setBackgroundColor(purpleColor)
             window.statusBarColor = purpleColor
-            window.navigationBarColor = purpleColor
+            window.navigationBarColor = android.graphics.Color.TRANSPARENT
         } else {
             // Default theme color
             val typedValue = android.util.TypedValue()
@@ -682,9 +682,7 @@ open class BrowserActivity : LocaleAwareAppCompatActivity(), ComponentCallbacks2
             
             theme.resolveAttribute(com.google.android.material.R.attr.colorPrimaryVariant, typedValue, true)
             window.statusBarColor = typedValue.data
-            
-            theme.resolveAttribute(com.google.android.material.R.attr.colorSurface, typedValue, true)
-            window.navigationBarColor = typedValue.data
+            window.navigationBarColor = android.graphics.Color.TRANSPARENT
         }
     }
     

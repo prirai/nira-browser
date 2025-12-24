@@ -105,12 +105,16 @@
         android:layout_height="wrap_content"
         android:layout_gravity="end|bottom"
         android:layout_marginEnd="16dp"
-        android:layout_marginBottom="16dp"
+        android:layout_marginBottom="0dp"
         android:contentDescription="Exit fullscreen"
         android:src="@drawable/ic_fullscreen_exit"
         android:visibility="gone"
+        android:alpha="0.5"
         app:backgroundTint="?attr/colorPrimaryContainer"
         app:tint="?attr/colorOnPrimaryContainer"
+        app:fabSize="mini"
+        app:elevation="0dp"
+        app:borderWidth="0dp"
         app:shapeAppearance="@style/ShapeAppearance.Material3.Corner.Large"
     />
     

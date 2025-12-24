@@ -690,7 +690,7 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
     }
     
     /**
-     * Show the floating fullscreen exit button
+     * Show the floating fullscreen exit button with U-shape styling
      */
     private fun showFullscreenExitButton() {
         val fullscreenExitButton = view?.findViewById<com.google.android.material.floatingactionbutton.FloatingActionButton>(
@@ -698,17 +698,26 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
         )
         
         fullscreenExitButton?.let { button ->
+            // Apply U-shape (rounded top, flat bottom)
+            val shapeModel = com.google.android.material.shape.ShapeAppearanceModel.builder()
+                .setTopLeftCorner(com.google.android.material.shape.CornerFamily.ROUNDED, 28f * resources.displayMetrics.density)
+                .setTopRightCorner(com.google.android.material.shape.CornerFamily.ROUNDED, 28f * resources.displayMetrics.density)
+                .setBottomLeftCorner(com.google.android.material.shape.CornerFamily.ROUNDED, 0f)
+                .setBottomRightCorner(com.google.android.material.shape.CornerFamily.ROUNDED, 0f)
+                .build()
+            button.shapeAppearanceModel = shapeModel
+            
             button.visibility = View.VISIBLE
             button.setOnClickListener {
                 exitManualFullscreen()
             }
             
-            // Animate in
+            // Animate in with 0.5f opacity
             button.alpha = 0f
             button.scaleX = 0f
             button.scaleY = 0f
             button.animate()
-                .alpha(1f)
+                .alpha(0.5f)
                 .scaleX(1f)
                 .scaleY(1f)
                 .setDuration(200)
