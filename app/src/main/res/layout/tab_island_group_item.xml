@@ -101,12 +101,11 @@
             android:paddingHorizontal="8dp"
             android:src="@android:drawable/ic_input_add"
             android:contentDescription="@string/add_new_tab_to_island"
-            android:tint="?android:attr/textColorSecondary"
             android:scaleType="centerInside"
             android:clickable="true"
             android:focusable="true"
             android:background="?android:attr/selectableItemBackground"
-        />
+            app:tint="?android:attr/textColorSecondary" />
 
     </LinearLayout>
 

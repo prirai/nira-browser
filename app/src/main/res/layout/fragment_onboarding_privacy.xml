@@ -168,7 +168,7 @@
                         android:layout_height="32dp"
                         android:src="@drawable/ic_search"
                         android:contentDescription="@string/search_suggestions"
-                        android:tint="?attr/colorPrimary" />
+                        app:tint="?attr/colorPrimary" />
 
                     <LinearLayout
                         android:layout_width="0dp"
