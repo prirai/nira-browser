@@ -74,9 +74,7 @@ class DefaultBrowserToolbarController(
     }
 
     override fun handleScroll(offset: Int) {
-        if (UserPreferences(activity).hideBarWhileScrolling) {
-            engineView.setVerticalClipping(offset)
-        }
+        // No clipping needed - we use margins for top toolbar instead
     }
 }
 

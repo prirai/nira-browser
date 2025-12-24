@@ -8,14 +8,12 @@ import androidx.core.view.WindowInsetsCompat
 import mozilla.components.concept.engine.EngineView
 
 /**
- * Manages web content positioning to prevent overlap with toolbars and keyboard.
- * Based on Firefox's approach: uses margins on swipeRefreshLayout to position content.
+ * Manages web content positioning to prevent overlap with system bars and keyboard.
  * 
  * This manager:
- * - Sets top/bottom margins on swipeRefreshLayout to avoid toolbar overlap
- * - Accounts for system bars (status bar, navigation bar)
+ * - Applies padding to engine view for system bars (status bar, navigation bar)
  * - Handles keyboard (IME) appearance with smooth animations
- * - Automatically recalculates when toolbar visibility changes
+ * - Does NOT handle toolbar margins (that's done in BaseBrowserFragment)
  */
 class WebContentPositionManager(
     private val engineView: EngineView,

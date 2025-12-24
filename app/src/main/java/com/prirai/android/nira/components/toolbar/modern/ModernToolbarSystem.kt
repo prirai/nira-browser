@@ -33,6 +33,9 @@ class ModernToolbarSystem @JvmOverloads constructor(
     private var tabGroupComponent: View? = null
     private var addressBarComponent: View? = null
     private var contextualComponent: View? = null
+    
+    // Toolbar offset callback for smooth margin adjustment
+    private var onOffsetChangedListener: ((Int, Int) -> Unit)? = null
 
     enum class ToolbarPosition {
         TOP, BOTTOM
@@ -75,8 +78,7 @@ class ModernToolbarSystem @JvmOverloads constructor(
             }
         }
 
-        // Update engine view about our new height
-        updateDynamicToolbarHeight()
+        // No need to update clipping - we use margins instead
     }
 
     fun removeComponent(type: ComponentType) {
@@ -95,22 +97,14 @@ class ModernToolbarSystem @JvmOverloads constructor(
             }
         }
 
-        updateDynamicToolbarHeight()
+        // No need to update clipping - we use margins instead
     }
 
     fun setEngineView(engine: EngineView) {
         engineView = engine
-
-        // For TOP toolbar: Enable dynamic toolbar so content starts below toolbar
-        // For BOTTOM toolbar: Set clipping to 0 to prevent black bar at top
-        if (toolbarPosition == ToolbarPosition.TOP) {
-            // Enable dynamic toolbar - this makes content start below the toolbar
-            updateDynamicToolbarHeight()
-        } else {
-            // BOTTOM toolbar: Disable dynamic toolbar
-            engine.setDynamicToolbarMaxHeight(0)
-            engine.setVerticalClipping(0)
-        }
+        
+        // Always disable dynamic toolbar - we use margins for top toolbar instead
+        engine.setDynamicToolbarMaxHeight(0)
     }
 
     fun setToolbarPosition(position: ToolbarPosition) {
@@ -137,44 +131,6 @@ class ModernToolbarSystem @JvmOverloads constructor(
             }
             
             insets
-        }
-    }
-
-    private fun updateDynamicToolbarHeight() {
-        val engine = engineView ?: return
-        
-        if (toolbarPosition == ToolbarPosition.TOP) {
-            // TOP toolbar: Enable dynamic toolbar to offset content below toolbar
-            // We need to measure the toolbar first if height is 0
-            if (height == 0) {
-                // Force measure to get proper height
-                measure(
-                    MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED),
-                    MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED)
-                )
-            }
-            
-            val totalHeight = getTotalHeight()
-            if (totalHeight > 0) {
-                engine.setDynamicToolbarMaxHeight(totalHeight)
-                // Set clipping to current offset so content adjusts as toolbar hides/shows
-                engine.setVerticalClipping(currentOffset)
-            } else {
-                // If still no height, post to next frame
-                post {
-                    val h = getTotalHeight()
-                    if (h > 0) {
-                        engine.setDynamicToolbarMaxHeight(h)
-                        engine.setVerticalClipping(currentOffset)
-                    }
-                }
-            }
-        } else {
-            // BOTTOM toolbar: Disable dynamic toolbar (no content offset needed)
-            // The scroll behavior translates the toolbar, not shrinks it
-            // Setting dynamic toolbar height reserves space in Gecko, causing black bars
-            engine.setDynamicToolbarMaxHeight(0)
-            engine.setVerticalClipping(0)
         }
     }
 
@@ -238,13 +194,14 @@ class ModernToolbarSystem @JvmOverloads constructor(
             ToolbarPosition.BOTTOM -> currentOffset.toFloat()  // Positive moves DOWN (hiding)
         }
 
-        // Update vertical clipping for TOP toolbar so content can expand as toolbar hides
+        // No clipping needed - we use margins instead
         if (toolbarPosition == ToolbarPosition.TOP) {
-            engineView?.setVerticalClipping(currentOffset)
-            
             // Keep toolbar visible but translated for smooth animation
             visibility = VISIBLE
             alpha = 1f
+            
+            // Notify listener for smooth margin adjustment
+            onOffsetChangedListener?.invoke(currentOffset, totalHeight)
         } else {
             // Bottom toolbar - normal fade behavior
             alpha = if (totalHeight > 0) {
@@ -256,6 +213,13 @@ class ModernToolbarSystem @JvmOverloads constructor(
     }
 
     fun getCurrentOffset(): Int = currentOffset
+    
+    /**
+     * Set listener for offset changes (for smooth margin adjustment)
+     */
+    fun setOnOffsetChangedListener(listener: (Int, Int) -> Unit) {
+        onOffsetChangedListener = listener
+    }
 
     enum class ComponentType {
         TAB_GROUP,

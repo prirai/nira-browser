@@ -220,7 +220,8 @@ class TabGroupBar @JvmOverloads constructor(
 
     private fun setupScrollBehaviorIfNeeded() {
         val prefs = com.prirai.android.nira.preferences.UserPreferences(context)
-        if (prefs.hideBarWhileScrolling && height > 0) {
+        // Always enable scroll behavior now
+        if (height > 0) {
             (layoutParams as? androidx.coordinatorlayout.widget.CoordinatorLayout.LayoutParams)?.apply {
                 if (behavior == null) {
                     behavior = mozilla.components.ui.widgets.behavior.EngineViewScrollingBehavior(

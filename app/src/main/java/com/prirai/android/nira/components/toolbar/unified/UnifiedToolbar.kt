@@ -73,6 +73,9 @@ class UnifiedToolbar @JvmOverloads constructor(
     // Expansion state callback
     private var onExpansionStateChanged: ((Boolean) -> Unit)? = null
     
+    // Toolbar offset callback for smooth margin adjustment
+    private var onToolbarOffsetChanged: ((Int, Int) -> Unit)? = null
+    
     // Reload/Stop button integration
     private var reloadStopIntegration: com.prirai.android.nira.integration.ReloadStopButtonIntegration? = null
     
@@ -230,10 +233,8 @@ class UnifiedToolbar @JvmOverloads constructor(
             }
         }
 
-        // Setup scroll behavior if enabled
-        if (prefs.hideBarWhileScrolling) {
-            setupScrollBehavior(parent)
-        }
+        // Always setup scroll behavior (always enabled now)
+        setupScrollBehavior(parent)
 
         return this
     }
@@ -723,6 +724,15 @@ class UnifiedToolbar @JvmOverloads constructor(
      */
     fun setOnExpansionStateChangedListener(listener: (Boolean) -> Unit) {
         onExpansionStateChanged = listener
+    }
+    
+    /**
+     * Set listener for toolbar offset changes (for smooth margin adjustment)
+     * @param listener (currentOffset, totalHeight) -> Unit
+     */
+    fun setOnToolbarOffsetChangedListener(listener: (Int, Int) -> Unit) {
+        onToolbarOffsetChanged = listener
+        toolbarSystem.setOnOffsetChangedListener(listener)
     }
 
     /**

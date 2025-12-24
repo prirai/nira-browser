@@ -77,7 +77,6 @@ import mozilla.components.feature.search.SearchFeature
 import mozilla.components.feature.session.FullScreenFeature
 import mozilla.components.feature.session.PictureInPictureFeature
 import mozilla.components.feature.session.SessionFeature
-import mozilla.components.feature.session.SwipeRefreshFeature
 import mozilla.components.feature.sitepermissions.SitePermissionsFeature
 import com.prirai.android.nira.auth.PasskeyAuthFeature
 import mozilla.components.lib.state.ext.consumeFlow
@@ -94,8 +93,6 @@ import mozilla.components.support.locale.ActivityContextWrapper
 import mozilla.components.support.utils.ext.requestInPlacePermissions
 import com.prirai.android.nira.browser.home.SharedViewModel
 import java.lang.ref.WeakReference
-import mozilla.components.ui.widgets.behavior.EngineViewClippingBehavior as OldEngineViewClippingBehavior
-import mozilla.components.ui.widgets.behavior.ViewPosition as OldToolbarPosition
 
 /**
  * Base fragment extended by [BrowserFragment].
@@ -136,7 +133,6 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
     
     // Web content position manager for toolbar and keyboard handling
     private var webContentPositionManager: com.prirai.android.nira.browser.WebContentPositionManager? = null
-    private val swipeRefreshFeature = ViewBoundFeatureWrapper<SwipeRefreshFeature>()
     private val webExtensionPromptFeature = ViewBoundFeatureWrapper<WebExtensionPromptFeature>()
     private var fullScreenMediaSessionFeature =
         ViewBoundFeatureWrapper<MediaSessionFullscreenFeature>()
@@ -486,23 +482,8 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
 
         expandToolbarOnNavigation(store)
 
-        binding.swipeRefresh.isEnabled = shouldPullToRefreshBeEnabled()
-
-        if (binding.swipeRefresh.isEnabled) {
-            val primaryTextColor = ContextCompat.getColor(context, R.color.primary_icon)
-            binding.swipeRefresh.setColorSchemeColors(primaryTextColor)
-            swipeRefreshFeature.set(
-                feature = SwipeRefreshFeature(
-                    requireContext().components.store,
-                    context.components.sessionUseCases.reload,
-                    binding.swipeRefresh,
-                    ({}),
-                    customTabSessionId
-                ),
-                owner = this,
-                view = view
-            )
-        }
+        // Setup swipe down for fullscreen (instead of pull to refresh)
+        setupSwipeDownForFullscreen()
 
         webExtensionPromptFeature.set(
             feature = WebExtensionPromptFeature(
@@ -594,41 +575,215 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
         unifiedToolbar?.expand()
     }
 
-    @VisibleForTesting
-    internal fun shouldPullToRefreshBeEnabled(): Boolean {
-        return UserPreferences(requireContext()).swipeToRefresh
+    /**
+     * Setup swipe down gesture to toggle fullscreen mode
+     */
+    private fun setupSwipeDownForFullscreen() {
+        if (!UserPreferences(requireContext()).swipeToRefresh) {
+            return
+        }
+        
+        // Completely disable swipe refresh to prevent interference
+        binding.swipeRefresh.isEnabled = false
+        binding.swipeRefresh.setOnRefreshListener(null)
+        
+        val swipeLayout = binding.gestureLayout
+        swipeLayout.addGestureListener(object : com.prirai.android.nira.browser.SwipeGestureListener {
+            private var isSwipeDown = false
+            private var startY = 0f
+            
+            override fun onSwipeStarted(start: android.graphics.PointF, next: android.graphics.PointF): Boolean {
+                // Only handle swipe down from top of screen when page is at top
+                val engineView = binding.engineView as? View
+                val canScrollUp = engineView?.canScrollVertically(-1) ?: false
+                
+                // Start gesture if:
+                // 1. Starting near top of screen (within 150dp for easier trigger)
+                // 2. Page cannot scroll up (at top)
+                // 3. Swiping down (next.y > start.y)
+                val threshold = 150 * resources.displayMetrics.density
+                val distanceY = next.y - start.y
+                
+                if (start.y < threshold && !canScrollUp && distanceY > 20) { // Minimum 20px downward movement
+                    startY = start.y
+                    isSwipeDown = true
+                    return true
+                }
+                return false
+            }
+            
+            override fun onSwipeUpdate(distanceX: Float, distanceY: Float) {
+                // Track swipe progress
+            }
+            
+            override fun onSwipeFinished(velocityX: Float, velocityY: Float) {
+                if (isSwipeDown) {
+                    toggleManualFullscreen()
+                    isSwipeDown = false
+                    startY = 0f
+                }
+            }
+        })
+    }
+    
+    /**
+     * Toggle manual fullscreen mode (hide/show all toolbars)
+     */
+    protected fun toggleManualFullscreen() {
+        val isCurrentlyFullscreen = unifiedToolbar?.visibility == View.GONE
+        
+        if (isCurrentlyFullscreen) {
+            // Exit fullscreen - show toolbars
+            exitManualFullscreen()
+        } else {
+            // Enter fullscreen - hide toolbars
+            enterManualFullscreen()
+        }
+    }
+    
+    /**
+     * Enter manual fullscreen mode
+     */
+    private fun enterManualFullscreen() {
+        // Hide unified toolbar completely
+        unifiedToolbar?.let { toolbar ->
+            toolbar.collapse()
+            toolbar.visibility = View.GONE
+        }
+        
+        // Adjust web content margins for top toolbar
+        adjustWebContentMarginsForFullscreen(isFullscreen = true)
+        
+        // Show floating fullscreen exit button
+        showFullscreenExitButton()
+        
+        // Update toolbar icon (for when toolbar is shown again)
+        updateToolbarFullscreenIcon(isFullscreen = true)
+    }
+    
+    /**
+     * Exit manual fullscreen mode
+     */
+    private fun exitManualFullscreen() {
+        // Show unified toolbar
+        unifiedToolbar?.let { toolbar ->
+            toolbar.visibility = View.VISIBLE
+            toolbar.expand()
+        }
+        
+        // Restore web content margins
+        adjustWebContentMarginsForFullscreen(isFullscreen = false)
+        
+        // Hide floating fullscreen exit button
+        hideFullscreenExitButton()
+        
+        // Update toolbar icon back to enter fullscreen
+        updateToolbarFullscreenIcon(isFullscreen = false)
+    }
+    
+    /**
+     * Update the fullscreen icon in the toolbar
+     */
+    protected open fun updateToolbarFullscreenIcon(isFullscreen: Boolean) {
+        // This will be called by subclasses to update their toolbar icon
+        // Subclasses should override to implement their specific logic
+    }
+    
+    /**
+     * Show the floating fullscreen exit button
+     */
+    private fun showFullscreenExitButton() {
+        val fullscreenExitButton = view?.findViewById<com.google.android.material.floatingactionbutton.FloatingActionButton>(
+            R.id.fullscreenExitButton
+        )
+        
+        fullscreenExitButton?.let { button ->
+            button.visibility = View.VISIBLE
+            button.setOnClickListener {
+                exitManualFullscreen()
+            }
+            
+            // Animate in
+            button.alpha = 0f
+            button.scaleX = 0f
+            button.scaleY = 0f
+            button.animate()
+                .alpha(1f)
+                .scaleX(1f)
+                .scaleY(1f)
+                .setDuration(200)
+                .start()
+        }
+    }
+    
+    /**
+     * Hide the floating fullscreen exit button
+     */
+    private fun hideFullscreenExitButton() {
+        val fullscreenExitButton = view?.findViewById<com.google.android.material.floatingactionbutton.FloatingActionButton>(
+            R.id.fullscreenExitButton
+        )
+        
+        fullscreenExitButton?.let { button ->
+            // Animate out
+            button.animate()
+                .alpha(0f)
+                .scaleX(0f)
+                .scaleY(0f)
+                .setDuration(200)
+                .withEndAction {
+                    button.visibility = View.GONE
+                }
+                .start()
+        }
+    }
+    
+    /**
+     * Adjust web content top margin when entering/exiting manual fullscreen
+     * Only needed for top toolbar position
+     */
+    private fun adjustWebContentMarginsForFullscreen(isFullscreen: Boolean) {
+        val prefs = UserPreferences(requireContext())
+        if (prefs.toolbarPosition != com.prirai.android.nira.components.toolbar.ToolbarPosition.TOP.ordinal) {
+            return // Bottom toolbar doesn't need margin adjustment
+        }
+        
+        val swipeRefreshParams = binding.swipeRefresh.layoutParams as? CoordinatorLayout.LayoutParams ?: return
+        
+        if (isFullscreen) {
+            // Fullscreen: remove top margin so content fills screen
+            swipeRefreshParams.topMargin = 0
+        } else {
+            // Normal: restore margin for address bar
+            val addressBarHeight = resources.getDimensionPixelSize(R.dimen.browser_toolbar_height)
+            swipeRefreshParams.topMargin = addressBarHeight
+        }
+        
+        binding.swipeRefresh.layoutParams = swipeRefreshParams
+        binding.swipeRefresh.requestLayout()
     }
 
     @VisibleForTesting
     internal fun initializeEngineView(toolbarHeight: Int) {
         val context = requireContext()
 
-        if (UserPreferences(context).hideBarWhileScrolling) {
-            // CRITICAL: With UnifiedToolbar, we use simple translation, not dynamic toolbar
-            // Dynamic toolbar reserves space in Gecko causing black bars
-            // Always set to 0 regardless of toolbar position
-            binding.engineView.setDynamicToolbarMaxHeight(0)
-            
-            // Reset swipeRefresh margins
-            val swipeRefreshParams = binding.swipeRefresh.layoutParams as CoordinatorLayout.LayoutParams
-            swipeRefreshParams.topMargin = 0
+        // Always use 0 for dynamic toolbar (we use translation-based hiding)
+        binding.engineView.setDynamicToolbarMaxHeight(0)
+        
+        // For top toolbar: add margin equal to address bar height
+        // For bottom toolbar: no margins needed (toolbar scrolls with content)
+        val swipeRefreshParams = binding.swipeRefresh.layoutParams as CoordinatorLayout.LayoutParams
+        if (UserPreferences(context).shouldUseBottomToolbar) {
             swipeRefreshParams.bottomMargin = 0
-            binding.swipeRefresh.layoutParams = swipeRefreshParams
+            swipeRefreshParams.topMargin = 0
         } else {
-            binding.engineView.setDynamicToolbarMaxHeight(0)
-
-            val swipeRefreshParams =
-                binding.swipeRefresh.layoutParams as CoordinatorLayout.LayoutParams
-            if (UserPreferences(context).shouldUseBottomToolbar) {
-                swipeRefreshParams.bottomMargin = toolbarHeight
-                swipeRefreshParams.topMargin = 0
-            } else {
-                swipeRefreshParams.topMargin = toolbarHeight
-                swipeRefreshParams.bottomMargin = 0
-            }
-            binding.swipeRefresh.layoutParams = swipeRefreshParams
-            binding.swipeRefresh.requestLayout()
+            // Top toolbar: margin = address bar height only (not full toolbar height)
+            val addressBarHeight = resources.getDimensionPixelSize(com.prirai.android.nira.R.dimen.browser_toolbar_height)
+            swipeRefreshParams.topMargin = addressBarHeight
+            swipeRefreshParams.bottomMargin = 0
         }
+        binding.swipeRefresh.layoutParams = swipeRefreshParams
+        binding.swipeRefresh.requestLayout()
     }
 
     @VisibleForTesting
@@ -965,7 +1120,6 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
 
             // Disable dynamic toolbar
             binding.engineView.setDynamicToolbarMaxHeight(0)
-            binding.engineView.setVerticalClipping(0)
             
             // Notify subclasses about fullscreen change (for modern toolbar system)
             onFullScreenModeChanged(true)
@@ -989,7 +1143,8 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
             onFullScreenModeChanged(false)
         }
 
-        binding.swipeRefresh.isEnabled = shouldPullToRefreshBeEnabled()
+        // Keep swipe refresh disabled - we use custom gesture for fullscreen
+        binding.swipeRefresh.isEnabled = false
     }
     
     /**

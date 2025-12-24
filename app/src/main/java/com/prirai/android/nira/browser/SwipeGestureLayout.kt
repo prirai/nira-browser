@@ -80,8 +80,14 @@ class SwipeGestureLayout @JvmOverloads constructor(
         return when (event.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
                 handledInitialScroll = false
+                activeListener = null
                 gestureDetector.onTouchEvent(event)
                 false
+            }
+            MotionEvent.ACTION_MOVE -> {
+                val shouldIntercept = gestureDetector.onTouchEvent(event)
+                // Return true to intercept if we have an active listener
+                shouldIntercept && activeListener != null
             }
             else -> gestureDetector.onTouchEvent(event)
         }
