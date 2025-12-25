@@ -2,15 +2,13 @@ package com.prirai.android.nira.components.toolbar.modern
 
 import android.annotation.SuppressLint
 import android.content.Context
-import mozilla.components.browser.state.state.SessionState
-import com.prirai.android.nira.browser.tabgroups.TabGroupManager
-import com.prirai.android.nira.browser.tabgroups.UnifiedTabGroupManager
+import android.util.Log
 import com.prirai.android.nira.browser.tabgroups.TabGroupData
-import com.prirai.android.nira.ext.components
+import com.prirai.android.nira.browser.tabgroups.UnifiedTabGroupManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import android.util.Log
+import mozilla.components.browser.state.state.SessionState
 
 /**
  * Manages Tab Islands - grouping, ungrouping, renaming, collapsing, and persistence.

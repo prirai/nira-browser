@@ -1,7 +1,6 @@
 package com.prirai.android.nira.history
 
 import android.content.Context
-import com.prirai.android.nira.R
 import java.util.concurrent.TimeUnit
 
 object HistoryTimeFormatter {

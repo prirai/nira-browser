@@ -1,7 +1,6 @@
 package com.prirai.android.nira.auth
 
 import android.app.Activity
-import androidx.lifecycle.LifecycleOwner
 import mozilla.components.browser.state.store.BrowserStore
 import mozilla.components.concept.engine.Engine
 import mozilla.components.support.base.feature.LifecycleAwareFeature

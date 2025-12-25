@@ -1,8 +1,5 @@
 package com.prirai.android.nira.auth
 
-import android.app.Activity
-import android.util.Base64
-import org.json.JSONArray
 import org.json.JSONObject
 
 /**

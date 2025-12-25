@@ -3,7 +3,6 @@
 package com.prirai.android.nira.ext
 
 import android.graphics.Rect
-import android.os.Build
 import android.view.TouchDelegate
 import android.view.View
 import android.view.accessibility.AccessibilityNodeInfo

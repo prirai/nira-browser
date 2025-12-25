@@ -14,17 +14,13 @@ import android.widget.EditText
 import android.widget.FrameLayout
 import androidx.core.view.isVisible
 import androidx.lifecycle.LifecycleOwner
-import androidx.lifecycle.lifecycleScope
 import com.google.android.material.card.MaterialCardView
 import com.google.android.material.textview.MaterialTextView
-import kotlinx.coroutines.flow.mapNotNull
-import kotlinx.coroutines.launch
-import mozilla.components.browser.state.selector.findTab
+import com.prirai.android.nira.R
 import mozilla.components.browser.state.selector.findCustomTab
+import mozilla.components.browser.state.selector.findTab
 import mozilla.components.browser.state.store.BrowserStore
 import mozilla.components.concept.engine.EngineSession
-import mozilla.components.lib.state.ext.flowScoped
-import com.prirai.android.nira.R
 
 /**
  * Custom Material 3 Find in Page component that works for both regular tabs and custom tabs.

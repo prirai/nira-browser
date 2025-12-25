@@ -5,13 +5,10 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
-import androidx.lifecycle.lifecycleScope
-import androidx.recyclerview.widget.LinearLayoutManager
 import com.prirai.android.nira.R
 import com.prirai.android.nira.databinding.FragmentPwaSuggestionsBinding
 import com.prirai.android.nira.webapp.PwaSuggestionManager
 import com.prirai.android.nira.webapp.PwaSuggestionsAdapter
-import kotlinx.coroutines.launch
 
 /**
  * Fragment for displaying suggested PWAs

@@ -2,33 +2,27 @@ package com.prirai.android.nira.browser.tabs
 
 import android.graphics.Color
 import android.os.Bundle
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.fragment.app.DialogFragment
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.NavHostFragment
-import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.prirai.android.nira.BrowserActivity
-import com.prirai.android.nira.NavGraphDirections
 import com.prirai.android.nira.R
 import com.prirai.android.nira.browser.BrowsingMode
 import com.prirai.android.nira.browser.BrowsingModeManager
 import com.prirai.android.nira.browser.tabgroups.TabGroupManager
 import com.prirai.android.nira.browser.tabgroups.UnifiedTabGroupManager
-import com.prirai.android.nira.browser.tabgroups.TabGroupData
 import com.prirai.android.nira.databinding.FragmentTabsBottomSheetBinding
 import com.prirai.android.nira.ext.components
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import mozilla.components.lib.state.ext.flowScoped
-import kotlin.random.Random
-import androidx.core.graphics.toColorInt
-import androidx.fragment.app.DialogFragment
 
 class TabsBottomSheetFragment : DialogFragment() {
 
@@ -627,7 +621,8 @@ class TabsBottomSheetFragment : DialogFragment() {
     private fun showProfileCreateDialog() {
         val composeView = androidx.compose.ui.platform.ComposeView(requireContext())
         val userPreferences = com.prirai.android.nira.preferences.UserPreferences(requireContext())
-        val themeChoice = com.prirai.android.nira.settings.ThemeChoice.values()[userPreferences.appThemeChoice]
+        val themeChoice =
+            com.prirai.android.nira.settings.ThemeChoice.entries.toTypedArray()[userPreferences.appThemeChoice]
         val isDark = when (themeChoice) {
             com.prirai.android.nira.settings.ThemeChoice.DARK -> true
             com.prirai.android.nira.settings.ThemeChoice.LIGHT -> false
@@ -670,7 +665,8 @@ class TabsBottomSheetFragment : DialogFragment() {
     private fun showProfileEditDialog(profile: com.prirai.android.nira.browser.profile.BrowserProfile) {
         val composeView = androidx.compose.ui.platform.ComposeView(requireContext())
         val userPreferences = com.prirai.android.nira.preferences.UserPreferences(requireContext())
-        val themeChoice = com.prirai.android.nira.settings.ThemeChoice.values()[userPreferences.appThemeChoice]
+        val themeChoice =
+            com.prirai.android.nira.settings.ThemeChoice.entries.toTypedArray()[userPreferences.appThemeChoice]
         val isDark = when (themeChoice) {
             com.prirai.android.nira.settings.ThemeChoice.DARK -> true
             com.prirai.android.nira.settings.ThemeChoice.LIGHT -> false

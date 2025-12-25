@@ -32,7 +32,6 @@ class TabIslandsVerticalAdapter(
 
     private val items = mutableListOf<ListItem>()
     private var selectedTabId: String? = null
-    private var allTabs = listOf<TabSessionState>()
     private val thumbnailLoader = ThumbnailLoader(context.components.thumbnailStorage)
 
     companion object {
@@ -51,45 +50,6 @@ class TabIslandsVerticalAdapter(
         data class IslandBottomCap(val island: TabIsland) : ListItem()
         data class UngroupedTab(val tab: TabSessionState) : ListItem()
         object UngroupedHeader : ListItem()
-    }
-
-    fun updateData(
-        islands: List<TabIsland>,
-        ungroupedTabs: List<TabSessionState>,
-        allTabs: List<TabSessionState>,
-        selectedTabId: String?
-    ) {
-        this.selectedTabId = selectedTabId
-        this.allTabs = allTabs
-        items.clear()
-
-        // Add islands
-        for (island in islands) {
-            val tabsInIsland = allTabs.filter { island.tabIds.contains(it.id) }
-            val tabCount = tabsInIsland.size
-
-            if (island.isCollapsed) {
-                // Show collapsed island
-                items.add(ListItem.CollapsedIsland(island, tabCount))
-            } else {
-                // Show expanded island with header, tabs, and bottom cap
-                items.add(ListItem.ExpandedIslandHeader(island, tabCount))
-                tabsInIsland.forEachIndexed { index, tab ->
-                    items.add(ListItem.TabInIsland(tab, island, isFirst = index == 0))
-                }
-                items.add(ListItem.IslandBottomCap(island))
-            }
-        }
-
-        // Add ungrouped tabs
-        if (ungroupedTabs.isNotEmpty()) {
-            items.add(ListItem.UngroupedHeader)
-            for (tab in ungroupedTabs) {
-                items.add(ListItem.UngroupedTab(tab))
-            }
-        }
-
-        notifyDataSetChanged()
     }
 
     override fun getItemViewType(position: Int): Int = when (items[position]) {
@@ -156,31 +116,6 @@ class TabIslandsVerticalAdapter(
 
     override fun getItemCount() = items.size
 
-    /**
-     * Get item at position for drag-and-drop operations
-     */
-    fun getItemAt(position: Int): ListItem? {
-        return if (position in 0 until items.size) {
-            items[position]
-        } else {
-            null
-        }
-    }
-
-    /**
-     * Find the position of a tab by its ID
-     */
-    fun findPositionOfTab(tabId: String): Int {
-        items.forEachIndexed { index, item ->
-            when (item) {
-                is ListItem.TabInIsland -> if (item.tab.id == tabId) return index
-                is ListItem.UngroupedTab -> if (item.tab.id == tabId) return index
-                else -> {}
-            }
-        }
-        return -1
-    }
-
     // Collapsed Island ViewHolder
     inner class CollapsedIslandViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         private val nameText: TextView = itemView.findViewById(R.id.collapsed_island_name)
@@ -190,9 +125,7 @@ class TabIslandsVerticalAdapter(
 
         fun bind(item: ListItem.CollapsedIsland) {
             val island = item.island
-            val displayName = if (island.name.isNotBlank()) {
-                island.name
-            } else {
+            val displayName = island.name.ifBlank {
                 "${item.tabCount} tabs"
             }
             nameText.text = displayName
@@ -226,9 +159,7 @@ class TabIslandsVerticalAdapter(
 
         fun bind(item: ListItem.ExpandedIslandHeader) {
             val island = item.island
-            val displayName = if (island.name.isNotBlank()) {
-                island.name
-            } else {
+            val displayName = island.name.ifBlank {
                 "${item.tabCount} tabs"
             }
             nameText.text = displayName
@@ -405,9 +336,6 @@ class TabIslandsVerticalAdapter(
                 itemView.setOnTouchListener { view, event ->
                     when (event.action) {
                         android.view.MotionEvent.ACTION_DOWN -> {
-                            startTime = System.currentTimeMillis()
-                            startX = event.x
-                            startY = event.y
                             false // Allow drag to take precedence
                         }
 
@@ -451,16 +379,6 @@ class TabIslandsVerticalAdapter(
             titleText.setTextColor(androidx.core.content.ContextCompat.getColor(itemView.context, R.color.m3_primary_text))
             // Accessibility
             itemView.contentDescription = itemView.context.getString(R.string.ungrouped_tabs_header_description)
-        }
-
-        fun setDragMode(isDragging: Boolean) {
-            if (isDragging) {
-                titleText.text = "UNGROUP"
-                titleText.setTextColor(androidx.core.content.ContextCompat.getColor(itemView.context, R.color.m3_error))
-            } else {
-                titleText.text = itemView.context.getString(R.string.ungrouped_tabs)
-                titleText.setTextColor(androidx.core.content.ContextCompat.getColor(itemView.context, R.color.m3_primary_text))
-            }
         }
     }
 }

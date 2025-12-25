@@ -7,25 +7,21 @@ import android.os.Bundle
 import android.util.Log
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
+import androidx.core.content.edit
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.prirai.android.nira.R
 import com.prirai.android.nira.browser.bookmark.items.BookmarkFolderItem
 import com.prirai.android.nira.browser.bookmark.items.BookmarkItem
 import com.prirai.android.nira.browser.bookmark.items.BookmarkSiteItem
 import com.prirai.android.nira.browser.bookmark.repository.BookmarkManager
 import com.prirai.android.nira.utils.BookmarkUtils
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import org.json.JSONArray
 import org.json.JSONObject
 import org.json.JSONTokener
-import org.jsoup.Jsoup
 import java.io.FileOutputStream
-import java.io.IOException
 import java.io.InputStream
-import java.io.InputStreamReader
 import java.io.OutputStream
-import java.io.Reader
 import java.util.Scanner
-import androidx.core.content.edit
 
 
 class ImportExportSettingsFragment : BaseSettingsFragment() {

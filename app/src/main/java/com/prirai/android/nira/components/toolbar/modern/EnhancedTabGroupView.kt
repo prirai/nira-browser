@@ -1,20 +1,21 @@
 package com.prirai.android.nira.components.toolbar.modern
 
 import android.content.Context
-import android.graphics.*
+import android.graphics.Canvas
+import android.graphics.Color
+import android.graphics.Paint
 import android.util.AttributeSet
 import android.view.View
-import androidx.core.content.ContextCompat
+import androidx.core.view.isVisible
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import mozilla.components.browser.state.state.SessionState
 import com.prirai.android.nira.R
 import com.prirai.android.nira.ext.components
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import androidx.core.view.isVisible
+import mozilla.components.browser.state.state.SessionState
 
 /**
  * Enhanced tab group view with Tab Islands support - automatic and manual grouping,
@@ -53,9 +54,12 @@ class EnhancedTabGroupView @JvmOverloads constructor(
 
     // Track parent-child relationships for automatic grouping
     private val pendingAutoGroups = mutableMapOf<String, String>()
-    
-    // Cache Paint for onDraw to avoid allocation on every frame
+
+    // Cache Paint and ElevationOverlayProvider for onDraw to avoid allocation on every frame
     private val backgroundPaint by lazy { Paint() }
+    private val elevationOverlayProvider by lazy {
+        com.google.android.material.elevation.ElevationOverlayProvider(context)
+    }
 
     init {
         setupRecyclerView()
@@ -1205,7 +1209,7 @@ class EnhancedTabGroupView @JvmOverloads constructor(
 
         // Draw background using Material 3 surface color with tonal elevation overlay (3dp)
         val elevationDp = 3f * resources.displayMetrics.density
-        val elevatedColor = com.google.android.material.elevation.ElevationOverlayProvider(context)
+        val elevatedColor = elevationOverlayProvider
             .compositeOverlayWithThemeSurfaceColorIfNeeded(elevationDp)
         backgroundPaint.color = elevatedColor
         canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), backgroundPaint)

@@ -5,15 +5,12 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.RectF
 import android.view.HapticFeedbackConstants
-import android.view.View
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.RecyclerView
-import com.prirai.android.nira.browser.tabgroups.TabGroupData
 import com.prirai.android.nira.browser.tabgroups.UnifiedTabGroupManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import mozilla.components.browser.state.state.TabSessionState
-import androidx.core.graphics.toColorInt
 
 /**
  * Enhanced drag & drop helper for tab grouping in the tab sheet.

@@ -3,11 +3,19 @@ package com.prirai.android.nira.webapp
 import android.content.Context
 import android.graphics.Bitmap
 import androidx.core.app.NotificationCompat
-import androidx.room.*
+import androidx.room.Dao
+import androidx.room.Database
+import androidx.room.Entity
+import androidx.room.Insert
+import androidx.room.PrimaryKey
+import androidx.room.Query
+import androidx.room.Room
+import androidx.room.RoomDatabase
+import androidx.room.Update
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
-import java.util.*
 import java.net.URL
+import java.util.UUID
 
 /**
  * Manager for Progressive Web Apps (PWAs)
@@ -123,7 +131,7 @@ class WebAppManager(private val context: Context) {
     /**
      * Clear all PWA data (storage, cache, etc.)
      */
-    suspend fun clearWebAppData(id: String) {
+    fun clearWebAppData(id: String) {
         // TODO: Implement actual storage clearing
         // This would involve clearing service worker caches, localStorage, etc.
     }
@@ -131,7 +139,7 @@ class WebAppManager(private val context: Context) {
     /**
      * Check if PWA supports offline mode
      */
-    suspend fun checkOfflineSupport(url: String): Boolean {
+    fun checkOfflineSupport(url: String): Boolean {
         // Check if the PWA has a service worker and cache manifest
         // This would involve checking the web app manifest and service worker registration
         return false // Placeholder - would need GeckoView integration
@@ -157,7 +165,7 @@ class WebAppManager(private val context: Context) {
     /**
      * Force update PWA cache (for offline use)
      */
-    suspend fun updatePwaCache(id: String) {
+    fun updatePwaCache(id: String) {
         // This would trigger service worker cache update
         // Would need GeckoView session integration
     }
@@ -165,7 +173,7 @@ class WebAppManager(private val context: Context) {
     /**
      * Get total offline storage used by all PWAs
      */
-    suspend fun getTotalOfflineStorage(): Long {
+    fun getTotalOfflineStorage(): Long {
         // Would sum up all PWA cache storage
         return 0 // Placeholder
     }
@@ -173,7 +181,7 @@ class WebAppManager(private val context: Context) {
     /**
      * Get notification settings for a PWA
      */
-    suspend fun getNotificationSettings(webAppId: String): PwaNotificationSettings {
+    fun getNotificationSettings(webAppId: String): PwaNotificationSettings {
         // Would retrieve from database or preferences
         return PwaNotificationSettings(
             webAppId = webAppId,
@@ -188,7 +196,7 @@ class WebAppManager(private val context: Context) {
     /**
      * Update notification settings for a PWA
      */
-    suspend fun updateNotificationSettings(settings: PwaNotificationSettings) {
+    fun updateNotificationSettings(settings: PwaNotificationSettings) {
         // Would save to database or preferences
     }
 

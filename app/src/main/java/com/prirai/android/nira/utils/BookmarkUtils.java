@@ -16,6 +16,7 @@ public final class BookmarkUtils {
                 try {
                     Thread.sleep(1);
                 } catch (InterruptedException e) {
+                    // TODO: Replace with proper logging
                     e.printStackTrace();
                 }
                 continue;

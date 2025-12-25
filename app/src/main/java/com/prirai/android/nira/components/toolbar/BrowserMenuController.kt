@@ -8,7 +8,6 @@ import com.prirai.android.nira.BrowserAnimator
 import com.prirai.android.nira.R
 import com.prirai.android.nira.ext.components
 import com.prirai.android.nira.history.HistoryActivity
-import com.prirai.android.nira.preferences.UserPreferences
 import com.prirai.android.nira.settings.activity.SettingsActivity
 import com.prirai.android.nira.ssl.showSslDialog
 import kotlinx.coroutines.MainScope

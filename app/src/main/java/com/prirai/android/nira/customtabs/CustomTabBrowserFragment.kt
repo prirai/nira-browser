@@ -5,7 +5,8 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
-import androidx.lifecycle.lifecycleScope
+import com.prirai.android.nira.databinding.FragmentBrowserBinding
+import com.prirai.android.nira.ext.components
 import kotlinx.coroutines.flow.mapNotNull
 import mozilla.components.browser.state.selector.findCustomTab
 import mozilla.components.browser.state.state.SessionState
@@ -14,8 +15,6 @@ import mozilla.components.feature.customtabs.CustomTabWindowFeature
 import mozilla.components.feature.session.SessionFeature
 import mozilla.components.lib.state.ext.flowScoped
 import mozilla.components.support.base.feature.ViewBoundFeatureWrapper
-import com.prirai.android.nira.databinding.FragmentBrowserBinding
-import com.prirai.android.nira.ext.components
 
 /**
  * Minimal base fragment for custom tabs that skips heavy toolbar initialization.

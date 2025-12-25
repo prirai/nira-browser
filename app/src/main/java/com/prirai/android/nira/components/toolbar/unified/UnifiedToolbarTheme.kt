@@ -2,7 +2,6 @@ package com.prirai.android.nira.components.toolbar.unified
 
 import android.content.Context
 import androidx.core.content.ContextCompat
-import androidx.core.graphics.toColorInt
 import com.google.android.material.elevation.ElevationOverlayProvider
 import com.prirai.android.nira.R
 

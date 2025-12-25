@@ -10,13 +10,10 @@ import com.prirai.android.nira.addons.AddonsActivity
 import com.prirai.android.nira.ext.components
 import mozilla.components.browser.menu.WebExtensionBrowserMenuBuilder
 import mozilla.components.browser.menu.item.BrowserMenuDivider
-import mozilla.components.browser.menu.item.BrowserMenuImageSwitch
-import mozilla.components.browser.menu.item.BrowserMenuImageText
 import mozilla.components.browser.menu.item.BrowserMenuItemToolbar
 import mozilla.components.browser.state.selector.selectedTab
 import mozilla.components.browser.state.state.TabSessionState
 import mozilla.components.browser.state.store.BrowserStore
-import com.prirai.android.nira.components.toolbar.BrowserMenuImageCheckbox
 
 @Suppress("LargeClass", "LongParameterList")
 class BrowserMenu(

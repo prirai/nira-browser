@@ -1,7 +1,6 @@
 package com.prirai.android.nira.addons
 
 import android.content.Intent
-import android.net.Uri
 import android.os.Bundle
 import android.text.method.LinkMovementMethod
 import android.view.MenuItem
@@ -18,7 +17,6 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updatePadding
 import com.prirai.android.nira.R
 import com.prirai.android.nira.ext.components
-import com.prirai.android.nira.ext.isAppInDarkTheme
 import com.prirai.android.nira.ext.getParcelableExtraCompat
 import com.prirai.android.nira.theme.applyCompleteTheme
 import kotlinx.coroutines.CoroutineScope
@@ -44,10 +42,6 @@ class AddonDetailsActivity : AppCompatActivity() {
     }
     
     private val webExtensionPromptFeature = ViewBoundFeatureWrapper<WebExtensionPromptFeature>()
-    
-    companion object {
-        private const val INSTALLATION_DIALOG_FRAGMENT_TAG = "INSTALLATION_DIALOG_FRAGMENT"
-    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -86,7 +80,7 @@ class AddonDetailsActivity : AppCompatActivity() {
                 context = this,
                 view = rootView,
                 fragmentManager = supportFragmentManager,
-                onLinkClicked = { url, privateBrowsing ->
+                onLinkClicked = { url, _ ->
                     val intent = Intent(Intent.ACTION_VIEW, url.toUri())
                     startActivity(intent)
                 }
@@ -174,7 +168,6 @@ class AddonDetailsActivity : AppCompatActivity() {
                         runOnUiThread {
                             installButton.isEnabled = true
                             installButton.text = "Install"
-                            // Clear the cache so the bottom sheet shows updated data
                             ExtensionsBottomSheetFragment.clearCache()
                             android.widget.Toast.makeText(
                                 this,
@@ -188,7 +181,6 @@ class AddonDetailsActivity : AppCompatActivity() {
                         runOnUiThread {
                             installButton.isEnabled = true
                             installButton.text = "Install"
-                            // Only show error if not cancelled by user
                             if (error !is java.util.concurrent.CancellationException) {
                                 android.widget.Toast.makeText(
                                     this,

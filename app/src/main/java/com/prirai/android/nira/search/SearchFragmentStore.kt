@@ -145,12 +145,13 @@ private fun searchStateReducer(state: SearchFragmentState, action: SearchFragmen
                 showSearchShortcuts = state.url.isEmpty() &&
                     state.showSearchShortcutsSetting &&
                     action.search.searchEngines.size > 1,
-                searchEngineSource = if (state.searchEngineSource !is SearchEngineSource.Shortcut) {
-                    action.search.selectedOrDefaultSearchEngine?.let { SearchEngineSource.Default(it) }
-                        ?: SearchEngineSource.None
-                } else {
-                    state.searchEngineSource
-                }
+                searchEngineSource = (state.searchEngineSource as? SearchEngineSource.Shortcut)
+                    ?: (action.search.selectedOrDefaultSearchEngine?.let {
+                        SearchEngineSource.Default(
+                            it
+                        )
+                    }
+                        ?: SearchEngineSource.None)
             )
         }
     }

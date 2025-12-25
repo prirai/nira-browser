@@ -5,7 +5,6 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Paint
 import android.graphics.Typeface
-import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.TransitionDrawable
 import android.view.LayoutInflater
 import android.view.View
@@ -20,6 +19,7 @@ import androidx.annotation.StringRes
 import androidx.annotation.VisibleForTesting
 import androidx.appcompat.content.res.AppCompatResources
 import androidx.core.content.ContextCompat
+import androidx.core.graphics.drawable.toDrawable
 import androidx.core.view.isVisible
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
@@ -40,7 +40,6 @@ import mozilla.components.feature.addons.ui.translateSummary
 import mozilla.components.support.ktx.android.content.appName
 import mozilla.components.support.ktx.android.content.appVersionName
 import kotlin.math.roundToInt
-import androidx.core.graphics.drawable.toDrawable
 
 
 private const val VIEW_HOLDER_TYPE_SECTION = 0

@@ -1,6 +1,5 @@
 package com.prirai.android.nira.browser.toolbar
 
-import android.graphics.drawable.BitmapDrawable
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup

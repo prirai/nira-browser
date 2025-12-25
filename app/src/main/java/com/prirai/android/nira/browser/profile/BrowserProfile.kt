@@ -1,6 +1,5 @@
 package com.prirai.android.nira.browser.profile
 
-import android.graphics.Color
 import java.util.UUID
 
 /**

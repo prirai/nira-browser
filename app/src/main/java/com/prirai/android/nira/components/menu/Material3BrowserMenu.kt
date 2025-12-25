@@ -8,7 +8,6 @@ import android.widget.PopupWindow
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.google.android.material.card.MaterialCardView
 import com.google.android.material.textview.MaterialTextView
 import com.prirai.android.nira.R
 

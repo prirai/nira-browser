@@ -2,18 +2,16 @@ package com.prirai.android.nira
 
 import android.content.Context
 import android.graphics.Color
-import android.graphics.drawable.ColorDrawable
 import android.view.View
-import androidx.core.content.res.ResourcesCompat
 import androidx.core.graphics.drawable.toDrawable
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.LifecycleCoroutineScope
 import androidx.navigation.NavOptions
 import com.prirai.android.nira.preferences.UserPreferences
 import kotlinx.coroutines.launch
-import mozilla.components.ui.widgets.behavior.ViewPosition as OldToolbarPosition
 import mozilla.components.concept.engine.EngineView
 import java.lang.ref.WeakReference
+import mozilla.components.ui.widgets.behavior.ViewPosition as OldToolbarPosition
 
 /**
  * Handles properly animating the browser engine based on `SHOULD_ANIMATE_FLAG` passed in through

@@ -5,7 +5,6 @@ import android.graphics.Canvas
 import android.graphics.Paint
 import android.util.AttributeSet
 import android.view.View
-import androidx.core.content.ContextCompat
 import com.google.android.material.color.MaterialColors
 
 class PageIndicatorView @JvmOverloads constructor(

@@ -10,7 +10,6 @@ import androidx.preference.Preference
 import androidx.preference.Preference.OnPreferenceChangeListener
 import androidx.preference.Preference.OnPreferenceClickListener
 import androidx.preference.PreferenceFragmentCompat
-import androidx.preference.PreferenceViewHolder
 import androidx.recyclerview.widget.RecyclerView
 import com.prirai.android.nira.R
 

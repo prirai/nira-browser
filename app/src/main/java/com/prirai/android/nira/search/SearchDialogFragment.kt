@@ -4,7 +4,6 @@ import android.app.Dialog
 import android.content.Context
 import android.content.DialogInterface
 import android.graphics.Color
-import android.graphics.drawable.ColorDrawable
 import android.os.Build
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -17,6 +16,7 @@ import androidx.constraintlayout.widget.ConstraintProperties.BOTTOM
 import androidx.constraintlayout.widget.ConstraintProperties.PARENT_ID
 import androidx.constraintlayout.widget.ConstraintProperties.TOP
 import androidx.constraintlayout.widget.ConstraintSet
+import androidx.core.graphics.drawable.toDrawable
 import androidx.core.view.WindowCompat
 import androidx.core.view.isVisible
 import androidx.navigation.fragment.findNavController
@@ -26,7 +26,6 @@ import com.prirai.android.nira.BrowserDirection
 import com.prirai.android.nira.R
 import com.prirai.android.nira.databinding.FragmentSearchDialogBinding
 import com.prirai.android.nira.ext.components
-import com.prirai.android.nira.ext.isAppInDarkTheme
 import com.prirai.android.nira.preferences.UserPreferences
 import com.prirai.android.nira.search.awesomebar.AwesomeBarView
 import com.prirai.android.nira.search.toolbar.ToolbarView
@@ -40,7 +39,6 @@ import mozilla.components.support.ktx.android.content.getColorFromAttr
 import mozilla.components.support.ktx.android.view.hideKeyboard
 import mozilla.components.ui.autocomplete.InlineAutocompleteEditText
 import mozilla.components.ui.widgets.behavior.ViewPosition as OldToolbarPosition
-import androidx.core.graphics.drawable.toDrawable
 
 typealias SearchDialogFragmentStore = SearchFragmentStore
 

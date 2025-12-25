@@ -3,7 +3,6 @@ package com.prirai.android.nira.webapp
 import android.content.Context
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
-import com.prirai.android.nira.R
 import com.prirai.android.nira.utils.FaviconLoader
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers

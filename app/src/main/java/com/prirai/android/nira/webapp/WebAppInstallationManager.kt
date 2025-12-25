@@ -155,7 +155,7 @@ class WebAppInstallationManager(private val context: Context) {
     /**
      * Get website icon
      */
-    private suspend fun getWebsiteIcon(url: String): Bitmap? {
+    private fun getWebsiteIcon(url: String): Bitmap? {
         // This would use the browser's icon service
         return null // Placeholder
     }

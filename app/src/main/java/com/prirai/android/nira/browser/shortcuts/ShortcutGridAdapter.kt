@@ -1,7 +1,6 @@
 package com.prirai.android.nira.browser.shortcuts
 
 import android.content.Context
-import android.net.Uri
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -9,13 +8,13 @@ import android.widget.BaseAdapter
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.core.graphics.drawable.toDrawable
+import androidx.core.net.toUri
 import com.prirai.android.nira.R
 import com.prirai.android.nira.ext.components
 import com.prirai.android.nira.preferences.UserPreferences
 import com.prirai.android.nira.utils.Utils
 import mozilla.components.browser.icons.IconRequest
 import mozilla.components.support.ktx.android.net.hostWithoutCommonPrefixes
-import androidx.core.net.toUri
 
 internal class ShortcutGridAdapter(
         private val context: Context,

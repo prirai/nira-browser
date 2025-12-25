@@ -1,12 +1,12 @@
 package com.prirai.android.nira.request
 
+// import com.prirai.android.nira.browser.home.HomeFragmentDirections // Removed - using BrowserFragment for homepage
 import android.content.Context
 import android.content.Intent
-import android.net.Uri
 import androidx.core.content.ContextCompat.startActivity
+import androidx.core.net.toUri
 import androidx.navigation.NavController
 import com.prirai.android.nira.addons.AddonsActivity
-// import com.prirai.android.nira.browser.home.HomeFragmentDirections // Removed - using BrowserFragment for homepage
 import com.prirai.android.nira.ext.components
 import com.prirai.android.nira.preferences.UserPreferences
 import kotlinx.coroutines.CoroutineScope
@@ -14,12 +14,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import mozilla.components.browser.errorpages.ErrorPages
 import mozilla.components.browser.errorpages.ErrorType
-import mozilla.components.browser.state.selector.selectedTab
 import mozilla.components.concept.engine.EngineSession
 import mozilla.components.concept.engine.request.RequestInterceptor
 import mozilla.components.concept.engine.request.RequestInterceptor.InterceptionResponse
 import java.lang.ref.WeakReference
-import androidx.core.net.toUri
 
 
 class AppRequestInterceptor(val context: Context) : RequestInterceptor {

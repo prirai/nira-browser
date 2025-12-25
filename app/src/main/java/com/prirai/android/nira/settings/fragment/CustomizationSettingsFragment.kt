@@ -3,18 +3,17 @@ package com.prirai.android.nira.settings.fragment
 import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
-import android.widget.EditText
 import android.widget.Toast
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.preference.Preference
 import androidx.preference.SeekBarPreference
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.prirai.android.nira.R
 import com.prirai.android.nira.ext.components
 import com.prirai.android.nira.preferences.UserPreferences
 import com.prirai.android.nira.settings.HomepageBackgroundChoice
 import com.prirai.android.nira.theme.applyAppTheme
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
 
 
 class CustomizationSettingsFragment : BaseSettingsFragment() {

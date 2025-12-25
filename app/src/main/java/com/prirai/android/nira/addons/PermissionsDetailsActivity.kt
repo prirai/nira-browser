@@ -1,11 +1,11 @@
 package com.prirai.android.nira.addons
 
 import android.content.Intent
-import android.net.Uri
 import android.os.Bundle
 import android.view.MenuItem
 import android.view.View
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.net.toUri
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
@@ -13,13 +13,11 @@ import androidx.core.view.updatePadding
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.prirai.android.nira.R
-import com.prirai.android.nira.ext.isAppInDarkTheme
 import com.prirai.android.nira.ext.getParcelableExtraCompat
 import com.prirai.android.nira.theme.applyCompleteTheme
 import mozilla.components.feature.addons.Addon
 import mozilla.components.feature.addons.ui.AddonPermissionsAdapter
 import mozilla.components.feature.addons.ui.translateName
-import androidx.core.net.toUri
 
 private const val LEARN_MORE_URL =
     "https://smartcookieweb.com/help-biscuit/extensions/#permission-requests"

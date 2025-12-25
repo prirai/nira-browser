@@ -7,7 +7,6 @@ import com.prirai.android.nira.BrowserFragmentDirections
 import com.prirai.android.nira.R
 import com.prirai.android.nira.ext.components
 import com.prirai.android.nira.ext.nav
-import com.prirai.android.nira.preferences.UserPreferences
 import mozilla.components.browser.state.action.ContentAction
 import mozilla.components.browser.state.selector.findCustomTabOrSelectedTab
 import mozilla.components.browser.state.store.BrowserStore

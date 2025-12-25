@@ -5,7 +5,6 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.WindowCompat
 import androidx.fragment.app.FragmentManager
 import com.prirai.android.nira.R
-import com.prirai.android.nira.preferences.UserPreferences
 import com.prirai.android.nira.theme.ThemeManager
 import com.prirai.android.nira.theme.applyCompleteTheme
 

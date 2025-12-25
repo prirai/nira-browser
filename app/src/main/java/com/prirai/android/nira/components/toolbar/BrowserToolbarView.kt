@@ -12,22 +12,16 @@ import androidx.lifecycle.LifecycleOwner
 import com.prirai.android.nira.R
 import com.prirai.android.nira.ext.components
 import com.prirai.android.nira.preferences.UserPreferences
-import com.prirai.android.nira.ssl.showSslDialog
 import com.prirai.android.nira.utils.ToolbarPopupWindow
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.mapNotNull
 import mozilla.components.browser.state.selector.selectedTab
 import mozilla.components.browser.state.state.CustomTabSessionState
 import mozilla.components.browser.toolbar.BrowserToolbar
 import mozilla.components.browser.toolbar.display.DisplayToolbar
-import mozilla.components.lib.state.ext.flowScoped
 import mozilla.components.support.ktx.util.URLStringUtils.toDisplayUrl
 import mozilla.components.ui.widgets.behavior.EngineViewScrollingBehavior
-import mozilla.components.support.ktx.android.content.res.resolveAttribute
 import java.lang.ref.WeakReference
 import mozilla.components.ui.widgets.behavior.ViewPosition as MozacToolbarPosition
-import androidx.core.net.toUri
 
 interface BrowserToolbarViewInteractor {
     fun onBrowserToolbarPaste(text: String)

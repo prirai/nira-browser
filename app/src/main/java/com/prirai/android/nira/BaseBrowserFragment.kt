@@ -1,5 +1,6 @@
 package com.prirai.android.nira
 
+// import com.prirai.android.nira.browser.home.HomeFragmentDirections // Removed - using BrowserFragment for homepage
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.res.Configuration
@@ -13,25 +14,24 @@ import androidx.annotation.CallSuper
 import androidx.annotation.VisibleForTesting
 import androidx.appcompat.app.AppCompatActivity
 import androidx.coordinatorlayout.widget.CoordinatorLayout
-import androidx.core.content.ContextCompat
 import androidx.core.view.OnApplyWindowInsetsListener
 import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.isGone
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.NavController
 import androidx.navigation.fragment.findNavController
-import com.prirai.android.nira.R
 import com.prirai.android.nira.addons.WebExtensionPromptFeature
+import com.prirai.android.nira.auth.PasskeyAuthFeature
 import com.prirai.android.nira.browser.BrowsingMode
-import com.prirai.android.nira.settings.HomepageChoice
 import com.prirai.android.nira.browser.SwipeGestureLayout
-// import com.prirai.android.nira.browser.home.HomeFragmentDirections // Removed - using BrowserFragment for homepage
+import com.prirai.android.nira.browser.home.SharedViewModel
+import com.prirai.android.nira.components.FindInPageComponent
 import com.prirai.android.nira.components.StoreProvider
-import com.prirai.android.nira.components.toolbar.BrowserFragmentStore
 import com.prirai.android.nira.components.toolbar.BrowserFragmentState
+import com.prirai.android.nira.components.toolbar.BrowserFragmentStore
 import com.prirai.android.nira.components.toolbar.BrowserInteractor
 import com.prirai.android.nira.components.toolbar.BrowserToolbarViewInteractor
 import com.prirai.android.nira.components.toolbar.DefaultBrowserToolbarController
@@ -40,11 +40,11 @@ import com.prirai.android.nira.components.toolbar.ToolbarPosition
 import com.prirai.android.nira.databinding.FragmentBrowserBinding
 import com.prirai.android.nira.downloads.DownloadService
 import com.prirai.android.nira.ext.components
-import com.prirai.android.nira.components.FindInPageComponent
 import com.prirai.android.nira.integration.ContextMenuIntegration
 import com.prirai.android.nira.integration.ReaderModeIntegration
 import com.prirai.android.nira.integration.ReloadStopButtonIntegration
 import com.prirai.android.nira.preferences.UserPreferences
+import com.prirai.android.nira.settings.HomepageChoice
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
@@ -78,7 +78,6 @@ import mozilla.components.feature.session.FullScreenFeature
 import mozilla.components.feature.session.PictureInPictureFeature
 import mozilla.components.feature.session.SessionFeature
 import mozilla.components.feature.sitepermissions.SitePermissionsFeature
-import com.prirai.android.nira.auth.PasskeyAuthFeature
 import mozilla.components.lib.state.ext.consumeFlow
 import mozilla.components.support.base.feature.ActivityResultHandler
 import mozilla.components.support.base.feature.PermissionsFeature
@@ -91,7 +90,6 @@ import mozilla.components.support.ktx.android.view.hideKeyboard
 import mozilla.components.support.ktx.kotlinx.coroutines.flow.ifAnyChanged
 import mozilla.components.support.locale.ActivityContextWrapper
 import mozilla.components.support.utils.ext.requestInPlacePermissions
-import com.prirai.android.nira.browser.home.SharedViewModel
 import java.lang.ref.WeakReference
 
 /**
@@ -630,7 +628,7 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
      * Toggle manual fullscreen mode (hide/show all toolbars)
      */
     protected fun toggleManualFullscreen() {
-        val isCurrentlyFullscreen = unifiedToolbar?.visibility == View.GONE
+        val isCurrentlyFullscreen = unifiedToolbar?.isGone == true
         
         if (isCurrentlyFullscreen) {
             // Exit fullscreen - show toolbars
@@ -1219,10 +1217,10 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
         return if (isTopToolbar) {
             // In TOP mode: only bottom components (tab bar + contextual toolbar) are at bottom
             var height = 0
-            unifiedToolbar?.getTabGroupBar()?.takeIf { it.visibility == View.VISIBLE }?.let {
+            unifiedToolbar?.getTabGroupBar()?.takeIf { it.isVisible }?.let {
                 height += it.height
             }
-            unifiedToolbar?.getContextualToolbar()?.takeIf { it.visibility == View.VISIBLE }?.let {
+            unifiedToolbar?.getContextualToolbar()?.takeIf { it.isVisible }?.let {
                 height += it.height
             }
             
@@ -1236,10 +1234,10 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
             // In BOTTOM mode: address bar + tab bar + contextual toolbar all at bottom
             var height = 0
             unifiedToolbar?.getToolbarView()?.let { height += it.height }
-            unifiedToolbar?.getTabGroupBar()?.takeIf { it.visibility == View.VISIBLE }?.let {
+            unifiedToolbar?.getTabGroupBar()?.takeIf { it.isVisible }?.let {
                 height += it.height
             }
-            unifiedToolbar?.getContextualToolbar()?.takeIf { it.visibility == View.VISIBLE }?.let {
+            unifiedToolbar?.getContextualToolbar()?.takeIf { it.isVisible }?.let {
                 height += it.height
             }
             

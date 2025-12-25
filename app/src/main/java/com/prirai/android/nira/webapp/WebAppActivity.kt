@@ -2,22 +2,19 @@ package com.prirai.android.nira.webapp
 
 import android.Manifest
 import android.content.Intent
-import android.net.Uri
 import android.os.Build
 import android.os.Bundle
-import android.view.View
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
-import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.lifecycleScope
 import com.prirai.android.nira.R
-import mozilla.components.feature.pwa.ext.getWebAppManifest
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import mozilla.components.feature.pwa.ext.getWebAppManifest
 
 /**
  * Activity for Progressive Web Apps (PWAs) - Fullscreen, no browser chrome

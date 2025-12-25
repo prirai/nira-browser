@@ -2,7 +2,6 @@ package com.prirai.android.nira.browser.tabgroups
 
 import android.annotation.SuppressLint
 import android.content.Context
-import android.util.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -48,7 +47,6 @@ class UnifiedTabGroupManager private constructor(private val context: Context) {
     val groupEvents: SharedFlow<GroupEvent> = _groupEvents.asSharedFlow()
 
     companion object {
-        private const val TAG = "UnifiedTabGroupManager"
         private val AVAILABLE_COLORS = listOf(
             0xFFE57373.toInt(), // Red
             0xFF81C784.toInt(), // Green

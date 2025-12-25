@@ -1,7 +1,7 @@
 package com.prirai.android.nira.browser.tabgroups
 
-import android.net.Uri
 import android.util.Log
+import androidx.core.net.toUri
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -10,7 +10,6 @@ import mozilla.components.browser.state.action.TabListAction
 import mozilla.components.browser.state.state.BrowserState
 import mozilla.components.lib.state.Middleware
 import mozilla.components.lib.state.MiddlewareContext
-import androidx.core.net.toUri
 
 /**
  * Middleware that monitors tab creation and applies cross-domain grouping logic.

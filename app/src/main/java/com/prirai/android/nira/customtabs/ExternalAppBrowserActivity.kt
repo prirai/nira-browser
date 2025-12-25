@@ -4,16 +4,15 @@ import android.os.Bundle
 import androidx.annotation.VisibleForTesting
 import androidx.browser.customtabs.CustomTabsIntent
 import androidx.navigation.fragment.NavHostFragment
-import mozilla.components.browser.state.action.CustomTabListAction
-import mozilla.components.browser.state.selector.findCustomTab
-import mozilla.components.browser.state.state.createCustomTab
-import mozilla.components.browser.state.state.SessionState
-import mozilla.components.feature.intent.ext.EXTRA_SESSION_ID
-import mozilla.components.support.utils.SafeIntent
 import com.prirai.android.nira.BrowserActivity
 import com.prirai.android.nira.R
 import com.prirai.android.nira.ext.components
-import com.prirai.android.nira.ext.getIntentSessionId
+import mozilla.components.browser.state.action.CustomTabListAction
+import mozilla.components.browser.state.selector.findCustomTab
+import mozilla.components.browser.state.state.SessionState
+import mozilla.components.browser.state.state.createCustomTab
+import mozilla.components.feature.intent.ext.EXTRA_SESSION_ID
+import mozilla.components.support.utils.SafeIntent
 
 /**
  * Activity that holds the [ExternalAppBrowserFragment] that is launched within an external app,

@@ -3,11 +3,10 @@ package com.prirai.android.nira
 
 import com.prirai.android.nira.components.Components
 import com.prirai.android.nira.theme.applyAppTheme
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import mozilla.components.browser.state.action.SystemAction
 import mozilla.components.browser.state.selector.selectedTab
 import mozilla.components.feature.addons.update.GlobalAddonDependencyProvider

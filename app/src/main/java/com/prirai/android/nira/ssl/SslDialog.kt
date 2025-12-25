@@ -1,14 +1,6 @@
 package com.prirai.android.nira.ssl
 
 import android.content.Context
-import android.net.http.SslCertificate
-import android.view.LayoutInflater
-import android.widget.TextView
-import com.prirai.android.nira.R
-import com.prirai.android.nira.ext.components
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
-import mozilla.components.browser.state.selector.selectedTab
-import mozilla.components.support.ktx.kotlin.tryGetHostFromUrl
 
 /**
  * Shows an informative bottom sheet with connection/security information

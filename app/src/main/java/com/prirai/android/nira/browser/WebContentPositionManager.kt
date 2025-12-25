@@ -23,8 +23,6 @@ class WebContentPositionManager(
     private val getBottomToolbarHeight: () -> Int
 ) {
     
-    private var lastTopMargin = 0
-    private var lastBottomMargin = 0
     private var lastImeInset = 0
     private var statusBarHeight = 0
     private var navigationBarHeight = 0

@@ -1,8 +1,8 @@
 package com.prirai.android.nira
 
 import android.view.View
-import android.view.ViewGroup
 import androidx.core.view.isVisible
+import androidx.lifecycle.lifecycleScope
 import com.prirai.android.nira.browser.toolbar.ToolbarGestureHandler
 import com.prirai.android.nira.browser.toolbar.WebExtensionToolbarFeature
 import com.prirai.android.nira.components.toolbar.ToolbarMenu
@@ -10,17 +10,16 @@ import com.prirai.android.nira.ext.components
 import com.prirai.android.nira.ext.nav
 import com.prirai.android.nira.preferences.UserPreferences
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import androidx.lifecycle.lifecycleScope
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.distinctUntilChangedBy
 import kotlinx.coroutines.flow.mapNotNull
+import kotlinx.coroutines.launch
 import mozilla.components.browser.state.state.SessionState
-import mozilla.components.lib.state.ext.flowScoped
-import mozilla.components.support.ktx.kotlinx.coroutines.flow.ifAnyChanged
 import mozilla.components.browser.thumbnails.BrowserThumbnails
 import mozilla.components.feature.tabs.WindowFeature
+import mozilla.components.lib.state.ext.flowScoped
 import mozilla.components.support.base.feature.UserInteractionHandler
 import mozilla.components.support.base.feature.ViewBoundFeatureWrapper
+import mozilla.components.support.ktx.kotlinx.coroutines.flow.ifAnyChanged
 
 /**
  * Fragment used for browsing the web within the main app.
@@ -651,9 +650,9 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
             val contextualToolbar = unifiedToolbar?.getContextualToolbar()
             
             var totalHeight = navBarHeight
-            contextualToolbar?.let { if (prefs.showContextualToolbar && it.visibility == View.VISIBLE) totalHeight += it.height }
+            contextualToolbar?.let { if (prefs.showContextualToolbar && it.isVisible) totalHeight += it.height }
             browserToolbar?.let { totalHeight += it.asView()?.height ?: 0 }
-            tabGroupBar?.let { if (prefs.showTabGroupBar && it.visibility == View.VISIBLE) totalHeight += it.height }
+            tabGroupBar?.let { if (prefs.showTabGroupBar && it.isVisible) totalHeight += it.height }
             
             if (totalHeight > navBarHeight) totalHeight else (160 * resources.displayMetrics.density).toInt() + navBarHeight
         } else {
@@ -663,8 +662,8 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
             val contextualToolbar = unifiedToolbar?.getContextualToolbar()
             
             var totalHeight = navBarHeight  // Always include nav bar
-            contextualToolbar?.let { if (prefs.showContextualToolbar && it.visibility == View.VISIBLE) totalHeight += it.height }
-            tabGroupBar?.let { if (prefs.showTabGroupBar && it.visibility == View.VISIBLE) totalHeight += it.height }
+            contextualToolbar?.let { if (prefs.showContextualToolbar && it.isVisible) totalHeight += it.height }
+            tabGroupBar?.let { if (prefs.showTabGroupBar && it.isVisible) totalHeight += it.height }
             
             // Return full height including nav bar
             totalHeight
@@ -714,8 +713,8 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
         val contextualToolbar = unifiedToolbar?.getContextualToolbar()
         
         var totalHeight = navBarHeight
-        contextualToolbar?.let { if (prefs.showContextualToolbar && it.visibility == View.VISIBLE) totalHeight += it.height }
-        tabGroupBar?.let { if (prefs.showTabGroupBar && it.visibility == View.VISIBLE) totalHeight += it.height }
+        contextualToolbar?.let { if (prefs.showContextualToolbar && it.isVisible) totalHeight += it.height }
+        tabGroupBar?.let { if (prefs.showTabGroupBar && it.isVisible) totalHeight += it.height }
         
         return totalHeight
     }

@@ -1,9 +1,6 @@
 package com.prirai.android.nira
 
-import androidx.lifecycle.DefaultLifecycleObserver
-import androidx.lifecycle.LifecycleOwner
-import mozilla.components.browser.state.action.AppLifecycleAction
-
+// import com.prirai.android.nira.browser.home.HomeFragmentDirections // Removed - using BrowserFragment for homepage
 import android.content.ComponentCallbacks2
 import android.content.Context
 import android.content.Intent
@@ -17,8 +14,10 @@ import androidx.appcompat.widget.Toolbar
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
-import androidx.core.view.updatePadding
 import androidx.fragment.app.FragmentManager
+import androidx.lifecycle.DefaultLifecycleObserver
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.NavDirections
 import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.ui.AppBarConfiguration
@@ -29,7 +28,6 @@ import com.prirai.android.nira.browser.BrowsingMode
 import com.prirai.android.nira.browser.BrowsingModeManager
 import com.prirai.android.nira.browser.DefaultBrowsingModeManager
 import com.prirai.android.nira.browser.SearchEngineList
-// import com.prirai.android.nira.browser.home.HomeFragmentDirections // Removed - using BrowserFragment for homepage
 import com.prirai.android.nira.databinding.ActivityMainBinding
 import com.prirai.android.nira.ext.alreadyOnDestination
 import com.prirai.android.nira.ext.components
@@ -39,10 +37,9 @@ import com.prirai.android.nira.preferences.UserPreferences
 import com.prirai.android.nira.search.SearchDialogFragmentDirections
 import com.prirai.android.nira.theme.applyAppTheme
 import com.prirai.android.nira.utils.Utils
-import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.Dispatchers
 import mozilla.components.browser.icons.IconRequest
+import mozilla.components.browser.state.action.AppLifecycleAction
 import mozilla.components.browser.state.search.SearchEngine
 import mozilla.components.browser.state.state.SessionState
 import mozilla.components.browser.state.state.WebExtensionState
