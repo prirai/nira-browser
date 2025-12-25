@@ -2,6 +2,7 @@ package com.prirai.android.nira.browser.tabs
 
 import android.content.Context
 import java.util.LinkedList
+import androidx.core.content.edit
 
 class TabLRUManager private constructor(context: Context) {
     
@@ -79,7 +80,7 @@ class TabLRUManager private constructor(context: Context) {
     fun getMostRecentTab(): String? = lruQueue.firstOrNull()
     
     private fun saveToPrefs() {
-        prefs.edit().putString("lru_order", lruQueue.joinToString(",")).apply()
+        prefs.edit { putString("lru_order", lruQueue.joinToString(",")) }
     }
     
     private fun loadFromPrefs() {

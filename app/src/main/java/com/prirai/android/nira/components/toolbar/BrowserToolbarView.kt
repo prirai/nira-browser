@@ -22,6 +22,7 @@ import mozilla.components.support.ktx.util.URLStringUtils.toDisplayUrl
 import mozilla.components.ui.widgets.behavior.EngineViewScrollingBehavior
 import java.lang.ref.WeakReference
 import mozilla.components.ui.widgets.behavior.ViewPosition as MozacToolbarPosition
+import androidx.core.net.toUri
 
 interface BrowserToolbarViewInteractor {
     fun onBrowserToolbarPaste(text: String)
@@ -73,15 +74,7 @@ class BrowserToolbarView(
     @VisibleForTesting
     internal var view: BrowserToolbar = layout
         .findViewById(R.id.toolbar)
-        
-    // Access to integrated components for bottom toolbar layout
-    internal val integratedTabGroupBar: View? = if (toolbarLayout == R.layout.component_bottom_browser_toolbar) {
-        layout.findViewById(R.id.tabGroupBarIntegrated)
-    } else null
-    
-    // Legacy integratedContextualToolbar removed - now handled by UnifiedToolbar's ModernContextualToolbar
-    internal val integratedContextualToolbar: View? = null
-    
+
     // Get the actual container for bottom toolbar
     private val toolbarContainer: View? = if (toolbarLayout == R.layout.component_bottom_browser_toolbar) {
         val container = layout.findViewById<View>(R.id.toolbarContainer)
@@ -95,8 +88,6 @@ class BrowserToolbarView(
         get() = false
 
     init {
-        val isCustomTabSession = customTabSession != null
-
         view.display.setOnUrlLongClickListener {
             ToolbarPopupWindow.show(
                 WeakReference(view),
@@ -225,10 +216,6 @@ class BrowserToolbarView(
         }
     }
 
-    fun dismissMenu() {
-        view.dismissMenu()
-    }
-
     /**
      * Sets whether the toolbar will have a dynamic behavior (to be scrolled) or not.
      *
@@ -308,7 +295,7 @@ class BrowserToolbarView(
      */
     private fun smartUrlDisplay(url: CharSequence): CharSequence {
         return try {
-            val uri = android.net.Uri.parse(url.toString())
+            val uri = url.toString().toUri()
             val host = uri.host ?: return toDisplayUrl(url)
             val path = uri.path ?: return host
             
@@ -349,7 +336,7 @@ class BrowserToolbarView(
                     "$cleanHost$path"
                 }
             }
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             // Fallback to original toDisplayUrl function
             toDisplayUrl(url)
         }

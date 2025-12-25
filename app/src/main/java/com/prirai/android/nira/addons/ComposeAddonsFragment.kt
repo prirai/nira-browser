@@ -62,6 +62,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import mozilla.components.feature.addons.Addon
 import mozilla.components.feature.addons.ui.translateName
+import androidx.core.net.toUri
 
 class ComposeAddonsFragment : Fragment() {
 
@@ -254,7 +255,8 @@ fun AddonsScreen(
                 item {
                     TextButton(
                         onClick = {
-                            val intent = Intent(Intent.ACTION_VIEW, android.net.Uri.parse("https://addons.mozilla.org/android/"))
+                            val intent = Intent(Intent.ACTION_VIEW,
+                                "https://addons.mozilla.org/android/".toUri())
                             context.startActivity(intent)
                         },
                         modifier = Modifier.fillMaxWidth()
