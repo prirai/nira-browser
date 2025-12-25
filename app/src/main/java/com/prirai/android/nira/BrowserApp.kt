@@ -1,4 +1,3 @@
-@file:Suppress("INLINE_FROM_HIGHER_PLATFORM")
 package com.prirai.android.nira
 
 import com.prirai.android.nira.components.Components
