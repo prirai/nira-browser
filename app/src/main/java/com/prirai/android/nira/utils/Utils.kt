@@ -9,6 +9,7 @@ import android.graphics.Paint
 import android.graphics.RectF
 import android.util.TypedValue
 import com.prirai.android.nira.R
+import androidx.core.graphics.createBitmap
 
 
 open class Utils {
@@ -20,7 +21,7 @@ open class Utils {
         val size = context.resources.getDimension(R.dimen.mozac_browser_icons_size_default)
         val sizePx = size.toInt()
 
-        val bitmap = Bitmap.createBitmap(sizePx, sizePx, Bitmap.Config.ARGB_8888)
+        val bitmap = createBitmap(sizePx, sizePx)
         val canvas = Canvas(bitmap)
 
         val backgroundColor = Color.LTGRAY

@@ -15,6 +15,7 @@ import mozilla.components.support.ktx.android.content.res.resolveAttribute
 import mozilla.components.support.ktx.android.view.hideKeyboard
 import com.prirai.android.nira.search.SearchFragmentState
 import androidx.core.graphics.drawable.toDrawable
+import androidx.core.graphics.scale
 
 interface ToolbarInteractor {
     fun onUrlCommitted(url: String)
@@ -110,12 +111,7 @@ class ToolbarView(
             val iconSize =
                 context.resources.getDimensionPixelSize(R.dimen.icon_width)
 
-            val scaledIcon = Bitmap.createScaledBitmap(
-                searchEngine.icon,
-                iconSize,
-                iconSize,
-                true
-            )
+            val scaledIcon = searchEngine.icon.scale(iconSize, iconSize)
 
             val icon = scaledIcon.toDrawable(context.resources)
 

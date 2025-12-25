@@ -94,6 +94,7 @@ import mozilla.components.support.ktx.kotlinx.coroutines.flow.ifAnyChanged
 import mozilla.components.support.locale.ActivityContextWrapper
 import mozilla.components.support.utils.ext.requestInPlacePermissions
 import java.lang.ref.WeakReference
+import androidx.core.graphics.toColorInt
 
 /**
  * Base fragment extended by [BrowserFragment].
@@ -511,6 +512,16 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
                 owner = this,
                 view = view
             )
+            
+            // Observe tab changes to re-enable swipe refresh when switching tabs
+            consumeFlow(store) { flow ->
+                flow.map { state -> state.selectedTabId }
+                    .distinctUntilChanged()
+                    .collect {
+                        // Re-evaluate if swipe refresh should be enabled for this tab
+                        binding.swipeRefresh.isEnabled = shouldPullToRefreshBeEnabled()
+                    }
+            }
         }
 
         webExtensionPromptFeature.set(
@@ -754,9 +765,9 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
                         iconIndicator.scaleY = iconScale
                         
                         if (currentProgress >= 1f) {
-                            iconIndicator.setColorFilter(android.graphics.Color.parseColor("#00C853"))
+                            iconIndicator.setColorFilter("#00C853".toColorInt())
                             iconIndicator.backgroundTintList = android.content.res.ColorStateList.valueOf(
-                                android.graphics.Color.parseColor("#C8E6C9")
+                                "#C8E6C9".toColorInt()
                             )
                         } else {
                             iconIndicator.setColorFilter(getColorFromAttr(com.google.android.material.R.attr.colorOnSurface))
@@ -778,9 +789,9 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
                         iconIndicator.scaleY = iconScale
                         
                         if (currentProgress >= 1f) {
-                            iconIndicator.setColorFilter(android.graphics.Color.parseColor("#00C853"))
+                            iconIndicator.setColorFilter("#00C853".toColorInt())
                             iconIndicator.backgroundTintList = android.content.res.ColorStateList.valueOf(
-                                android.graphics.Color.parseColor("#C8E6C9")
+                                "#C8E6C9".toColorInt()
                             )
                         } else {
                             iconIndicator.setColorFilter(getColorFromAttr(com.google.android.material.R.attr.colorOnSurface))
@@ -802,9 +813,9 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
                         iconIndicator.scaleY = iconScale
                         
                         if (currentProgress >= 1f) {
-                            iconIndicator.setColorFilter(android.graphics.Color.parseColor("#00C853"))
+                            iconIndicator.setColorFilter("#00C853".toColorInt())
                             iconIndicator.backgroundTintList = android.content.res.ColorStateList.valueOf(
-                                android.graphics.Color.parseColor("#C8E6C9")
+                                "#C8E6C9".toColorInt()
                             )
                         } else {
                             iconIndicator.setColorFilter(getColorFromAttr(com.google.android.material.R.attr.colorOnSurface))

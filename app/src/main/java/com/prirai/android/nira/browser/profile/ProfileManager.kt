@@ -147,7 +147,7 @@ class ProfileManager(private val context: Context) {
         // Don't save default profile to prefs, it's generated
         val toSave = profiles.filter { !it.isDefault }
         val json = profileListAdapter.toJson(toSave)
-        prefs.edit().putString(KEY_PROFILES, json).apply()
+        prefs.edit { putString(KEY_PROFILES, json) }
     }
     
     private fun cleanupProfileStorage(profileId: String) {

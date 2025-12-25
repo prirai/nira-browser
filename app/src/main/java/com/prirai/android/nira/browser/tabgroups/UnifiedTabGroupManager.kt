@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.UUID
+import androidx.core.net.toUri
 
 /**
  * Unified Tab Group Manager - Single source of truth for all tab grouping operations.
@@ -478,7 +479,7 @@ class UnifiedTabGroupManager private constructor(private val context: Context) {
      */
     private fun extractDomain(url: String): String {
         return try {
-            android.net.Uri.parse(url).host?.replace("www.", "") ?: "unknown"
+            url.toUri().host?.replace("www.", "") ?: "unknown"
         } catch (e: Exception) {
             "unknown"
         }

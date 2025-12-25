@@ -398,18 +398,18 @@ class ImportExportSettingsFragment : BaseSettingsFragment() {
                 }
                 
                 // Apply settings with migration
-                with(userPref.edit()) {
+                userPref.edit {
                     val keys = jsonObj.keys()
                     while (keys.hasNext()) {
                         val key = keys.next()
-                        
+
                         // Skip metadata keys
                         if (key.startsWith("_")) continue
-                        
+
                         // Apply migrations if needed
                         val migratedKey = migrateSettingKey(key, version)
                         if (migratedKey == null) continue // Skip obsolete settings
-                        
+
                         // Get value and determine type
                         when (val value = jsonObj.get(key)) {
                             is Boolean -> putBoolean(migratedKey, value)
@@ -419,8 +419,9 @@ class ImportExportSettingsFragment : BaseSettingsFragment() {
                             is String -> {
                                 // Try to infer type from string value
                                 when {
-                                    value == "true" || value == "false" -> 
+                                    value == "true" || value == "false" ->
                                         putBoolean(migratedKey, value.toBoolean())
+
                                     value.matches("-?\\d+".toRegex()) -> {
                                         val longValue = value.toLongOrNull()
                                         if (longValue != null) {
@@ -433,16 +434,18 @@ class ImportExportSettingsFragment : BaseSettingsFragment() {
                                             putString(migratedKey, value)
                                         }
                                     }
+
                                     value.matches("-?\\d+\\.\\d+".toRegex()) ->
                                         putFloat(migratedKey, value.toFloatOrNull() ?: 1.0f)
+
                                     else ->
                                         putString(migratedKey, value)
                                 }
                             }
+
                             else -> putString(migratedKey, value.toString())
                         }
                     }
-                    apply()
                 }
                 
                 // Show success and restart

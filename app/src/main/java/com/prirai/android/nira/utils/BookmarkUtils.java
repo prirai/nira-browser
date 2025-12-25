@@ -15,16 +15,13 @@ public final class BookmarkUtils {
 
                 try {
                     Thread.sleep(1);
-                } catch (InterruptedException e) {
-                    // TODO: Replace with proper logging
-                    e.printStackTrace();
+                } catch (InterruptedException ignored) {
                 }
                 continue;
             } else if (currentTime < lastId) {
                 try {
                     Thread.sleep(100);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
+                } catch (InterruptedException ignored) {
                 }
                 continue;
             }
