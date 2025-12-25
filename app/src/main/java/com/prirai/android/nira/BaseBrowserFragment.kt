@@ -9,6 +9,7 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.view.ViewStub
 import android.view.accessibility.AccessibilityManager
 import androidx.annotation.CallSuper
 import androidx.annotation.VisibleForTesting
@@ -29,7 +30,6 @@ import com.prirai.android.nira.auth.PasskeyAuthFeature
 import com.prirai.android.nira.browser.BrowsingMode
 import com.prirai.android.nira.browser.SwipeGestureLayout
 import com.prirai.android.nira.browser.home.SharedViewModel
-import com.prirai.android.nira.components.FindInPageComponent
 import com.prirai.android.nira.components.StoreProvider
 import com.prirai.android.nira.components.toolbar.BrowserFragmentState
 import com.prirai.android.nira.components.toolbar.BrowserFragmentStore
@@ -42,6 +42,7 @@ import com.prirai.android.nira.databinding.FragmentBrowserBinding
 import com.prirai.android.nira.downloads.DownloadService
 import com.prirai.android.nira.ext.components
 import com.prirai.android.nira.integration.ContextMenuIntegration
+import com.prirai.android.nira.integration.FindInPageIntegration
 import com.prirai.android.nira.integration.ReaderModeIntegration
 import com.prirai.android.nira.integration.ReloadStopButtonIntegration
 import com.prirai.android.nira.preferences.UserPreferences
@@ -125,7 +126,7 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
     private val downloadsFeature = ViewBoundFeatureWrapper<DownloadsFeature>()
     private val appLinksFeature = ViewBoundFeatureWrapper<AppLinksFeature>()
     private val promptsFeature = ViewBoundFeatureWrapper<PromptFeature>()
-    private var findInPageComponent: FindInPageComponent? = null
+    private val findInPageIntegration = ViewBoundFeatureWrapper<FindInPageIntegration>()
     private val sitePermissionsFeature = ViewBoundFeatureWrapper<SitePermissionsFeature>()
     private val fullScreenFeature = ViewBoundFeatureWrapper<FullScreenFeature>()
     private val swipeRefreshFeature = ViewBoundFeatureWrapper<SwipeRefreshFeature>()
@@ -252,7 +253,9 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
         val browserToolbarMenuController = DefaultBrowserToolbarMenuController(
             activity = activity,
             navController = findNavController(),
-            findInPageLauncher = { findInPageComponent?.show() },
+            findInPageLauncher = { 
+                findInPageIntegration.get()?.launch()
+            },
             browserAnimator = browserAnimator,
             customTabSessionId = customTabSessionId,
             store = store,
@@ -534,19 +537,29 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
     }
     
     private fun setupFindInPage(view: View) {
-        val sessionId = customTabSessionId
-        val tabId = sessionId ?: requireContext().components.store.state.selectedTabId ?: return
-        val rootLayout = view.findViewById<ViewGroup>(R.id.gestureLayout) ?: return
+        val stub = view.findViewById<ViewStub>(R.id.stubFindInPage) ?: return
         
-        // Create and attach the Find in Page component
-        findInPageComponent = FindInPageComponent(
-            context = requireContext(),
-            store = requireContext().components.store,
-            sessionId = tabId,
-            lifecycleOwner = viewLifecycleOwner,
-            isCustomTab = sessionId != null
+        findInPageIntegration.set(
+            feature = FindInPageIntegration(
+                store = requireContext().components.store,
+                sessionId = customTabSessionId,
+                stub = stub,
+                engineView = binding.engineView,
+                toolbarInfo = FindInPageIntegration.ToolbarInfo(
+                    toolbar = unifiedToolbar?.getBrowserToolbar()!!,
+                    isToolbarDynamic = true,
+                    isToolbarPlacedAtTop = true
+                ),
+                prepareLayout = {
+                    // Layout adjustments when find in page opens
+                },
+                restorePreviousLayout = {
+                    // Layout restoration when find in page closes
+                }
+            ),
+            owner = this,
+            view = view
         )
-        findInPageComponent?.attach(rootLayout)
     }
 
     private suspend fun provideAddons(): List<Addon> {
@@ -566,7 +579,7 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
                     arrayOf(tab.content.url, tab.content.loadRequest)
                 }
                 .collect {
-                    findInPageComponent?.onBackPressed()
+                    findInPageIntegration.onBackPressed()
                     unifiedToolbar?.expand()
                 }
         }
@@ -1188,7 +1201,7 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
     override fun onBackPressed(): Boolean {
         // Check features in order of priority
         if (readerViewFeature.onBackPressed()) return true
-        if (findInPageComponent?.onBackPressed() == true) return true
+        if (findInPageIntegration.onBackPressed()) return true
         if (fullScreenFeature.onBackPressed()) return true
         if (promptsFeature.onBackPressed()) return true
         if (sessionFeature.onBackPressed()) return true
@@ -1324,7 +1337,7 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
     internal open fun fullScreenChanged(inFullScreen: Boolean) {
         if (inFullScreen) {
             // Close find in page bar if opened
-            findInPageComponent?.onBackPressed()
+            findInPageIntegration.onBackPressed()
 
             requireActivity().enterImmersiveMode(
                 setOnApplyWindowInsetsListener = { key: String, listener: OnApplyWindowInsetsListener ->
@@ -1495,8 +1508,7 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
     override fun onDestroyView() {
         super.onDestroyView()
 
-        findInPageComponent?.destroy()
-        findInPageComponent = null
+        // Lifecycle-aware features cleaned up automatically
         webContentPositionManager?.destroy()
         webContentPositionManager = null
         binding.engineView.setActivityContext(null)

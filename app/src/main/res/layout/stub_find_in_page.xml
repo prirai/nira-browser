@@ -6,8 +6,10 @@
     android:layout_height="56dp"
     android:layout_gravity="bottom"
     android:background="?attr/colorSurface"
+    android:elevation="16dp"
     android:clickable="true"
     android:focusable="true"
+    android:translationZ="16dp"
     app:findInPageNoMatchesTextColor="?attr/colorError"
     app:findInPageButtonsTint="?android:attr/textColorPrimary"
     app:findInPageResultCountTextColor="?android:attr/textColorPrimary" />

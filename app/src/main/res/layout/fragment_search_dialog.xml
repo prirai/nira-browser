@@ -173,4 +173,19 @@
         app:layout_constraintBottom_toBottomOf="@id/pill_wrapper"
         app:layout_constraintStart_toStartOf="@+id/pill_wrapper"
         app:layout_constraintTop_toTopOf="@id/pill_wrapper" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/qr_scan_button"
+        style="@style/Widget.Material3.Button.TonalButton.Icon"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:insetTop="0dp"
+        android:insetBottom="0dp"
+        android:contentDescription="@string/scan_qr_code"
+        app:icon="@drawable/ic_qr_code_scanner"
+        app:iconGravity="textStart"
+        app:iconPadding="0dp"
+        app:layout_constraintBottom_toBottomOf="@id/pill_wrapper"
+        app:layout_constraintStart_toEndOf="@+id/search_engines_shortcut_button"
+        app:layout_constraintTop_toTopOf="@id/pill_wrapper" />
 </androidx.constraintlayout.widget.ConstraintLayout>

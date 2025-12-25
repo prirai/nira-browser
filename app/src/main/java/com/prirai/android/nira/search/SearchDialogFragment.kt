@@ -245,6 +245,21 @@ class SearchDialogFragment : AppCompatDialogFragment(), UserInteractionHandler {
             interactor.onSearchShortcutsButtonClicked()
         }
 
+        binding.qrScanButton.setOnClickListener {
+            val qrScanner = com.prirai.android.nira.integration.QrScannerIntegration(
+                context = requireContext(),
+                fragment = this,
+                onScanResult = { url ->
+                    requireContext().components.sessionUseCases.loadUrl(url)
+                    dismiss()
+                },
+                onNeedToRequestPermissions = { permissions ->
+                    requestPermissions(permissions, REQUEST_CODE_QR_SCAN)
+                }
+            )
+            qrScanner.scan()
+        }
+
         binding.fillLinkFromClipboard.setOnClickListener {
             val clipboardUrl = requireContext().components.clipboardHandler.extractURL() ?: ""
             val urlView = toolbarView.view
@@ -404,5 +419,9 @@ class SearchDialogFragment : AppCompatDialogFragment(), UserInteractionHandler {
                 requireContext().getColorFromAttr(color)
             )
         }
+    }
+
+    companion object {
+        private const val REQUEST_CODE_QR_SCAN = 103
     }
 }
