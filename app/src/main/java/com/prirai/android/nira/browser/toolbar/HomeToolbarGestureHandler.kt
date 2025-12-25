@@ -6,6 +6,8 @@ import android.graphics.PointF
 import android.view.View
 import android.view.ViewConfiguration
 import androidx.core.animation.doOnEnd
+import androidx.core.graphics.contains
+import androidx.core.graphics.toPoint
 import androidx.core.view.isVisible
 import androidx.interpolator.view.animation.LinearOutSlowInInterpolator
 import androidx.navigation.findNavController
@@ -13,6 +15,7 @@ import com.prirai.android.nira.R
 import com.prirai.android.nira.browser.FakeTab
 import com.prirai.android.nira.browser.SwipeGestureListener
 import com.prirai.android.nira.browser.tabs.TabLRUManager
+import com.prirai.android.nira.components.toolbar.ToolbarPosition
 import com.prirai.android.nira.ext.getRectWithScreenLocation
 import com.prirai.android.nira.ext.getWindowInsets
 import com.prirai.android.nira.ext.isKeyboardVisible
@@ -22,9 +25,6 @@ import mozilla.components.browser.state.selector.selectedTab
 import mozilla.components.browser.state.state.TabSessionState
 import mozilla.components.browser.state.store.BrowserStore
 import mozilla.components.feature.tabs.TabsUseCases
-import androidx.core.graphics.contains
-import androidx.core.graphics.toPoint
-import com.prirai.android.nira.components.toolbar.ToolbarPosition
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
@@ -71,7 +71,6 @@ class HomeToolbarGestureHandler(
             GestureDirection.LEFT_TO_RIGHT
         }
 
-        @Suppress("ComplexCondition")
         return if (
             !activity.window.decorView.isKeyboardVisible() &&
             start.isInToolbar() &&

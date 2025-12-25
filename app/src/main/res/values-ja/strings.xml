@@ -349,4 +349,12 @@
     <string name="web_light_theme_description">ウェブサイトにライトテーマの使用をリクエスト</string>
     <string name="web_dark_theme_description">ウェブサイトにダークテーマの使用をリクエスト</string>
     <string name="web_system_theme_description">システムテーマの設定に従う</string>
+    <string name="flatten_folder">フォルダを平坦化</string>
+    <string name="flatten_folder_confirm">このフォルダのすべてのアイテムを親フォルダに移動します。続行しますか？</string>
+    <string name="multiselect_mode">複数選択モード</string>
+    <string name="delete_selected">選択したものを削除</string>
+    <string name="move_selected">選択したものを移動</string>
+    <string name="open_in_background_tabs">バックグラウンドタブで開く</string>
+    <string name="select_profile">プロフィールを選択</string>
+    <string name="profile">プロフィール</string>
 </resources>

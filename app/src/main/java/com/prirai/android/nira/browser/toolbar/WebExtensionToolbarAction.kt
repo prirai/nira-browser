@@ -58,7 +58,6 @@ open class WebExtensionToolbarAction(
         return rootView
     }
 
-    @Suppress("TooGenericExceptionCaught")
     override fun bind(view: View) {
         val imageView = view.findViewById<ImageView>(R.id.action_image)
         val textView = view.findViewById<TextView>(R.id.badge_text)

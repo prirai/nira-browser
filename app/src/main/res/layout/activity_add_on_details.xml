@@ -47,7 +47,7 @@
             android:layout_alignParentTop="true"
             android:layout_alignParentEnd="true"
             android:layout_marginTop="8dp"
-            android:text="Install"
+            android:text="@string/mozac_feature_addons_install_addon"
             style="@style/Widget.Material3.Button" />
 
         <RatingBar

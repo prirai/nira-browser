@@ -35,7 +35,6 @@ class DefaultBrowserToolbarMenuController(
     private val currentSession
         get() = store.state.findCustomTabOrSelectedTab(customTabSessionId)
 
-    @Suppress("ComplexMethod", "LongMethod")
     override fun handleToolbarItemInteraction(item: ToolbarMenu.Item) {
         val sessionUseCases = activity.components.sessionUseCases
 

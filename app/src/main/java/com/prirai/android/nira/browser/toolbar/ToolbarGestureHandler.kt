@@ -18,6 +18,7 @@ import com.prirai.android.nira.R
 import com.prirai.android.nira.browser.FakeTab
 import com.prirai.android.nira.browser.SwipeGestureListener
 import com.prirai.android.nira.browser.tabs.TabLRUManager
+import com.prirai.android.nira.components.toolbar.ToolbarPosition
 import com.prirai.android.nira.ext.getRectWithScreenLocation
 import com.prirai.android.nira.ext.getWindowInsets
 import com.prirai.android.nira.ext.isKeyboardVisible
@@ -28,12 +29,10 @@ import mozilla.components.browser.state.state.TabSessionState
 import mozilla.components.browser.state.store.BrowserStore
 import mozilla.components.feature.tabs.TabsUseCases
 import mozilla.components.support.ktx.android.view.getRectWithViewLocation
-import com.prirai.android.nira.components.toolbar.ToolbarPosition
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
 
-@Suppress("LargeClass", "TooManyFunctions")
 class ToolbarGestureHandler(
     private val activity: Activity,
     private val contentLayout: View,
@@ -76,7 +75,6 @@ class ToolbarGestureHandler(
             GestureDirection.LEFT_TO_RIGHT
         }
 
-        @Suppress("ComplexCondition")
         return if (
             !activity.window.decorView.isKeyboardVisible() &&
             start.isInToolbar() &&

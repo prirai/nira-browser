@@ -98,7 +98,6 @@ import java.lang.ref.WeakReference
  * UI code specific to the app or to custom tabs can be found in the subclasses.
  */
 @ExperimentalCoroutinesApi
-@Suppress("TooManyFunctions", "LargeClass")
 abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, ActivityResultHandler,
     AccessibilityManager.AccessibilityStateChangeListener {
 
@@ -111,7 +110,6 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
 
     // Unified Toolbar System
     @VisibleForTesting
-    @Suppress("VariableNaming")
     internal var _unifiedToolbar: com.prirai.android.nira.components.toolbar.unified.UnifiedToolbar? = null
 
     @VisibleForTesting
@@ -205,7 +203,6 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
         }
     }
 
-    @Suppress("ComplexMethod", "LongMethod")
     @CallSuper
     internal open fun initializeUI(view: View, tab: SessionState) {
         val context = requireContext()

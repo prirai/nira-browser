@@ -10,7 +10,6 @@ import mozilla.components.feature.findinpage.FindInPageFeature
 import mozilla.components.feature.findinpage.view.FindInPageView
 import mozilla.components.support.base.feature.LifecycleAwareFeature
 
-@Suppress("UndocumentedPublicClass")
 class FindInPageIntegration(
     private val store: BrowserStore,
     private val sessionId: String? = null,

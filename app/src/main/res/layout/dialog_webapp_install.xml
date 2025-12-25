@@ -34,7 +34,7 @@
         android:textAppearance="@style/TextAppearance.Material3.HeadlineSmall"
         android:textColor="?attr/colorOnSurface"
         android:gravity="center"
-        android:text="Install Web App" />
+        android:text="@string/install_web_app" />
 
     <!-- App Description -->
     <TextView

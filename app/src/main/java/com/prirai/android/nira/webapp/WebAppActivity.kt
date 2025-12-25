@@ -66,7 +66,6 @@ class WebAppActivity : AppCompatActivity() {
                     .webAppManager.loadIconFromFile(app.iconUrl)
                 
                 if (icon != null) {
-                    @Suppress("DEPRECATION")
                     val taskDescription = android.app.ActivityManager.TaskDescription(app.name, icon)
                     setTaskDescription(taskDescription)
                 } else {
@@ -75,7 +74,6 @@ class WebAppActivity : AppCompatActivity() {
                         .loadFavicon(url)
                     
                     if (cachedIcon != null) {
-                        @Suppress("DEPRECATION")
                         val taskDescription = android.app.ActivityManager.TaskDescription(app.name, cachedIcon)
                         setTaskDescription(taskDescription)
                     }

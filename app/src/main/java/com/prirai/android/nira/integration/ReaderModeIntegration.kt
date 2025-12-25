@@ -2,19 +2,18 @@ package com.prirai.android.nira.integration
 
 import android.content.Context
 import androidx.core.content.ContextCompat
-import com.prirai.android.nira.R
-import mozilla.components.support.ktx.android.content.getColorFromAttr
 import com.google.android.material.floatingactionbutton.FloatingActionButton
+import com.prirai.android.nira.R
 import mozilla.components.browser.state.selector.selectedTab
 import mozilla.components.browser.state.store.BrowserStore
 import mozilla.components.browser.toolbar.BrowserToolbar
 import mozilla.components.concept.engine.Engine
 import mozilla.components.feature.readerview.ReaderViewFeature
 import mozilla.components.feature.readerview.view.ReaderViewControlsView
-import mozilla.components.support.base.feature.UserInteractionHandler
 import mozilla.components.support.base.feature.LifecycleAwareFeature
+import mozilla.components.support.base.feature.UserInteractionHandler
+import mozilla.components.support.ktx.android.content.getColorFromAttr
 
-@Suppress("UndocumentedPublicClass")
 class ReaderModeIntegration(
     context: Context,
     engine: Engine,

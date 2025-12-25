@@ -21,7 +21,6 @@ import mozilla.components.feature.tabs.TabsUseCases
 import mozilla.components.support.base.feature.LifecycleAwareFeature
 import mozilla.components.ui.widgets.DefaultSnackbarDelegate
 
-@Suppress("LongParameterList", "UndocumentedPublicClass")
 class ContextMenuIntegration(
     context: Context,
     fragmentManager: FragmentManager,

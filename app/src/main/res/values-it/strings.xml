@@ -350,4 +350,12 @@
     <string name="website_title">Titolo del sito web</string>
     <string name="welcome_subtitle">Un browser veloce, privato e personalizzabile, progettato per te</string>
     <string name="welcome_to_nira">Benvenuto in Nira Browser</string>
+    <string name="flatten_folder">Appiattisci cartella</string>
+    <string name="flatten_folder_confirm">Questo sposterà tutti gli elementi da questa cartella al suo genitore. Continuare?</string>
+    <string name="multiselect_mode">Modalità multi-selezione</string>
+    <string name="delete_selected">Elimina selezionati</string>
+    <string name="move_selected">Sposta selezionati</string>
+    <string name="open_in_background_tabs">Apri in schede in background</string>
+    <string name="select_profile">Seleziona profilo</string>
+    <string name="profile">Profilo</string>
 </resources>

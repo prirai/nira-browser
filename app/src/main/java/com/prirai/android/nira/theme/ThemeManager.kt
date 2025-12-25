@@ -158,7 +158,6 @@ object ThemeManager {
                 android.view.WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS
             )
         } else {
-            @Suppress("DEPRECATION")
             val isDark = isDarkMode(context)
             if (isDark || isPrivateMode) {
                 window.decorView.systemUiVisibility = 

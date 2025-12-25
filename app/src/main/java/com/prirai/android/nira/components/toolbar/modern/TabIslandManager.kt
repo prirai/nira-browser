@@ -1,6 +1,5 @@
 package com.prirai.android.nira.components.toolbar.modern
 
-import android.annotation.SuppressLint
 import android.content.Context
 import android.util.Log
 import com.prirai.android.nira.browser.tabgroups.TabGroupData
@@ -34,7 +33,6 @@ class TabIslandManager(private val context: Context) {
     companion object {
         private const val TAG = "TabIslandManager"
 
-        @SuppressLint("StaticFieldLeak")
         @Volatile
         private var instance: TabIslandManager? = null
 

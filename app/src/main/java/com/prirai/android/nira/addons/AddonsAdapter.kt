@@ -1,6 +1,5 @@
 package com.prirai.android.nira.addons
 
-import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Paint
@@ -56,7 +55,6 @@ private const val VIEW_HOLDER_TYPE_ADDON = 1
  * @property style Indicates how items should look like.
  * @property excludedAddonIDs The list of add-on IDs to be excluded from the recommended section.
  */
-@Suppress("LargeClass", "DEPRECATION")
 class AddonsAdapter(
     private val addonCollectionProvider: AMOAddonsProvider,
     private val addonsManagerDelegate: AddonsManagerAdapterDelegate,
@@ -389,7 +387,6 @@ class AddonsAdapter(
          * @param appName The application name.
          * @param appVersion The application version.
          */
-        @Suppress("LongParameterList")
         fun bindMessageBars(
             context: Context,
             messageBarWarningView: View,
@@ -475,7 +472,6 @@ class AddonsAdapter(
             }
         }
 
-        @SuppressLint("DiffUtilEquals")
         override fun areContentsTheSame(oldItem: Any, newItem: Any): Boolean {
             return oldItem == newItem
         }

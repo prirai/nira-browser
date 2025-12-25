@@ -349,4 +349,12 @@
     <string name="web_light_theme_description">طلب من مواقع الويب استخدام الوضع الفاتح</string>
     <string name="web_dark_theme_description">طلب من مواقع الويب استخدام الوضع الداكن</string>
     <string name="web_system_theme_description">اتباع تفضيل مظهر النظام</string>
+    <string name="flatten_folder">تسطيح المجلد</string>
+    <string name="flatten_folder_confirm">سيؤدي هذا إلى نقل جميع العناصر من هذا المجلد إلى المجلد الأصلي. هل تريد المتابعة؟</string>
+    <string name="multiselect_mode">وضع الاختيار المتعدد</string>
+    <string name="delete_selected">حذف المحدد</string>
+    <string name="move_selected">نقل المحدد</string>
+    <string name="open_in_background_tabs">افتح في علامات التبويب الخلفية</string>
+    <string name="select_profile">اختر الملف الشخصي</string>
+    <string name="profile">الملف الشخصي</string>
 </resources>

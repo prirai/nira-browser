@@ -402,7 +402,6 @@ open class BrowserActivity : LocaleAwareAppCompatActivity(), ComponentCallbacks2
         super.onActivityResult(requestCode, resultCode, data)
     }
 
-    @Suppress("SpreadOperator")
     fun setupNavigationToolbar(vararg topLevelDestinationIds: Int) {
         NavigationUI.setupWithNavController(
             navigationToolbar,
@@ -430,7 +429,6 @@ open class BrowserActivity : LocaleAwareAppCompatActivity(), ComponentCallbacks2
         editNameDialogFragment.show(fm, "fragment_edit_name")
     }
 
-    @Suppress("LongParameterList")
     fun openToBrowserAndLoad(
         searchTermOrURL: String,
         newTab: Boolean,

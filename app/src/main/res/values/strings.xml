@@ -786,4 +786,19 @@
         name="web_system_theme_description"
     >Follow system theme preference</string>
 
+    <string name="selected_count">%d selected</string>
+    <string name="exit_fullscreen">Exit fullscreen</string>
+    <string name="toggle_fullscreen">Toggle fullscreen</string>
+    <string name="bookmark_title_placeholder">Bookmark Title</string>
+    <string name="history_title_placeholder">History Title</string>
+    <string name="tab_title_placeholder">Tab Title</string>
+    <string name="chip_placeholder">Chip</string>
+    <string name="header_placeholder">Header</string>
+    <string name="subheader_placeholder">Subheader</string>
+    <string name="open_tab">Open</string>
+    <string name="refresh">Refresh</string>
+    <string name="sort_addons">Sort</string>
+    <string name="mozac_feature_addons_install_addon">Install</string>
+    <string name="mozac_feature_toolbar_back_button">Back</string>
+    <string name="mozac_feature_toolbar_forward_button">Forward</string>
 </resources>
