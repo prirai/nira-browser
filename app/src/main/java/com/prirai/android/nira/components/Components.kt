@@ -383,4 +383,8 @@ open class Components(private val applicationContext: Context) {
     
     // Custom Tabs
     val customTabsStore by lazy { CustomTabsServiceStore() }
+    
+    val customTabsUseCases by lazy { 
+        mozilla.components.feature.tabs.CustomTabsUseCases(store, sessionUseCases.loadUrl) 
+    }
 }

@@ -7,16 +7,14 @@ import androidx.navigation.fragment.NavHostFragment
 import com.prirai.android.nira.BrowserActivity
 import com.prirai.android.nira.R
 import com.prirai.android.nira.ext.components
-import mozilla.components.browser.state.action.CustomTabListAction
 import mozilla.components.browser.state.selector.findCustomTab
-import mozilla.components.browser.state.state.SessionState
-import mozilla.components.browser.state.state.createCustomTab
+import mozilla.components.feature.customtabs.CustomTabIntentProcessor
 import mozilla.components.feature.intent.ext.EXTRA_SESSION_ID
 import mozilla.components.support.utils.SafeIntent
 
 /**
  * Activity that holds the [ExternalAppBrowserFragment] that is launched within an external app,
- * such as custom tabs.
+ * such as custom tabs. Uses Mozilla's CustomTabIntentProcessor for standardized intent handling.
  */
 open class ExternalAppBrowserActivity : BrowserActivity() {
 
@@ -28,30 +26,34 @@ open class ExternalAppBrowserActivity : BrowserActivity() {
         super.onCreate(savedInstanceState)
         hasCalledOnCreate = true
         
-        applyCustomTabTheming()
-        
-        val safeIntent = SafeIntent(intent)
-        val url = safeIntent.dataString
-        
-        if (url != null && savedInstanceState == null) {
-            val customTab = createCustomTab(
-                url = url,
-                source = SessionState.Source.Internal.CustomTab
+        if (savedInstanceState == null) {
+            // Use Mozilla's CustomTabIntentProcessor to handle the intent
+            val processor = CustomTabIntentProcessor(
+                addCustomTabUseCase = components.customTabsUseCases.add,
+                resources = resources,
+                isPrivate = false
             )
-            components.store.dispatch(CustomTabListAction.AddCustomTabAction(customTab))
             
-            // Navigate to the external app browser fragment
-            val navHostFragment = supportFragmentManager.findFragmentById(R.id.container) as? NavHostFragment
-            navHostFragment?.let { host ->
-                val bundle = Bundle().apply {
-                    putString("activeSessionId", customTab.id)
-                    putString(EXTRA_SESSION_ID, customTab.id)
-                    // Pass toolbar color to fragment
-                    intent.extras?.let { extras ->
-                        putAll(extras)
+            // Process the intent to create the custom tab session
+            if (processor.process(intent)) {
+                val sessionId = SafeIntent(intent).getStringExtra(EXTRA_SESSION_ID)
+                
+                // Apply custom tab theming based on intent colors
+                applyCustomTabTheming()
+                
+                // Navigate to the external app browser fragment
+                val navHostFragment = supportFragmentManager.findFragmentById(R.id.container) as? NavHostFragment
+                navHostFragment?.let { host ->
+                    val bundle = Bundle().apply {
+                        putString("activeSessionId", sessionId)
+                        putString(EXTRA_SESSION_ID, sessionId)
+                        // Pass intent extras (including toolbar colors) to fragment
+                        intent.extras?.let { extras ->
+                            putAll(extras)
+                        }
                     }
+                    host.navController.navigate(R.id.externalAppBrowserFragment, bundle)
                 }
-                host.navController.navigate(R.id.externalAppBrowserFragment, bundle)
             }
         }
     }
