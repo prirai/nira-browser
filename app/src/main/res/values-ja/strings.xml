@@ -357,4 +357,24 @@
     <string name="open_in_background_tabs">バックグラウンドタブで開く</string>
     <string name="select_profile">プロフィールを選択</string>
     <string name="profile">プロフィール</string>
+    <string name="install_web_app_profile_selection">ウェブアプリのプロフィールを選択</string>
+    <string name="install_web_app_profile_message">このウェブアプリをインストールするプロフィールを選択してください</string>
+    <string name="web_app_already_installed">ウェブアプリは既にインストールされています</string>
+    <string name="already_installed">既にインストール済み</string>
+    <string name="web_app_already_installed_profile">このプロフィールにウェブアプリが既にインストールされています</string>
+    <string name="selected_count">%d 個選択</string>
+    <string name="exit_fullscreen">全画面表示を終了</string>
+    <string name="toggle_fullscreen">全画面表示を切り替え</string>
+    <string name="bookmark_title_placeholder">ブックマークタイトル</string>
+    <string name="history_title_placeholder">履歴タイトル</string>
+    <string name="tab_title_placeholder">タブタイトル</string>
+    <string name="chip_placeholder">チップ</string>
+    <string name="header_placeholder">ヘッダー</string>
+    <string name="subheader_placeholder">サブヘッダー</string>
+    <string name="open_tab">開く</string>
+    <string name="refresh">更新</string>
+    <string name="sort_addons">並べ替え</string>
+    <string name="mozac_feature_addons_install_addon">インストール</string>
+    <string name="mozac_feature_toolbar_back_button">戻る</string>
+    <string name="mozac_feature_toolbar_forward_button">進む</string>
 </resources>

@@ -28,10 +28,8 @@ open class ExternalAppBrowserActivity : BrowserActivity() {
         super.onCreate(savedInstanceState)
         hasCalledOnCreate = true
         
-        // Apply custom tab theming from intent
         applyCustomTabTheming()
         
-        // Create a custom tab session from the intent
         val safeIntent = SafeIntent(intent)
         val url = safeIntent.dataString
         
@@ -168,17 +166,6 @@ open class ExternalAppBrowserActivity : BrowserActivity() {
         }
         
         super.onDestroy()
-    }
-
-    @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
-    internal fun hasExternalTab(): Boolean {
-        return getExternalTab() != null
-    }
-
-    @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
-    internal fun getExternalTab(): SessionState? {
-        val id = getExternalTabId() ?: return null
-        return components.store.state.findCustomTab(id)
     }
 
     @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)

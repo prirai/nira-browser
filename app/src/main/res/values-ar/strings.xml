@@ -357,4 +357,24 @@
     <string name="open_in_background_tabs">افتح في علامات التبويب الخلفية</string>
     <string name="select_profile">اختر الملف الشخصي</string>
     <string name="profile">الملف الشخصي</string>
+    <string name="install_web_app_profile_selection">حدد الملف الشخصي لتطبيق الويب</string>
+    <string name="install_web_app_profile_message">اختر ملفًا شخصيًا لتثبيت تطبيق الويب هذا</string>
+    <string name="web_app_already_installed">تم تثبيت تطبيق الويب بالفعل</string>
+    <string name="already_installed">مثبت بالفعل</string>
+    <string name="web_app_already_installed_profile">تطبيق الويب مثبت بالفعل في هذا الملف الشخصي</string>
+    <string name="selected_count">%d محدد</string>
+    <string name="exit_fullscreen">الخروج من وضع ملء الشاشة</string>
+    <string name="toggle_fullscreen">تبديل ملء الشاشة</string>
+    <string name="bookmark_title_placeholder">عنوان الإشارة المرجعية</string>
+    <string name="history_title_placeholder">عنوان السجل</string>
+    <string name="tab_title_placeholder">عنوان علامة التبويب</string>
+    <string name="chip_placeholder">شريحة</string>
+    <string name="header_placeholder">رأس</string>
+    <string name="subheader_placeholder">رأس فرعي</string>
+    <string name="open_tab">فتح</string>
+    <string name="refresh">تحديث</string>
+    <string name="sort_addons">فرز</string>
+    <string name="mozac_feature_addons_install_addon">تثبيت</string>
+    <string name="mozac_feature_toolbar_back_button">رجوع</string>
+    <string name="mozac_feature_toolbar_forward_button">إلى الأمام</string>
 </resources>

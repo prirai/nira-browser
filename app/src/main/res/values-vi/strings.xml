@@ -357,4 +357,24 @@
     <string name="open_in_background_tabs">Mở trong các tab nền</string>
     <string name="select_profile">Chọn hồ sơ</string>
     <string name="profile">Hồ sơ</string>
+    <string name="install_web_app_profile_selection">Chọn hồ sơ cho ứng dụng web</string>
+    <string name="install_web_app_profile_message">Chọn hồ sơ để cài đặt ứng dụng web này</string>
+    <string name="web_app_already_installed">Ứng dụng web đã được cài đặt</string>
+    <string name="already_installed">Đã cài đặt</string>
+    <string name="web_app_already_installed_profile">Ứng dụng web đã được cài đặt trong hồ sơ này</string>
+    <string name="selected_count">%d đã chọn</string>
+    <string name="exit_fullscreen">Thoát toàn màn hình</string>
+    <string name="toggle_fullscreen">Chuyển đổi toàn màn hình</string>
+    <string name="bookmark_title_placeholder">Tiêu đề dấu trang</string>
+    <string name="history_title_placeholder">Tiêu đề lịch sử</string>
+    <string name="tab_title_placeholder">Tiêu đề thẻ</string>
+    <string name="chip_placeholder">Chip</string>
+    <string name="header_placeholder">Tiêu đề</string>
+    <string name="subheader_placeholder">Tiêu đề phụ</string>
+    <string name="open_tab">Mở</string>
+    <string name="refresh">Làm mới</string>
+    <string name="sort_addons">Sắp xếp</string>
+    <string name="mozac_feature_addons_install_addon">Cài đặt</string>
+    <string name="mozac_feature_toolbar_back_button">Quay lại</string>
+    <string name="mozac_feature_toolbar_forward_button">Tiến</string>
 </resources>

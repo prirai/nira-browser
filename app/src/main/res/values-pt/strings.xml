@@ -358,4 +358,24 @@
     <string name="open_in_background_tabs">Abrir em abas em segundo plano</string>
     <string name="select_profile">Selecionar perfil</string>
     <string name="profile">Perfil</string>
+    <string name="install_web_app_profile_selection">Selecionar perfil para o aplicativo web</string>
+    <string name="install_web_app_profile_message">Escolha um perfil para instalar este aplicativo web</string>
+    <string name="web_app_already_installed">Aplicativo web já instalado</string>
+    <string name="already_installed">Já instalado</string>
+    <string name="web_app_already_installed_profile">Aplicativo web já instalado neste perfil</string>
+    <string name="selected_count">%d selecionado(s)</string>
+    <string name="exit_fullscreen">Sair da tela cheia</string>
+    <string name="toggle_fullscreen">Alternar tela cheia</string>
+    <string name="bookmark_title_placeholder">Título do marcador</string>
+    <string name="history_title_placeholder">Título do histórico</string>
+    <string name="tab_title_placeholder">Título da aba</string>
+    <string name="chip_placeholder">Chip</string>
+    <string name="header_placeholder">Cabeçalho</string>
+    <string name="subheader_placeholder">Subcabeçalho</string>
+    <string name="open_tab">Abrir</string>
+    <string name="refresh">Atualizar</string>
+    <string name="sort_addons">Ordenar</string>
+    <string name="mozac_feature_addons_install_addon">Instalar</string>
+    <string name="mozac_feature_toolbar_back_button">Voltar</string>
+    <string name="mozac_feature_toolbar_forward_button">Avançar</string>
 </resources>

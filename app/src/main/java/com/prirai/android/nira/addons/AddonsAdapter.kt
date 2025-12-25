@@ -1,10 +1,8 @@
 package com.prirai.android.nira.addons
 
 import android.content.Context
-import android.graphics.Bitmap
 import android.graphics.Paint
 import android.graphics.Typeface
-import android.graphics.drawable.TransitionDrawable
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -15,20 +13,15 @@ import androidx.annotation.ColorRes
 import androidx.annotation.DimenRes
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
-import androidx.annotation.VisibleForTesting
 import androidx.appcompat.content.res.AppCompatResources
 import androidx.core.content.ContextCompat
-import androidx.core.graphics.drawable.toDrawable
 import androidx.core.view.isVisible
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import com.prirai.android.nira.R
 import com.prirai.android.nira.browser.AddonSortType
 import com.prirai.android.nira.preferences.UserPreferences
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import mozilla.components.feature.addons.Addon
-import mozilla.components.feature.addons.amo.AMOAddonsProvider
 import mozilla.components.feature.addons.ui.AddonsManagerAdapterDelegate
 import mozilla.components.feature.addons.ui.CustomViewHolder
 import mozilla.components.feature.addons.ui.CustomViewHolder.AddonViewHolder
@@ -49,24 +42,16 @@ private const val VIEW_HOLDER_TYPE_ADDON = 1
  * an add-on such as recommended, unsupported or installed. In addition, it will perform actions
  * such as installing an add-on.
  *
- * @property addonCollectionProvider Provider of AMO collection API.
  * @property addonsManagerDelegate Delegate that will provides method for handling the add-on items.
  * @param addons The list of add-on based on the AMO store.
  * @property style Indicates how items should look like.
- * @property excludedAddonIDs The list of add-on IDs to be excluded from the recommended section.
  */
 class AddonsAdapter(
-    private val addonCollectionProvider: AMOAddonsProvider,
     private val addonsManagerDelegate: AddonsManagerAdapterDelegate,
     private val addons: List<Addon>,
     private val style: Style? = null,
-    private val excludedAddonIDs: List<String> = emptyList(),
     private val context: Context
 ) : ListAdapter<Any, CustomViewHolder>(DifferCallback) {
-    private val scope = CoroutineScope(Dispatchers.IO)
-
-    @VisibleForTesting
-    internal var addonsMap: MutableMap<String, Addon> = addons.associateBy({ it.id }, { it }).toMutableMap()
 
     internal val userPreferences: UserPreferences = UserPreferences(context)
 
@@ -359,20 +344,6 @@ class AddonsAdapter(
         }
     }
 
-    fun sortAddonList(){
-        submitList(createListWithSections(addonsMap.values.toList()))
-    }
-
-    fun updateAddon(addon: Addon) {
-        addonsMap[addon.id] = addon
-        submitList(createListWithSections(addonsMap.values.toList()))
-    }
-
-    fun updateAddons(addons: List<Addon>) {
-        addonsMap = addons.associateBy({ it.id }, { it }).toMutableMap()
-        submitList(createListWithSections(addons))
-    }
-
     companion object {
         /**
          * Bind an add-on to the message bars layout.
@@ -473,22 +444,25 @@ class AddonsAdapter(
         }
 
         override fun areContentsTheSame(oldItem: Any, newItem: Any): Boolean {
-            return oldItem == newItem
+            return when {
+                oldItem is Addon && newItem is Addon -> {
+                    oldItem.id == newItem.id &&
+                            oldItem.translatableName == newItem.translatableName &&
+                            oldItem.translatableDescription == newItem.translatableDescription &&
+                            oldItem.isEnabled() == newItem.isEnabled()
+                }
+
+                oldItem is Section && newItem is Section -> {
+                    oldItem.title == newItem.title
+                }
+
+                else -> oldItem === newItem
+            }
         }
     }
 
-    internal fun setWithAnimation(image: ImageView, bitmap: Bitmap, duration: Int = 1500) {
-        with(image) {
-            val bitmapDrawable = bitmap.toDrawable(context.resources)
-            val animation = TransitionDrawable(arrayOf(drawable, bitmapDrawable))
-            animation.isCrossFadeEnabled = true
-            setImageDrawable(animation)
-            animation.startTransition(duration)
-        }
-    }
 }
 
 private fun Addon.inRecommendedSection() = !isInstalled()
-private fun Addon.inSideloadedSection() = isInstalled() && !isSupported()
 private fun Addon.inInstalledSection() = isInstalled() && isSupported() && isEnabled()
 private fun Addon.inDisabledSection() = isInstalled() && isSupported() && !isEnabled()

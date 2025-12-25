@@ -25,11 +25,6 @@ class TabsAdapter(
 
     private var selectedTabId: String? = null
 
-    fun updateTabs(tabs: List<TabSessionState>, selectedId: String?) {
-        selectedTabId = selectedId
-        submitList(tabs)
-    }
-
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): TabViewHolder {
         val view = LayoutInflater.from(parent.context)
             .inflate(R.layout.item_tab_card, parent, false)
@@ -96,7 +91,7 @@ class TabsAdapter(
         override fun areContentsTheSame(oldItem: TabSessionState, newItem: TabSessionState): Boolean {
             return oldItem.content.title == newItem.content.title &&
                     oldItem.content.url == newItem.content.url &&
-                    oldItem.content.icon == newItem.content.icon
+                    oldItem.content.icon?.sameAs(newItem.content.icon) != false
         }
     }
 }

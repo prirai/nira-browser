@@ -358,4 +358,24 @@
     <string name="open_in_background_tabs">Otwórz w kartach w tle</string>
     <string name="select_profile">Wybierz profil</string>
     <string name="profile">Profil</string>
+    <string name="install_web_app_profile_selection">Wybierz profil dla aplikacji webowej</string>
+    <string name="install_web_app_profile_message">Wybierz profil, aby zainstalować tę aplikację webową</string>
+    <string name="web_app_already_installed">Aplikacja webowa jest już zainstalowana</string>
+    <string name="already_installed">Już zainstalowano</string>
+    <string name="web_app_already_installed_profile">Aplikacja webowa już zainstalowana w tym profilu</string>
+    <string name="selected_count">Wybrano: %d</string>
+    <string name="exit_fullscreen">Wyjdź z pełnego ekranu</string>
+    <string name="toggle_fullscreen">Przełącz pełny ekran</string>
+    <string name="bookmark_title_placeholder">Tytuł zakładki</string>
+    <string name="history_title_placeholder">Tytuł historii</string>
+    <string name="tab_title_placeholder">Tytuł karty</string>
+    <string name="chip_placeholder">Znacznik</string>
+    <string name="header_placeholder">Nagłówek</string>
+    <string name="subheader_placeholder">Podtytuł</string>
+    <string name="open_tab">Otwórz</string>
+    <string name="refresh">Odśwież</string>
+    <string name="sort_addons">Sortuj</string>
+    <string name="mozac_feature_addons_install_addon">Zainstaluj</string>
+    <string name="mozac_feature_toolbar_back_button">Wstecz</string>
+    <string name="mozac_feature_toolbar_forward_button">Dalej</string>
 </resources>

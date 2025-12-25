@@ -357,4 +357,24 @@
     <string name="open_in_background_tabs">Arka plan sekmelerinde aç</string>
     <string name="select_profile">Profil seç</string>
     <string name="profile">Profil</string>
+    <string name="install_web_app_profile_selection">Web uygulaması için profil seç</string>
+    <string name="install_web_app_profile_message">Bu web uygulamasını yüklemek için bir profil seçin</string>
+    <string name="web_app_already_installed">Web uygulaması zaten yüklü</string>
+    <string name="already_installed">Zaten yüklü</string>
+    <string name="web_app_already_installed_profile">Web uygulaması bu profilde zaten yüklü</string>
+    <string name="selected_count">%d seçili</string>
+    <string name="exit_fullscreen">Tam ekrandan çık</string>
+    <string name="toggle_fullscreen">Tam ekranı aç/kapat</string>
+    <string name="bookmark_title_placeholder">Yer imi başlığı</string>
+    <string name="history_title_placeholder">Geçmiş başlığı</string>
+    <string name="tab_title_placeholder">Sekme başlığı</string>
+    <string name="chip_placeholder">Çip</string>
+    <string name="header_placeholder">Başlık</string>
+    <string name="subheader_placeholder">Alt başlık</string>
+    <string name="open_tab">Aç</string>
+    <string name="refresh">Yenile</string>
+    <string name="sort_addons">Sırala</string>
+    <string name="mozac_feature_addons_install_addon">Yükle</string>
+    <string name="mozac_feature_toolbar_back_button">Geri</string>
+    <string name="mozac_feature_toolbar_forward_button">İleri</string>
 </resources>

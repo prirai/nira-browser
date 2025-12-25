@@ -358,4 +358,24 @@
     <string name="open_in_background_tabs">在后台标签中打开</string>
     <string name="select_profile">选择配置文件</string>
     <string name="profile">配置文件</string>
+    <string name="install_web_app_profile_selection">选择网络应用的配置文件</string>
+    <string name="install_web_app_profile_message">选择一个配置文件来安装此网络应用</string>
+    <string name="web_app_already_installed">网络应用已安装</string>
+    <string name="already_installed">已安装</string>
+    <string name="web_app_already_installed_profile">网络应用已在此配置文件中安装</string>
+    <string name="selected_count">已选择 %d 项</string>
+    <string name="exit_fullscreen">退出全屏</string>
+    <string name="toggle_fullscreen">切换全屏</string>
+    <string name="bookmark_title_placeholder">书签标题</string>
+    <string name="history_title_placeholder">历史记录标题</string>
+    <string name="tab_title_placeholder">标签页标题</string>
+    <string name="chip_placeholder">芯片</string>
+    <string name="header_placeholder">标题</string>
+    <string name="subheader_placeholder">副标题</string>
+    <string name="open_tab">打开</string>
+    <string name="refresh">刷新</string>
+    <string name="sort_addons">排序</string>
+    <string name="mozac_feature_addons_install_addon">安装</string>
+    <string name="mozac_feature_toolbar_back_button">返回</string>
+    <string name="mozac_feature_toolbar_forward_button">前进</string>
 </resources>

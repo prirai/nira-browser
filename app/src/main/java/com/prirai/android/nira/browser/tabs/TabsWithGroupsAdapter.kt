@@ -5,6 +5,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
+import androidx.core.content.edit
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.ListAdapter
@@ -16,7 +17,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import mozilla.components.browser.state.state.TabSessionState
-import androidx.core.content.edit
 
 /**
  * Adapter for tabs within a group with long-press support
@@ -142,7 +142,6 @@ class GroupTabsAdapter(
             cardView.setOnTouchListener { v, event ->
                 when (event.action) {
                     android.view.MotionEvent.ACTION_DOWN -> {
-                        startY = event.rawY
                         isDragging = false
                         false
                     }
@@ -216,7 +215,7 @@ class GroupTabsAdapter(
         override fun areContentsTheSame(oldItem: TabSessionState, newItem: TabSessionState): Boolean {
             return oldItem.content.title == newItem.content.title &&
                     oldItem.content.url == newItem.content.url &&
-                    oldItem.content.icon == newItem.content.icon
+                    oldItem.content.icon?.sameAs(newItem.content.icon) != false
         }
     }
 }
@@ -268,14 +267,6 @@ class TabsWithGroupsAdapter(
     fun expandGroup(groupId: String) {
         if (collapsedGroups.contains(groupId)) {
             collapsedGroups.remove(groupId)
-            saveCollapsedState()
-            notifyDataSetChanged()
-        }
-    }
-
-    fun collapseGroup(groupId: String) {
-        if (!collapsedGroups.contains(groupId)) {
-            collapsedGroups.add(groupId)
             saveCollapsedState()
             notifyDataSetChanged()
         }

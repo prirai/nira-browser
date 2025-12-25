@@ -10,32 +10,14 @@ import android.widget.LinearLayout
 import android.widget.PopupMenu
 import android.widget.TextView
 import androidx.browser.customtabs.CustomTabsIntent
-import androidx.core.view.isVisible
-import androidx.lifecycle.lifecycleScope
-import kotlinx.coroutines.flow.mapNotNull
-import kotlinx.coroutines.launch
-import android.text.Editable
-import android.text.TextWatcher
-import android.view.inputmethod.EditorInfo
-import android.view.inputmethod.InputMethodManager
-import android.widget.EditText
-import androidx.core.content.ContextCompat
-import androidx.core.content.res.ResourcesCompat
-import com.google.android.material.card.MaterialCardView
-import com.google.android.material.textview.MaterialTextView
-import mozilla.components.browser.state.selector.findCustomTab
-import mozilla.components.browser.state.state.SessionState
-import mozilla.components.browser.toolbar.BrowserToolbar
-import mozilla.components.concept.engine.EngineSession
-import mozilla.components.feature.customtabs.CustomTabWindowFeature
-import mozilla.components.lib.state.ext.flowScoped
-import mozilla.components.support.base.feature.ViewBoundFeatureWrapper
-import mozilla.components.support.utils.SafeIntent
+import androidx.core.graphics.toColorInt
 import com.prirai.android.nira.BrowserActivity
 import com.prirai.android.nira.R
 import com.prirai.android.nira.components.FindInPageComponent
 import com.prirai.android.nira.ext.components
-import androidx.core.net.toUri
+import mozilla.components.browser.state.selector.findCustomTab
+import mozilla.components.browser.state.state.SessionState
+import kotlin.math.pow
 
 /**
  * Fragment used for browsing the web within external apps (custom tabs).
@@ -43,9 +25,6 @@ import androidx.core.net.toUri
  */
 class ExternalAppBrowserFragment : CustomTabBrowserFragment() {
 
-    private val customTabWindowFeature = ViewBoundFeatureWrapper<CustomTabWindowFeature>()
-    
-    // Custom header views
     private var customTabHeader: LinearLayout? = null
     private var customTabTitle: TextView? = null
     private var customTabUrl: TextView? = null
@@ -60,20 +39,15 @@ class ExternalAppBrowserFragment : CustomTabBrowserFragment() {
     private var textColor: Int = -1
     
     override fun onCreate(savedInstanceState: Bundle?) {
-        // Set customTabSessionId from arguments before calling super
         customTabSessionId = arguments?.getString("activeSessionId")
         
-        // Extract toolbar color from arguments (passed from activity intent)
         toolbarColor = arguments?.getInt(CustomTabsIntent.EXTRA_TOOLBAR_COLOR, -1) ?: -1
         
-        // Calculate appropriate text color based on toolbar color
         if (toolbarColor != -1) {
             textColor = if (isColorLight(toolbarColor)) {
-                // Light background needs dark text
-                android.graphics.Color.parseColor("#000000")
+                "#000000".toColorInt()
             } else {
-                // Dark background needs light text
-                android.graphics.Color.parseColor("#FFFFFF")
+                "#FFFFFF".toColorInt()
             }
         }
         
@@ -346,9 +320,9 @@ class ExternalAppBrowserFragment : CustomTabBrowserFragment() {
         val blue = android.graphics.Color.blue(color) / 255.0
         
         // Calculate relative luminance
-        val r = if (red <= 0.03928) red / 12.92 else Math.pow((red + 0.055) / 1.055, 2.4)
-        val g = if (green <= 0.03928) green / 12.92 else Math.pow((green + 0.055) / 1.055, 2.4)
-        val b = if (blue <= 0.03928) blue / 12.92 else Math.pow((blue + 0.055) / 1.055, 2.4)
+        val r = if (red <= 0.03928) red / 12.92 else ((red + 0.055) / 1.055).pow(2.4)
+        val g = if (green <= 0.03928) green / 12.92 else ((green + 0.055) / 1.055).pow(2.4)
+        val b = if (blue <= 0.03928) blue / 12.92 else ((blue + 0.055) / 1.055).pow(2.4)
         
         val luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b
         
