@@ -1,5 +1,7 @@
 package com.prirai.android.nira.settings.fragment
 
+import com.prirai.android.nira.preferences.UserPreferences
+
 import android.app.Activity
 import android.content.Intent
 import android.net.Uri
@@ -379,7 +381,7 @@ class ImportExportSettingsFragment : BaseSettingsFragment() {
             val input: InputStream? = requireActivity().contentResolver.openInputStream(uri)
             input?.use { stream ->
                 val content = stream.bufferedReader().use { it.readText() }
-                
+
                 // Try to parse as JSON
                 val jsonObj = try {
                     JSONObject(content)
@@ -389,62 +391,119 @@ class ImportExportSettingsFragment : BaseSettingsFragment() {
                 }
 
                 val userPref = requireActivity().getSharedPreferences(SCW_PREFERENCES, 0)
-                
+                val allPrefs = userPref.all
+
                 // Get version for migration
                 val version = try {
-                    jsonObj.getInt("_version")
+                    jsonObj.optInt("_version", 0)
                 } catch (e: Exception) {
                     0 // Legacy or no version
                 }
-                
+
                 // Apply settings with migration
                 with(userPref.edit()) {
                     val keys = jsonObj.keys()
                     while (keys.hasNext()) {
                         val key = keys.next()
-                        
+
                         // Skip metadata keys
                         if (key.startsWith("_")) continue
-                        
+
                         // Apply migrations if needed
-                        val migratedKey = migrateSettingKey(key, version)
-                        if (migratedKey == null) continue // Skip obsolete settings
-                        
-                        // Get value and determine type
-                        when (val value = jsonObj.get(key)) {
-                            is Boolean -> putBoolean(migratedKey, value)
-                            is Int -> putInt(migratedKey, value)
-                            is Long -> putLong(migratedKey, value)
-                            is Double -> putFloat(migratedKey, value.toFloat())
-                            is String -> {
-                                // Try to infer type from string value
-                                when {
-                                    value == "true" || value == "false" -> 
-                                        putBoolean(migratedKey, value.toBoolean())
-                                    value.matches("-?\\d+".toRegex()) -> {
-                                        val longValue = value.toLongOrNull()
-                                        if (longValue != null) {
-                                            if (longValue > Int.MAX_VALUE || longValue < Int.MIN_VALUE) {
-                                                putLong(migratedKey, longValue)
-                                            } else {
-                                                putInt(migratedKey, longValue.toInt())
-                                            }
-                                        } else {
-                                            putString(migratedKey, value)
-                                        }
-                                    }
-                                    value.matches("-?\\d+\\.\\d+".toRegex()) ->
-                                        putFloat(migratedKey, value.toFloatOrNull() ?: 1.0f)
-                                    else ->
-                                        putString(migratedKey, value)
+                        val migratedKey = migrateSettingKey(key, version) ?: continue
+
+                        // Get value from JSON
+                        val jsonValue = jsonObj.get(key)
+                        if (jsonValue == null || jsonValue == JSONObject.NULL) continue
+
+                        // Determine target type based on existing preference
+                        val existingValue = allPrefs[migratedKey]
+
+                        when (existingValue) {
+                            is Boolean -> {
+                                when (jsonValue) {
+                                    is Boolean -> putBoolean(migratedKey, jsonValue)
+                                    is String -> putBoolean(migratedKey, jsonValue.toBoolean())
+                                    is Int -> putBoolean(migratedKey, jsonValue != 0)
+                                    else -> Log.w("ImportExportSettings", "Skipping boolean key $migratedKey due to incompatible JSON type: ${jsonValue.javaClass}")
                                 }
                             }
-                            else -> putString(migratedKey, value.toString())
+                            is Int -> {
+                                when (jsonValue) {
+                                    is Int -> putInt(migratedKey, jsonValue)
+                                    is Long -> putInt(migratedKey, jsonValue.toInt())
+                                    is String -> putInt(migratedKey, jsonValue.toIntOrNull() ?: 0)
+                                    else -> Log.w("ImportExportSettings", "Skipping int key $migratedKey due to incompatible JSON type: ${jsonValue.javaClass}")
+                                }
+                            }
+                            is Long -> {
+                                when (jsonValue) {
+                                    is Long -> putLong(migratedKey, jsonValue)
+                                    is Int -> putLong(migratedKey, jsonValue.toLong())
+                                    is String -> putLong(migratedKey, jsonValue.toLongOrNull() ?: 0L)
+                                    else -> Log.w("ImportExportSettings", "Skipping long key $migratedKey due to incompatible JSON type: ${jsonValue.javaClass}")
+                                }
+                            }
+                            is Float -> {
+                                when (jsonValue) {
+                                    is Double -> putFloat(migratedKey, jsonValue.toFloat())
+                                    is Float -> putFloat(migratedKey, jsonValue)
+                                    is Int -> putFloat(migratedKey, jsonValue.toFloat())
+                                    is String -> putFloat(migratedKey, jsonValue.toFloatOrNull() ?: 1.0f)
+                                    else -> Log.w("ImportExportSettings", "Skipping float key $migratedKey due to incompatible JSON type: ${jsonValue.javaClass}")
+                                }
+                            }
+                            is String -> {
+                                putString(migratedKey, jsonValue.toString())
+                            }
+                            null -> {
+                                // For new keys (not in existing prefs), infer type.
+                                // But be careful with known String keys that might look like numbers.
+                                if (isKnownStringKey(migratedKey)) {
+                                    putString(migratedKey, jsonValue.toString())
+                                } else {
+                                    when (jsonValue) {
+                                        is Boolean -> putBoolean(migratedKey, jsonValue)
+                                        is Int -> putInt(migratedKey, jsonValue)
+                                        is Long -> putLong(migratedKey, jsonValue)
+                                        is Double -> putFloat(migratedKey, jsonValue.toFloat())
+                                        is String -> {
+                                            // Legacy inference or String values
+                                            when {
+                                                jsonValue.equals("true", ignoreCase = true) || jsonValue.equals("false", ignoreCase = true) ->
+                                                    putBoolean(migratedKey, jsonValue.toBoolean())
+                                                jsonValue.matches("-?\\d+".toRegex()) -> {
+                                                    val longValue = jsonValue.toLongOrNull()
+                                                    if (longValue != null) {
+                                                        if (longValue > Int.MAX_VALUE || longValue < Int.MIN_VALUE) {
+                                                            putLong(migratedKey, longValue)
+                                                        } else {
+                                                            putInt(migratedKey, longValue.toInt())
+                                                        }
+                                                    } else {
+                                                        putString(migratedKey, jsonValue)
+                                                    }
+                                                }
+                                                jsonValue.matches("-?\\d+\\.\\d+".toRegex()) ->
+                                                    // Default to float for decimal numbers as SharedPreferences doesn't support Double natively
+                                                    putFloat(migratedKey, jsonValue.toFloatOrNull() ?: 1.0f)
+                                                else ->
+                                                    putString(migratedKey, jsonValue)
+                                            }
+                                        }
+                                        else -> putString(migratedKey, jsonValue.toString())
+                                    }
+                                }
+                            }
+                            else -> {
+                                // In case of Set<String> or other types we don't explicitly handle yet
+                                Log.w("ImportExportSettings", "Unknown type for key $migratedKey: ${existingValue.javaClass}")
+                            }
                         }
                     }
                     apply()
                 }
-                
+
                 // Show success and restart
                 Toast.makeText(context, R.string.successful, Toast.LENGTH_SHORT).show()
                 requireActivity().recreate()
@@ -513,6 +572,16 @@ class ImportExportSettingsFragment : BaseSettingsFragment() {
                 importSettings(uri)
             }
         }
+    }
+
+    private fun isKnownStringKey(key: String): Boolean {
+        // List of keys strictly known to be Strings to prevent incorrect type inference
+        return key == UserPreferences.CUSTOM_SEARCH_ENGINE_URL ||
+                key == UserPreferences.HOMEPAGE_URL ||
+                key == UserPreferences.HOMEPAGE_BACKGROUND_URL ||
+                key == UserPreferences.COLLECTION_NAME ||
+                key == UserPreferences.COLLECTION_USER ||
+                key == UserPreferences.BAR_ADDONS_LIST
     }
 
     companion object {
