@@ -104,7 +104,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="end|bottom"
-        android:layout_marginEnd="16dp"
+        android:layout_marginEnd="12dp"
         android:layout_marginBottom="0dp"
         android:contentDescription="@string/exit_fullscreen"
         android:src="@drawable/ic_fullscreen_exit"
@@ -115,7 +115,7 @@
         app:fabSize="mini"
         app:elevation="0dp"
         app:borderWidth="0dp"
-        app:shapeAppearance="@style/ShapeAppearance.Material3.Corner.Large"
+        app:shapeAppearance="@style/ShapeAppearance.Material3.Corner.Medium"
     />
     
     <com.google.android.material.floatingactionbutton.FloatingActionButton
@@ -123,7 +123,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="end|bottom"
-        android:layout_marginEnd="16dp"
+        android:layout_marginEnd="12dp"
         android:layout_marginBottom="0dp"
         android:contentDescription="@string/toggle_fullscreen"
         android:src="@drawable/ic_fullscreen"
@@ -134,7 +134,7 @@
         app:fabSize="mini"
         app:elevation="0dp"
         app:borderWidth="0dp"
-        app:shapeAppearance="@style/ShapeAppearance.Material3.Corner.Large"
+        app:shapeAppearance="@style/ShapeAppearance.Material3.Corner.Medium"
     />
 
     <com.prirai.android.nira.browser.FakeTab

@@ -587,6 +587,11 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
      * Only needed for top toolbar position - provides smooth margin animation
      */
     private fun adjustWebContentMarginsForToolbarOffset(currentOffset: Int, totalHeight: Int) {
+        // CRITICAL: Check if view is still attached to prevent crash when switching tabs
+        if (!isAdded || view == null) {
+            return
+        }
+        
         val prefs = UserPreferences(requireContext())
         if (prefs.toolbarPosition != com.prirai.android.nira.components.toolbar.ToolbarPosition.TOP.ordinal) {
             return // Bottom toolbar doesn't need margin adjustment
@@ -648,10 +653,11 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
      * Apply U-shape styling to button (rounded top, flat bottom for attachment)
      */
     private fun applyUShapeToButton(button: com.google.android.material.floatingactionbutton.FloatingActionButton) {
-        // Create shape with only top corners rounded
+        // Create shape with only top corners rounded - using medium corners for more compact look
+        val cornerRadius = 16f * resources.displayMetrics.density // Medium corner radius
         val shapeModel = com.google.android.material.shape.ShapeAppearanceModel.builder()
-            .setTopLeftCorner(com.google.android.material.shape.CornerFamily.ROUNDED, 28f * resources.displayMetrics.density)
-            .setTopRightCorner(com.google.android.material.shape.CornerFamily.ROUNDED, 28f * resources.displayMetrics.density)
+            .setTopLeftCorner(com.google.android.material.shape.CornerFamily.ROUNDED, cornerRadius)
+            .setTopRightCorner(com.google.android.material.shape.CornerFamily.ROUNDED, cornerRadius)
             .setBottomLeftCorner(com.google.android.material.shape.CornerFamily.ROUNDED, 0f)
             .setBottomRightCorner(com.google.android.material.shape.CornerFamily.ROUNDED, 0f)
             .build()

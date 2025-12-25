@@ -14,6 +14,7 @@ import androidx.annotation.CallSuper
 import androidx.annotation.VisibleForTesting
 import androidx.appcompat.app.AppCompatActivity
 import androidx.coordinatorlayout.widget.CoordinatorLayout
+import androidx.core.content.ContextCompat
 import androidx.core.view.OnApplyWindowInsetsListener
 import androidx.core.view.ViewCompat
 import androidx.core.view.isGone
@@ -77,6 +78,7 @@ import mozilla.components.feature.search.SearchFeature
 import mozilla.components.feature.session.FullScreenFeature
 import mozilla.components.feature.session.PictureInPictureFeature
 import mozilla.components.feature.session.SessionFeature
+import mozilla.components.feature.session.SwipeRefreshFeature
 import mozilla.components.feature.sitepermissions.SitePermissionsFeature
 import mozilla.components.lib.state.ext.consumeFlow
 import mozilla.components.support.base.feature.ActivityResultHandler
@@ -126,6 +128,7 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
     private var findInPageComponent: FindInPageComponent? = null
     private val sitePermissionsFeature = ViewBoundFeatureWrapper<SitePermissionsFeature>()
     private val fullScreenFeature = ViewBoundFeatureWrapper<FullScreenFeature>()
+    private val swipeRefreshFeature = ViewBoundFeatureWrapper<SwipeRefreshFeature>()
     
     // Web content position manager for toolbar and keyboard handling
     private var webContentPositionManager: com.prirai.android.nira.browser.WebContentPositionManager? = null
@@ -477,8 +480,35 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
 
         expandToolbarOnNavigation(store)
 
-        // Setup swipe down for fullscreen (instead of pull to refresh)
-        setupSwipeDownForFullscreen()
+        // Setup swipe to refresh
+        binding.swipeRefresh.isEnabled = shouldPullToRefreshBeEnabled()
+
+        if (binding.swipeRefresh.isEnabled) {
+            val primaryTextColor = ContextCompat.getColor(requireContext(), R.color.primary_icon)
+            binding.swipeRefresh.setColorSchemeColors(primaryTextColor)
+            
+            // Set the refresh icon to start from below the status bar
+            val statusBarHeight = resources.getDimensionPixelSize(
+                resources.getIdentifier("status_bar_height", "dimen", "android")
+            )
+            binding.swipeRefresh.setProgressViewOffset(
+                false,
+                statusBarHeight,
+                statusBarHeight + resources.getDimensionPixelSize(R.dimen.browser_toolbar_height)
+            )
+            
+            swipeRefreshFeature.set(
+                feature = SwipeRefreshFeature(
+                    requireContext().components.store,
+                    requireContext().components.sessionUseCases.reload,
+                    binding.swipeRefresh,
+                    ({}),
+                    customTabSessionId
+                ),
+                owner = this,
+                view = view
+            )
+        }
 
         webExtensionPromptFeature.set(
             feature = WebExtensionPromptFeature(
@@ -582,45 +612,241 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
         binding.swipeRefresh.isEnabled = false
         binding.swipeRefresh.setOnRefreshListener(null)
         
+        // Use the tabPreview (FakeTab) overlay to show fullscreen icon
+        val iconOverlay = binding.tabPreview
+        
+        // Make overlay transparent (remove white background)
+        iconOverlay.setBackgroundColor(android.graphics.Color.TRANSPARENT)
+        
+        // Create the fullscreen icon indicator
+        val iconIndicator = android.widget.ImageView(requireContext()).apply {
+            layoutParams = android.widget.FrameLayout.LayoutParams(
+                (64 * resources.displayMetrics.density).toInt(),
+                (64 * resources.displayMetrics.density).toInt()
+            ).apply {
+                gravity = android.view.Gravity.CENTER_HORIZONTAL or android.view.Gravity.TOP
+                topMargin = (48 * resources.displayMetrics.density).toInt()
+            }
+            setImageResource(R.drawable.ic_fullscreen)
+            setColorFilter(getColorFromAttr(com.google.android.material.R.attr.colorOnSurface))
+            scaleType = android.widget.ImageView.ScaleType.FIT_CENTER
+            elevation = 16f * resources.displayMetrics.density
+            // Circular background
+            background = androidx.core.content.ContextCompat.getDrawable(requireContext(), R.drawable.ic_circle_background)
+            backgroundTintList = android.content.res.ColorStateList.valueOf(
+                getColorFromAttr(com.google.android.material.R.attr.colorSurfaceContainerHigh)
+            )
+            val padding = (16 * resources.displayMetrics.density).toInt()
+            setPadding(padding, padding, padding, padding)
+        }
+        
+        // Add icon to the overlay
+        (iconOverlay as? android.view.ViewGroup)?.addView(iconIndicator)
+        
         val swipeLayout = binding.gestureLayout
+        // Lower thresholds for easier detection (raw pixel values from touch events)
+        // Detection threshold: Just check if movement exists
+        val detectionThresholdPx = 30f // 30 raw pixels
+        val verticalActivationThresholdPx = 30f // 30 pixels for down
+        val horizontalActivationThresholdPx = 60f // 60 pixels for left/right
+        
+        android.util.Log.d("SwipeFullscreen", "Screen density: ${resources.displayMetrics.density}, thresholds: detect=$detectionThresholdPx, vertical=$verticalActivationThresholdPx, horizontal=$horizontalActivationThresholdPx")
+        
         swipeLayout.addGestureListener(object : com.prirai.android.nira.browser.SwipeGestureListener {
-            private var isSwipeDown = false
-            private var startY = 0f
+            private var isSwipeActive = false
+            private var swipeDirection: String = ""
+            private var cumulativeDistanceX = 0f
+            private var cumulativeDistanceY = 0f
+            private var currentProgress = 0f
             
             override fun onSwipeStarted(start: android.graphics.PointF, next: android.graphics.PointF): Boolean {
-                // Only handle swipe down from top of screen when page is at top
                 val engineView = binding.engineView as? View
-                val canScrollUp = engineView?.canScrollVertically(-1) ?: false
-                
-                // Start gesture if:
-                // 1. Starting near top of screen (within 150dp for easier trigger)
-                // 2. Page cannot scroll up (at top)
-                // 3. Swiping down (next.y > start.y)
-                val threshold = 150 * resources.displayMetrics.density
+                val distanceX = next.x - start.x
                 val distanceY = next.y - start.y
                 
-                if (start.y < threshold && !canScrollUp && distanceY > 20) { // Minimum 20px downward movement
-                    startY = start.y
-                    isSwipeDown = true
+                // Reset cumulative distances
+                cumulativeDistanceX = 0f
+                cumulativeDistanceY = 0f
+                currentProgress = 0f
+                
+                // Determine which gesture has priority based on the initial movement
+                val absDistanceX = kotlin.math.abs(distanceX)
+                val absDistanceY = kotlin.math.abs(distanceY)
+                
+                android.util.Log.d("SwipeFullscreen", "Swipe START - distanceY: $distanceY, distanceX: $distanceX, startY: ${start.y}, startX: ${start.x}, absX: $absDistanceX, absY: $absDistanceY")
+                
+                // Check for DOWN swipe - finger moving DOWN (positive distanceY)
+                // IMPORTANT: Only when page is at TOP (canScrollVertically(-1) returns FALSE)
+                if (absDistanceY > absDistanceX && distanceY > detectionThresholdPx) {
+                    val canScrollUp = engineView?.canScrollVertically(-1) ?: true
+                    android.util.Log.d("SwipeFullscreen", "DOWN check: canScrollUp=$canScrollUp")
+                    if (!canScrollUp) {
+                        android.util.Log.d("SwipeFullscreen", "✓ DOWN swipe STARTED (page at top)")
+                        swipeDirection = "DOWN"
+                        isSwipeActive = true
+                        iconOverlay.visibility = android.view.View.VISIBLE
+                        iconOverlay.alpha = 1f
+                        return true
+                    } else {
+                        android.util.Log.d("SwipeFullscreen", "✗ DOWN blocked: page can scroll up")
+                    }
+                }
+                
+                // Check for LEFT swipe - moving left with sufficient horizontal distance
+                if (distanceX < -detectionThresholdPx) {
+                    android.util.Log.d("SwipeFullscreen", "✓ LEFT swipe STARTED")
+                    swipeDirection = "LEFT"
+                    isSwipeActive = true
+                    iconOverlay.visibility = android.view.View.VISIBLE
+                    iconOverlay.alpha = 1f
                     return true
                 }
+                
+                // Check for RIGHT swipe - moving right with sufficient horizontal distance
+                if (distanceX > detectionThresholdPx) {
+                    android.util.Log.d("SwipeFullscreen", "✓ RIGHT swipe STARTED")
+                    swipeDirection = "RIGHT"
+                    isSwipeActive = true
+                    iconOverlay.visibility = android.view.View.VISIBLE
+                    iconOverlay.alpha = 1f
+                    return true
+                }
+                
+                android.util.Log.d("SwipeFullscreen", "✗ No gesture detected (thresholds not met)")
                 return false
             }
             
             override fun onSwipeUpdate(distanceX: Float, distanceY: Float) {
-                // Track swipe progress
+                if (!isSwipeActive) return
+                
+                // IMPORTANT: distanceX/Y are INCREMENTAL, we need to accumulate them
+                cumulativeDistanceX += distanceX
+                cumulativeDistanceY += distanceY
+                
+                android.util.Log.d("SwipeFullscreen", "$swipeDirection update: distanceX=$distanceX, distanceY=$distanceY, cumX=$cumulativeDistanceX, cumY=$cumulativeDistanceY")
+                
+                when (swipeDirection) {
+                    "DOWN" -> {
+                        // Use absolute value since gesture direction can be inverted
+                        val absDistance = kotlin.math.abs(cumulativeDistanceY)
+                        currentProgress = (absDistance / verticalActivationThresholdPx).coerceIn(0f, 1f)
+                        android.util.Log.d("SwipeFullscreen", "DOWN progress: $currentProgress (cumulative: $cumulativeDistanceY, absDistance: $absDistance)")
+                        
+                        iconIndicator.alpha = currentProgress.coerceAtLeast(0.5f)
+                        iconIndicator.translationY = absDistance * 0.5f
+                        iconIndicator.rotation = currentProgress * 180f
+                        
+                        val iconScale = 0.8f + (currentProgress * 0.5f)
+                        iconIndicator.scaleX = iconScale
+                        iconIndicator.scaleY = iconScale
+                        
+                        if (currentProgress >= 1f) {
+                            iconIndicator.setColorFilter(android.graphics.Color.parseColor("#00C853"))
+                            iconIndicator.backgroundTintList = android.content.res.ColorStateList.valueOf(
+                                android.graphics.Color.parseColor("#C8E6C9")
+                            )
+                        } else {
+                            iconIndicator.setColorFilter(getColorFromAttr(com.google.android.material.R.attr.colorOnSurface))
+                            iconIndicator.backgroundTintList = android.content.res.ColorStateList.valueOf(
+                                getColorFromAttr(com.google.android.material.R.attr.colorSurfaceContainerHigh)
+                            )
+                        }
+                    }
+                    "LEFT" -> {
+                        val absDistance = kotlin.math.abs(cumulativeDistanceX)
+                        currentProgress = (absDistance / horizontalActivationThresholdPx).coerceIn(0f, 1f)
+                        android.util.Log.d("SwipeFullscreen", "LEFT progress: $currentProgress (cumulative: $cumulativeDistanceX, absDistance: $absDistance)")
+                        
+                        iconIndicator.alpha = currentProgress.coerceAtLeast(0.5f)
+                        iconIndicator.rotation = -currentProgress * 90f
+                        
+                        val iconScale = 0.8f + (currentProgress * 0.5f)
+                        iconIndicator.scaleX = iconScale
+                        iconIndicator.scaleY = iconScale
+                        
+                        if (currentProgress >= 1f) {
+                            iconIndicator.setColorFilter(android.graphics.Color.parseColor("#00C853"))
+                            iconIndicator.backgroundTintList = android.content.res.ColorStateList.valueOf(
+                                android.graphics.Color.parseColor("#C8E6C9")
+                            )
+                        } else {
+                            iconIndicator.setColorFilter(getColorFromAttr(com.google.android.material.R.attr.colorOnSurface))
+                            iconIndicator.backgroundTintList = android.content.res.ColorStateList.valueOf(
+                                getColorFromAttr(com.google.android.material.R.attr.colorSurfaceContainerHigh)
+                            )
+                        }
+                    }
+                    "RIGHT" -> {
+                        val absDistance = kotlin.math.abs(cumulativeDistanceX)
+                        currentProgress = (absDistance / horizontalActivationThresholdPx).coerceIn(0f, 1f)
+                        android.util.Log.d("SwipeFullscreen", "RIGHT progress: $currentProgress (cumulative: $cumulativeDistanceX, absDistance: $absDistance)")
+                        
+                        iconIndicator.alpha = currentProgress.coerceAtLeast(0.5f)
+                        iconIndicator.rotation = currentProgress * 90f
+                        
+                        val iconScale = 0.8f + (currentProgress * 0.5f)
+                        iconIndicator.scaleX = iconScale
+                        iconIndicator.scaleY = iconScale
+                        
+                        if (currentProgress >= 1f) {
+                            iconIndicator.setColorFilter(android.graphics.Color.parseColor("#00C853"))
+                            iconIndicator.backgroundTintList = android.content.res.ColorStateList.valueOf(
+                                android.graphics.Color.parseColor("#C8E6C9")
+                            )
+                        } else {
+                            iconIndicator.setColorFilter(getColorFromAttr(com.google.android.material.R.attr.colorOnSurface))
+                            iconIndicator.backgroundTintList = android.content.res.ColorStateList.valueOf(
+                                getColorFromAttr(com.google.android.material.R.attr.colorSurfaceContainerHigh)
+                            )
+                        }
+                    }
+                }
             }
             
             override fun onSwipeFinished(velocityX: Float, velocityY: Float) {
-                if (isSwipeDown) {
-                    toggleManualFullscreen()
-                    isSwipeDown = false
-                    startY = 0f
+                if (isSwipeActive) {
+                    android.util.Log.d("SwipeFullscreen", "$swipeDirection swipe FINISHED - progress: $currentProgress")
+                    
+                    // Animate icon out
+                    iconIndicator.animate()
+                        .alpha(0f)
+                        .translationY(0f)
+                        .rotation(0f)
+                        .scaleX(1f)
+                        .scaleY(1f)
+                        .setDuration(250)
+                        .withEndAction {
+                            iconOverlay.visibility = android.view.View.GONE
+                        }
+                        .start()
+                    
+                    // Toggle fullscreen if threshold reached
+                    if (currentProgress >= 1f) {
+                        android.util.Log.d("SwipeFullscreen", "✓✓✓ ACTIVATING FULLSCREEN ✓✓✓")
+                        toggleManualFullscreen()
+                    }
+                    
+                    isSwipeActive = false
+                    swipeDirection = ""
+                    cumulativeDistanceX = 0f
+                    cumulativeDistanceY = 0f
+                    currentProgress = 0f
                 }
             }
         })
     }
     
+    private fun getColorFromAttr(attr: Int): Int {
+        val typedValue = android.util.TypedValue()
+        requireContext().theme.resolveAttribute(attr, typedValue, true)
+        return typedValue.data
+    }
+    
+    @VisibleForTesting
+    internal fun shouldPullToRefreshBeEnabled(): Boolean {
+        return UserPreferences(requireContext()).swipeToRefresh
+    }
+
     /**
      * Toggle manual fullscreen mode (hide/show all toolbars)
      */
