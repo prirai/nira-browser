@@ -345,6 +345,13 @@ fun ExtensionItem(
     onClick: () -> Unit
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
+    val prefs = UserPreferences(context)
+    
+    // Get currently pinned extensions
+    val pinnedExtensions = remember { 
+        mutableStateOf(prefs.barAddonsList.split(",").filter { it.isNotEmpty() }.toSet())
+    }
+    val isPinned = pinnedExtensions.value.contains(addon.id)
     
     Surface(
         modifier = Modifier
@@ -432,6 +439,49 @@ fun ExtensionItem(
                     )
                 }
             }
+            
+            // Pin/Unpin button
+            androidx.compose.material3.IconButton(
+                onClick = {
+                    val currentPinned = prefs.barAddonsList.split(",").filter { it.isNotEmpty() }.toMutableSet()
+                    if (isPinned) {
+                        // Unpin
+                        currentPinned.remove(addon.id)
+                    } else {
+                        // Pin
+                        currentPinned.add(addon.id)
+                    }
+                    prefs.barAddonsList = currentPinned.joinToString(",")
+                    pinnedExtensions.value = currentPinned
+                    
+                    // Show toast notification
+                    android.widget.Toast.makeText(
+                        context,
+                        context.getString(R.string.app_restart),
+                        android.widget.Toast.LENGTH_LONG
+                    ).show()
+                },
+                modifier = Modifier.size(40.dp)
+            ) {
+                Icon(
+                    painter = painterResource(
+                        id = if (isPinned) {
+                            R.drawable.ic_pin_filled
+                        } else {
+                            R.drawable.ic_pin_outline
+                        }
+                    ),
+                    contentDescription = if (isPinned) "Unpin extension" else "Pin extension",
+                    tint = if (isPinned) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    },
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.width(8.dp))
 
             // Chevron
             Icon(

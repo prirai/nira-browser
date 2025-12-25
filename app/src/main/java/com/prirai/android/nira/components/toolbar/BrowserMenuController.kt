@@ -69,7 +69,7 @@ class DefaultBrowserToolbarMenuController(
                 )
             }
 
-            is ToolbarMenu.Item.Settings -> browserAnimator.captureEngineViewAndDrawStatically {
+            is ToolbarMenu.Item.Settings -> {
                 val settings = Intent(activity, SettingsActivity::class.java)
                 settings.flags = Intent.FLAG_ACTIVITY_NEW_TASK
                 activity.startActivity(settings)

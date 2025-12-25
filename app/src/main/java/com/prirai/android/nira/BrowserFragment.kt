@@ -278,17 +278,41 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
                             androidx.coordinatorlayout.widget.CoordinatorLayout.LayoutParams.WRAP_CONTENT
                         ).apply {
                             gravity = android.view.Gravity.BOTTOM
+                            // IMPORTANT: Add scroll behavior for hide-on-scroll functionality
+                            // Bottom components should hide when scrolling down, show when scrolling up
+                            behavior = mozilla.components.ui.widgets.behavior.EngineViewScrollingBehavior(
+                                context,
+                                null,
+                                mozilla.components.ui.widgets.behavior.ViewPosition.BOTTOM
+                            )
                         }
                         
+                        // Apply Material 3 background with elevation
+                        val elevationDp = 3f * resources.displayMetrics.density
+                        val elevatedColor = com.google.android.material.elevation.ElevationOverlayProvider(requireContext())
+                            .compositeOverlayWithThemeSurfaceColorIfNeeded(elevationDp)
+                        container.setBackgroundColor(elevatedColor)
+                        
+                        // Set high elevation to ensure it stays above engine view
+                        container.elevation = 16f * resources.displayMetrics.density
+                        
                         // Apply window insets to avoid navigation bar
+                        // CRITICAL: Only apply bottom padding for navigation bar, NO extra margins
                         androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(container) { view, insets ->
-                            val systemBars = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars())
-                            view.setPadding(0, 0, 0, systemBars.bottom)
+                            val navigationBars = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.navigationBars())
+                            // Only bottom padding, no margins
+                            view.setPadding(0, 0, 0, navigationBars.bottom)
                             insets
                         }
                         
                         it.addView(container, layoutParams)
                         container.visibility = View.VISIBLE
+                        
+                        // Disable animation/transition to prevent stutter
+                        container.layoutTransition = null
+                        
+                        // Use hardware layer for better scroll performance
+                        container.setLayerType(View.LAYER_TYPE_HARDWARE, null)
                         
                         // Request insets to be applied
                         androidx.core.view.ViewCompat.requestApplyInsets(container)
@@ -309,8 +333,23 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
             // Set toolbar offset listener for smooth margin adjustment (top toolbar only)
             unifiedToolbar?.setOnToolbarOffsetChangedListener { currentOffset, totalHeight ->
                 adjustWebContentMarginsForToolbarOffset(currentOffset, totalHeight)
-                // Also adjust fullscreen button position to follow toolbar
-                adjustFullscreenButtonPosition(currentOffset, totalHeight)
+                // For bottom toolbar mode, also adjust fullscreen button
+                if (prefs.toolbarPosition == com.prirai.android.nira.components.toolbar.ToolbarPosition.BOTTOM.ordinal) {
+                    adjustFullscreenButtonPosition(currentOffset, totalHeight)
+                }
+            }
+            
+            // For TOP toolbar mode, track bottom components translation to move fullscreen button
+            if (prefs.toolbarPosition == com.prirai.android.nira.components.toolbar.ToolbarPosition.TOP.ordinal) {
+                unifiedToolbar?.getBottomComponentsContainer()?.let { container ->
+                    container.viewTreeObserver.addOnPreDrawListener {
+                        val fullscreenButton = view?.findViewById<com.google.android.material.floatingactionbutton.FloatingActionButton>(
+                            R.id.fullscreenToggleButton
+                        )
+                        fullscreenButton?.translationY = container.translationY
+                        true
+                    }
+                }
             }
 
             // Set contextual toolbar listener
@@ -541,6 +580,8 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
 
     }
 
+    private var lastTopMargin = -1
+    
     /**
      * Adjust web content top margin smoothly as toolbar offset changes
      * Only needed for top toolbar position - provides smooth margin animation
@@ -551,25 +592,29 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
             return // Bottom toolbar doesn't need margin adjustment
         }
         
+        // For top toolbar: adjust top margin based on toolbar scroll position
+        // Do NOT use translationY as it causes black bars when bottom components hide
         val swipeRefreshParams = binding.swipeRefresh.layoutParams as? androidx.coordinatorlayout.widget.CoordinatorLayout.LayoutParams ?: return
         
-        // Calculate margin based on ONLY the address bar height
-        // Bottom components (tab bar, contextual toolbar) are positioned separately at bottom
-        // and should NOT affect top margin calculation
+        // Only adjust top margin based on the address bar height (not bottom components)
         val addressBarHeight = resources.getDimensionPixelSize(R.dimen.browser_toolbar_height)
         
-        // The totalHeight includes all toolbar components, but we only care about address bar
-        // So we calculate progress based on address bar height only
-        val progress = if (addressBarHeight > 0) {
-            (currentOffset.toFloat() / addressBarHeight.toFloat()).coerceIn(0f, 1f)
-        } else {
-            0f
+        // Calculate how much of the address bar is visible
+        val visibleAddressBarHeight = addressBarHeight - currentOffset
+        val newTopMargin = maxOf(0, visibleAddressBarHeight)
+        
+        // OPTIMIZATION: Only update layout if margin actually changed significantly (> 1px)
+        // This prevents excessive layout passes and eliminates stutter
+        if (kotlin.math.abs(newTopMargin - lastTopMargin) > 1) {
+            swipeRefreshParams.topMargin = newTopMargin
+            lastTopMargin = newTopMargin
+            
+            // CRITICAL: Ensure bottom margin is ALWAYS 0 for top toolbar
+            // The bottom components float above the engine view, not pushing it up
+            swipeRefreshParams.bottomMargin = 0
+            
+            binding.swipeRefresh.layoutParams = swipeRefreshParams
         }
-        
-        val adjustedMargin = (addressBarHeight * (1f - progress)).toInt()
-        
-        swipeRefreshParams.topMargin = adjustedMargin
-        binding.swipeRefresh.layoutParams = swipeRefreshParams
     }
 
     /**
@@ -592,21 +637,6 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
             // Listen to toolbar position changes to reposition button
             unifiedToolbar?.getToolbarView()?.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
                 positionFullscreenButtonAboveToolbars()
-            }
-            
-            // For top toolbar mode, also listen to bottom components movement
-            val prefs = UserPreferences(requireContext())
-            if (prefs.toolbarPosition == com.prirai.android.nira.components.toolbar.ToolbarPosition.TOP.ordinal) {
-                unifiedToolbar?.getBottomComponentsContainer()?.let { bottomContainer ->
-                    // Track when bottom components translate (hide/show)
-                    bottomContainer.viewTreeObserver.addOnPreDrawListener {
-                        val currentTranslation = bottomContainer.translationY
-                        if (currentTranslation != 0f) {
-                            fullscreenButton.translationY = currentTranslation
-                        }
-                        true
-                    }
-                }
             }
             
             // Apply rounded top corners only (U-shape attachment)
@@ -678,27 +708,21 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
         
         val prefs = UserPreferences(requireContext())
         
-        // Get navigation bar height
-        val windowInsets = androidx.core.view.ViewCompat.getRootWindowInsets(fullscreenButton)
-        val navBarHeight = windowInsets?.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars())?.bottom ?: 0
-        
         if (prefs.toolbarPosition == com.prirai.android.nira.components.toolbar.ToolbarPosition.BOTTOM.ordinal) {
             // BOTTOM mode: button follows toolbar translation
+            // As toolbar scrolls down (hides), offset is positive, button moves down
             fullscreenButton.translationY = currentOffset.toFloat()
         } else {
-            // TOP mode: The offset represents ADDRESS BAR scroll (not bottom components)
-            // Bottom components hide via their container's translationY, not through offset
-            // So we track the container's translation directly
+            // TOP mode: Bottom components have scroll behavior and hide downward
+            // Button should move down with them (same translationY as container)
             val bottomComponentsContainer = unifiedToolbar?.getBottomComponentsContainer()
-            val containerTranslation = bottomComponentsContainer?.translationY ?: 0f
-            
-            // Button follows container translation but with nav bar minimum
-            val baseHeight = getBottomComponentsBaseHeight()
-            val adjustedHeight = (baseHeight + containerTranslation.toInt()).coerceAtLeast(navBarHeight)
-            
-            val layoutParams = fullscreenButton.layoutParams as? android.widget.FrameLayout.LayoutParams
-            layoutParams?.bottomMargin = adjustedHeight
-            fullscreenButton.layoutParams = layoutParams
+            if (bottomComponentsContainer != null) {
+                // EngineViewScrollingBehavior uses translationY to hide/show
+                // Positive translationY means moved down (hidden)
+                fullscreenButton.translationY = bottomComponentsContainer.translationY
+            } else {
+                fullscreenButton.translationY = 0f
+            }
         }
     }
     
