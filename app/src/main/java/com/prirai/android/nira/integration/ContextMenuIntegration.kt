@@ -36,6 +36,7 @@ class ContextMenuIntegration(
             val snackbarDelegate = DefaultSnackbarDelegate()
             listOf(
                 createCopyLinkCandidate(context, parentView, snackbarDelegate),
+                createCopyLinkTextCandidate(context, parentView, snackbarDelegate),
                 createShareLinkCandidate(context),
                 createOpenImageInNewTabCandidate(context, tabsUseCases, parentView, snackbarDelegate),
                 createSaveImageCandidate(context, contextMenuUseCases),
@@ -52,12 +53,13 @@ class ContextMenuIntegration(
                     launchInApp = { true }
                 )
             )
+            val snackbarDelegate = DefaultSnackbarDelegate()
             ContextMenuCandidate.defaultCandidates(
                 context,
                 tabsUseCases,
                 contextMenuUseCases,
                 parentView
-            ) + appLinksCandidate
+            ) + appLinksCandidate + createCopyLinkTextCandidate(context, parentView, snackbarDelegate)
         }
     }
 

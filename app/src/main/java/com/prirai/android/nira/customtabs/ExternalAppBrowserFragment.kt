@@ -5,6 +5,7 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.view.ViewStub
 import android.widget.ImageButton
 import android.widget.LinearLayout
 import android.widget.PopupMenu
@@ -14,9 +15,9 @@ import androidx.core.graphics.toColorInt
 import androidx.fragment.app.Fragment
 import com.prirai.android.nira.BrowserActivity
 import com.prirai.android.nira.R
-import com.prirai.android.nira.components.FindInPageComponent
 import com.prirai.android.nira.databinding.FragmentBrowserBinding
 import com.prirai.android.nira.ext.components
+import com.prirai.android.nira.integration.FindInPageIntegration
 import kotlinx.coroutines.flow.mapNotNull
 import mozilla.components.browser.state.selector.findCustomTab
 import mozilla.components.browser.state.state.SessionState
@@ -43,6 +44,7 @@ class ExternalAppBrowserFragment : Fragment(), UserInteractionHandler {
     private val sessionFeature = ViewBoundFeatureWrapper<SessionFeature>()
     private val customTabWindowFeature = ViewBoundFeatureWrapper<CustomTabWindowFeature>()
     private val swipeRefreshFeature = ViewBoundFeatureWrapper<SwipeRefreshFeature>()
+    private val findInPageIntegration = ViewBoundFeatureWrapper<FindInPageIntegration>()
     private val downloadsFeature = ViewBoundFeatureWrapper<mozilla.components.feature.downloads.DownloadsFeature>()
     
     private var customTabHeader: LinearLayout? = null
@@ -52,7 +54,6 @@ class ExternalAppBrowserFragment : Fragment(), UserInteractionHandler {
     private var customTabCloseButton: ImageButton? = null
     
     private var engineView: EngineView? = null
-    private var findInPageComponent: FindInPageComponent? = null
     
     // Custom tab theming colors
     private var toolbarColor: Int = -1
@@ -303,7 +304,7 @@ class ExternalAppBrowserFragment : Fragment(), UserInteractionHandler {
         popup.setOnMenuItemClickListener { item ->
             when (item.itemId) {
                 R.id.menu_find_in_page -> {
-                    findInPageComponent?.show()
+                    findInPageIntegration.get()?.launch()
                     true
                 }
                 R.id.menu_share -> {
@@ -349,16 +350,26 @@ class ExternalAppBrowserFragment : Fragment(), UserInteractionHandler {
     }
     
     private fun setupCustomFindInPage(sessionId: String) {
-        val rootLayout = view?.findViewById<ViewGroup>(R.id.gestureLayout) ?: return
+        val stub = view?.findViewById<ViewStub>(R.id.stubFindInPage) ?: return
         
-        findInPageComponent = FindInPageComponent(
-            context = requireContext(),
-            store = requireContext().components.store,
-            sessionId = sessionId,
-            lifecycleOwner = viewLifecycleOwner,
-            isCustomTab = true
+        findInPageIntegration.set(
+            feature = FindInPageIntegration(
+                store = requireContext().components.store,
+                sessionId = sessionId,
+                stub = stub,
+                engineView = binding.engineView,
+                toolbarInfo = FindInPageIntegration.ToolbarInfo(
+                    toolbar = customTabHeader?.parent as? mozilla.components.browser.toolbar.BrowserToolbar
+                        ?: return, // Not a BrowserToolbar, can't use
+                    isToolbarDynamic = false,
+                    isToolbarPlacedAtTop = true
+                ),
+                prepareLayout = {},
+                restorePreviousLayout = {}
+            ),
+            owner = this,
+            view = view!!
         )
-        findInPageComponent?.attach(rootLayout)
     }
     
     private fun shareCurrentUrl() {
@@ -413,8 +424,8 @@ class ExternalAppBrowserFragment : Fragment(), UserInteractionHandler {
     }
 
     override fun onBackPressed(): Boolean {
-        // Check find in page first
-        if (findInPageComponent?.onBackPressed() == true) {
+        // Check if find in page is open
+        if (findInPageIntegration.onBackPressed()) {
             return true
         }
         
@@ -441,7 +452,7 @@ class ExternalAppBrowserFragment : Fragment(), UserInteractionHandler {
     }
     
     override fun onDestroyView() {
-        findInPageComponent?.destroy()
+        // Lifecycle-aware features cleaned up automatically
         _binding = null
         super.onDestroyView()
     }

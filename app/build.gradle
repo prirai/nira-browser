@@ -177,6 +177,8 @@ dependencies {
     implementation "org.mozilla.components:feature-addons:$mozComponentsVersion"
     implementation "org.mozilla.components:feature-findinpage:$mozComponentsVersion"
     implementation "org.mozilla.components:feature-accounts:$mozComponentsVersion"
+    implementation "org.mozilla.components:feature-qr:$mozComponentsVersion"
+    implementation "org.mozilla.components:feature-recentlyclosed:$mozComponentsVersion"
     // Added: for Firefox Account sync (bookmarks/history/tabs)
 
     // Mozilla service components

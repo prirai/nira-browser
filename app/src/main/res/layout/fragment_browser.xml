@@ -44,6 +44,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="56dp"
                 android:layout_gravity="bottom"
+                android:elevation="16dp"
                 android:inflatedId="@+id/findInPageView"
                 android:layout="@layout/stub_find_in_page"
             />
