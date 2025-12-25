@@ -350,4 +350,12 @@
     <string name="web_light_theme_description">Solicitar que os sites usem o tema claro</string>
     <string name="web_dark_theme_description">Solicitar que os sites usem o tema escuro</string>
     <string name="web_system_theme_description">Seguir a preferência de tema do sistema</string>
+    <string name="flatten_folder">Achatar pasta</string>
+    <string name="flatten_folder_confirm">Isso moverá todos os itens desta pasta para a pasta pai. Continuar?</string>
+    <string name="multiselect_mode">Modo de seleção múltipla</string>
+    <string name="delete_selected">Excluir selecionados</string>
+    <string name="move_selected">Mover selecionados</string>
+    <string name="open_in_background_tabs">Abrir em abas em segundo plano</string>
+    <string name="select_profile">Selecionar perfil</string>
+    <string name="profile">Perfil</string>
 </resources>

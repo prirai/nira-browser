@@ -15,7 +15,6 @@ import mozilla.components.browser.state.selector.selectedTab
 import mozilla.components.browser.state.state.TabSessionState
 import mozilla.components.browser.state.store.BrowserStore
 
-@Suppress("LargeClass", "LongParameterList")
 class BrowserMenu(
     private val context: Context,
     private val store: BrowserStore,

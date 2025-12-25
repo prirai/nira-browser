@@ -350,4 +350,12 @@
     <string name="web_light_theme_description">Запрашивать у веб-сайтов использование светлой темы</string>
     <string name="web_dark_theme_description">Запрашивать у веб-сайтов использование тёмной темы</string>
     <string name="web_system_theme_description">Следовать системным настройкам темы</string>
+    <string name="flatten_folder">Выровнять папку</string>
+    <string name="flatten_folder_confirm">Это переместит все элементы из этой папки в родительскую. Продолжить?</string>
+    <string name="multiselect_mode">Режим множественного выбора</string>
+    <string name="delete_selected">Удалить выбранное</string>
+    <string name="move_selected">Переместить выбранное</string>
+    <string name="open_in_background_tabs">Открыть в фоновых вкладках</string>
+    <string name="select_profile">Выбрать профиль</string>
+    <string name="profile">Профиль</string>
 </resources>

@@ -350,4 +350,12 @@
     <string name="web_light_theme_description">Żądaj, aby strony internetowe używały jasnego motywu</string>
     <string name="web_dark_theme_description">Żądaj, aby strony internetowe używały ciemnego motywu</string>
     <string name="web_system_theme_description">Podążaj za preferencjami motywu systemowego</string>
+    <string name="flatten_folder">Spłaszcz folder</string>
+    <string name="flatten_folder_confirm">To przeniesie wszystkie elementy z tego folderu do jego rodzica. Kontynuować?</string>
+    <string name="multiselect_mode">Tryb wielokrotnego wyboru</string>
+    <string name="delete_selected">Usuń zaznaczone</string>
+    <string name="move_selected">Przenieś zaznaczone</string>
+    <string name="open_in_background_tabs">Otwórz w kartach w tle</string>
+    <string name="select_profile">Wybierz profil</string>
+    <string name="profile">Profil</string>
 </resources>

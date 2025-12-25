@@ -350,4 +350,12 @@
     <string name="web_light_theme_description">请求网站使用浅色主题</string>
     <string name="web_dark_theme_description">请求网站使用深色主题</string>
     <string name="web_system_theme_description">遵循系统主题偏好</string>
+    <string name="flatten_folder">展平文件夹</string>
+    <string name="flatten_folder_confirm">这将把此文件夹中的所有项目移动到其父文件夹。是否继续？</string>
+    <string name="multiselect_mode">多选模式</string>
+    <string name="delete_selected">删除所选</string>
+    <string name="move_selected">移动所选</string>
+    <string name="open_in_background_tabs">在后台标签中打开</string>
+    <string name="select_profile">选择配置文件</string>
+    <string name="profile">配置文件</string>
 </resources>

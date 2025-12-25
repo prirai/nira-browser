@@ -42,7 +42,6 @@ import mozilla.components.ui.widgets.behavior.ViewPosition as OldToolbarPosition
 
 typealias SearchDialogFragmentStore = SearchFragmentStore
 
-@SuppressWarnings("LargeClass", "TooManyFunctions")
 class SearchDialogFragment : AppCompatDialogFragment(), UserInteractionHandler {
     private var _binding: FragmentSearchDialogBinding? = null
     private val binding get() = _binding!!
@@ -221,7 +220,6 @@ class SearchDialogFragment : AppCompatDialogFragment(), UserInteractionHandler {
         return view
     }
 
-    @SuppressWarnings("LongMethod")
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 

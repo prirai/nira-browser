@@ -10,7 +10,6 @@ import mozilla.components.feature.tabs.TabsUseCases
 /**
  * An interface that handles the view manipulation of the Search, triggered by the Interactor
  */
-@Suppress("TooManyFunctions")
 interface SearchController {
     fun handleUrlCommitted(url: String)
     fun handleEditingCancelled()
@@ -23,7 +22,6 @@ interface SearchController {
     fun handleSearchShortcutsButtonClicked()
 }
 
-@Suppress("TooManyFunctions", "LongParameterList")
 class SearchDialogController(
     private val activity: BrowserActivity,
     private val store: BrowserStore,

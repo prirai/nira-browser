@@ -155,7 +155,6 @@ private val lightColorPalette = FirefoxColors(
 /**
  * A custom Color Palette for Mozilla Firefox for Android (Fenix).
  */
-@Suppress("LargeClass", "LongParameterList")
 @Stable
 class FirefoxColors(
     layer1: Color,

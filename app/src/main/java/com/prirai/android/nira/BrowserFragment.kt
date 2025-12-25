@@ -25,7 +25,6 @@ import mozilla.components.support.ktx.kotlinx.coroutines.flow.ifAnyChanged
  * Fragment used for browsing the web within the main app.
  */
 @ExperimentalCoroutinesApi
-@Suppress("TooManyFunctions", "LargeClass")
 class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
 
     private val windowFeature = ViewBoundFeatureWrapper<WindowFeature>()
@@ -36,7 +35,6 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
 
     // Toolbar icon for fullscreen toggle
 
-    @Suppress("LongMethod")
     override fun initializeUI(view: View, tab: SessionState) {
         super.initializeUI(view, tab)
 

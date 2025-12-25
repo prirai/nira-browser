@@ -33,7 +33,6 @@ interface BrowserToolbarViewInteractor {
 }
 
 @ExperimentalCoroutinesApi
-@SuppressWarnings("LargeClass")
 class BrowserToolbarView(
     private val container: ViewGroup,
     private val toolbarPosition: ToolbarPosition,
@@ -294,7 +293,6 @@ class BrowserToolbarView(
         } ?: android.util.Log.w("BrowserToolbar", "Failed to apply behavior - layoutParams is not CoordinatorLayout.LayoutParams")
     }
 
-    @Suppress("ComplexCondition")
     private fun ToolbarMenu.Item.performHapticIfNeeded(view: View) {
         if (this is ToolbarMenu.Item.Reload && this.bypassCache ||
             this is ToolbarMenu.Item.Back && this.viewHistory ||

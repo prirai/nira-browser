@@ -1,6 +1,5 @@
 package com.prirai.android.nira.browser.tabgroups
 
-import android.annotation.SuppressLint
 import android.content.Context
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -58,7 +57,6 @@ class UnifiedTabGroupManager private constructor(private val context: Context) {
             0xFFFFF176.toInt()  // Yellow
         )
 
-        @SuppressLint("StaticFieldLeak")
         @Volatile
         private var instance: UnifiedTabGroupManager? = null
 

@@ -1,4 +1,4 @@
-<?xml version='1.0' encoding='utf-8' ?>
+<?xml version='1.0' encoding='utf-8'?>
 <resources>
     <string name="action_add_bookmark">Thêm dấu trang</string>
     <string name="action_add_to_homescreen">Thêm vào màn hình chính</string>
@@ -12,18 +12,12 @@
     <string name="add_new_tab_to_island">Thêm thẻ mới vào nhóm</string>
     <string name="add_shortcut">Thêm lối tắt</string>
     <string name="add_to_top">Thêm vào đầu danh sách</string>
-    <string
-        name="addon_not_available"
-    >Tiện ích bổ sung này không có sẵn từ cửa hàng tiện ích bổ sung. Nira không thể xác nhận các quyền mà nó yêu cầu. Chỉ tiếp tục nếu bạn tin tưởng tiện ích mở rộng này.</string>
+    <string name="addon_not_available">Tiện ích bổ sung này không có sẵn từ cửa hàng tiện ích bổ sung. Nira không thể xác nhận các quyền mà nó yêu cầu. Chỉ tiếp tục nếu bạn tin tưởng tiện ích mở rộng này.</string>
     <string name="all_categories">Tất cả danh mục</string>
     <string name="all_extensions">Tất cả tiện ích mở rộng</string>
-    <string
-        name="already_available"
-    >Tiện ích bổ sung này đã có sẵn trong cửa hàng tiện ích bổ sung chính thức. Các tiện ích bổ sung có sẵn trong cửa hàng chính thức không thể được cài đặt bên ngoài.</string>
+    <string name="already_available">Tiện ích bổ sung này đã có sẵn trong cửa hàng tiện ích bổ sung chính thức. Các tiện ích bổ sung có sẵn trong cửa hàng chính thức không thể được cài đặt bên ngoài.</string>
     <string name="app_installed">Đã cài đặt ứng dụng</string>
-    <string
-        name="app_restart"
-    >Vui lòng khởi động lại ứng dụng để thay đổi có hiệu lực.</string>
+    <string name="app_restart">Vui lòng khởi động lại ứng dụng để thay đổi có hiệu lực.</string>
     <string name="associate_profile">Liên kết hồ sơ</string>
     <string name="auto">Tự động</string>
     <string name="auto_font">Phông chữ tự động</string>
@@ -47,28 +41,20 @@
     <string name="choose_your_theme">Chọn chủ đề của bạn</string>
     <string name="clear">Xóa</string>
     <string name="clear_bookmarks">Xóa dấu trang</string>
-    <string
-        name="clear_bookmarks_confirm"
-    >Bạn có chắc chắn muốn xóa tất cả dấu trang không?</string>
+    <string name="clear_bookmarks_confirm">Bạn có chắc chắn muốn xóa tất cả dấu trang không?</string>
     <string name="clear_cache">Xóa bộ nhớ đệm</string>
     <string name="clear_cookies">Xóa cookie</string>
-    <string
-        name="clear_cookies_and_site_data"
-    >Xóa cookie và dữ liệu trang</string>
+    <string name="clear_cookies_and_site_data">Xóa cookie và dữ liệu trang</string>
     <string name="clear_data">Xóa dữ liệu</string>
     <string name="clear_history">Xóa lịch sử duyệt web và dữ liệu trang</string>
     <string name="clear_permissions">Xóa quyền</string>
     <string name="clear_settings">Xóa cài đặt</string>
     <string name="clear_tabs">Xóa các thẻ đang mở</string>
     <string name="clear_web_app_data">Xóa dữ liệu ứng dụng</string>
-    <string
-        name="clear_web_app_data_confirmation"
-    >Bạn có chắc chắn muốn xóa tất cả dữ liệu cho "%1$s" không? Thao tác này sẽ xóa các tệp đã lưu trong bộ nhớ cache, cơ sở dữ liệu và dữ liệu đã lưu trữ khác.</string>
+    <string name="clear_web_app_data_confirmation">Bạn có chắc chắn muốn xóa tất cả dữ liệu cho "%1$s" không? Thao tác này sẽ xóa các tệp đã lưu trong bộ nhớ cache, cơ sở dữ liệu và dữ liệu đã lưu trữ khác.</string>
     <string name="clone">Nhân bản</string>
     <string name="clone_webapp">Nhân bản ứng dụng web</string>
-    <string
-        name="clone_webapp_dialog_message"
-    >Tạo một bản sao của "%1$s" với một hồ sơ khác?</string>
+    <string name="clone_webapp_dialog_message">Tạo một bản sao của "%1$s" với một hồ sơ khác?</string>
     <string name="clone_webapp_dialog_title">Nhân bản ứng dụng web</string>
     <string name="close">Đóng</string>
     <string name="close_all_tabs">Đóng tất cả các thẻ</string>
@@ -76,12 +62,10 @@
     <string name="close_current_tab">Đóng thẻ hiện tại</string>
     <string name="close_other_tabs">Đóng các thẻ khác</string>
     <string name="close_tab">Đóng thẻ</string>
-    <string name="close_tab_button">Nút đóng thẻ</string>
+    <string name="close_tab_button">Đóng %1$s</string>
     <string name="collapse_island_button">Thu gọn nhóm</string>
     <string name="collapse_or_expand_island">Thu gọn hoặc mở rộng nhóm</string>
-    <string
-        name="collapsed_island_description"
-    >Đảo %1$s đã thu gọn với %2$d tab, chạm để mở rộng</string>
+    <string name="collapsed_island_description">Đảo %1$s đã thu gọn với %2$d tab, chạm để mở rộng</string>
     <string name="collection_name">Tên bộ sưu tập</string>
     <string name="collection_user">Người dùng bộ sưu tập</string>
     <string name="connection_is_secure">Kết nối an toàn</string>
@@ -91,25 +75,15 @@
     <string name="create_folder">Tạo thư mục</string>
     <string name="current_profile">Hồ sơ: %1$s</string>
     <string name="custom">Tùy chỉnh</string>
-    <string
-        name="custom_collection"
-    >Bộ sưu tập tiện ích bổ sung tùy chỉnh</string>
+    <string name="custom_collection">Bộ sưu tập tiện ích bổ sung tùy chỉnh</string>
     <string name="custom_page">Trang tùy chỉnh</string>
     <string name="custom_search_engine">Công cụ tìm kiếm tùy chỉnh</string>
-    <string
-        name="custom_search_engine_details"
-    >Nhập URL với \'{searchTerms}\' thay cho truy vấn</string>
-    <string
-        name="custom_search_engine_error"
-    >URL tìm kiếm không chứa \'{searchTerms}\'</string>
+    <string name="custom_search_engine_details">Nhập URL với \'{searchTerms}\' thay cho truy vấn</string>
+    <string name="custom_search_engine_error">URL tìm kiếm không chứa \'{searchTerms}\'</string>
     <string name="customization">Tùy chỉnh</string>
-    <string
-        name="customization_description"
-    >Biến trình duyệt thành của riêng bạn</string>
+    <string name="customization_description">Biến trình duyệt thành của riêng bạn</string>
     <string name="dark_mode">Chế độ tối</string>
-    <string
-        name="dark_mode_description"
-    >Dễ chịu cho mắt, hoàn hảo cho môi trường thiếu sáng</string>
+    <string name="dark_mode_description">Dễ chịu cho mắt, hoàn hảo cho môi trường thiếu sáng</string>
     <string name="dark_theme">Tối</string>
     <string name="dark_theme_desc">Dễ chịu cho mắt</string>
     <string name="default_word">Mặc định</string>
@@ -118,27 +92,19 @@
     <string name="delete_confirm">Bạn có chắc muốn xóa mục này không?</string>
     <string name="delete_confirm_title">Xác nhận xóa</string>
     <string name="delete_folder">Xóa thư mục</string>
-    <string
-        name="delete_folder_confirm"
-    >Xóa thư mục "%1$s" và tất cả nội dung của nó?</string>
+    <string name="delete_folder_confirm">Xóa thư mục "%1$s" và tất cả nội dung của nó?</string>
     <string name="delete_shortcut">Xóa phím tắt</string>
     <string name="desktop_mode">Trang web cho máy tính</string>
     <string name="discover_apps">Khám phá</string>
     <string name="edit_bookmark">Chỉnh sửa dấu trang</string>
     <string name="edit_folder">Chỉnh sửa thư mục</string>
     <string name="edit_shortcut">Chỉnh sửa phím tắt</string>
-    <string
-        name="enhanced_tracking_protection"
-    >Bảo vệ theo dõi nâng cao</string>
+    <string name="enhanced_tracking_protection">Bảo vệ theo dõi nâng cao</string>
     <string name="error">Lỗi</string>
     <string name="example_domain">example.com</string>
-    <string
-        name="example_url"
-    >&lt;a href="https://example.com"&gt;https://example.com&lt;/a&gt;</string>
+    <string name="example_url">&lt;a href="https://example.com"&gt;https://example.com&lt;/a&gt;</string>
     <string name="expand_collapse">Mở rộng/Thu gọn</string>
-    <string
-        name="expanded_island_description"
-    >Đảo %1$s đã mở rộng với %2$d tab, chạm để thu gọn</string>
+    <string name="expanded_island_description">Đảo %1$s đã mở rộng với %2$d tab, chạm để thu gọn</string>
     <string name="export_bookmarks">Xuất dấu trang để sao lưu</string>
     <string name="export_settings">Xuất cài đặt để sao lưu</string>
     <string name="extension_support">Hỗ trợ tiện ích mở rộng đầy đủ</string>
@@ -160,9 +126,7 @@
     <string name="homepage_background_url">Nhập URL</string>
     <string name="homepage_type">Loại trang chủ</string>
     <string name="icon_size">Kích thước biểu tượng</string>
-    <string
-        name="icon_size_desc"
-    >Điều chỉnh kích thước biểu tượng thanh công cụ</string>
+    <string name="icon_size_desc">Điều chỉnh kích thước biểu tượng thanh công cụ</string>
     <string name="import_backup">Nhập dấu trang từ bản sao lưu</string>
     <string name="import_settings">Nhập cài đặt từ bản sao lưu</string>
     <string name="install">Cài đặt</string>
@@ -172,12 +136,8 @@
     <string name="installed">Cài đặt thành công</string>
     <string name="installed_apps">Đã cài đặt</string>
     <string name="interface_font_scale">Kích thước phông chữ giao diện</string>
-    <string
-        name="interface_font_scale_desc"
-    >Điều chỉnh kích thước văn bản giao diện</string>
-    <string
-        name="interface_font_scale_preview"
-    >Xem trước kích thước văn bản</string>
+    <string name="interface_font_scale_desc">Điều chỉnh kích thước văn bản giao diện</string>
+    <string name="interface_font_scale_preview">Xem trước kích thước văn bản</string>
     <string name="island">Đảo</string>
     <string name="island_icon">Biểu tượng đảo</string>
     <string name="island_name">Tên đảo</string>
@@ -189,14 +149,10 @@
     <string name="learn_more">Tìm hiểu thêm</string>
     <string name="licenses">Giấy phép mã nguồn mở</string>
     <string name="light_mode">Chế độ sáng</string>
-    <string
-        name="light_mode_description"
-    >Giao diện sáng và sạch cho việc sử dụng ban ngày</string>
+    <string name="light_mode_description">Giao diện sáng và sạch cho việc sử dụng ban ngày</string>
     <string name="light_theme">Sáng</string>
     <string name="light_theme_desc">Giao diện sáng và sạch</string>
-    <string
-        name="load_shortcut_icons"
-    >Tải biểu tượng trang web cho phím tắt</string>
+    <string name="load_shortcut_icons">Tải biểu tượng trang web cho phím tắt</string>
     <string name="load_xpi_file">Tải lên tệp XPI</string>
     <string name="load_xpi_link">Tải XPI từ liên kết</string>
     <string name="loading">Đang tải…</string>
@@ -207,58 +163,30 @@
     <string name="more_options">Tùy chọn khác</string>
     <string name="move_bookmark">Chuyển tới thư mục</string>
     <string name="move_navbar">Di chuyển thanh điều hướng</string>
-    <string
-        name="mozac_feature_addons_failed_to_disable"
-    >Không thể tắt %s</string>
-    <string
-        name="mozac_feature_addons_failed_to_enable"
-    >Không thể bật %s</string>
-    <string
-        name="mozac_feature_addons_failed_to_uninstall"
-    >Không thể gỡ cài đặt %s</string>
-    <string
-        name="mozac_feature_addons_settings_allow_in_private_browsing"
-    >Cho phép trong duyệt web riêng tư</string>
-    <string
-        name="mozac_feature_addons_successfully_disabled"
-    >Đã tắt %s thành công</string>
-    <string
-        name="mozac_feature_addons_successfully_enabled"
-    >Đã bật %s thành công</string>
-    <string
-        name="mozac_feature_addons_successfully_uninstalled"
-    >Đã gỡ cài đặt %s thành công</string>
-    <string
-        name="mozac_reader_view_description"
-    >Bật chế độ xem trình đọc</string>
-    <string
-        name="mozac_reader_view_description_selected"
-    >Tắt chế độ xem trình đọc</string>
+    <string name="mozac_feature_addons_failed_to_disable">Không thể tắt %s</string>
+    <string name="mozac_feature_addons_failed_to_enable">Không thể bật %s</string>
+    <string name="mozac_feature_addons_failed_to_uninstall">Không thể gỡ cài đặt %s</string>
+    <string name="mozac_feature_addons_settings_allow_in_private_browsing">Cho phép trong duyệt web riêng tư</string>
+    <string name="mozac_feature_addons_successfully_disabled">Đã tắt %s thành công</string>
+    <string name="mozac_feature_addons_successfully_enabled">Đã bật %s thành công</string>
+    <string name="mozac_feature_addons_successfully_uninstalled">Đã gỡ cài đặt %s thành công</string>
+    <string name="mozac_reader_view_description">Bật chế độ xem trình đọc</string>
+    <string name="mozac_reader_view_description_selected">Tắt chế độ xem trình đọc</string>
     <string name="name">Tên</string>
     <string name="new_folder_name">Thư mục mới</string>
     <string name="new_tab">Thẻ mới</string>
     <string name="next">Tiếp theo</string>
     <string name="no_bookmarks">Không có dấu trang nào</string>
-    <string
-        name="no_bookmarks_description"
-    >Dấu trang của bạn sẽ xuất hiện ở đây</string>
+    <string name="no_bookmarks_description">Dấu trang của bạn sẽ xuất hiện ở đây</string>
     <string name="no_history">Chưa có lịch sử duyệt web</string>
-    <string
-        name="no_installed_webapps"
-    >Không có ứng dụng web nào được cài đặt</string>
+    <string name="no_installed_webapps">Không có ứng dụng web nào được cài đặt</string>
     <string name="no_results">Không có kết quả</string>
-    <string
-        name="no_suggested_webapps"
-    >Duyệt qua các trang web để xem đề xuất</string>
+    <string name="no_suggested_webapps">Duyệt qua các trang web để xem đề xuất</string>
     <string name="no_suggestions">Không có đề xuất nào</string>
     <string name="no_tabs_description">Nhấn nút + để mở thẻ mới</string>
     <string name="no_tabs_message">Không có thẻ nào đang mở</string>
-    <string
-        name="no_web_apps_installed"
-    >Không có ứng dụng web nào được cài đặt</string>
-    <string
-        name="no_web_apps_installed_description"
-    >Cài đặt ứng dụng web tiến bộ từ các trang web để quản lý chúng tại đây</string>
+    <string name="no_web_apps_installed">Không có ứng dụng web nào được cài đặt</string>
+    <string name="no_web_apps_installed_description">Cài đặt ứng dụng web tiến bộ từ các trang web để quản lý chúng tại đây</string>
     <string name="none">Không</string>
     <string name="onboarding_dark_theme">Chủ đề tối</string>
     <string name="onboarding_light_theme">Chủ đề sáng</string>
@@ -276,41 +204,21 @@
     <string name="printer_icon">Biểu tượng máy in</string>
     <string name="privacy">Quyền riêng tư</string>
     <string name="privacy_and_security">Quyền riêng tư &amp; Bảo mật</string>
-    <string
-        name="privacy_description"
-    >Cấu hình cài đặt quyền riêng tư của bạn</string>
+    <string name="privacy_description">Cấu hình cài đặt quyền riêng tư của bạn</string>
     <string name="privacy_first">Ưu tiên quyền riêng tư</string>
     <string name="privacy_security">Quyền riêng tư &amp; Bảo mật</string>
-    <string
-        name="prompt_external_downloader"
-    >Hỏi ứng dụng nào để sử dụng để tải xuống tệp</string>
-    <string
-        name="pwa_benefit_homescreen"
-    >Truy cập nhanh từ màn hình chính</string>
+    <string name="prompt_external_downloader">Hỏi ứng dụng nào để sử dụng để tải xuống tệp</string>
+    <string name="pwa_benefit_homescreen">Truy cập nhanh từ màn hình chính</string>
     <string name="pwa_benefit_notifications">Nhận thông báo</string>
-    <string
-        name="pwa_benefit_offline"
-    >Làm việc ngoại tuyến không cần internet</string>
+    <string name="pwa_benefit_offline">Làm việc ngoại tuyến không cần internet</string>
     <string name="pwa_benefit_themed">Trải nghiệm theo chủ đề tùy chỉnh</string>
-    <string
-        name="pwa_cache_updated"
-    >Bộ nhớ cache đã được cập nhật cho "%1$s". Ứng dụng này hiện có thể hoạt động tốt hơn khi ngoại tuyến.</string>
+    <string name="pwa_cache_updated">Bộ nhớ cache đã được cập nhật cho "%1$s". Ứng dụng này hiện có thể hoạt động tốt hơn khi ngoại tuyến.</string>
     <string name="pwa_categories">Danh mục</string>
-    <string
-        name="pwa_install_basic"
-    >"%1$s" có thể được cài đặt dưới dạng ứng dụng web cơ bản</string>
-    <string
-        name="pwa_install_excellent"
-    >"%1$s" là một ứng dụng web tiến bộ tuyệt vời với hỗ trợ ngoại tuyến đầy đủ</string>
-    <string
-        name="pwa_install_good"
-    >"%1$s" là một ứng dụng web tiến bộ tốt với các tính năng ngoại tuyến cơ bản</string>
-    <string
-        name="pwa_install_poor"
-    >"%1$s" có khả năng ứng dụng web hạn chế</string>
-    <string
-        name="pwa_installation_complete"
-    >Đã cài đặt "%1$s" thành công!</string>
+    <string name="pwa_install_basic">"%1$s" có thể được cài đặt dưới dạng ứng dụng web cơ bản</string>
+    <string name="pwa_install_excellent">"%1$s" là một ứng dụng web tiến bộ tuyệt vời với hỗ trợ ngoại tuyến đầy đủ</string>
+    <string name="pwa_install_good">"%1$s" là một ứng dụng web tiến bộ tốt với các tính năng ngoại tuyến cơ bản</string>
+    <string name="pwa_install_poor">"%1$s" có khả năng ứng dụng web hạn chế</string>
+    <string name="pwa_installation_complete">Đã cài đặt "%1$s" thành công!</string>
     <string name="pwa_management_navigation">Mở quản lý PWA</string>
     <string name="pwa_offline_status">Ngoại tuyến: %1$s</string>
     <string name="pwa_suggestions">Ứng dụng web được đề xuất</string>
@@ -319,82 +227,50 @@
     <string name="remote_debugging">Gỡ lỗi từ xa</string>
     <string name="remove_history_item">Xóa mục lịch sử</string>
     <string name="safe_browsing">Duyệt web an toàn</string>
-    <string
-        name="safe_browsing_desc"
-    >Bảo vệ khỏi các trang web nguy hiểm</string>
+    <string name="safe_browsing_desc">Bảo vệ khỏi các trang web nguy hiểm</string>
     <string name="save_as_pdf">Lưu dưới dạng PDF</string>
     <string name="search">Tìm kiếm</string>
     <string name="search_engine">Công cụ tìm kiếm</string>
-    <string
-        name="search_engine_description"
-    >Chọn nhà cung cấp tìm kiếm mặc định của bạn</string>
+    <string name="search_engine_description">Chọn nhà cung cấp tìm kiếm mặc định của bạn</string>
     <string name="search_suggestions">Đề xuất tìm kiếm</string>
     <string name="search_suggestions_desc">Nhận đề xuất khi bạn gõ</string>
     <string name="search_tabs">Tìm kiếm tab</string>
-    <string
-        name="search_tabs_bookmarks_history"
-    >Tìm kiếm tab, dấu trang và lịch sử</string>
-    <string
-        name="search_tabs_description"
-    >Nhập để tìm kiếm trên tất cả các tab, dấu trang và lịch sử duyệt web của bạn</string>
+    <string name="search_tabs_bookmarks_history">Tìm kiếm tab, dấu trang và lịch sử</string>
+    <string name="search_tabs_description">Nhập để tìm kiếm trên tất cả các tab, dấu trang và lịch sử duyệt web của bạn</string>
     <string name="security_icon">Biểu tượng bảo mật</string>
     <string name="select">Chọn</string>
     <string name="select_folder">Chọn thư mục</string>
     <string name="select_folder_confirm">Chọn "%1$s"</string>
     <string name="select_time_range">Chọn khoảng thời gian</string>
-    <string
-        name="selected_tab_description"
-    >Tab đã chọn: %1$s, %2$s %3$s</string>
+    <string name="selected_tab_description">Tab đã chọn: %1$s, %2$s %3$s</string>
     <string name="settings">Cài đặt</string>
     <string name="settings_about">Giới thiệu</string>
-    <string
-        name="settings_about_explain"
-    >Phiên bản ứng dụng, giấy phép mã nguồn mở…</string>
+    <string name="settings_about_explain">Phiên bản ứng dụng, giấy phép mã nguồn mở…</string>
     <string name="settings_addons">Cài đặt tiện ích bổ sung</string>
-    <string
-        name="settings_addons_explain"
-    >Bật tiện ích bổ sung, xóa tiện ích bổ sung…</string>
+    <string name="settings_addons_explain">Bật tiện ích bổ sung, xóa tiện ích bổ sung…</string>
     <string name="settings_advanced">Cài đặt nâng cao</string>
-    <string
-        name="settings_advanced_explain"
-    >Bộ sưu tập Tiện ích bổ sung…</string>
+    <string name="settings_advanced_explain">Bộ sưu tập Tiện ích bổ sung…</string>
     <string name="settings_customization">Cài đặt tùy chỉnh</string>
-    <string
-        name="settings_customization_explain"
-    >Chủ đề ứng dụng, thanh điều hướng…</string>
+    <string name="settings_customization_explain">Chủ đề ứng dụng, thanh điều hướng…</string>
     <string name="settings_general">Cài đặt chung</string>
     <string name="settings_general_explain">JavaScript…</string>
     <string name="settings_import_and_export">Cài đặt nhập và xuất</string>
     <string name="settings_import_and_export_explain">Xuất và nhập…</string>
-    <string
-        name="settings_privacy_and_security"
-    >Cài đặt quyền riêng tư và bảo mật</string>
+    <string name="settings_privacy_and_security">Cài đặt quyền riêng tư và bảo mật</string>
     <string name="settings_privacy_and_security_explain">Xóa lịch sử…</string>
     <string name="share">Chia sẻ</string>
     <string name="shortcut_added">Đã thêm phím tắt</string>
-    <string
-        name="shortcut_added_message"
-    >Phím tắt cho "%1$s" đã được thêm vào màn hình chính của bạn</string>
+    <string name="shortcut_added_message">Phím tắt cho "%1$s" đã được thêm vào màn hình chính của bạn</string>
     <string name="shortcut_failed">Phím tắt thất bại</string>
-    <string
-        name="shortcut_failed_message"
-    >Không thể thêm phím tắt vào màn hình chính</string>
+    <string name="shortcut_failed_message">Không thể thêm phím tắt vào màn hình chính</string>
     <string name="shortcut_icon">Biểu tượng phím tắt</string>
     <string name="shortcuts">Phím tắt</string>
-    <string
-        name="show_contextual_toolbar"
-    >Hiển thị thanh công cụ theo ngữ cảnh</string>
-    <string
-        name="show_contextual_toolbar_desc"
-    >Hiển thị thanh công cụ dưới cùng với các nút điều hướng</string>
-    <string
-        name="show_protocol_in_url"
-    >Hiển thị giao thức URL trong thanh công cụ</string>
+    <string name="show_contextual_toolbar">Hiển thị thanh công cụ theo ngữ cảnh</string>
+    <string name="show_contextual_toolbar_desc">Hiển thị thanh công cụ dưới cùng với các nút điều hướng</string>
+    <string name="show_protocol_in_url">Hiển thị giao thức URL trong thanh công cụ</string>
     <string name="show_shortcuts">Hiển thị phím tắt</string>
     <string name="show_tab_group_bar">Hiển thị thanh nhóm tab</string>
-    <string
-        name="show_tab_group_bar_desc"
-    >Hiển thị thanh đảo tab phía trên thanh địa chỉ</string>
+    <string name="show_tab_group_bar_desc">Hiển thị thanh đảo tab phía trên thanh địa chỉ</string>
     <string name="skip">Bỏ qua</string>
     <string name="small">Nhỏ</string>
     <string name="sort">Sắp xếp</string>
@@ -404,24 +280,16 @@
     <string name="sort_by_url">Sắp xếp theo URL</string>
     <string name="sort_rating">Xếp hạng</string>
     <string name="sort_z_a">Z-A</string>
-    <string
-        name="stack_items_reverse"
-    >Xếp các mục từ dưới cùng của ngăn</string>
+    <string name="stack_items_reverse">Xếp các mục từ dưới cùng của ngăn</string>
     <string name="stop">Dừng</string>
     <string name="successful">Thành công</string>
-    <string
-        name="swap_bookmarks_and_tabs"
-    >Hoán đổi ngăn dấu trang và tab</string>
+    <string name="swap_bookmarks_and_tabs">Hoán đổi ngăn dấu trang và tab</string>
     <string name="swipe_to_refresh">Vuốt để làm mới</string>
     <string name="switch_to_tab">Chuyển sang tab</string>
     <string name="system_default">Mặc định hệ thống</string>
-    <string
-        name="system_default_description"
-    >Tự động theo chủ đề thiết bị của bạn</string>
+    <string name="system_default_description">Tự động theo chủ đề thiết bị của bạn</string>
     <string name="system_theme">Theo hệ thống</string>
-    <string
-        name="system_theme_desc"
-    >Phù hợp với cài đặt thiết bị của bạn</string>
+    <string name="system_theme_desc">Phù hợp với cài đặt thiết bị của bạn</string>
     <string name="tab_close_button">Đóng tab</string>
     <string name="tab_count_background">Nền số lượng tab</string>
     <string name="tab_description">Tab: %1$s, %2$s %3$s</string>
@@ -437,86 +305,56 @@
     <string name="tabs_count_description">%d tab đang mở</string>
     <string name="theme">Chủ đề ứng dụng</string>
     <string name="theme_description">Chọn bảng màu ưa thích của bạn</string>
-    <string
-        name="theme_explain"
-    >Chủ đề của các yếu tố giao diện người dùng của trình duyệt.</string>
+    <string name="theme_explain">Chủ đề của các yếu tố giao diện người dùng của trình duyệt.</string>
     <string name="title">Tiêu đề</string>
     <string name="title_empty_mes">Tiêu đề trống!</string>
-    <string
-        name="toolbar_icon_size"
-    >Kích thước biểu tượng thanh công cụ</string>
-    <string
-        name="toolbar_icon_size_desc"
-    >Điều chỉnh kích thước của biểu tượng thanh công cụ</string>
+    <string name="toolbar_icon_size">Kích thước biểu tượng thanh công cụ</string>
+    <string name="toolbar_icon_size_desc">Điều chỉnh kích thước của biểu tượng thanh công cụ</string>
     <string name="toolbar_position">Vị trí thanh công cụ</string>
     <string name="top">Trên cùng</string>
     <string name="tracking_protection">Bảo vệ theo dõi</string>
-    <string
-        name="tracking_protection_desc"
-    >Chặn trình theo dõi và quảng cáo</string>
-    <string
-        name="trust_third_party_certs"
-    >Tin cậy chứng chỉ CA của bên thứ ba</string>
+    <string name="tracking_protection_desc">Chặn trình theo dõi và quảng cáo</string>
+    <string name="trust_third_party_certs">Tin cậy chứng chỉ CA của bên thứ ba</string>
     <string name="undo">Hoàn tác</string>
     <string name="ungrouped_tabs">Các tab chưa nhóm</string>
-    <string
-        name="ungrouped_tabs_header_description"
-    >Phần các tab chưa nhóm</string>
+    <string name="ungrouped_tabs_header_description">Phần các tab chưa nhóm</string>
     <string name="uninstall">Gỡ cài đặt</string>
     <string name="uninstall_web_app">Gỡ cài đặt ứng dụng web</string>
-    <string
-        name="uninstall_web_app_confirmation"
-    >Bạn có chắc chắn muốn gỡ cài đặt "%1$s" không? Thao tác này sẽ xóa ứng dụng khỏi thiết bị của bạn.</string>
+    <string name="uninstall_web_app_confirmation">Bạn có chắc chắn muốn gỡ cài đặt "%1$s" không? Thao tác này sẽ xóa ứng dụng khỏi thiết bị của bạn.</string>
     <string name="update_cache">Cập nhật bộ nhớ cache</string>
     <string name="url">URL</string>
     <string name="url_empty_mes">URL trống!</string>
     <string name="use_custom_collection">Sử dụng bộ sưu tập tùy chỉnh</string>
-    <string
-        name="use_custom_collection_disclaimer"
-    >Khi sử dụng bộ sưu tập tiện ích bổ sung tùy chỉnh, trình duyệt sẽ truy vấn máy chủ của Mozilla để tìm tiện ích bổ sung. CookieJarApps không thể đảm bảo rằng các tiện ích bổ sung này an toàn hoặc sẽ hoạt động đúng trên thiết bị của bạn.</string>
+    <string name="use_custom_collection_disclaimer">Khi sử dụng bộ sưu tập tiện ích bổ sung tùy chỉnh, trình duyệt sẽ truy vấn máy chủ của Mozilla để tìm tiện ích bổ sung. CookieJarApps không thể đảm bảo rằng các tiện ích bổ sung này an toàn hoặc sẽ hoạt động đúng trên thiết bị của bạn.</string>
     <string name="version">Phiên bản ứng dụng</string>
-    <string
-        name="web_app_data_cleared"
-    >Dữ liệu ứng dụng web đã được xóa thành công</string>
+    <string name="web_app_data_cleared">Dữ liệu ứng dụng web đã được xóa thành công</string>
     <string name="web_app_icon">Biểu tượng ứng dụng web</string>
     <string name="web_app_settings_title">Ứng dụng web</string>
     <string name="web_apps_title">Ứng dụng web</string>
     <string name="web_dark_theme">Trang web tối</string>
-    <string
-        name="web_dark_theme_desc"
-    >Yêu cầu chế độ tối từ các trang web</string>
-    <string
-        name="web_dark_theme_description"
-    >Yêu cầu các trang web sử dụng chủ đề tối</string>
+    <string name="web_dark_theme_desc">Yêu cầu chế độ tối từ các trang web</string>
+    <string name="web_dark_theme_description">Yêu cầu các trang web sử dụng chủ đề tối</string>
     <string name="web_light_theme">Trang web sáng</string>
-    <string
-        name="web_light_theme_desc"
-    >Yêu cầu chế độ sáng từ các trang web</string>
-    <string
-        name="web_light_theme_description"
-    >Yêu cầu các trang web sử dụng chủ đề sáng</string>
+    <string name="web_light_theme_desc">Yêu cầu chế độ sáng từ các trang web</string>
+    <string name="web_light_theme_description">Yêu cầu các trang web sử dụng chủ đề sáng</string>
     <string name="web_system_theme">Theo hệ thống</string>
-    <string
-        name="web_system_theme_desc"
-    >Phù hợp với chủ đề thiết bị của bạn</string>
-    <string
-        name="web_system_theme_description"
-    >Theo tùy chọn chủ đề hệ thống</string>
+    <string name="web_system_theme_desc">Phù hợp với chủ đề thiết bị của bạn</string>
+    <string name="web_system_theme_description">Theo tùy chọn chủ đề hệ thống</string>
     <string name="web_theme">Chủ đề web</string>
-    <string
-        name="web_theme_description"
-    >Chọn cách các trang web sẽ xuất hiện</string>
-    <string
-        name="web_theme_explain"
-    >Chủ đề mà trình duyệt yêu cầu các tiện ích mở rộng và trang web sử dụng.</string>
+    <string name="web_theme_description">Chọn cách các trang web sẽ xuất hiện</string>
+    <string name="web_theme_explain">Chủ đề mà trình duyệt yêu cầu các tiện ích mở rộng và trang web sử dụng.</string>
     <string name="web_theme_title">Chủ đề trang web</string>
     <string name="website_theme">Chủ đề trang web</string>
-    <string
-        name="website_theme_desc"
-    >Chỉ khả dụng khi ứng dụng ở chế độ tối</string>
+    <string name="website_theme_desc">Chỉ khả dụng khi ứng dụng ở chế độ tối</string>
     <string name="website_title">Tiêu đề trang web</string>
-    <string
-        name="welcome_subtitle"
-    >Một trình duyệt nhanh, riêng tư và tùy chỉnh được thiết kế dành cho bạn</string>
+    <string name="welcome_subtitle">Một trình duyệt nhanh, riêng tư và tùy chỉnh được thiết kế dành cho bạn</string>
     <string name="welcome_to_nira">Chào mừng đến với Nira</string>
+    <string name="flatten_folder">Làm phẳng thư mục</string>
+    <string name="flatten_folder_confirm">Điều này sẽ di chuyển tất cả các mục từ thư mục này sang thư mục cha. Tiếp tục?</string>
+    <string name="multiselect_mode">Chế độ chọn nhiều</string>
+    <string name="delete_selected">Xóa đã chọn</string>
+    <string name="move_selected">Di chuyển đã chọn</string>
+    <string name="open_in_background_tabs">Mở trong các tab nền</string>
+    <string name="select_profile">Chọn hồ sơ</string>
+    <string name="profile">Hồ sơ</string>
 </resources>

@@ -83,7 +83,6 @@ import java.util.concurrent.TimeUnit
 
 private const val DAY_IN_MINUTES = 24 * 60L
 
-@Suppress("LargeClass")
 open class Components(private val applicationContext: Context) {
     
     // Visual completeness queue for deferred initialization

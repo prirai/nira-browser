@@ -11,26 +11,25 @@ import com.prirai.android.nira.browser.BrowsingMode
 import com.prirai.android.nira.browser.bookmark.CustomBookmarksStorage
 import com.prirai.android.nira.ext.components
 import com.prirai.android.nira.preferences.UserPreferences
+import com.prirai.android.nira.search.SearchEngineSource
+import com.prirai.android.nira.search.SearchFragmentState
 import mozilla.components.browser.state.search.SearchEngine
 import mozilla.components.concept.awesomebar.AwesomeBar
 import mozilla.components.concept.engine.EngineSession
-import mozilla.components.feature.search.SearchUseCases
-import mozilla.components.feature.session.SessionUseCases
-import mozilla.components.feature.tabs.TabsUseCases
-import mozilla.components.support.ktx.android.content.getColorFromAttr
-import com.prirai.android.nira.search.SearchEngineSource
-import com.prirai.android.nira.search.SearchFragmentState
 import mozilla.components.feature.awesomebar.provider.BookmarksStorageSuggestionProvider
 import mozilla.components.feature.awesomebar.provider.HistoryStorageSuggestionProvider
 import mozilla.components.feature.awesomebar.provider.SearchActionProvider
 import mozilla.components.feature.awesomebar.provider.SearchSuggestionProvider
 import mozilla.components.feature.awesomebar.provider.SessionSuggestionProvider
+import mozilla.components.feature.search.SearchUseCases
+import mozilla.components.feature.session.SessionUseCases
+import mozilla.components.feature.tabs.TabsUseCases
+import mozilla.components.support.ktx.android.content.getColorFromAttr
 
 /**
  * View that contains and configures the BrowserAwesomeBar
  * TODO: suggestions based on bookmarks
  */
-@Suppress("LargeClass")
 class AwesomeBarView(
     private val activity: BrowserActivity,
     val interactor: AwesomeBarInteractor,
@@ -195,7 +194,6 @@ class AwesomeBarView(
         }
     }
 
-    @Suppress("ComplexMethod")
     private fun getProvidersToAdd(context: Context, state: SearchFragmentState): MutableSet<AwesomeBar.SuggestionProvider> {
         val providersToAdd = mutableSetOf<AwesomeBar.SuggestionProvider>()
 

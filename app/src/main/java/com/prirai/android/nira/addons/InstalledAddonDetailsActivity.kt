@@ -10,13 +10,12 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updatePadding
+import com.google.android.material.switchmaterial.SwitchMaterial
 import com.prirai.android.nira.BrowserActivity
 import com.prirai.android.nira.R
 import com.prirai.android.nira.ext.components
-import com.prirai.android.nira.ext.isAppInDarkTheme
 import com.prirai.android.nira.ext.getParcelableExtraCompat
 import com.prirai.android.nira.theme.applyCompleteTheme
-import com.google.android.material.switchmaterial.SwitchMaterial
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -27,7 +26,6 @@ import mozilla.components.feature.addons.ui.translateName
 /**
  * An activity to show the details of a installed add-on.
  */
-@Suppress("LargeClass")
 class InstalledAddonDetailsActivity : AppCompatActivity() {
     private val scope = CoroutineScope(Dispatchers.IO)
 
