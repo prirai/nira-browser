@@ -102,4 +102,8 @@
     <color name="photonGrey40">@color/m3_outline_variant</color>
     <color name="photonRed50">@color/m3_error</color>
     <color name="photonBlue40">@color/m3_primary</color>
+    
+    <!-- Mozilla Reader View color overrides -->
+    <color name="mozac_feature_readerview_text_color">@color/m3_on_surface</color>
+    <color name="mozac_feature_readerview_selected">@color/m3_primary</color>
 </resources>

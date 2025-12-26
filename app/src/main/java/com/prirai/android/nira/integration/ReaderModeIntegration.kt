@@ -2,8 +2,10 @@ package com.prirai.android.nira.integration
 
 import android.content.Context
 import androidx.core.content.ContextCompat
+import androidx.fragment.app.FragmentManager
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.prirai.android.nira.R
+import com.prirai.android.nira.browser.ReaderAppearanceBottomSheet
 import mozilla.components.browser.state.selector.selectedTab
 import mozilla.components.browser.state.store.BrowserStore
 import mozilla.components.browser.toolbar.BrowserToolbar
@@ -20,7 +22,8 @@ class ReaderModeIntegration(
     store: BrowserStore,
     toolbar: BrowserToolbar,
     view: ReaderViewControlsView,
-    readerViewAppearanceButton: FloatingActionButton
+    readerViewAppearanceButton: FloatingActionButton,
+    private val fragmentManager: FragmentManager
 ) : LifecycleAwareFeature, UserInteractionHandler {
 
     private var readerViewButtonVisible = false

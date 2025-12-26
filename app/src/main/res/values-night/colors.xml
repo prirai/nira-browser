@@ -75,4 +75,8 @@
     <!-- Additional semantic colors -->
     <color name="security_indicator_secure">@color/secure_icon_color</color>
     <color name="menu_text_color">@color/m3_on_surface</color>
+    
+    <!-- Mozilla Reader View color overrides -->
+    <color name="mozac_feature_readerview_text_color">@color/m3_on_surface</color>
+    <color name="mozac_feature_readerview_selected">@color/m3_primary</color>
 </resources>

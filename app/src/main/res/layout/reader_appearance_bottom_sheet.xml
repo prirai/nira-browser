@@ -1,0 +1,157 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="24dp"
+    android:background="@color/m3_surface_container">
+
+    <!-- Title -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Reader View Appearance"
+        android:textSize="20sp"
+        android:textStyle="bold"
+        android:textColor="@color/m3_on_surface"
+        android:layout_marginBottom="24dp" />
+
+    <!-- Color Scheme Section -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Color Scheme"
+        android:textSize="14sp"
+        android:textColor="@color/m3_on_surface_variant"
+        android:layout_marginBottom="12dp" />
+
+    <com.google.android.material.button.MaterialButtonToggleGroup
+        android:id="@+id/colorSchemeGroup"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="24dp"
+        app:singleSelection="true"
+        app:selectionRequired="true">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/colorLight"
+            style="@style/Widget.Material3.Button.OutlinedButton"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Light"
+            android:textColor="@color/m3_on_surface" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/colorDark"
+            style="@style/Widget.Material3.Button.OutlinedButton"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Dark"
+            android:textColor="@color/m3_on_surface" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/colorSepia"
+            style="@style/Widget.Material3.Button.OutlinedButton"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Sepia"
+            android:textColor="@color/m3_on_surface" />
+
+    </com.google.android.material.button.MaterialButtonToggleGroup>
+
+    <!-- Font Section -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Font"
+        android:textSize="14sp"
+        android:textColor="@color/m3_on_surface_variant"
+        android:layout_marginBottom="12dp" />
+
+    <com.google.android.material.button.MaterialButtonToggleGroup
+        android:id="@+id/fontGroup"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="24dp"
+        app:singleSelection="true"
+        app:selectionRequired="true">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/fontSansSerif"
+            style="@style/Widget.Material3.Button.OutlinedButton"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Sans-serif"
+            android:textColor="@color/m3_on_surface" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/fontSerif"
+            style="@style/Widget.Material3.Button.OutlinedButton"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Serif"
+            android:textColor="@color/m3_on_surface" />
+
+    </com.google.android.material.button.MaterialButtonToggleGroup>
+
+    <!-- Font Size Section -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Font Size"
+        android:textSize="14sp"
+        android:textColor="@color/m3_on_surface_variant"
+        android:layout_marginBottom="12dp" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/fontSizeDecrease"
+            style="@style/Widget.Material3.Button.OutlinedButton.Icon"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:text="-"
+            android:textSize="20sp"
+            android:textColor="@color/m3_on_surface"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            android:contentDescription="Decrease font size" />
+
+        <com.google.android.material.slider.Slider
+            android:id="@+id/fontSizeSlider"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:valueFrom="1"
+            android:valueTo="9"
+            android:stepSize="1"
+            android:value="5"
+            app:thumbColor="@color/m3_primary"
+            app:trackColorActive="@color/m3_primary"
+            app:trackColorInactive="@color/m3_outline_variant" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/fontSizeIncrease"
+            style="@style/Widget.Material3.Button.OutlinedButton.Icon"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:text="+"
+            android:textSize="20sp"
+            android:textColor="@color/m3_on_surface"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            android:contentDescription="Increase font size" />
+
+    </LinearLayout>
+
+</LinearLayout>

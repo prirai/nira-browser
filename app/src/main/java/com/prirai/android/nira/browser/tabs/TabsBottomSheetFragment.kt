@@ -10,6 +10,11 @@ import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.NavHostFragment
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import androidx.recyclerview.widget.GridLayoutManager
+import android.view.animation.PathInterpolator
+import android.transition.TransitionManager
+import android.transition.ChangeBounds
+import android.widget.LinearLayout
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.prirai.android.nira.BrowserActivity
 import com.prirai.android.nira.R
@@ -33,8 +38,13 @@ class TabsBottomSheetFragment : DialogFragment() {
     private lateinit var tabGroupManager: TabGroupManager
     private lateinit var unifiedGroupManager: UnifiedTabGroupManager
     private lateinit var tabsAdapter: TabsWithGroupsAdapter
+    private lateinit var tabsGridAdapter: TabsGridAdapter
     private lateinit var dragHelper: TabGroupDragHelper
     private var isInitializing = true
+    private var isGridView = false
+    private val viewPrefs by lazy { 
+        requireContext().getSharedPreferences("tabs_view_prefs", android.content.Context.MODE_PRIVATE) 
+    }
 
     companion object {
         const val TAG = "TabsBottomSheet"
@@ -62,8 +72,9 @@ class TabsBottomSheetFragment : DialogFragment() {
 
         setupUI()
         setupTabsAdapter()
+        setupGridView()
         setupDragAndDrop()
-        setupProfileChips()
+        setupMergedProfileButtons()
         setupStoreObserver()
         setupUnifiedGroupObserver()
         
@@ -86,15 +97,21 @@ class TabsBottomSheetFragment : DialogFragment() {
                 ViewGroup.LayoutParams.MATCH_PARENT
             )
             
+            // Preserve status bar appearance (don't change icons to black)
+            val isDark = com.prirai.android.nira.theme.ThemeManager.isDarkMode(requireContext())
+            androidx.core.view.WindowInsetsControllerCompat(window, window.decorView).apply {
+                isAppearanceLightStatusBars = !isDark
+            }
+            
             // Apply window insets for edge-to-edge
             androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(window.decorView) { v, insets ->
                 val systemBars = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars())
                 
-                // Apply padding to profile chip bar to avoid navigation bar overlap
-                binding.profileChipScrollView.setPadding(
-                    binding.profileChipScrollView.paddingLeft,
-                    binding.profileChipScrollView.paddingTop,
-                    binding.profileChipScrollView.paddingRight,
+                // Apply padding to profile button container to avoid navigation bar overlap
+                binding.profileButtonContainer.setPadding(
+                    binding.profileButtonContainer.paddingLeft,
+                    binding.profileButtonContainer.paddingTop,
+                    binding.profileButtonContainer.paddingRight,
                     systemBars.bottom + 16 // Add extra padding for navigation bar
                 )
                 
@@ -185,90 +202,291 @@ class TabsBottomSheetFragment : DialogFragment() {
         )
         dragHelper.attachToRecyclerView(binding.tabsRecyclerView)
     }
-
-    private fun setupProfileChips() {
+    
+    private fun setupMergedProfileButtons() {
         val profileManager = com.prirai.android.nira.browser.profile.ProfileManager.getInstance(requireContext())
         val profiles = profileManager.getAllProfiles()
         val isPrivateMode = browsingModeManager.mode.isPrivate
         val currentProfile = browsingModeManager.currentProfile
 
-        binding.profileChipGroup.removeAllViews()
-        binding.profileChipGroup.setOnCheckedStateChangeListener(null)
+        binding.profileButtonGroup.removeAllViews()
 
-        var chipToCheck: com.google.android.material.chip.Chip? = null
-        val profileIdMap = mutableMapOf<Int, String>()
-
-        profiles.forEach { profile ->
-            val chip = LayoutInflater.from(requireContext())
-                .inflate(R.layout.item_profile_chip, binding.profileChipGroup, false) as com.google.android.material.chip.Chip
-
-            chip.text = "${profile.emoji} ${profile.name}"
-            chip.tag = profile.id
-            chip.id = View.generateViewId()
-            profileIdMap[chip.id] = profile.id
-
-            chip.setOnLongClickListener {
-                if (!isInitializing) {
+        val buttons = mutableListOf<MergedProfileButton>()
+        
+        // Add profile buttons
+        profiles.forEachIndexed { index, profile ->
+            val button = MergedProfileButton(requireContext()).apply {
+                id = View.generateViewId()
+                tag = profile.id
+                setText(profile.emoji, profile.name)
+                setActive(!isPrivateMode && profile.id == currentProfile.id, animated = false)
+                
+                val position = when {
+                    profiles.size == 1 -> MergedProfileButton.Position.ONLY
+                    index == 0 -> MergedProfileButton.Position.FIRST
+                    index == profiles.size - 1 -> MergedProfileButton.Position.MIDDLE
+                    else -> MergedProfileButton.Position.MIDDLE
+                }
+                setPosition(position)
+                
+                val heightPx = (48 * resources.displayMetrics.density).toInt()
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    heightPx
+                ).apply {
+                    marginEnd = 1 // 1dp for merged appearance
+                }
+                
+                setOnClickListener {
+                    switchToProfile(profile.id, false)
+                }
+                
+                setOnLongClickListener {
                     showProfileEditDialog(profile)
+                    true
                 }
-                true
             }
-
-            binding.profileChipGroup.addView(chip)
-
-            if (!isPrivateMode && profile.id == currentProfile.id) {
-                chipToCheck = chip
+            buttons.add(button)
+            binding.profileButtonGroup.addView(button)
+        }
+        
+        // Add private button
+        val privateButton = MergedProfileButton(requireContext()).apply {
+            id = View.generateViewId()
+            tag = "private"
+            setText("🕵️", "Private")
+            setActive(isPrivateMode, animated = false)
+            setPosition(MergedProfileButton.Position.MIDDLE)
+            
+            val heightPx = (48 * resources.displayMetrics.density).toInt()
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                heightPx
+            ).apply {
+                marginEnd = 1
+            }
+            
+            setOnClickListener {
+                switchToProfile("private", true)
             }
         }
-
-        val privateChip = LayoutInflater.from(requireContext())
-            .inflate(R.layout.item_profile_chip, binding.profileChipGroup, false) as com.google.android.material.chip.Chip
-        privateChip.text = "🕵️ Private"
-        privateChip.tag = "private"
-        privateChip.id = View.generateViewId()
-        profileIdMap[privateChip.id] = "private"
-        binding.profileChipGroup.addView(privateChip)
-
-        if (isPrivateMode) {
-            chipToCheck = privateChip
+        binding.profileButtonGroup.addView(privateButton)
+        
+        // Add plus button
+        val plusButton = MergedProfileButton(requireContext()).apply {
+            id = View.generateViewId()
+            setText("+", "")
+            setActive(false, animated = false)
+            setPosition(MergedProfileButton.Position.LAST)
+            
+            val heightPx = (48 * resources.displayMetrics.density).toInt()
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                heightPx
+            )
+            
+            setOnClickListener {
+                showProfileCreateDialog()
+            }
         }
+        binding.profileButtonGroup.addView(plusButton)
+    }
 
-        val addChip = LayoutInflater.from(requireContext())
-            .inflate(R.layout.item_profile_chip, binding.profileChipGroup, false) as com.google.android.material.chip.Chip
-        addChip.text = "+"
-        addChip.isCheckable = false
-        addChip.id = View.generateViewId()
-        addChip.setOnClickListener {
-            showProfileCreateDialog()
+    private fun switchToProfile(profileId: String, isPrivate: Boolean) {
+        if (isInitializing) return
+        
+        // Animate all buttons
+        val transition = ChangeBounds().apply {
+            duration = 300
+            interpolator = PathInterpolator(0.4f, 0.0f, 0.2f, 1.0f)
         }
-        binding.profileChipGroup.addView(addChip)
-
-        chipToCheck?.let {
-            binding.profileChipGroup.check(it.id)
+        TransitionManager.beginDelayedTransition(binding.profileButtonGroup, transition)
+        
+        for (i in 0 until binding.profileButtonGroup.childCount) {
+            val child = binding.profileButtonGroup.getChildAt(i) as? MergedProfileButton
+            child?.let {
+                val buttonTag = it.tag as? String
+                val shouldBeActive = if (isPrivate) {
+                    buttonTag == "private"
+                } else {
+                    buttonTag == profileId
+                }
+                it.setActive(shouldBeActive, animated = true)
+            }
         }
-
-        binding.profileChipGroup.setOnCheckedStateChangeListener { _, checkedIds ->
-            if (isInitializing || checkedIds.isEmpty()) return@setOnCheckedStateChangeListener
-
-            val selectedChipId = checkedIds.first()
-            when (val selectedProfileId = profileIdMap[selectedChipId]) {
-                "private" -> {
-                    if (!browsingModeManager.mode.isPrivate) {
-                        browsingModeManager.mode = BrowsingMode.Private
-                        profileManager.setPrivateMode(true)
-                        updateTabsDisplay()
+        
+        // Update browsing mode and tabs
+        val profileManager = com.prirai.android.nira.browser.profile.ProfileManager.getInstance(requireContext())
+        if (isPrivate) {
+            if (!browsingModeManager.mode.isPrivate) {
+                browsingModeManager.mode = BrowsingMode.Private
+                profileManager.setPrivateMode(true)
+                updateTabsDisplay()
+            }
+        } else {
+            val profiles = profileManager.getAllProfiles()
+            val profile = profiles.find { it.id == profileId }
+            if (profile != null && (browsingModeManager.mode.isPrivate || profile.id != browsingModeManager.currentProfile.id)) {
+                browsingModeManager.currentProfile = profile
+                browsingModeManager.mode = BrowsingMode.Normal
+                profileManager.setActiveProfile(profile)
+                profileManager.setPrivateMode(false)
+                updateTabsDisplay()
+            }
+        }
+    }
+    
+    private fun setupGridView() {
+        // Load saved view mode
+        isGridView = viewPrefs.getBoolean("is_grid_view", false)
+        
+        // Setup grid adapter with ThumbnailLoader
+        val thumbnailLoader = mozilla.components.browser.thumbnails.loader.ThumbnailLoader(
+            requireContext().components.thumbnailStorage
+        )
+        tabsGridAdapter = TabsGridAdapter(
+            thumbnailLoader = thumbnailLoader,
+            onTabClick = { tabId ->
+                requireContext().components.tabsUseCases.selectTab(tabId)
+                
+                // Navigate to browser if we're currently on home
+                try {
+                    val navController = NavHostFragment.findNavController(this)
+                    if (navController.currentDestination?.id == R.id.homeFragment) {
+                        (requireActivity() as BrowserActivity).openToBrowser(
+                            from = com.prirai.android.nira.BrowserDirection.FromHome,
+                            customTabSessionId = tabId
+                        )
+                    }
+                } catch (e: Exception) {
+                    // Ignore navigation errors
+                }
+                
+                view?.post { dismiss() }
+            },
+            onTabClose = { tabId ->
+                requireContext().components.tabsUseCases.removeTab(tabId)
+            },
+            onGroupMoreClick = { groupId, view ->
+                showGroupOptionsMenu(groupId, view)
+            }
+        )
+        
+        binding.tabsGridRecyclerView.apply {
+            layoutManager = GridLayoutManager(requireContext(), 3).apply {
+                spanSizeLookup = object : GridLayoutManager.SpanSizeLookup() {
+                    override fun getSpanSize(position: Int): Int {
+                        return when (tabsGridAdapter.getItemViewType(position)) {
+                            0 -> 3 // Group takes full width (3 columns)
+                            else -> 1 // Individual tabs take 1/3 width
+                        }
                     }
                 }
-                else -> {
-                    val profile = profiles.find { it.id == selectedProfileId }
-                    if (profile != null && (browsingModeManager.mode.isPrivate || profile.id != browsingModeManager.currentProfile.id)) {
-                        browsingModeManager.currentProfile = profile
-                        browsingModeManager.mode = BrowsingMode.Normal
-                        profileManager.setActiveProfile(profile)
-                        profileManager.setPrivateMode(false)
-                        updateTabsDisplay()
-                    }
+            }
+            adapter = tabsGridAdapter
+        }
+        
+        // Setup view mode switcher
+        binding.viewModeSwitcher.addOnButtonCheckedListener { _, checkedId, isChecked ->
+            if (!isChecked) return@addOnButtonCheckedListener
+            
+            when (checkedId) {
+                R.id.listViewButton -> switchToListView()
+                R.id.gridViewButton -> switchToGridView()
+            }
+        }
+        
+        // Apply initial view mode
+        if (isGridView) {
+            binding.gridViewButton.isChecked = true
+            binding.tabsRecyclerView.visibility = View.GONE
+            binding.tabsGridRecyclerView.visibility = View.VISIBLE
+        }
+    }
+
+    private fun switchToListView() {
+        isGridView = false
+        viewPrefs.edit().putBoolean("is_grid_view", false).apply()
+        binding.tabsRecyclerView.visibility = View.VISIBLE
+        binding.tabsGridRecyclerView.visibility = View.GONE
+        updateTabsDisplay()
+    }
+
+    private fun switchToGridView() {
+        isGridView = true
+        viewPrefs.edit().putBoolean("is_grid_view", true).apply()
+        binding.tabsRecyclerView.visibility = View.GONE
+        binding.tabsGridRecyclerView.visibility = View.VISIBLE
+        updateGridDisplay()
+    }
+
+    private fun updateGridDisplay() {
+        if (!isAdded || context == null) return
+        
+        lifecycleScope.launch {
+            val store = requireContext().components.store.state
+            val isPrivateMode = browsingModeManager.mode.isPrivate
+            val currentProfile = browsingModeManager.currentProfile
+
+            val filteredTabs = store.tabs.filter { tab ->
+                val tabIsPrivate = tab.content.private
+                if (tabIsPrivate != isPrivateMode) {
+                    false
+                } else if (isPrivateMode) {
+                    tab.contextId == "private"
+                } else {
+                    val expectedContextId = "profile_${currentProfile.id}"
+                    (tab.contextId == expectedContextId) || (tab.contextId == null)
                 }
+            }
+
+            val allGroups = unifiedGroupManager.getAllGroups()
+            val gridItems = mutableListOf<TabGridItem>()
+            
+            val tabToGroupMap = mutableMapOf<String, com.prirai.android.nira.browser.tabgroups.TabGroupData>()
+            allGroups.forEach { group ->
+                group.tabIds.forEach { tabId ->
+                    tabToGroupMap[tabId] = group
+                }
+            }
+            
+            val processedGroups = mutableSetOf<String>()
+            val processedTabs = mutableSetOf<String>()
+            
+            filteredTabs.forEach { tab ->
+                if (processedTabs.contains(tab.id)) return@forEach
+                
+                val group = tabToGroupMap[tab.id]
+                
+                if (group != null && !processedGroups.contains(group.id)) {
+                    processedGroups.add(group.id)
+                    
+                    val groupTabs = filteredTabs.filter { it.id in group.tabIds }
+                    
+                    if (groupTabs.isNotEmpty()) {
+                        gridItems.add(TabGridItem.GroupHeader(
+                            groupId = group.id,
+                            name = group.name.ifBlank { "" },
+                            color = group.color,
+                            tabs = groupTabs
+                        ))
+                    }
+                    
+                    group.tabIds.forEach { processedTabs.add(it) }
+                } else if (group == null) {
+                    gridItems.add(TabGridItem.Tab(tab, null))
+                    processedTabs.add(tab.id)
+                }
+            }
+
+            tabsGridAdapter.updateItems(gridItems, store.selectedTabId)
+            
+            if (filteredTabs.isEmpty()) {
+                binding.tabsGridRecyclerView.visibility = View.GONE
+                binding.emptyStateLayout.visibility = View.VISIBLE
+            } else {
+                binding.tabsGridRecyclerView.visibility = View.VISIBLE
+                binding.emptyStateLayout.visibility = View.GONE
             }
         }
     }
@@ -306,6 +524,11 @@ class TabsBottomSheetFragment : DialogFragment() {
     }
 
     private fun updateTabsDisplay() {
+        if (isGridView) {
+            updateGridDisplay()
+            return
+        }
+        
         if (!isAdded || context == null) return
         
         lifecycleScope.launch {
@@ -677,7 +900,7 @@ class TabsBottomSheetFragment : DialogFragment() {
                         val profileManager = com.prirai.android.nira.browser.profile.ProfileManager.getInstance(requireContext())
                         val newProfile = profileManager.createProfile(name, color, emoji)
 
-                        setupProfileChips()
+                        setupMergedProfileButtons()
 
                         browsingModeManager.currentProfile = newProfile
                         browsingModeManager.mode = BrowsingMode.Normal
@@ -727,7 +950,7 @@ class TabsBottomSheetFragment : DialogFragment() {
                             browsingModeManager.currentProfile = updatedProfile
                         }
 
-                        setupProfileChips()
+                        setupMergedProfileButtons()
 
                         (composeView.parent as? ViewGroup)?.removeView(composeView)
                     },
@@ -740,7 +963,7 @@ class TabsBottomSheetFragment : DialogFragment() {
 
                         profileManager.deleteProfile(profile.id)
 
-                        setupProfileChips()
+                        setupMergedProfileButtons()
                         updateTabsDisplay()
 
                         (composeView.parent as? ViewGroup)?.removeView(composeView)

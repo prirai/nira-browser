@@ -296,7 +296,8 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
                     components.store,
                     toolbar,
                     binding.readerViewBar,
-                    binding.readerViewAppearanceButton
+                    binding.readerViewAppearanceButton,
+                    parentFragmentManager
                 ),
                 owner = this,
                 view = view

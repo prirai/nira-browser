@@ -159,6 +159,20 @@ class TabIslandsVerticalAdapter(
 
         fun bind(item: ListItem.ExpandedIslandHeader) {
             val island = item.island
+            
+            // Hide header for Unnamed groups
+            if (island.name.equals("Unnamed", ignoreCase = true) || island.name.isBlank()) {
+                itemView.visibility = View.GONE
+                itemView.layoutParams = RecyclerView.LayoutParams(0, 0)
+                return
+            } else {
+                itemView.visibility = View.VISIBLE
+                itemView.layoutParams = RecyclerView.LayoutParams(
+                    RecyclerView.LayoutParams.MATCH_PARENT,
+                    RecyclerView.LayoutParams.WRAP_CONTENT
+                )
+            }
+            
             val displayName = island.name.ifBlank {
                 "${item.tabCount} tabs"
             }
