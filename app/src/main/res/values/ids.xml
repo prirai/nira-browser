@@ -4,4 +4,6 @@
     <item name="url_bar" type="id"/>
     <item name="browser_action" type="id"/>
     <item name="tabs_button" type="id"/>
+    <!-- Custom tag IDs for storing metadata -->
+    <item name="tag_context_id" type="id"/>
 </resources>

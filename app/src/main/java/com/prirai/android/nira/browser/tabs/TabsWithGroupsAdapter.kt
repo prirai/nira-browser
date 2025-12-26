@@ -57,6 +57,10 @@ class GroupTabsAdapter(
             val isSelected = tab.id == selectedId
             cardView.isSelected = isSelected
 
+            // Check if guest tab (no profile context)
+            val isGuestTab = tab.contextId == null
+            val guestTabColor = com.prirai.android.nira.theme.ColorConstants.TabGroups.ORANGE
+
             // Improved title logic
             val isRealUrl = tab.content.url.isNotEmpty() &&
                     !tab.content.url.startsWith("about:")
@@ -88,15 +92,21 @@ class GroupTabsAdapter(
             if (isSelected) {
                 val strokeWidth = (2 * cardView.context.resources.displayMetrics.density).toInt()
                 cardView.strokeWidth = strokeWidth
-                cardView.strokeColor = groupColor
+                // Use guest tab color for guest tabs, otherwise use group color
+                cardView.strokeColor = if (isGuestTab) guestTabColor else groupColor
                 cardView.cardElevation = 2f * cardView.context.resources.displayMetrics.density
             } else {
                 val strokeWidth = (1 * cardView.context.resources.displayMetrics.density).toInt()
                 cardView.strokeWidth = strokeWidth
-                cardView.strokeColor = androidx.core.content.ContextCompat.getColor(
-                    cardView.context,
-                    R.color.tab_card_stroke
-                )
+                // Show orange border for guest tabs even when not selected
+                cardView.strokeColor = if (isGuestTab) {
+                    guestTabColor
+                } else {
+                    androidx.core.content.ContextCompat.getColor(
+                        cardView.context,
+                        R.color.tab_card_stroke
+                    )
+                }
                 cardView.cardElevation = 2f * cardView.context.resources.displayMetrics.density
             }
             
@@ -135,70 +145,10 @@ class GroupTabsAdapter(
                 onTabClick(tab.id)
             }
 
-            // Add touch listener for drag-out-to-ungroup
-            var startY = 0f
-            var isDragging = false
-            
-            cardView.setOnTouchListener { v, event ->
-                when (event.action) {
-                    android.view.MotionEvent.ACTION_DOWN -> {
-                        isDragging = false
-                        false
-                    }
-                    
-                    android.view.MotionEvent.ACTION_MOVE -> {
-                        val deltaY = kotlin.math.abs(startY - event.rawY)
-                        
-                        if (deltaY > 30 && !isDragging) {
-                            isDragging = true
-                            v.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS)
-                        }
-                        
-                        if (isDragging) {
-                            // Visual feedback during drag
-                            val progress = (deltaY / 150f).coerceIn(0f, 1f)
-                            cardView.alpha = 1f - (progress * 0.3f)
-                            cardView.scaleX = 1f - (progress * 0.1f)
-                            cardView.scaleY = 1f - (progress * 0.1f)
-                            true
-                        } else {
-                            false
-                        }
-                    }
-                    
-                    android.view.MotionEvent.ACTION_UP, android.view.MotionEvent.ACTION_CANCEL -> {
-                        if (isDragging) {
-                            val deltaY = kotlin.math.abs(startY - event.rawY)
-                            if (deltaY > 150) {
-                                // Trigger ungroup - call long press to show menu
-                                v.performClick()
-                                cardView.performLongClick()
-                            } else {
-                                // Spring back
-                                cardView.animate()
-                                    .alpha(1f)
-                                    .scaleX(1f)
-                                    .scaleY(1f)
-                                    .setDuration(200)
-                                    .start()
-                            }
-                            isDragging = false
-                            true
-                        } else {
-                            false
-                        }
-                    }
-                    
-                    else -> false
-                }
-            }
-
+            // Add long press support but disable the problematic drag-to-ungroup feature
+            // The touch listener was causing recycling crashes
             cardView.setOnLongClickListener {
-                if (!isDragging) {
-                    onTabLongPress(tab.id, it)
-                } else {
-                    false
-                }
+                onTabLongPress(tab.id, it)
             }
 
             closeButton.setOnClickListener {
@@ -231,17 +181,19 @@ class TabsWithGroupsAdapter(
 ) : ListAdapter<TabItem, RecyclerView.ViewHolder>(TabItemDiffCallback()) {
 
     private var selectedTabId: String? = null
+    
+    // Use shared preferences with TabIslandManager for synced collapse state
+    private val prefs = context.getSharedPreferences("tab_island_prefs", android.content.Context.MODE_PRIVATE)
     private val collapsedGroups = mutableSetOf<String>()
-    private val prefs = context.getSharedPreferences("tab_groups_prefs", android.content.Context.MODE_PRIVATE)
     
     init {
-        // Load collapsed groups from preferences
-        val savedCollapsed = prefs.getStringSet("collapsed_groups", emptySet()) ?: emptySet()
+        // Load collapsed groups from shared preferences (same as TabIslandManager)
+        val savedCollapsed = prefs.getStringSet("collapsed_islands", emptySet()) ?: emptySet()
         collapsedGroups.addAll(savedCollapsed)
     }
     
     private fun saveCollapsedState() {
-        prefs.edit { putStringSet("collapsed_groups", collapsedGroups) }
+        prefs.edit().putStringSet("collapsed_islands", collapsedGroups).apply()
     }
 
     companion object {
@@ -435,6 +387,10 @@ class TabsWithGroupsAdapter(
             val isSelected = tab.id == selectedId
             cardView.isSelected = isSelected
 
+            // Check if guest tab (no profile context)
+            val isGuestTab = tab.contextId == null
+            val guestTabColor = com.prirai.android.nira.theme.ColorConstants.TabGroups.ORANGE
+
             // Show title with fallback to URL
             val title = when {
                 tab.content.title.isNotBlank() -> tab.content.title
@@ -444,27 +400,38 @@ class TabsWithGroupsAdapter(
             tabTitle.text = title
             tabUrl.text = tab.content.url
             
-            // Highlight selected tab with theme-respectful stroke - use primary color for ungrouped tabs
+            // Highlight selected tab with theme-respectful stroke
             if (isSelected) {
                 val strokeWidth = (2 * cardView.context.resources.displayMetrics.density).toInt()
                 cardView.strokeWidth = strokeWidth
-                // Use Material 3 primary color (supports dynamic colors) - same as tab group bar
-                val theme = cardView.context.theme
-                val primaryTypedValue = android.util.TypedValue()
-                val primaryColor = if (theme.resolveAttribute(android.R.attr.colorPrimary, primaryTypedValue, true)) {
-                    primaryTypedValue.data
+                
+                // Use guest tab color for guest tabs, otherwise use primary color
+                val borderColor = if (isGuestTab) {
+                    guestTabColor
                 } else {
-                    androidx.core.content.ContextCompat.getColor(cardView.context, R.color.m3_primary)
+                    // Use Material 3 primary color (supports dynamic colors)
+                    val theme = cardView.context.theme
+                    val primaryTypedValue = android.util.TypedValue()
+                    if (theme.resolveAttribute(android.R.attr.colorPrimary, primaryTypedValue, true)) {
+                        primaryTypedValue.data
+                    } else {
+                        androidx.core.content.ContextCompat.getColor(cardView.context, R.color.m3_primary)
+                    }
                 }
-                cardView.strokeColor = primaryColor
+                cardView.strokeColor = borderColor
                 cardView.cardElevation = 2f * cardView.context.resources.displayMetrics.density
             } else {
                 val strokeWidth = (1 * cardView.context.resources.displayMetrics.density).toInt()
                 cardView.strokeWidth = strokeWidth
-                cardView.strokeColor = androidx.core.content.ContextCompat.getColor(
-                    cardView.context,
-                    R.color.tab_card_stroke
-                )
+                // Show orange border for guest tabs even when not selected
+                cardView.strokeColor = if (isGuestTab) {
+                    guestTabColor
+                } else {
+                    androidx.core.content.ContextCompat.getColor(
+                        cardView.context,
+                        R.color.tab_card_stroke
+                    )
+                }
                 cardView.cardElevation = 2f * cardView.context.resources.displayMetrics.density
             }
 

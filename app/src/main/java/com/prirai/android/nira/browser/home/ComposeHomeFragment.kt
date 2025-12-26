@@ -419,7 +419,7 @@ class ComposeHomeFragment : Fragment() {
             tab = null,
             canGoBack = false,
             canGoForward = false,
-            tabCount = components.store.state.tabs.size,
+            tabCount = getFilteredTabCount(),
             isHomepage = true
         )
 
@@ -637,7 +637,7 @@ class ComposeHomeFragment : Fragment() {
             tab = null,
             canGoBack = false,
             canGoForward = false,
-            tabCount = components.store.state.tabs.size,
+            tabCount = getFilteredTabCount(),
             isHomepage = true
         )
     }
@@ -817,5 +817,28 @@ class ComposeHomeFragment : Fragment() {
         
         // Show menu from UnifiedToolbar's menu button
         unifiedToolbar?.showMenu(menuItems)
+    }
+    
+    /**
+     * Get tab count filtered by current profile + guest tabs (null contextId)
+     */
+    private fun getFilteredTabCount(): Int {
+        val store = components.store.state
+        val isPrivateMode = browsingModeManager.mode.isPrivate
+        val currentProfile = browsingModeManager.currentProfile
+        
+        return store.tabs.count { tab ->
+            val tabIsPrivate = tab.content.private
+            
+            if (tabIsPrivate != isPrivateMode) {
+                false
+            } else if (isPrivateMode) {
+                tab.contextId == "private"
+            } else {
+                val expectedContextId = "profile_${currentProfile.id}"
+                // Include tabs with matching contextId OR guest tabs (null contextId)
+                (tab.contextId == expectedContextId) || (tab.contextId == null)
+            }
+        }
     }
 }
