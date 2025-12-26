@@ -322,7 +322,8 @@ class TabsBottomSheetFragment : DialogFragment() {
                     tab.contextId == "private"
                 } else {
                     val expectedContextId = "profile_${currentProfile.id}"
-                    tab.contextId == expectedContextId
+                    // Include tabs with matching contextId OR guest tabs (null contextId)
+                    (tab.contextId == expectedContextId) || (tab.contextId == null)
                 }
             }
 
@@ -337,28 +338,54 @@ class TabsBottomSheetFragment : DialogFragment() {
                 group.tabIds.contains(selectedTabId)
             }
             
-            for (group in allGroups) {
-                val groupTabs = filteredTabs.filter { it.id in group.tabIds }
-                
-                if (groupTabs.isNotEmpty()) {
-                    tabItems.add(TabItem.Group(
-                        groupId = group.id,
-                        name = group.name.ifBlank { "" },
-                        color = group.color,
-                        tabs = groupTabs
-                    ))
-                    
-                    // Auto-expand group containing selected tab
-                    if (group.id == groupWithSelectedTab?.id) {
-                        tabsAdapter.expandGroup(group.id)
-                    }
+            // Create a map of tab ID to group for quick lookup
+            val tabToGroupMap = mutableMapOf<String, com.prirai.android.nira.browser.tabgroups.TabGroupData>()
+            allGroups.forEach { group ->
+                group.tabIds.forEach { tabId ->
+                    tabToGroupMap[tabId] = group
                 }
             }
             
-            val groupedTabIds = allGroups.flatMap { it.tabIds }.toSet()
+            val processedGroups = mutableSetOf<String>()
+            val processedTabs = mutableSetOf<String>()
             
-            filteredTabs.filter { it.id !in groupedTabIds }.forEach { tab ->
-                tabItems.add(TabItem.SingleTab(tab))
+            // Process tabs in their original order (like tab bar)
+            // Groups appear where their first tab is located
+            filteredTabs.forEach { tab ->
+                // Skip if already processed
+                if (processedTabs.contains(tab.id)) {
+                    return@forEach
+                }
+                
+                val group = tabToGroupMap[tab.id]
+                
+                if (group != null && !processedGroups.contains(group.id)) {
+                    // First tab of a group - add the entire group here
+                    processedGroups.add(group.id)
+                    
+                    val groupTabs = filteredTabs.filter { it.id in group.tabIds }
+                    
+                    if (groupTabs.isNotEmpty()) {
+                        tabItems.add(TabItem.Group(
+                            groupId = group.id,
+                            name = group.name.ifBlank { "" },
+                            color = group.color,
+                            tabs = groupTabs
+                        ))
+                        
+                        // Auto-expand group containing selected tab
+                        if (group.id == groupWithSelectedTab?.id) {
+                            tabsAdapter.expandGroup(group.id)
+                        }
+                    }
+                    
+                    // Mark all group tabs as processed
+                    group.tabIds.forEach { processedTabs.add(it) }
+                } else if (group == null) {
+                    // Tab is not in any group - add it in its original position
+                    tabItems.add(TabItem.SingleTab(tab))
+                    processedTabs.add(tab.id)
+                }
             }
 
             tabsAdapter.updateItems(tabItems, store.selectedTabId)

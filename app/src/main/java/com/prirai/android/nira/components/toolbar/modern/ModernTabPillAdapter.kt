@@ -972,8 +972,9 @@ class ModernTabPillAdapter(
             tabs.forEachIndexed { index, tab ->
                 val isLastTab = index == tabs.size - 1
                 val tabView = createTabPillView(tab, island, index, isLastTab)
-                // Store tab ID as tag for later updates
+                // Store tab ID and contextId as tags for later updates
                 tabView.tag = tab.id
+                tabView.setTag(R.id.tag_context_id, tab.contextId)
                 tabsContainer.addView(tabView)
             }
         }
@@ -981,9 +982,14 @@ class ModernTabPillAdapter(
         fun updateTabSelection(tabId: String, island: TabIsland) {
             // Update selection state for tabs in this group
             val tabCount = tabsContainer.childCount
+            val guestTabColor = com.prirai.android.nira.theme.ColorConstants.TabGroups.ORANGE
+            
             for (i in 0 until tabCount) {
                 val tabView = tabsContainer.getChildAt(i)
                 val storedTabId = tabView.tag as? String
+                val contextId = tabView.getTag(R.id.tag_context_id) as? String
+                val isGuestTab = contextId == null
+                
                 if (storedTabId != null) {
                     val tabContent: ViewGroup = tabView.findViewById(R.id.tabPillContent)
                     val titleView: TextView = tabView.findViewById(R.id.tabTitle)
@@ -1007,7 +1013,9 @@ class ModernTabPillAdapter(
                             setColor(backgroundColor)
                             // Prominent border for selected state (3dp stroke width)
                             val strokeWidth = (3 * itemView.resources.displayMetrics.density).toInt()
-                            setStroke(strokeWidth, island.color)
+                            // Use guest tab color for guest tabs, otherwise use island color
+                            val borderColor = if (isGuestTab) guestTabColor else island.color
+                            setStroke(strokeWidth, borderColor)
                             // Only round top-right and bottom-right corners for last tab
                             if (isLastTab) {
                                 val radius = 12f * itemView.resources.displayMetrics.density
@@ -1025,7 +1033,7 @@ class ModernTabPillAdapter(
                         titleView.setTypeface(null, android.graphics.Typeface.BOLD)
                         faviconView.alpha = 1.0f
                     } else {
-                        // Unselected tab: same background as ungrouped tabs
+                        // Unselected tab: show orange border for guest tabs
                         val typedValue = android.util.TypedValue()
                         val theme = itemView.context.theme
                         val backgroundColor = if (theme.resolveAttribute(com.google.android.material.R.attr.colorSurfaceVariant, typedValue, true)) {
@@ -1036,6 +1044,11 @@ class ModernTabPillAdapter(
                         
                         val gradient = GradientDrawable().apply {
                             setColor(backgroundColor)
+                            // Show orange border for guest tabs even when not selected
+                            if (isGuestTab) {
+                                val strokeWidth = (2 * itemView.resources.displayMetrics.density).toInt()
+                                setStroke(strokeWidth, guestTabColor)
+                            }
                             // Only round top-right and bottom-right corners for last tab
                             if (isLastTab) {
                                 val radius = 12f * itemView.resources.displayMetrics.density
@@ -1065,6 +1078,10 @@ class ModernTabPillAdapter(
             val tabContent: ViewGroup = tabView.findViewById(R.id.tabPillContent)
             val faviconView: ImageView = tabView.findViewById(R.id.tabFavicon)
             val titleView: TextView = tabView.findViewById(R.id.tabTitle)
+
+            // Check if guest tab (no profile context)
+            val isGuestTab = tab.contextId == null
+            val guestTabColor = com.prirai.android.nira.theme.ColorConstants.TabGroups.ORANGE
 
             // Show separator for all tabs (acts as divider from header/previous tab)
             separator.visibility = View.VISIBLE
@@ -1102,7 +1119,9 @@ class ModernTabPillAdapter(
                     setColor(backgroundColor)
                     // Prominent border for selected state (3dp stroke width)
                     val strokeWidth = (3 * itemView.resources.displayMetrics.density).toInt()
-                    setStroke(strokeWidth, island.color)
+                    // Use guest tab color for guest tabs, otherwise use island color
+                    val borderColor = if (isGuestTab) guestTabColor else island.color
+                    setStroke(strokeWidth, borderColor)
                     // No rounding needed - plus button is now at the end
                 }
                 tabContent.background = gradient
@@ -1111,7 +1130,7 @@ class ModernTabPillAdapter(
                 titleView.setTypeface(null, android.graphics.Typeface.BOLD)
                 faviconView.alpha = 1.0f
             } else {
-                // Unselected tab: same background as ungrouped tabs
+                // Unselected tab: show orange border for guest tabs
                 val typedValue = android.util.TypedValue()
                 val theme = itemView.context.theme
                 val backgroundColor = if (theme.resolveAttribute(com.google.android.material.R.attr.colorSurfaceVariant, typedValue, true)) {
@@ -1122,6 +1141,11 @@ class ModernTabPillAdapter(
                 
                 val gradient = GradientDrawable().apply {
                     setColor(backgroundColor)
+                    // Show orange border for guest tabs even when not selected
+                    if (isGuestTab) {
+                        val strokeWidth = (2 * itemView.resources.displayMetrics.density).toInt()
+                        setStroke(strokeWidth, guestTabColor)
+                    }
                     // No rounding needed - plus button is now at the end
                 }
                 tabContent.background = gradient

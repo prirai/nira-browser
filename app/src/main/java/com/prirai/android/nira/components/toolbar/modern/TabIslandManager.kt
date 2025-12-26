@@ -24,7 +24,8 @@ class TabIslandManager(private val context: Context) {
     
     private val scope = CoroutineScope(Dispatchers.Main)
     
-    // UI-only state for collapse/expand (not persisted)
+    // Persist collapse state in SharedPreferences for sync between tab bar and tab sheet
+    private val prefs = context.getSharedPreferences("tab_island_prefs", Context.MODE_PRIVATE)
     private val collapseState = mutableMapOf<String, Boolean>()
     
     // Listeners for island changes
@@ -67,12 +68,20 @@ class TabIslandManager(private val context: Context) {
     }
 
     init {
+        // Load collapse state from preferences
+        val savedCollapsed = prefs.getStringSet("collapsed_islands", emptySet()) ?: emptySet()
+        savedCollapsed.forEach { collapseState[it] = true }
+        
         // Listen to unified manager for changes
         scope.launch {
             unifiedManager.groupEvents.collect {
                 notifyListeners()
             }
         }
+    }
+    
+    private fun saveCollapseState() {
+        prefs.edit().putStringSet("collapsed_islands", collapseState.filter { it.value }.keys).apply()
     }
 
 
@@ -186,6 +195,7 @@ class TabIslandManager(private val context: Context) {
         }
 
         collapseState[islandId] = newState
+        saveCollapseState()
         notifyListeners()
         return true
     }
@@ -198,6 +208,7 @@ class TabIslandManager(private val context: Context) {
     fun toggleIslandCollapseBottomSheet(islandId: String): Boolean {
         val currentState = collapseState[islandId] ?: false
         collapseState[islandId] = !currentState
+        saveCollapseState()
         notifyListeners()
         return true
     }
@@ -207,6 +218,7 @@ class TabIslandManager(private val context: Context) {
      */
     fun collapseIsland(islandId: String): Boolean {
         collapseState[islandId] = true
+        saveCollapseState()
         notifyListeners()
         return true
     }
@@ -223,6 +235,7 @@ class TabIslandManager(private val context: Context) {
         }
 
         collapseState[islandId] = false
+        saveCollapseState()
         notifyListeners()
         return true
     }
