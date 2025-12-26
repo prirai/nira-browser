@@ -264,9 +264,10 @@
     <string name="delete_bookmark">Delete bookmark</string>
   <string name="delete_folder">Delete folder</string>
   <string name="flatten_folder">Flatten folder</string>
+  <string name="flatten_folder_confirm_formatted">Flatten \"%1$s\"? All items inside will be moved to the current folder and the folder will be deleted.</string>
   <string
         name="flatten_folder_confirm"
-    >Flatten \"%1$s\"? All items inside will be moved to the current folder and the folder will be deleted.</string>
+    >Flatten this folder? All items inside will be moved to the current folder and the folder will be deleted.</string>
   <string name="open">Open</string>
   <string name="open_new">Open in new tab</string>
   <string name="open_new_private">Open in new private tab</string>
@@ -802,4 +803,11 @@
     <string name="mozac_feature_toolbar_back_button">Back</string>
     <string name="mozac_feature_toolbar_forward_button">Forward</string>
     <string name="scan_qr_code">Scan QR code</string>
+  <string name="webapps_category_header">Manage Web Apps</string>
+
+
+  <plurals name="multiselect_count">
+    <item quantity="one">%1$d selected</item>
+    <item quantity="other">%1$d selected</item>
+  </plurals>
 </resources>

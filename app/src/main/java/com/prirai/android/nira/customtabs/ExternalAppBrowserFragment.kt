@@ -205,8 +205,7 @@ class ExternalAppBrowserFragment : Fragment(), UserInteractionHandler {
     
     private fun addCustomHeader(view: View, tab: SessionState) {
         // Inflate custom header
-        val headerView = LayoutInflater.from(requireContext())
-            .inflate(R.layout.custom_tab_header, null)
+        val headerView = layoutInflater.inflate(R.layout.custom_tab_header, null)
         
         // Find the main constraint layout (browserWindow), not browserLayout
         val browserWindow = view.findViewById<ViewGroup>(R.id.browserWindow) ?: return

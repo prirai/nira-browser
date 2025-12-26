@@ -126,6 +126,7 @@ object ThemeManager {
     /**
      * Apply Material 3 colors to status bar and navigation bar.
      */
+    @androidx.annotation.RequiresApi(Build.VERSION_CODES.M)
     fun applySystemBarsTheme(activity: android.app.Activity, isPrivateMode: Boolean = false) {
         val context = activity as Context
         val window = activity.window
@@ -151,6 +152,7 @@ object ThemeManager {
         }
         
         // Set light/dark status bar icons
+        @Suppress("DEPRECATION")
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             val isDark = isDarkMode(context)
             window.insetsController?.setSystemBarsAppearance(

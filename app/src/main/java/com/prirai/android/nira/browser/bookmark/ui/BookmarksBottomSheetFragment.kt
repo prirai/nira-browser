@@ -514,7 +514,11 @@ class BookmarksBottomSheetFragment : BottomSheetDialogFragment(), BookmarkAdapte
             binding.headerLayout.visibility = View.GONE
             
             // Update selected count text
-            val countText = getString(R.string.multiselect_mode, selectedCount)
+            val countText = resources.getQuantityString(
+                R.plurals.multiselect_count,
+                selectedCount,
+                selectedCount
+            )
             binding.root.findViewById<android.widget.TextView>(R.id.selectedCountText)?.text = countText
         } else {
             // Hide multiselect toolbar, show normal header
@@ -661,7 +665,7 @@ class BookmarksBottomSheetFragment : BottomSheetDialogFragment(), BookmarkAdapte
         // Show confirmation dialog
         androidx.appcompat.app.AlertDialog.Builder(requireContext())
             .setTitle(R.string.flatten_folder)
-            .setMessage(getString(R.string.flatten_folder_confirm, folder.title ?: ""))
+            .setMessage(getString(R.string.flatten_folder_confirm_formatted, folder.title ?: ""))
             .setPositiveButton(android.R.string.ok) { _, _ ->
                 try {
                     // Flatten the folder
