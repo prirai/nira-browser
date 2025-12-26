@@ -162,12 +162,11 @@
 
     <com.google.android.material.button.MaterialButtonToggleGroup
         android:id="@+id/search_actions_toggle_group"
+        style="@style/Widget.App.Button.ToggleGroup"
         android:layout_width="wrap_content"
         android:layout_height="40dp"
         app:singleSelection="false"
         app:selectionRequired="false"
-        app:strokeWidth="1dp"
-        app:strokeColor="@color/m3_outline_variant"
         app:layout_constraintBottom_toBottomOf="@id/pill_wrapper"
         app:layout_constraintStart_toStartOf="@+id/pill_wrapper"
         app:layout_constraintTop_toTopOf="@id/pill_wrapper">
