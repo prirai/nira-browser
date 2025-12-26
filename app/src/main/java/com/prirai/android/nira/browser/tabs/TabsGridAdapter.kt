@@ -171,12 +171,30 @@ class TabsGridAdapter(
             }
             title.text = displayTitle
 
-            // Load thumbnail using ThumbnailLoader with higher resolution
-            val iconSize = 240 // Higher resolution for clarity
-            thumbnailLoader.loadIntoView(
-                thumbnail,
-                ImageLoadRequest(tab.id, iconSize, isPrivate = tab.content.private)
-            )
+            // Load thumbnail using ThumbnailLoader with actual view dimensions
+            // Post to ensure view is measured
+            thumbnail.post {
+                val width = thumbnail.width
+                val height = thumbnail.height
+                if (width > 0 && height > 0) {
+                    // Use the larger dimension for better quality
+                    val size = maxOf(width, height)
+                    thumbnailLoader.loadIntoView(
+                        thumbnail,
+                        ImageLoadRequest(tab.id, size, isPrivate = tab.content.private)
+                    )
+                } else {
+                    // Fallback to calculated size based on dp
+                    val displayMetrics = thumbnail.context.resources.displayMetrics
+                    val widthDp = 120 // match_parent in grid column
+                    val heightDp = 120 // fixed height from layout
+                    val size = (maxOf(widthDp, heightDp) * displayMetrics.density).toInt()
+                    thumbnailLoader.loadIntoView(
+                        thumbnail,
+                        ImageLoadRequest(tab.id, size, isPrivate = tab.content.private)
+                    )
+                }
+            }
             
             // Show placeholder for New Tab
             if (tab.content.url.startsWith("about:homepage") || tab.content.url == "about:blank") {
@@ -287,12 +305,26 @@ class GridGroupTabsAdapter(
             }
             title.text = displayTitle
             
-            // Load thumbnail with higher resolution
-            val iconSize = 200 // Higher resolution for clarity
-            thumbnailLoader.loadIntoView(
-                thumbnail,
-                ImageLoadRequest(tab.id, iconSize, isPrivate = tab.content.private)
-            )
+            // Load thumbnail with actual view dimensions for better quality
+            thumbnail.post {
+                val width = thumbnail.width
+                val height = thumbnail.height
+                if (width > 0 && height > 0) {
+                    val size = maxOf(width, height)
+                    thumbnailLoader.loadIntoView(
+                        thumbnail,
+                        ImageLoadRequest(tab.id, size, isPrivate = tab.content.private)
+                    )
+                } else {
+                    // Fallback to calculated size
+                    val displayMetrics = thumbnail.context.resources.displayMetrics
+                    val size = (140 * displayMetrics.density).toInt() // 140dp card width
+                    thumbnailLoader.loadIntoView(
+                        thumbnail,
+                        ImageLoadRequest(tab.id, size, isPrivate = tab.content.private)
+                    )
+                }
+            }
             
             // Show placeholder for New Tab
             if (tab.content.url.startsWith("about:homepage") || tab.content.url == "about:blank") {
