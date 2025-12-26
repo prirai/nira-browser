@@ -378,7 +378,7 @@ open class Components(private val applicationContext: Context) {
     val pwaSuggestionManager by lazy { com.prirai.android.nira.webapp.PwaSuggestionManager(applicationContext) }
 
     val tabsUseCases: TabsUseCases by lazy { TabsUseCases(store) }
-    val downloadsUseCases: DownloadsUseCases by lazy { DownloadsUseCases(store) }
+    val downloadsUseCases: DownloadsUseCases by lazy { DownloadsUseCases(store, applicationContext) }
     val contextMenuUseCases: ContextMenuUseCases by lazy { ContextMenuUseCases(store) }
     
     // Custom Tabs
