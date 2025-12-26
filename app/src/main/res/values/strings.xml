@@ -803,6 +803,7 @@
     <string name="mozac_feature_toolbar_back_button">Back</string>
     <string name="mozac_feature_toolbar_forward_button">Forward</string>
     <string name="scan_qr_code">Scan QR code</string>
+    <string name="change_search_engine">Change Search Engine</string>
   <string name="webapps_category_header">Manage Web Apps</string>
 
 

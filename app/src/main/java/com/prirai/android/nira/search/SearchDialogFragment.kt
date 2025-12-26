@@ -249,8 +249,21 @@ class SearchDialogFragment : AppCompatDialogFragment(), UserInteractionHandler {
             val qrScanner = com.prirai.android.nira.integration.QrScannerIntegration(
                 context = requireContext(),
                 fragment = this,
-                onScanResult = { url ->
-                    requireContext().components.sessionUseCases.loadUrl(url)
+                onScanResult = { scannedText ->
+                    // Process the scanned QR code and open it as a URL
+                    val url = scannedText.trim()
+                    
+                    // Hide keyboard and dismiss search dialog
+                    view.hideKeyboard()
+                    
+                    // Use the same navigation method as other search actions
+                    (activity as? BrowserActivity)?.openToBrowserAndLoad(
+                        searchTermOrURL = url,
+                        newTab = store.state.tabId == null,
+                        from = BrowserDirection.FromSearchDialog,
+                        engine = store.state.searchEngineSource.searchEngine
+                    )
+                    
                     dismiss()
                 },
                 onNeedToRequestPermissions = { permissions ->
