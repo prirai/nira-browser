@@ -346,6 +346,8 @@ class ModernTabPillAdapter(
                 when (event.action) {
                     android.view.MotionEvent.ACTION_DOWN -> {
                         isDragging = false // Reset class-level isDragging
+                        startY = event.rawY
+                        startX = event.rawX
                         false // Let RecyclerView handle scrolling
                     }
 
@@ -1195,6 +1197,8 @@ class ModernTabPillAdapter(
                     android.view.MotionEvent.ACTION_DOWN -> {
                         isDragging = false
                         hasMoved = false
+                        startY = event.rawY
+                        startX = event.rawX
                         
                         // Start manual long-press timer
                         longPressRunnable = Runnable {
@@ -1226,6 +1230,7 @@ class ModernTabPillAdapter(
                         
                         // Detect vertical movement for swipe
                         if (Math.abs(deltaY) > 5) {
+                            hasMoved = true
                         }
 
                         // Check if user is trying to swipe up for delete
@@ -1338,10 +1343,10 @@ class ModernTabPillAdapter(
             val removeItem = popupMenu.menu.add(0, 2, 1, "Remove from Group")
             removeItem.setIcon(R.drawable.ungroup_24px)
 
-            val moveToProfileItem = popupMenu.menu.add(0, 2, 1, "Move to Profile")
+            val moveToProfileItem = popupMenu.menu.add(0, 3, 2, "Move to Profile")
             moveToProfileItem.setIcon(R.drawable.move_item_24px)
 
-            val closeItem = popupMenu.menu.add(0, 3, 2, "Close Tab")
+            val closeItem = popupMenu.menu.add(0, 4, 3, "Close Tab")
             closeItem.setIcon(R.drawable.ic_round_close)
             
             // Force icons to show
