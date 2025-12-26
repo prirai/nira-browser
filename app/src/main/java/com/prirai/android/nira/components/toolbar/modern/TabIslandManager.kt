@@ -1,7 +1,6 @@
 package com.prirai.android.nira.components.toolbar.modern
 
 import android.content.Context
-import android.util.Log
 import com.prirai.android.nira.browser.tabgroups.TabGroupData
 import com.prirai.android.nira.browser.tabgroups.UnifiedTabGroupManager
 import kotlinx.coroutines.CoroutineScope
@@ -32,8 +31,6 @@ class TabIslandManager(private val context: Context) {
     private val changeListeners = mutableListOf<() -> Unit>()
 
     companion object {
-        private const val TAG = "TabIslandManager"
-
         @Volatile
         private var instance: TabIslandManager? = null
 
@@ -93,8 +90,6 @@ class TabIslandManager(private val context: Context) {
         name: String? = null,
         colorIndex: Int? = null
     ): TabIsland {
-        Log.d(TAG, "createIsland: Creating island with ${tabIds.size} tabs, name=$name")
-        
         val color = if (colorIndex != null) {
             TabIsland.DEFAULT_COLORS[colorIndex % TabIsland.DEFAULT_COLORS.size]
         } else {
@@ -102,15 +97,13 @@ class TabIslandManager(private val context: Context) {
         }
         
         scope.launch {
-            val group = unifiedManager.createGroup(
+            unifiedManager.createGroup(
                 tabIds = tabIds,
                 name = name ?: "",
                 color = color
             )
-            Log.d(TAG, "createIsland: Created group ${group.id}")
         }
         
-        // Return optimistic result
         return TabIsland(
             id = java.util.UUID.randomUUID().toString(),
             name = name ?: "",
@@ -120,12 +113,7 @@ class TabIslandManager(private val context: Context) {
         )
     }
 
-    /**
-     * Adds a tab to an existing island
-     */
     fun addTabToIsland(tabId: String, islandId: String): Boolean {
-        Log.d(TAG, "addTabToIsland: Adding tab $tabId to island $islandId")
-
         scope.launch {
             unifiedManager.addTabToGroup(tabId, islandId)
         }
@@ -133,12 +121,7 @@ class TabIslandManager(private val context: Context) {
         return true
     }
 
-    /**
-     * Removes a tab from an island
-     */
     fun removeTabFromIsland(tabId: String, islandId: String): Boolean {
-        Log.d(TAG, "removeTabFromIsland: Removing tab $tabId from island $islandId")
-
         scope.launch {
             unifiedManager.removeTabFromGroup(tabId)
         }
@@ -244,8 +227,6 @@ class TabIslandManager(private val context: Context) {
      * Deletes an island (ungroups all tabs)
      */
     fun deleteIsland(islandId: String): Boolean {
-        Log.d(TAG, "deleteIsland: Deleting island $islandId")
-
         scope.launch {
             unifiedManager.deleteGroup(islandId)
         }

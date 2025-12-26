@@ -219,19 +219,25 @@ class DefaultBrowserToolbarMenuController(
             }
 
             is ToolbarMenu.Item.NewTab -> {
+                val profileManager = com.prirai.android.nira.browser.profile.ProfileManager.getInstance(activity)
+                val currentProfile = profileManager.getActiveProfile()
+                val contextId = "profile_${currentProfile.id}"
+                
                 activity.components.tabsUseCases.addTab.invoke(
                     "about:homepage",
-                    selectTab = true
+                    selectTab = true,
+                    contextId = contextId
                 )
             }
 
             is ToolbarMenu.Item.NewPrivateTab -> {
-                // Switch to private mode first
                 activity.browsingModeManager.mode = com.prirai.android.nira.browser.BrowsingMode.Private
                 
                 activity.components.tabsUseCases.addTab.invoke(
                     "about:homepage",
-                    selectTab = true, private = true
+                    selectTab = true,
+                    private = true,
+                    contextId = "private"
                 )
             }
 
