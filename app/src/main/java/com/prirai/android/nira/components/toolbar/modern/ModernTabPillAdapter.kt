@@ -128,11 +128,6 @@ class ModernTabPillAdapter(
 
         // If only selection changed, just update affected items
         if (!itemsChanged && oldSelectedId != selectedId) {
-            android.util.Log.d(
-                "ModernTabPillAdapter",
-                "updateDisplayItems: Only selection changed, updating affected items"
-            )
-            // Find and update only the selected/deselected items
             displayItems.forEachIndexed { index, item ->
                 when (item) {
                     is TabPillItem.Tab -> {
@@ -170,30 +165,20 @@ class ModernTabPillAdapter(
 
         when {
             oldSize == 0 && items.isNotEmpty() -> {
-
                 notifyItemRangeInserted(0, items.size)
             }
 
             oldSize > items.size -> {
-                android.util.Log.d(
-                    "ModernTabPillAdapter",
-                    "updateDisplayItems: Items removed, notifying range changed and removed"
-                )
                 notifyItemRangeChanged(0, items.size)
                 notifyItemRangeRemoved(items.size, oldSize - items.size)
             }
 
             oldSize < items.size -> {
-                android.util.Log.d(
-                    "ModernTabPillAdapter",
-                    "updateDisplayItems: Items added, notifying range changed and inserted"
-                )
                 notifyItemRangeChanged(0, oldSize)
                 notifyItemRangeInserted(oldSize, items.size - oldSize)
             }
 
             else -> {
-
                 notifyItemRangeChanged(0, items.size)
             }
         }
@@ -431,11 +416,7 @@ class ModernTabPillAdapter(
                                     ?.setDuration(250)
                                     ?.withEndAction {
                                         decorView?.removeView(dragClone)
-                                        // Trigger actual delete
-                                        currentTabId?.let { 
-                                            android.util.Log.d("ModernTabPillAdapter", "Deleting standalone tab: $it")
-                                            onTabClose(it) 
-                                        }
+                                        currentTabId?.let { onTabClose(it) }
                                     }
                                     ?.start()
                             } else {
@@ -634,10 +615,7 @@ class ModernTabPillAdapter(
                                 .setDuration(300)
                                 .setInterpolator(android.view.animation.AccelerateInterpolator())
                                 .withEndAction {
-                                    currentTabId?.let { 
-                                        android.util.Log.d("ModernTabPillAdapter", "Deleting standalone tab: $it")
-                                        onTabClose(it) 
-                                    }
+                                    currentTabId?.let { onTabClose(it) }
                                 }
                                 .start()
                         }
@@ -1322,8 +1300,6 @@ class ModernTabPillAdapter(
                                     ?.setDuration(250)
                                     ?.withEndAction {
                                         decorView?.removeView(dragClone)
-                                        // Trigger actual delete
-                                        android.util.Log.d("ModernTabPillAdapter", "Deleting grouped tab: $tabId")
                                         onTabClose(tabId)
                                     }
                                     ?.start()

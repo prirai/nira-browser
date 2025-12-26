@@ -191,7 +191,7 @@ class ComposeHomeFragment : Fragment() {
                         bookmarks = bookmarks,
                         isBookmarkExpanded = isBookmarkExpanded,
                         currentProfile = currentProfile,
-                        onProfileClick = { showProfileSwitcher() },
+                        onProfileClick = {}, // Profile icon is now display-only
                         backgroundImageUrl = backgroundImageUrl,
                         isToolbarAtTop = isToolbarAtTop,
                         onShortcutClick = { shortcut ->
@@ -540,76 +540,6 @@ class ComposeHomeFragment : Fragment() {
                 findNavController().navigate(R.id.browserFragment)
             }
         }
-    }
-
-    private fun showProfileSwitcher() {
-        val profileManager =
-            com.prirai.android.nira.browser.profile.ProfileManager.getInstance(requireContext())
-        val allProfiles = profileManager.getAllProfiles()
-        val currentProfile = profileManager.getActiveProfile()
-        val isPrivate = profileManager.isPrivateMode()
-
-        val items = allProfiles.map { "${it.emoji} ${it.name}" }.toMutableList()
-        items.add("🕵️ Private")
-
-        // Find currently selected index
-        val selectedIndex = if (isPrivate) {
-            items.size - 1
-        } else {
-            allProfiles.indexOfFirst { it.id == currentProfile.id }.takeIf { it >= 0 } ?: 0
-        }
-
-        MaterialAlertDialogBuilder(requireContext())
-            .setTitle("Switch Profile")
-            .setSingleChoiceItems(items.toTypedArray(), selectedIndex) { dialog, which ->
-                val currentSelectedTab = components.store.state.selectedTab
-                
-                if (which == items.size - 1) {
-                    // Switch to private mode
-                    browsingModeManager.mode = BrowsingMode.Private
-                    profileManager.setPrivateMode(true)
-                    saveLastMode(isPrivate = true, profileId = null)
-                    
-                    // Migrate current tab to private mode if it exists and is not already private
-                    if (currentSelectedTab != null && !currentSelectedTab.content.private) {
-                        profileManager.migrateTabToProfile(currentSelectedTab.id, "private")
-                    } else if (currentSelectedTab == null) {
-                        // No tab to migrate, create a new private tab
-                        components.tabsUseCases.addTab(
-                            url = "about:homepage",
-                            selectTab = true,
-                            private = true,
-                            contextId = "private"
-                        )
-                    }
-                } else {
-                    val selectedProfile = allProfiles[which]
-                    browsingModeManager.mode = BrowsingMode.Normal
-                    profileManager.setActiveProfile(selectedProfile)
-                    profileManager.setPrivateMode(false)
-                    saveLastMode(isPrivate = false, profileId = selectedProfile.id)
-                    
-                    // Migrate current tab to the new profile if it exists
-                    if (currentSelectedTab != null) {
-                        profileManager.migrateTabToProfile(currentSelectedTab.id, selectedProfile.id)
-                    } else {
-                        // No tab to migrate, create a new tab for this profile
-                        val profileContextId = "profile_${selectedProfile.id}"
-                        components.tabsUseCases.addTab(
-                            url = "about:homepage",
-                            selectTab = true,
-                            private = false,
-                            contextId = profileContextId
-                        )
-                    }
-                }
-                
-                // Update the UI to reflect profile change
-                updateProfileUI()
-                
-                dialog.dismiss()
-            }
-            .show()
     }
 
     private fun saveLastMode(isPrivate: Boolean, profileId: String?) {
