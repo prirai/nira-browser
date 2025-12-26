@@ -31,7 +31,8 @@ object WebAppInstaller {
     ): Boolean = withContext(Dispatchers.IO) {
         // Extract base URL instead of using current page URL
         val baseUrl = WebAppManager.getBaseUrl(session.content.url)
-        val title = (manifest?.name ?: manifest?.shortName ?: session.content.title)?.takeIf { it.isNotBlank() } ?: baseUrl
+        val title = (manifest?.name ?: manifest?.shortName ?: session.content.title).takeIf { it.isNotBlank() }
+            ?: baseUrl
 
         val webAppManager = com.prirai.android.nira.components.Components(context).webAppManager
 

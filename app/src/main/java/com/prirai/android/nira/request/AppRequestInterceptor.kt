@@ -116,7 +116,7 @@ class AppRequestInterceptor(val context: Context) : RequestInterceptor {
         if (response == null && !isDirectNavigation) {
             response = context.components.webAppInterceptor.onLoadRequest(
                 engineSession, uri, lastUri, hasUserGesture, isSameDomain, isRedirect,
-                isDirectNavigation, isSubframeRequest
+                false, isSubframeRequest
             )
         }
 

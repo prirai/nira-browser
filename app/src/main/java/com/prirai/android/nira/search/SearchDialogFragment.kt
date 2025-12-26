@@ -388,7 +388,7 @@ class SearchDialogFragment : AppCompatDialogFragment(), UserInteractionHandler {
                     components.engine.speculativeConnect(clipboardUrl)
                 }
                 binding.clipboardUrl.text = clipboardUrl
-                binding.clipboardUrl.isVisible = shouldShowView
+                binding.clipboardUrl.isVisible = true
                 "${binding.clipboardTitle.text}, ${binding.clipboardUrl.text}."
             }
 

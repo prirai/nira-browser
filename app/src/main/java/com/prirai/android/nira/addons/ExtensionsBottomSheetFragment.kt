@@ -62,6 +62,7 @@ import kotlinx.coroutines.withContext
 import mozilla.components.browser.state.selector.selectedTab
 import mozilla.components.feature.addons.Addon
 import mozilla.components.feature.addons.ui.translateName
+import androidx.compose.ui.res.stringResource
 
 private fun Context.getColorFromAttr(attr: Int): Int {
     val typedValue = android.util.TypedValue()

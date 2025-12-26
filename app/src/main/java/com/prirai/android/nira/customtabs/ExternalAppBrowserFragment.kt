@@ -368,7 +368,7 @@ class ExternalAppBrowserFragment : Fragment(), UserInteractionHandler {
                 restorePreviousLayout = {}
             ),
             owner = this,
-            view = view!!
+            view = requireView()
         )
     }
     

@@ -160,7 +160,6 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
                     removedTabIds.forEach { tabId: String ->
                         lruManager.onTabClosed(tabId)
                     }
-                    lastTabIds = currentTabIds
                 }
             }
         }
@@ -517,11 +516,7 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
                     // Detect new tabs for auto-grouping
                     val currentTabIds = state.tabs.map { it.id }.toSet()
                     currentTabIds - lastTabIds
-
-                    lastTabIds = currentTabIds
-
-                    // Tabs are updated automatically via store observation in UnifiedToolbar
-
+                    
                     // Update toolbar with current context
                     val currentSelectedTab = state.tabs.find { it.id == state.selectedTabId }
                     val currentUrl = currentSelectedTab?.content?.url ?: ""

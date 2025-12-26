@@ -114,8 +114,7 @@ class Material3BrowserMenu(
             
             // Check available space below and above
             screenHeight - (anchorY + anchor.height)
-            anchorY
-            
+
             // Determine if anchor is in the bottom half of the screen (contextual toolbar case)
             val anchorInBottomHalf = anchorY > screenHeight / 2
             

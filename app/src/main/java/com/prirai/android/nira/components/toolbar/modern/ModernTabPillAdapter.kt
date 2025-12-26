@@ -158,7 +158,7 @@ class ModernTabPillAdapter(
         }
 
         // If nothing changed at all, skip update
-        if (!itemsChanged && oldSelectedId == selectedId) {
+        if (!itemsChanged) {
 
             return
         }
@@ -345,10 +345,6 @@ class ModernTabPillAdapter(
             cardView.setOnTouchListener { v, event ->
                 when (event.action) {
                     android.view.MotionEvent.ACTION_DOWN -> {
-                        startY = event.rawY
-                        startX = event.rawX
-                        localIsDragging = false
-                        hasMoved = false
                         isDragging = false // Reset class-level isDragging
                         false // Let RecyclerView handle scrolling
                     }
@@ -359,7 +355,6 @@ class ModernTabPillAdapter(
                         
                         // Detect horizontal scrolling and mark as moved
                         if (deltaX > 5) {
-                            hasMoved = true
                             isDragging = true // Prevent long-press menu
                             // Don't consume event - let RecyclerView scroll
                             return@setOnTouchListener false
@@ -367,7 +362,6 @@ class ModernTabPillAdapter(
                         
                         // Detect any movement for long-press prevention
                         if (Math.abs(deltaY) > 5) {
-                            hasMoved = true
                             isDragging = true
                         }
 
@@ -435,7 +429,6 @@ class ModernTabPillAdapter(
                                     ?.setDuration(250)
                                     ?.withEndAction {
                                         decorView?.removeView(dragClone)
-                                        dragClone = null
                                         // Trigger actual delete
                                         currentTabId?.let { 
                                             android.util.Log.d("ModernTabPillAdapter", "Deleting standalone tab: $it")
@@ -453,18 +446,14 @@ class ModernTabPillAdapter(
                                     ?.setDuration(200)
                                     ?.withEndAction {
                                         decorView?.removeView(dragClone)
-                                        dragClone = null
                                         cardView.alpha = 1f
                                         isDragging = false
                                     }
                                     ?.start()
                             }
-                            localIsDragging = false
-                            hasMoved = false
                             true
                         } else if (hasMoved) {
                             // Finger moved but didn't drag up - don't trigger click or long-press
-                            hasMoved = false
                             isDragging = false
                             true
                         } else {
@@ -1204,8 +1193,6 @@ class ModernTabPillAdapter(
             tabContent.setOnTouchListener { v, event ->
                 when (event.action) {
                     android.view.MotionEvent.ACTION_DOWN -> {
-                        startY = event.rawY
-                        startX = event.rawX
                         isDragging = false
                         hasMoved = false
                         
@@ -1233,14 +1220,12 @@ class ModernTabPillAdapter(
                         
                         // Detect horizontal scrolling
                         if (deltaX > 20 && deltaX > Math.abs(deltaY)) {
-                            hasMoved = true
                             // Don't consume event - let RecyclerView scroll
                             return@setOnTouchListener false
                         }
                         
                         // Detect vertical movement for swipe
                         if (Math.abs(deltaY) > 5) {
-                            hasMoved = true
                         }
 
                         // Check if user is trying to swipe up for delete
@@ -1294,8 +1279,7 @@ class ModernTabPillAdapter(
 
                     android.view.MotionEvent.ACTION_UP, android.view.MotionEvent.ACTION_CANCEL -> {
                         longPressRunnable?.let { handler.removeCallbacks(it) }
-                        longPressRunnable = null
-                        
+
                         if (isDragging) {
                             val deltaY = startY - event.rawY
                             if (deltaY > 100) {
@@ -1309,7 +1293,6 @@ class ModernTabPillAdapter(
                                     ?.setDuration(250)
                                     ?.withEndAction {
                                         decorView?.removeView(dragClone)
-                                        dragClone = null
                                         // Trigger actual delete
                                         android.util.Log.d("ModernTabPillAdapter", "Deleting grouped tab: $tabId")
                                         onTabClose(tabId)
@@ -1325,17 +1308,13 @@ class ModernTabPillAdapter(
                                     ?.setDuration(200)
                                     ?.withEndAction {
                                         decorView?.removeView(dragClone)
-                                        dragClone = null
                                         tabView.alpha = 1f
                                     }
                                     ?.start()
                             }
-                            isDragging = false
-                            hasMoved = false
                             true
                         } else if (hasMoved) {
                             // Finger moved but didn't drag up - don't trigger click
-                            hasMoved = false
                             true
                         } else {
                             // No movement - allow click to proceed

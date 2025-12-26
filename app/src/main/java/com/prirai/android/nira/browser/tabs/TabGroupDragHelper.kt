@@ -153,7 +153,6 @@ class TabGroupDragHelper(
             // Check if we're currently over a valid drop target
             val currentY = viewHolder.itemView.y + dY
             var isOverValidTarget = false
-            -1
             
             // Check each item in the adapter to see if we're hovering over it
             for (i in 0 until adapter.itemCount) {

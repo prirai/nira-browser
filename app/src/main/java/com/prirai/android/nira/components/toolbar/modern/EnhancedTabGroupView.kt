@@ -490,7 +490,7 @@ class EnhancedTabGroupView @JvmOverloads constructor(
                 islandManager.addTabToIsland(tabId1, island2.id)
             }
 
-            island1 == null && island2 == null -> {
+            island1 == null -> {
 
                 // Neither in island, create new one maintaining order
                 // Create island with tabs in their current order
@@ -499,7 +499,7 @@ class EnhancedTabGroupView @JvmOverloads constructor(
                 islandManager.createIsland(orderedTabs)
             }
 
-            island1 != null && island2 != null && island1.id != island2.id -> {
+            island2 != null && island1.id != island2.id -> {
 
                 // Both in different islands, merge into island2
                 islandManager.addTabToIsland(tabId1, island2.id)
@@ -581,7 +581,7 @@ class EnhancedTabGroupView @JvmOverloads constructor(
                 // Update adapter with fresh display items
                 lastDisplayItemsCount = displayItems.size
                 tabAdapter.updateDisplayItems(displayItems, selectedId)
-            } else if (hasSelectionChanged) {
+            } else {
                 // Only selection changed, just update that
                 val displayItems = islandManager.createDisplayItems(tabs)
                 tabAdapter.updateDisplayItems(displayItems, selectedId)
