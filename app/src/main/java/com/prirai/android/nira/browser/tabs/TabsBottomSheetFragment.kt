@@ -114,7 +114,8 @@ class TabsBottomSheetFragment : DialogFragment() {
         
         binding.newTabFab.setOnClickListener {
             addNewTab()
-            dismiss()
+            // Post dismiss to avoid touch event recycling crash
+            view?.post { dismiss() }
         }
         
         binding.searchTabFab.setOnClickListener {
@@ -147,7 +148,8 @@ class TabsBottomSheetFragment : DialogFragment() {
                     // Ignore navigation errors
                 }
                 
-                dismiss()
+                // Post dismiss to avoid touch event recycling crash
+                view?.post { dismiss() }
             },
             onTabClose = { tabId ->
                 requireContext().components.tabsUseCases.removeTab(tabId)
@@ -611,9 +613,10 @@ class TabsBottomSheetFragment : DialogFragment() {
             try {
                 NavHostFragment.findNavController(this@TabsBottomSheetFragment)
                     .navigate(R.id.homeFragment)
-                dismiss()
+                // Post dismiss to avoid touch event recycling crash
+                view?.post { dismiss() }
             } catch (e: Exception) {
-                dismiss()
+                view?.post { dismiss() }
             }
         }
     }
