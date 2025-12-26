@@ -36,18 +36,15 @@ class TabLRUManager private constructor(context: Context) {
     
     /**
      * Synchronize LRU queue with current tabs after restore.
-     * Removes stale IDs and adds new tabs to the end.
+     * Order: [accessed tabs in LRU order] + [unvisited tabs in their original order]
      */
     fun synchronizeWithTabs(currentTabIds: List<String>) {
-        // Remove tab IDs that no longer exist
+        // Keep only existing tabs in LRU queue (these are accessed tabs)
         lruQueue.retainAll(currentTabIds.toSet())
         
-        // Add new tabs that aren't in the queue yet (at the end)
-        for (tabId in currentTabIds) {
-            if (!lruQueue.contains(tabId)) {
-                lruQueue.addLast(tabId)
-            }
-        }
+        // Find tabs not in LRU queue (unvisited tabs) and add them in order they appear
+        val unvisitedTabs = currentTabIds.filter { !lruQueue.contains(it) }
+        lruQueue.addAll(unvisitedTabs)
         
         saveToPrefs()
     }
@@ -58,17 +55,14 @@ class TabLRUManager private constructor(context: Context) {
         
         val targetIndex = currentIndex + offset
         
-        // Handle rollover: if at the end (most recent) and swiping right (-1),
-        // wrap around to the oldest tab (last in queue)
+        // Wrap around at boundaries for circular navigation
         return when {
             targetIndex < 0 -> {
-                // Swiping to newer tabs, but already at newest
-                // Rollover to oldest tab
+                // Wrap to the end (oldest/last unvisited tab)
                 lruQueue.lastOrNull()
             }
             targetIndex >= lruQueue.size -> {
-                // Swiping to older tabs, but already at oldest
-                // Rollover to newest tab
+                // Wrap to the beginning (most recent tab)
                 lruQueue.firstOrNull()
             }
             else -> {
