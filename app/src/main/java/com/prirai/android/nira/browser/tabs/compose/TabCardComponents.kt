@@ -205,6 +205,64 @@ fun FaviconImage(
 }
 
 /**
+ * Thumbnail image for grid view - uses Coil to load from thumbnail storage
+ */
+@Composable
+fun ThumbnailImage(
+    tab: TabSessionState,
+    modifier: Modifier = Modifier
+) {
+    val context = LocalContext.current
+    
+    Box(
+        modifier = modifier
+            .aspectRatio(16f / 10f)
+            .clip(RoundedCornerShape(8.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant),
+        contentAlignment = Alignment.Center
+    ) {
+        // Use Coil AsyncImage to load thumbnail from storage
+        val imageRequest = remember(tab.id) {
+            ImageRequest.Builder(context)
+                .data("moz-tab-thumbnail://${tab.id}")
+                .crossfade(true)
+                .build()
+        }
+        
+        AsyncImage(
+            model = imageRequest,
+            contentDescription = "Tab thumbnail",
+            modifier = Modifier.fillMaxSize()
+        )
+        
+        // Fallback content when no thumbnail available
+        if (tab.content.icon == null) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center,
+                modifier = Modifier.fillMaxSize()
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Language,
+                    contentDescription = "No thumbnail",
+                    modifier = Modifier.size(48.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = tab.content.title.takeIf { it.isNotBlank() } ?: "New Tab",
+                    style = MaterialTheme.typography.bodySmall,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = 16.dp)
+                )
+            }
+        }
+    }
+}
+
+/**
  * Group header card
  */
 @Composable
@@ -230,7 +288,7 @@ fun GroupHeaderCard(
         shape = getGroupHeaderShape(),
         colors = CardDefaults.cardColors(
             containerColor = if (isTarget) {
-                getDragTargetColor(DragFeedback.HIGHLIGHT_GROUP)
+                getDragTargetColor(DragFeedback.MoveToGroup)
             } else {
                 Color(group.color).copy(alpha = 0.15f)
             }

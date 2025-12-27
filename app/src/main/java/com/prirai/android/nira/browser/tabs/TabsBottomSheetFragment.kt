@@ -10,6 +10,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.fragment.app.DialogFragment
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.NavHostFragment
@@ -27,6 +28,9 @@ import com.prirai.android.nira.browser.BrowsingMode
 import com.prirai.android.nira.browser.BrowsingModeManager
 import com.prirai.android.nira.browser.tabgroups.TabGroupManager
 import com.prirai.android.nira.browser.tabgroups.UnifiedTabGroupManager
+import com.prirai.android.nira.browser.tabs.compose.TabViewModel
+import com.prirai.android.nira.browser.tabs.compose.TabSheetListView
+import com.prirai.android.nira.browser.tabs.compose.TabSheetGridView
 import com.prirai.android.nira.databinding.FragmentTabsBottomSheetBinding
 import com.prirai.android.nira.ext.components
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -59,6 +63,7 @@ class TabsBottomSheetFragment : DialogFragment() {
     // Compose tab system
     private var useComposeTabSystem = true // Feature flag to enable Compose
     private var composeOrderManager: com.prirai.android.nira.browser.tabs.compose.TabOrderManager? = null
+    private var tabViewModel: com.prirai.android.nira.browser.tabs.compose.TabViewModel? = null
     
     // Mutable state for Compose to observe profile/mode changes
     private val profileStateTrigger = mutableStateOf(0)
@@ -425,7 +430,7 @@ class TabsBottomSheetFragment : DialogFragment() {
                 browsingModeManager.mode = BrowsingMode.Private
                 profileManager.setPrivateMode(true)
                 updateTabsDisplay()
-                // Trigger Compose recomposition
+                // Trigger Compose recomposition (it will automatically refresh via LaunchedEffect)
                 profileStateTrigger.value++
             }
         } else {
@@ -437,7 +442,7 @@ class TabsBottomSheetFragment : DialogFragment() {
                 profileManager.setActiveProfile(profile)
                 profileManager.setPrivateMode(false)
                 updateTabsDisplay()
-                // Trigger Compose recomposition
+                // Trigger Compose recomposition (it will automatically refresh via LaunchedEffect)
                 profileStateTrigger.value++
             }
         }
@@ -574,7 +579,7 @@ class TabsBottomSheetFragment : DialogFragment() {
                 }
             }
 
-            tabsGridAdapter!!.updateItems(gridItems, store.selectedTabId)
+            tabsGridAdapter?.updateItems(gridItems, store.selectedTabId)
             
             if (filteredTabs.isEmpty()) {
                 binding.tabsGridRecyclerView.visibility = View.GONE
@@ -1190,126 +1195,108 @@ class TabsBottomSheetFragment : DialogFragment() {
     
     @Composable
     private fun ComposeTabContent() {
-        // Observe browsing mode and profile changes
-        val browsingMode = browsingModeManager.mode
-        val currentProfile = browsingModeManager.currentProfile
-        
         // Trigger recomposition when profile/mode changes
         val trigger by profileStateTrigger
         
-        val tabs by produceState(
-            initialValue = emptyList<mozilla.components.browser.state.state.TabSessionState>(), 
-            requireContext().components.store, 
-            browsingMode, 
-            currentProfile,
-            trigger  // Add trigger to force recomposition
-        ) {
-            requireContext().components.store.flowScoped(viewLifecycleOwner) { flow ->
-                flow.map { state ->
-                    val isPrivateMode = browsingMode.isPrivate
-                    
+        // Capture current browsing mode and profile based on trigger
+        // This ensures we get fresh values on each profile switch
+        val browsingMode = remember(trigger) { browsingModeManager.mode }
+        val currentProfile = remember(trigger) { browsingModeManager.currentProfile }
+        
+        // Create ViewModel once and store it
+        val viewModel = remember {
+            TabViewModel(requireContext(), unifiedGroupManager).also {
+                tabViewModel = it
+            }
+        }
+        
+        // Simple approach: Load tabs directly when profile changes, then observe store updates
+        LaunchedEffect(browsingMode, currentProfile, trigger) {
+            val store = requireContext().components.store
+            val isPrivateMode = browsingMode.isPrivate
+            val activeProfile = currentProfile
+            val profileId = if (isPrivateMode) "private" else activeProfile.id
+            
+            // Collect tabs from store and update ViewModel
+            store.flowScoped(viewLifecycleOwner) { flow ->
+                flow.collect { state ->
                     // Filter tabs based on mode and profile
-                    state.tabs.filter { tab ->
+                    val filteredTabs = state.tabs.filter { tab ->
                         val tabIsPrivate = tab.content.private
                         if (tabIsPrivate != isPrivateMode) {
                             false
                         } else if (isPrivateMode) {
                             tab.contextId == "private"
                         } else {
-                            val expectedContextId = "profile_${currentProfile.id}"
-                            (tab.contextId == expectedContextId) || (tab.contextId == null)
+                            val expectedContextId = "profile_${activeProfile.id}"
+                            // Default profile shows null contextId tabs, other profiles don't
+                            if (activeProfile.id == "default") {
+                                (tab.contextId == expectedContextId) || (tab.contextId == null)
+                            } else {
+                                tab.contextId == expectedContextId
+                            }
                         }
                     }
-                }.collect { value = it }
-            }
-        }
-        
-        val selectedTabId by produceState(initialValue = null as String?, requireContext().components.store) {
-            requireContext().components.store.flowScoped(viewLifecycleOwner) { flow ->
-                flow.map { it.selectedTabId }.collect { value = it }
-            }
-        }
-        
-        // Get existing groups from UnifiedTabGroupManager
-        val existingGroups by produceState<List<com.prirai.android.nira.browser.tabgroups.TabGroupData>>(initialValue = emptyList(), unifiedGroupManager) {
-            unifiedGroupManager.groupsState.collect { groups ->
-                value = groups
-            }
-        }
-        
-        // Initialize order from existing groups
-        LaunchedEffect(tabs.size, existingGroups.size) {
-            val currentTabs = tabs
-            val currentGroups = existingGroups
-            
-            if (currentTabs.isNotEmpty()) {
-                val isPrivateMode = browsingModeManager.mode.isPrivate
-                val currentProfile = browsingModeManager.currentProfile
-                val profileId = if (isPrivateMode) "private" else currentProfile.id
-                
-                // Build order from existing groups
-                val orderItems = mutableListOf<com.prirai.android.nira.browser.tabs.compose.UnifiedTabOrder.OrderItem>()
-                val groupedTabIds = mutableSetOf<String>()
-                
-                // Add existing groups first
-                currentGroups.forEach { groupData ->
-                    val groupTabIds = groupData.tabIds.filter { tabId ->
-                        currentTabs.any { it.id == tabId }
-                    }
                     
-                    if (groupTabIds.size >= 2) {
-                        // groupData.color is already an Int
-                        orderItems.add(
-                            com.prirai.android.nira.browser.tabs.compose.UnifiedTabOrder.OrderItem.TabGroup(
-                                groupId = groupData.id,
-                                groupName = groupData.name.ifBlank { "Group ${groupData.tabCount}" },
-                                color = groupData.color,
-                                isExpanded = !groupData.isCollapsed,
-                                tabIds = groupTabIds
-                            )
-                        )
-                        groupedTabIds.addAll(groupTabIds)
+                    // Update ViewModel with filtered tabs
+                    viewModel.loadTabsForProfile(profileId, filteredTabs, state.selectedTabId)
+                }
+            }
+        }
+        
+        // Observe group changes and trigger refresh
+        LaunchedEffect(Unit) {
+            unifiedGroupManager.groupEvents.collect { event ->
+                // When groups change, force a refresh with current store state
+                val store = requireContext().components.store
+                val state = store.state
+                val isPrivateMode = browsingMode.isPrivate
+                val activeProfile = currentProfile
+                
+                val filteredTabs = state.tabs.filter { tab ->
+                    val tabIsPrivate = tab.content.private
+                    if (tabIsPrivate != isPrivateMode) {
+                        false
+                    } else if (isPrivateMode) {
+                        tab.contextId == "private"
+                    } else {
+                        val expectedContextId = "profile_${activeProfile.id}"
+                        if (activeProfile.id == "default") {
+                            (tab.contextId == expectedContextId) || (tab.contextId == null)
+                        } else {
+                            tab.contextId == expectedContextId
+                        }
                     }
                 }
                 
-                // Add ungrouped tabs
-                currentTabs.forEach { tab ->
-                    if (tab.id !in groupedTabIds) {
-                        orderItems.add(
-                            com.prirai.android.nira.browser.tabs.compose.UnifiedTabOrder.OrderItem.SingleTab(tab.id)
-                        )
-                    }
-                }
-                
-                // Save the order
-                val order = com.prirai.android.nira.browser.tabs.compose.UnifiedTabOrder(
-                    profileId = profileId,
-                    primaryOrder = orderItems,
-                    lastModified = System.currentTimeMillis()
-                )
-                composeOrderManager!!.saveOrder(order)
+                viewModel.forceRefresh(filteredTabs, state.selectedTabId)
             }
         }
         
         // Choose view based on grid mode
         if (isGridView) {
-            com.prirai.android.nira.browser.tabs.compose.TabSheetGridCompose(
-                tabs = tabs,
-                orderManager = composeOrderManager!!,
-                selectedTabId = selectedTabId,
+            TabSheetGridView(
+                viewModel = viewModel,
                 onTabClick = ::handleTabClickCompose,
                 onTabClose = ::handleTabCloseCompose,
-                onChangeGroupColor = ::showChangeGroupColorDialog,
-                columns = 3
+                onGroupClick = { groupId ->
+                    viewModel.toggleGroupExpanded(groupId)
+                },
+                onGroupOptionsClick = { groupId ->
+                    showGroupOptionsDialog(groupId, viewModel)
+                }
             )
         } else {
-            com.prirai.android.nira.browser.tabs.compose.TabSheetListCompose(
-                tabs = tabs,
-                orderManager = composeOrderManager!!,
-                selectedTabId = selectedTabId,
+            TabSheetListView(
+                viewModel = viewModel,
                 onTabClick = ::handleTabClickCompose,
                 onTabClose = ::handleTabCloseCompose,
-                onChangeGroupColor = ::showChangeGroupColorDialog
+                onGroupClick = { groupId ->
+                    viewModel.toggleGroupExpanded(groupId)
+                },
+                onGroupOptionsClick = { groupId ->
+                    showGroupOptionsDialog(groupId, viewModel)
+                }
             )
         }
     }
@@ -1324,7 +1311,93 @@ class TabsBottomSheetFragment : DialogFragment() {
     private fun handleTabCloseCompose(tabId: String) {
         lifecycleScope.launch {
             requireContext().components.tabsUseCases.removeTab(tabId)
-            composeOrderManager?.removeTab(tabId)
+        }
+    }
+    
+    private fun showGroupOptionsDialog(groupId: String, viewModel: TabViewModel) {
+        lifecycleScope.launch {
+            val group = unifiedGroupManager.getGroup(groupId) ?: return@launch
+            
+            val options = arrayOf("Rename Group", "Change Color", "Ungroup All")
+            
+            MaterialAlertDialogBuilder(requireContext())
+                .setTitle(group.name)
+                .setItems(options) { _, which ->
+                    when (which) {
+                        0 -> showRenameGroupDialog(groupId, group.name, viewModel)
+                        1 -> showChangeGroupColorDialogCompose(groupId, viewModel)
+                        2 -> {
+                            viewModel.ungroupAll(groupId)
+                        }
+                    }
+                }
+                .show()
+        }
+    }
+    
+    private fun showRenameGroupDialog(groupId: String, currentName: String, viewModel: TabViewModel) {
+        val input = android.widget.EditText(requireContext())
+        input.setText(currentName)
+        
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle("Rename Group")
+            .setView(input)
+            .setPositiveButton("Rename") { _, _ ->
+                val newName = input.text.toString()
+                if (newName.isNotBlank()) {
+                    viewModel.renameGroup(groupId, newName)
+                }
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+    
+    private fun showChangeGroupColorDialogCompose(groupId: String, viewModel: TabViewModel) {
+        lifecycleScope.launch {
+            val group = unifiedGroupManager.getGroup(groupId) ?: return@launch
+            val currentColor = group.color
+            
+            val dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_color_picker, null)
+            val recyclerView = dialogView.findViewById<RecyclerView>(R.id.colorRecyclerView)
+            
+            var selectedColorIndex = COLORS.indexOfFirst { getColorInt(it) == currentColor }.takeIf { it >= 0 } ?: 0
+            
+            val colorAdapter = object : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
+                override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
+                    val view = LayoutInflater.from(parent.context).inflate(R.layout.item_color_chip, parent, false)
+                    return object : RecyclerView.ViewHolder(view) {}
+                }
+                
+                override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
+                    val card = holder.itemView.findViewById<com.google.android.material.card.MaterialCardView>(R.id.colorCard)
+                    val colorView = holder.itemView.findViewById<View>(R.id.colorView)
+                    
+                    val colorInt = getColorInt(COLORS[position])
+                    colorView.setBackgroundColor(colorInt)
+                    card.isChecked = position == selectedColorIndex
+                    
+                    card.setOnClickListener {
+                        val oldSelection = selectedColorIndex
+                        selectedColorIndex = position
+                        notifyItemChanged(oldSelection)
+                        notifyItemChanged(selectedColorIndex)
+                    }
+                }
+                
+                override fun getItemCount() = COLORS.size
+            }
+            
+            recyclerView.adapter = colorAdapter
+            
+            MaterialAlertDialogBuilder(requireContext())
+                .setTitle("Choose Color")
+                .setView(dialogView)
+                .setPositiveButton("Apply") { _, _ ->
+                    val colorInt = getColorInt(COLORS[selectedColorIndex])
+                    viewModel.changeGroupColor(groupId, colorInt)
+                }
+                .setNegativeButton("Cancel", null)
+                .show()
         }
     }
     

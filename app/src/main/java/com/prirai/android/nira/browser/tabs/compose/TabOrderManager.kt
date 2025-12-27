@@ -72,6 +72,7 @@ class TabOrderManager(
         val item = newOrder.removeAt(fromIndex)
         newOrder.add(toIndex, item)
         saveOrder(current.copy(primaryOrder = newOrder))
+        syncToGroupManager()
     }
     
     /**
@@ -92,6 +93,7 @@ class TabOrderManager(
             }
         }
         saveOrder(current.copy(primaryOrder = newOrder))
+        syncToGroupManager()
     }
     
     // === GROUPING OPERATIONS ===
@@ -150,6 +152,7 @@ class TabOrderManager(
         remainingOrder.add(insertPos, newGroup)
         
         saveOrder(current.copy(primaryOrder = remainingOrder))
+        syncToGroupManager()
     }
     
     /**
@@ -185,6 +188,7 @@ class TabOrderManager(
         }
         
         saveOrder(current.copy(primaryOrder = newOrder))
+        syncToGroupManager()
     }
     
     /**
@@ -217,6 +221,7 @@ class TabOrderManager(
         newOrder.add(insertPos, ungroupedTab)
         
         saveOrder(current.copy(primaryOrder = newOrder))
+        syncToGroupManager()
     }
     
     /**
@@ -318,13 +323,125 @@ class TabOrderManager(
     }
     
     /**
-     * Initialize order from current tab state (for migration)
+     * Initialize order from current tab state and existing groups
+     * This syncs the Compose order with existing groups
      */
     suspend fun initializeFromTabs(profileId: String, tabIds: List<String>) {
+        // Get existing groups from UnifiedTabGroupManager
+        val existingGroups = groupManager.getAllGroups()
+        
+        val groupedTabIds = existingGroups.flatMap { it.tabIds }.toSet()
+        val ungroupedTabIds = tabIds.filter { it !in groupedTabIds }
+        
+        // Build order: groups first, then ungrouped tabs
+        // This maintains a stable order based on creation time
+        val primaryOrder = mutableListOf<UnifiedTabOrder.OrderItem>()
+        
+        // Add groups sorted by creation time
+        existingGroups.sortedBy { it.createdAt }.forEach { group ->
+            // Only include tabs that still exist
+            val validTabIds = group.tabIds.filter { it in tabIds }
+            if (validTabIds.isNotEmpty()) {
+                primaryOrder.add(
+                    UnifiedTabOrder.OrderItem.TabGroup(
+                        groupId = group.id,
+                        groupName = group.name,
+                        color = group.color,
+                        isExpanded = !group.isCollapsed,
+                        tabIds = validTabIds
+                    )
+                )
+            }
+        }
+        
+        // Add ungrouped tabs in the order they appear in tabIds
+        ungroupedTabIds.forEach { tabId ->
+            primaryOrder.add(UnifiedTabOrder.OrderItem.SingleTab(tabId))
+        }
+        
         val order = UnifiedTabOrder(
             profileId = profileId,
-            primaryOrder = tabIds.map { UnifiedTabOrder.OrderItem.SingleTab(it) }
+            primaryOrder = primaryOrder
         )
         saveOrder(order)
+    }
+    
+    /**
+     * Initialize from current state with groups
+     */
+    suspend fun initializeFromCurrentState(profileId: String, tabIds: List<String>, groups: List<com.prirai.android.nira.browser.tabgroups.TabGroupData>) {
+        val items = mutableListOf<UnifiedTabOrder.OrderItem>()
+        val processedTabIds = mutableSetOf<String>()
+        
+        // Add groups
+        groups.forEach { group ->
+            val validTabIds = group.tabIds.filter { it in tabIds }
+            if (validTabIds.isNotEmpty()) {
+                items.add(UnifiedTabOrder.OrderItem.TabGroup(
+                    groupId = group.id,
+                    groupName = group.name,
+                    color = group.color,
+                    isExpanded = true,
+                    tabIds = validTabIds
+                ))
+                processedTabIds.addAll(validTabIds)
+            }
+        }
+        
+        // Add ungrouped tabs
+        tabIds.forEach { tabId ->
+            if (!processedTabIds.contains(tabId)) {
+                items.add(UnifiedTabOrder.OrderItem.SingleTab(tabId))
+            }
+        }
+        
+        val order = UnifiedTabOrder(
+            profileId = profileId,
+            primaryOrder = items,
+            lastModified = System.currentTimeMillis()
+        )
+        saveOrder(order)
+    }
+    
+    /**
+     * Sync changes back to UnifiedTabGroupManager
+     * Updates group membership and properties
+     */
+    suspend fun syncToGroupManager() {
+        val current = _currentOrder.value ?: return
+        
+        current.primaryOrder.forEach { item ->
+            when (item) {
+                is UnifiedTabOrder.OrderItem.SingleTab -> {
+                    // Single tabs don't need syncing
+                }
+                is UnifiedTabOrder.OrderItem.TabGroup -> {
+                    // Sync group state
+                    val existingGroup = groupManager.getAllGroups().find { it.id == item.groupId }
+                    if (existingGroup != null) {
+                        // Update existing group's tab membership if changed
+                        val currentTabIds = existingGroup.tabIds.toSet()
+                        val newTabIds = item.tabIds.toSet()
+                        
+                        // Add new tabs to group
+                        newTabIds.filter { it !in currentTabIds }.forEach { tabId ->
+                            groupManager.addTabToGroup(tabId, item.groupId)
+                        }
+                        
+                        // Remove tabs no longer in group
+                        currentTabIds.filter { it !in newTabIds }.forEach { tabId ->
+                            groupManager.removeTabFromGroup(tabId)
+                        }
+                    } else {
+                        // Create new group
+                        groupManager.createGroup(
+                            tabIds = item.tabIds,
+                            name = item.groupName,
+                            color = item.color
+                        )
+                    }
+                }
+            }
+        }
     }
 }
