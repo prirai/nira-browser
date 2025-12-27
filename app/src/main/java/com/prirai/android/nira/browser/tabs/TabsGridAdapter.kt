@@ -31,7 +31,8 @@ class TabsGridAdapter(
     private val thumbnailLoader: ThumbnailLoader,
     private val onTabClick: (String) -> Unit,
     private val onTabClose: (String) -> Unit,
-    private val onGroupMoreClick: (String, View) -> Unit
+    private val onGroupMoreClick: (String, View) -> Unit,
+    private val onTabLongPress: (String, View) -> Boolean = { _, _ -> false }
 ) : ListAdapter<TabGridItem, RecyclerView.ViewHolder>(TabGridItemDiffCallback()) {
 
     private var selectedTabId: String? = null
@@ -63,7 +64,7 @@ class TabsGridAdapter(
             else -> {
                 val view = LayoutInflater.from(parent.context)
                     .inflate(R.layout.item_tab_grid, parent, false)
-                TabViewHolder(view as MaterialCardView, thumbnailLoader)
+                TabViewHolder(view as MaterialCardView, thumbnailLoader, onTabLongPress)
             }
         }
     }
@@ -130,7 +131,8 @@ class TabsGridAdapter(
 
     inner class TabViewHolder(
         private val cardView: MaterialCardView,
-        private val thumbnailLoader: ThumbnailLoader
+        private val thumbnailLoader: ThumbnailLoader,
+        private val onTabLongPress: (String, View) -> Boolean
     ) : RecyclerView.ViewHolder(cardView) {
         private val thumbnail: ImageView = cardView.findViewById(R.id.tabThumbnail)
         private val title: TextView = cardView.findViewById(R.id.tabTitle)
@@ -204,6 +206,10 @@ class TabsGridAdapter(
 
             cardView.setOnClickListener {
                 onTabClick(tab.id)
+            }
+            
+            cardView.setOnLongClickListener {
+                onTabLongPress(tab.id, it)
             }
 
             closeButton.setOnClickListener {

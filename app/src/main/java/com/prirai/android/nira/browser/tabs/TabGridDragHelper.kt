@@ -5,6 +5,7 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.RectF
 import android.view.HapticFeedbackConstants
+import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.RecyclerView
 import com.prirai.android.nira.browser.tabgroups.UnifiedTabGroupManager
@@ -13,51 +14,35 @@ import kotlinx.coroutines.launch
 import mozilla.components.browser.state.state.TabSessionState
 
 /**
- * Enhanced drag & drop helper for tab grouping and reordering in the tab sheet.
- * 
- * Features:
- * - Drag ungrouped tab onto another tab to create group
- * - Drag ungrouped tab onto group to add to group
- * - Drag tab from one group to another to move it
- * - Drag tab out of group to ungroup it
- * - Drag between items to reorder position
- * - Visual feedback with improved hit detection
- * - Prevents ghost duplication issues
+ * Enhanced drag & drop helper for tab grouping in grid view.
+ * Supports all the same operations as list view with grid-specific behavior.
  */
-class TabGroupDragHelper(
-    private val adapter: TabsWithGroupsAdapter,
+class TabGridDragHelper(
+    private val adapter: TabsGridAdapter,
     private val groupManager: UnifiedTabGroupManager,
     private val scope: CoroutineScope,
     private val onUpdate: () -> Unit
 ) : ItemTouchHelper.SimpleCallback(
-    ItemTouchHelper.UP or ItemTouchHelper.DOWN,
+    ItemTouchHelper.UP or ItemTouchHelper.DOWN or ItemTouchHelper.LEFT or ItemTouchHelper.RIGHT,
     0
 ) {
-    private var draggedItem: TabItem? = null
+    private var draggedItem: TabGridItem? = null
     private var draggedTabId: String? = null
     private var dragStartPosition = -1
-    private var dragStartY = 0f
     private var currentTargetPosition = -1
-    private var dropIndicatorPosition = -1
     private var isOverUngroupZone = false
     private var lastHapticFeedbackTime = 0L
     
     private val ungroupThreshold = 180f
-    private val reorderThreshold = 0.3f // 30% overlap to trigger reorder
     
     private val dropZonePaint = Paint().apply {
         style = Paint.Style.FILL
         alpha = 120
     }
     
-    private val dropIndicatorPaint = Paint().apply {
-        style = Paint.Style.FILL
-        color = Color.parseColor("#4CAF50")
-    }
-    
     private val highlightPaint = Paint().apply {
         style = Paint.Style.STROKE
-        strokeWidth = 8f
+        strokeWidth = 6f
         color = Color.parseColor("#4CAF50")
         alpha = 200
     }
@@ -80,7 +65,7 @@ class TabGroupDragHelper(
         if (targetItem != null && toPosition != fromPosition) {
             currentTargetPosition = toPosition
             
-            // Provide haptic feedback when hovering over new target
+            // Haptic feedback
             val currentTime = System.currentTimeMillis()
             if (currentTime - lastHapticFeedbackTime > 100) {
                 viewHolder.itemView.performHapticFeedback(
@@ -109,12 +94,16 @@ class TabGroupDragHelper(
 
         val item = adapter.currentList.getOrNull(position)
         
-        // Allow dragging single tabs only (not group headers)
+        // Allow dragging individual tabs only (not group headers)
         return when (item) {
-            is TabItem.SingleTab -> {
-                makeMovementFlags(ItemTouchHelper.UP or ItemTouchHelper.DOWN, 0)
+            is TabGridItem.Tab -> {
+                makeMovementFlags(
+                    ItemTouchHelper.UP or ItemTouchHelper.DOWN or 
+                    ItemTouchHelper.LEFT or ItemTouchHelper.RIGHT, 
+                    0
+                )
             }
-            is TabItem.Group -> 0
+            is TabGridItem.GroupHeader -> 0
             else -> 0
         }
     }
@@ -129,18 +118,17 @@ class TabGroupDragHelper(
                     if (position != RecyclerView.NO_POSITION) {
                         dragStartPosition = position
                         draggedItem = adapter.currentList.getOrNull(position)
-                        dragStartY = vh.itemView.y
                         
-                        // Extract tab ID to prevent ghost duplication
+                        // Extract tab ID
                         draggedTabId = when (val item = draggedItem) {
-                            is TabItem.SingleTab -> item.tab.id
+                            is TabGridItem.Tab -> item.tab.id
                             else -> null
                         }
                         
-                        // Enhanced visual feedback
+                        // Visual feedback
                         vh.itemView.alpha = 0.75f
-                        vh.itemView.scaleX = 1.05f
-                        vh.itemView.scaleY = 1.05f
+                        vh.itemView.scaleX = 1.08f
+                        vh.itemView.scaleY = 1.08f
                         vh.itemView.elevation = 16f
                         vh.itemView.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
                     }
@@ -150,16 +138,15 @@ class TabGroupDragHelper(
                 // Handle drop
                 draggedItem?.let { dragged ->
                     draggedTabId?.let { tabId ->
-                        handleDrop(dragged, tabId, currentTargetPosition, dropIndicatorPosition)
+                        handleDrop(dragged, tabId, currentTargetPosition)
                     }
                 }
                 
-                // Reset all state
+                // Reset state
                 draggedItem = null
                 draggedTabId = null
                 dragStartPosition = -1
                 currentTargetPosition = -1
-                dropIndicatorPosition = -1
                 isOverUngroupZone = false
                 lastHapticFeedbackTime = 0L
             }
@@ -188,70 +175,71 @@ class TabGroupDragHelper(
         super.onChildDraw(c, recyclerView, viewHolder, dX, dY, actionState, isCurrentlyActive)
 
         if (actionState == ItemTouchHelper.ACTION_STATE_DRAG && isCurrentlyActive) {
+            // Calculate drag distance from start position
+            val dragDistance = kotlin.math.sqrt((dX * dX + dY * dY).toDouble()).toFloat()
+            
             // Get current drag position
+            val currentX = viewHolder.itemView.x + dX
             val currentY = viewHolder.itemView.y + dY
+            val currentCenterX = currentX + viewHolder.itemView.width / 2
             val currentCenterY = currentY + viewHolder.itemView.height / 2
             
             // Reset state
             var foundTarget = false
-            dropIndicatorPosition = -1
             currentTargetPosition = -1
+            isOverUngroupZone = false
             
-            // Find target based on center position
-            for (i in 0 until adapter.itemCount) {
-                val targetView = recyclerView.layoutManager?.findViewByPosition(i) ?: continue
-                val targetTop = targetView.top.toFloat()
-                val targetBottom = targetView.bottom.toFloat()
-                val targetHeight = targetBottom - targetTop
-                val targetCenterY = (targetTop + targetBottom) / 2
-                
-                val targetItem = adapter.currentList.getOrNull(i)
-                
-                // Check if center of dragged item overlaps with any part of target
-                if (currentCenterY >= targetTop && currentCenterY <= targetBottom) {
+            // Check if the dragged tab is in a group by checking the groupId field
+            val isInGroup = when (val item = draggedItem) {
+                is TabGridItem.Tab -> item.groupId != null
+                else -> false
+            }
+            
+            // Only show ungroup zone if tab is actually in a group AND dragged far
+            if (isInGroup && dragDistance > ungroupThreshold) {
+                isOverUngroupZone = true
+            }
+            
+            if (!isOverUngroupZone) {
+                // Find target in grid
+                for (i in 0 until adapter.itemCount) {
+                    val targetView = recyclerView.layoutManager?.findViewByPosition(i) ?: continue
                     
-                    if (targetItem != null && i != dragStartPosition) {
-                        foundTarget = true
-                        currentTargetPosition = i
+                    val targetLeft = targetView.left.toFloat()
+                    val targetRight = targetView.right.toFloat()
+                    val targetTop = targetView.top.toFloat()
+                    val targetBottom = targetView.bottom.toFloat()
+                    
+                    // Check if center overlaps
+                    if (currentCenterX >= targetLeft && currentCenterX <= targetRight &&
+                        currentCenterY >= targetTop && currentCenterY <= targetBottom) {
                         
-                        // Determine if we should show reorder indicator or grouping indicator
-                        when (targetItem) {
-                            is TabItem.Group -> {
-                                // Hovering over group - show group highlight
-                                drawGroupHighlight(c, targetView)
-                            }
-                            is TabItem.SingleTab -> {
-                                // Check if we're closer to top or bottom for reordering
-                                val distanceFromCenter = kotlin.math.abs(currentCenterY - targetCenterY)
-                                
-                                // If close to center, show merge indicator
-                                // If close to edges, show reorder indicator
-                                if (distanceFromCenter < targetHeight * 0.5f) {
-                                    // Show merge/group indicator
+                        val targetItem = adapter.currentList.getOrNull(i)
+                        
+                        if (targetItem != null && i != dragStartPosition) {
+                            foundTarget = true
+                            currentTargetPosition = i
+                            
+                            when (targetItem) {
+                                is TabGridItem.GroupHeader -> {
+                                    drawGroupHighlight(c, targetView)
+                                }
+                                is TabGridItem.Tab -> {
                                     drawTabMergeHighlight(c, targetView)
-                                } else {
-                                    val distanceFromTop = kotlin.math.abs(currentCenterY - targetTop)
-                                    val distanceFromBottom = kotlin.math.abs(currentCenterY - targetBottom)
-                                    
-                                    // Show reorder indicator at top or bottom
-                                    if (distanceFromTop < distanceFromBottom) {
-                                        drawReorderIndicator(c, recyclerView, targetTop)
-                                        dropIndicatorPosition = i
-                                    } else {
-                                        drawReorderIndicator(c, recyclerView, targetBottom)
-                                        dropIndicatorPosition = i + 1
-                                    }
                                 }
                             }
+                            
+                            break
                         }
-                        
-                        break
                     }
                 }
             }
             
-            // Set opacity based on state
-            if (foundTarget) {
+            // Draw ungroup zone AFTER other drawing (so it appears on top)
+            if (isOverUngroupZone) {
+                drawUngroupZone(c, recyclerView)
+                viewHolder.itemView.alpha = 0.5f
+            } else if (foundTarget) {
                 viewHolder.itemView.alpha = 0.75f
             } else {
                 viewHolder.itemView.alpha = 0.6f
@@ -259,8 +247,8 @@ class TabGroupDragHelper(
         }
     }
 
-    private fun drawUngroupZone(canvas: Canvas, recyclerView: RecyclerView, viewHolder: RecyclerView.ViewHolder, dragDown: Boolean) {
-        // Draw full overlay
+    private fun drawUngroupZone(canvas: Canvas, recyclerView: RecyclerView) {
+        // Draw semi-transparent overlay across entire view
         val rect = RectF(
             0f,
             0f,
@@ -268,11 +256,11 @@ class TabGroupDragHelper(
             recyclerView.height.toFloat()
         )
         
-        dropZonePaint.color = Color.parseColor("#FF5722") // Material Deep Orange
-        dropZonePaint.alpha = 120
+        dropZonePaint.color = Color.parseColor("#FF5722")
+        dropZonePaint.alpha = 100
         canvas.drawRect(rect, dropZonePaint)
         
-        // Draw text hint in center
+        // Draw text in center
         val textPaint = Paint().apply {
             color = Color.WHITE
             textSize = 48f
@@ -290,18 +278,18 @@ class TabGroupDragHelper(
 
     private fun drawGroupHighlight(canvas: Canvas, targetView: android.view.View) {
         val rect = RectF(
-            targetView.left.toFloat() + 4f,
-            targetView.top.toFloat() + 4f,
-            targetView.right.toFloat() - 4f,
-            targetView.bottom.toFloat() - 4f
+            targetView.left.toFloat() + 8f,
+            targetView.top.toFloat() + 8f,
+            targetView.right.toFloat() - 8f,
+            targetView.bottom.toFloat() - 8f
         )
         
-        // Draw fill
-        dropZonePaint.color = Color.parseColor("#4CAF50") // Material Green
+        // Fill
+        dropZonePaint.color = Color.parseColor("#4CAF50")
         dropZonePaint.alpha = 80
         canvas.drawRoundRect(rect, 16f, 16f, dropZonePaint)
         
-        // Draw stroke
+        // Stroke
         highlightPaint.color = Color.parseColor("#4CAF50")
         highlightPaint.alpha = 220
         canvas.drawRoundRect(rect, 16f, 16f, highlightPaint)
@@ -309,143 +297,117 @@ class TabGroupDragHelper(
 
     private fun drawTabMergeHighlight(canvas: Canvas, targetView: android.view.View) {
         val rect = RectF(
-            targetView.left.toFloat() + 4f,
-            targetView.top.toFloat() + 4f,
-            targetView.right.toFloat() - 4f,
-            targetView.bottom.toFloat() - 4f
+            targetView.left.toFloat() + 6f,
+            targetView.top.toFloat() + 6f,
+            targetView.right.toFloat() - 6f,
+            targetView.bottom.toFloat() - 6f
         )
         
-        // Draw fill with pulsing effect
-        dropZonePaint.color = Color.parseColor("#2196F3") // Material Blue
+        // Fill
+        dropZonePaint.color = Color.parseColor("#2196F3")
         dropZonePaint.alpha = 100
         canvas.drawRoundRect(rect, 12f, 12f, dropZonePaint)
         
-        // Draw animated stroke
+        // Stroke
         highlightPaint.color = Color.parseColor("#2196F3")
         highlightPaint.alpha = 240
-        highlightPaint.strokeWidth = 6f
+        highlightPaint.strokeWidth = 5f
         canvas.drawRoundRect(rect, 12f, 12f, highlightPaint)
     }
 
-    private fun drawReorderIndicator(canvas: Canvas, recyclerView: RecyclerView, yPosition: Float) {
-        val indicatorHeight = 4f
-        val inset = 16f
-        
-        val rect = RectF(
-            inset,
-            yPosition - indicatorHeight / 2,
-            recyclerView.width.toFloat() - inset,
-            yPosition + indicatorHeight / 2
-        )
-        
-        // Draw thick line indicator
-        dropIndicatorPaint.color = Color.parseColor("#FF9800") // Material Orange
-        dropIndicatorPaint.alpha = 255
-        canvas.drawRoundRect(rect, indicatorHeight / 2, indicatorHeight / 2, dropIndicatorPaint)
-        
-        // Draw end caps (circles)
-        val capRadius = 8f
-        canvas.drawCircle(inset, yPosition, capRadius, dropIndicatorPaint)
-        canvas.drawCircle(recyclerView.width.toFloat() - inset, yPosition, capRadius, dropIndicatorPaint)
-    }
-
     private fun handleDrop(
-        draggedItem: TabItem, 
+        draggedItem: TabGridItem,
         draggedTabId: String,
-        targetPosition: Int,
-        indicatorPosition: Int
+        targetPosition: Int
     ) {
         scope.launch {
             when (draggedItem) {
-                is TabItem.SingleTab -> {
-                    handleSingleTabDrop(draggedItem.tab, draggedTabId, targetPosition, indicatorPosition)
+                is TabGridItem.Tab -> {
+                    handleTabDrop(draggedItem.tab, draggedTabId, targetPosition)
                 }
-                is TabItem.Group -> {
-                    // Group items cannot be dragged directly
+                is TabGridItem.GroupHeader -> {
+                    // Not draggable
                 }
             }
         }
     }
 
-    private suspend fun handleSingleTabDrop(
+    private suspend fun handleTabDrop(
         draggedTab: TabSessionState,
         draggedTabId: String,
-        targetPosition: Int,
-        indicatorPosition: Int
+        targetPosition: Int
     ) {
-        // Check if reordering (indicator position is set)
-        if (indicatorPosition >= 0) {
-            // TODO: Implement tab reordering in future
-            // For now, fall through to grouping logic
+        // Check if dropping in ungroup zone
+        if (isOverUngroupZone) {
+            val currentGroup = groupManager.getGroupForTab(draggedTabId)
+            if (currentGroup != null) {
+                groupManager.removeTabFromGroup(draggedTabId)
+                onUpdate()
+            }
+            return
         }
 
-        // Get target item for grouping/ungrouping operations
+        // Get target item
         if (targetPosition < 0 || targetPosition >= adapter.currentList.size) {
             return
         }
 
         when (val targetItem = adapter.currentList[targetPosition]) {
-            is TabItem.SingleTab -> {
-                // Prevent self-drop which causes ghost duplication
+            is TabGridItem.Tab -> {
+                // Prevent self-drop
                 if (draggedTabId == targetItem.tab.id) {
                     return
                 }
                 
-                // Dropped on another single tab
+                // Merge tabs
                 val draggedGroup = groupManager.getGroupForTab(draggedTabId)
                 val targetGroup = groupManager.getGroupForTab(targetItem.tab.id)
                 
                 when {
                     draggedGroup == null && targetGroup == null -> {
-                        // Both ungrouped - create new group
+                        // Create new group
                         groupManager.createGroup(
                             tabIds = listOf(draggedTabId, targetItem.tab.id)
                         )
                     }
                     draggedGroup != null && targetGroup == null -> {
-                        // Dragged from group to ungrouped - add target to dragged's group
+                        // Add target to dragged's group
                         groupManager.addTabToGroup(targetItem.tab.id, draggedGroup.id)
                     }
                     draggedGroup == null && targetGroup != null -> {
-                        // Dragged ungrouped to group - add dragged to target's group
+                        // Add dragged to target's group
                         groupManager.addTabToGroup(draggedTabId, targetGroup.id)
                     }
                     draggedGroup != null && targetGroup != null && draggedGroup.id != targetGroup.id -> {
-                        // Both in different groups - move dragged to target's group
+                        // Move between groups
                         groupManager.moveTabBetweenGroups(
                             draggedTabId,
                             draggedGroup.id,
                             targetGroup.id
                         )
                     }
-                    // If same group, do nothing
                 }
                 onUpdate()
             }
             
-            is TabItem.Group -> {
-                // Dropped on a group - add to that group
+            is TabGridItem.GroupHeader -> {
+                // Add to group
                 val draggedGroup = groupManager.getGroupForTab(draggedTabId)
                 
-                // Prevent adding to same group (causes ghost duplication)
+                // Prevent adding to same group
                 if (draggedGroup?.id == targetItem.groupId) {
                     return
                 }
                 
                 if (draggedGroup == null) {
-                    // Ungrouped tab dropped on group - add it
                     groupManager.addTabToGroup(draggedTabId, targetItem.groupId)
                 } else {
-                    // Tab from different group - move it
                     groupManager.moveTabBetweenGroups(
                         draggedTabId,
                         draggedGroup.id,
                         targetItem.groupId
                     )
                 }
-                
-                // Expand the target group to show the new tab
-                adapter.expandGroup(targetItem.groupId)
                 onUpdate()
             }
         }
