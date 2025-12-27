@@ -133,27 +133,29 @@ We welcome contributions! Here's how you can help:
 - [x] Material 3 Theming
 - [x] Amoled theming support
 - [x] Edge-to-edge design
+- [x] Sending tabs and groups to other profiles
+- [x] QR scanning for opening URLs
 
 ### Coming Soon
 - [ ] Sync across devices
 - [ ] Profile import/export
 - [ ] More customization options (never ends?)
-- [ ] Sending tabs and groups to other profiles
 - [ ] Accessibility improvements
 - [ ] User js inspired by arkenfox, betterfox and co
 - [ ] Download management interface
-- [ ] QR scanning for opening URLs
 - [ ] New icon representing the project
----
 
 ## Support
 
 Need help? Have questions?
 
 - [Open an Issue](https://github.com/prirai/nira-browser/issues)
-- Social links will be updated
+- [Discuss here](https://t.me/nirafoss)
+- Discussions tab in github can be used as a high priority entry point for discussing a feature or general usability comments.
 
----
+## Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=prirai/nira-browser&type=date&legend=top-left)](https://www.star-history.com/#prirai/nira-browser&type=date&legend=top-left)
 
 ## License
 
