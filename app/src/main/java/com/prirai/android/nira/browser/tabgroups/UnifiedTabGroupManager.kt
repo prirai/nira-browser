@@ -89,7 +89,8 @@ class UnifiedTabGroupManager private constructor(private val context: Context) {
                     name = dbGroup.name,
                     color = parseColor(dbGroup.color),
                     tabIds = tabIds,
-                    createdAt = dbGroup.createdAt
+                    createdAt = dbGroup.createdAt,
+                    contextId = null  // Will be determined from tabs
                 )
                 groupDataList.add(groupData)
             }
@@ -116,7 +117,8 @@ class UnifiedTabGroupManager private constructor(private val context: Context) {
         tabIds: List<String>,
         name: String? = null,
         color: Int? = null,
-        profileId: String? = null
+        profileId: String? = null,
+        contextId: String? = null
     ): TabGroupData = withContext(Dispatchers.IO) {
         if (tabIds.isEmpty()) {
             throw IllegalArgumentException("Cannot create group with no tabs")
@@ -158,7 +160,8 @@ class UnifiedTabGroupManager private constructor(private val context: Context) {
             name = groupName,
             color = groupColor,
             tabIds = tabIds,
-            createdAt = now
+            createdAt = now,
+            contextId = contextId
         )
 
         // Update cache
@@ -285,6 +288,62 @@ class UnifiedTabGroupManager private constructor(private val context: Context) {
 
         emitStateUpdate()
         _groupEvents.emit(GroupEvent.GroupColorChanged(groupId, newColor))
+
+        true
+    }
+
+    /**
+     * Updates a group with new properties
+     */
+    suspend fun updateGroup(
+        groupId: String,
+        name: String? = null,
+        color: Int? = null,
+        tabIds: List<String>? = null
+    ): Boolean = withContext(Dispatchers.IO) {
+        val group = groupsCache[groupId] ?: return@withContext false
+        val dbGroup = dao.getGroupById(groupId) ?: return@withContext false
+
+        val updatedName = name ?: group.name
+        val updatedColor = color ?: group.color
+        val updatedTabIds = tabIds ?: group.tabIds
+
+        // Update database
+        val updatedDbGroup = dbGroup.copy(
+            name = updatedName,
+            color = colorToString(updatedColor)
+        )
+        dao.updateGroup(updatedDbGroup)
+
+        // Update tab associations if changed
+        if (tabIds != null) {
+            dao.removeAllTabsFromGroup(groupId)
+            tabIds.forEachIndexed { index, tabId ->
+                val member = TabGroupMember(
+                    tabId = tabId,
+                    groupId = groupId,
+                    position = index
+                )
+                dao.insertTabGroupMember(member)
+            }
+        }
+
+        // Update cache
+        val updatedGroup = group.copy(
+            name = updatedName,
+            color = updatedColor,
+            tabIds = updatedTabIds
+        )
+        groupsCache[groupId] = updatedGroup
+
+        // Update tab to group map
+        if (tabIds != null) {
+            group.tabIds.forEach { tabToGroupMap.remove(it) }
+            updatedTabIds.forEach { tabToGroupMap[it] = groupId }
+        }
+
+        emitStateUpdate()
+        _groupEvents.emit(GroupEvent.GroupUpdated(groupId))
 
         true
     }
@@ -515,7 +574,8 @@ data class TabGroupData(
     val color: Int,
     val tabIds: List<String>,
     val createdAt: Long,
-    val isCollapsed: Boolean = false
+    val isCollapsed: Boolean = false,
+    val contextId: String? = null
 ) {
     val tabCount: Int get() = tabIds.size
     val isEmpty: Boolean get() = tabIds.isEmpty()
@@ -530,6 +590,7 @@ sealed class GroupEvent {
     data class GroupDeleted(val groupId: String) : GroupEvent()
     data class GroupRenamed(val groupId: String, val newName: String) : GroupEvent()
     data class GroupColorChanged(val groupId: String, val newColor: Int) : GroupEvent()
+    data class GroupUpdated(val groupId: String) : GroupEvent()
     data class TabAddedToGroup(val tabId: String, val groupId: String) : GroupEvent()
     data class TabRemovedFromGroup(val tabId: String, val groupId: String) : GroupEvent()
     data class TabMovedBetweenGroups(val tabId: String, val fromGroupId: String, val toGroupId: String) : GroupEvent()

@@ -86,7 +86,7 @@ fun TabBarCompose(
                                         onTabClick = onTabClick,
                                         onTabClose = onTabClose,
                                         orderManager = orderManager,
-                                        modifier = Modifier.longPressDraggableHandle()
+                                        modifier = Modifier.draggableHandle()
                                     )
                                 }
                             }
@@ -99,7 +99,7 @@ fun TabBarCompose(
                                     dragDropState = dragDropState,
                                     onTabClick = onTabClick,
                                     orderManager = orderManager,
-                                    modifier = Modifier.longPressDraggableHandle()
+                                    modifier = Modifier.draggableHandle()
                                 )
                             }
                         }
@@ -143,7 +143,7 @@ private fun TabBarTabItem(
         ),
         colors = CardDefaults.cardColors(
             containerColor = when {
-                isTarget -> getDragTargetColor(DragFeedback.HIGHLIGHT_TAB)
+                isTarget -> getDragTargetColor(DragFeedback.GroupWith)
                 isSelected -> MaterialTheme.colorScheme.primaryContainer
                 else -> MaterialTheme.colorScheme.surface
             }
@@ -210,7 +210,7 @@ private fun TabBarGroupItem(
         shape = RoundedCornerShape(TabVisualConstants.TAB_CORNER_RADIUS),
         colors = CardDefaults.cardColors(
             containerColor = if (isTarget) {
-                getDragTargetColor(DragFeedback.HIGHLIGHT_GROUP)
+                getDragTargetColor(DragFeedback.MoveToGroup)
             } else {
                 Color(group.color).copy(alpha = 0.15f)
             }

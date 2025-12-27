@@ -122,11 +122,11 @@ fun getTabSpacing(isInGroup: Boolean): Dp {
 @Composable
 fun getDragTargetColor(feedbackType: DragFeedback): Color {
     return when (feedbackType) {
-        DragFeedback.HIGHLIGHT_TAB -> MaterialTheme.colorScheme.primaryContainer
-        DragFeedback.HIGHLIGHT_GROUP -> MaterialTheme.colorScheme.secondaryContainer
-        DragFeedback.INSERTION_LINE -> MaterialTheme.colorScheme.primary
-        DragFeedback.SCALE_SPACE -> Color.Transparent
-        DragFeedback.NONE -> Color.Transparent
+        DragFeedback.GroupWith -> MaterialTheme.colorScheme.primaryContainer
+        DragFeedback.MoveToGroup -> MaterialTheme.colorScheme.secondaryContainer
+        DragFeedback.Reorder -> MaterialTheme.colorScheme.primary
+        DragFeedback.Ungroup -> MaterialTheme.colorScheme.tertiaryContainer
+        DragFeedback.None -> Color.Transparent
     }
 }
 
