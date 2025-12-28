@@ -76,10 +76,11 @@ data class TabGroupWithTabIds(
     val color: String,
     val createdAt: Long,
     val isActive: Boolean,
+    val contextId: String?,
     val tabIds: String? // Comma-separated tab IDs
 ) {
     fun toTabGroupWithTabs(): TabGroupWithTabs {
-        val group = TabGroup(id, name, color, createdAt, isActive)
+        val group = TabGroup(id, name, color, createdAt, isActive, contextId)
         val tabIdList = tabIds?.split(",")?.filter { it.isNotBlank() } ?: emptyList()
         return TabGroupWithTabs(group, tabIdList)
     }

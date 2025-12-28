@@ -133,13 +133,8 @@ object ThemeManager {
         
         if (isPrivateMode) {
             // Purple theme for private mode
-            val typedValue = android.util.TypedValue()
-            context.theme.resolveAttribute(
-                android.R.attr.colorPrimary,
-                typedValue,
-                true
-            )
-            window.statusBarColor = typedValue.data
+            val purpleColor = ColorConstants.PrivateMode.PURPLE
+            window.statusBarColor = purpleColor
             window.navigationBarColor = android.graphics.Color.TRANSPARENT
         } else if (isAmoledActive(context)) {
             // Pure black for AMOLED

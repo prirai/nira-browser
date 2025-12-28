@@ -35,8 +35,12 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.prirai.android.nira.R
+import com.prirai.android.nira.ext.components
 import mozilla.components.browser.state.state.TabSessionState
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.Dispatchers
+import android.content.Context
 
 sealed class ListItem {
     data class GroupHeader(
@@ -69,14 +73,16 @@ fun TabSheetListView(
     val groups by viewModel.groups.collectAsState()
     val expandedGroups by viewModel.expandedGroups.collectAsState()
     val selectedTabId by viewModel.selectedTabId.collectAsState()
+    val currentOrder by viewModel.currentOrder.collectAsState()
+    val currentProfile by viewModel.currentProfileId.collectAsState()
     
     val scope = rememberCoroutineScope()
     val listState = rememberLazyListState()
     val dragDropState = rememberAdvancedDragDropState()
     
-    // Build list items from tabs and groups
-    val listItems = remember(tabs, groups, expandedGroups) {
-        buildListItems(tabs, groups, expandedGroups)
+    // Build list items from tabs and groups using UnifiedTabOrder
+    val listItems = remember(tabs, groups, expandedGroups, currentOrder) {
+        buildListItemsFromOrder(tabs, groups, expandedGroups, currentOrder)
     }
 
     // Ensure unique keys by deduplicating items with same tab id in different groups
@@ -370,7 +376,101 @@ private fun TabListItem(
     }
 }
 
-private fun buildListItems(
+private fun buildListItemsFromOrder(
+    tabs: List<TabSessionState>,
+    groups: List<com.prirai.android.nira.browser.tabgroups.TabGroupData>,
+    expandedGroups: Set<String>,
+    currentOrder: UnifiedTabOrder?
+): List<ListItem> {
+    val items = mutableListOf<ListItem>()
+    val addedTabIds = mutableSetOf<String>()
+    
+    if (currentOrder == null || currentOrder.primaryOrder.isEmpty()) {
+        // Fallback to old behavior if no order exists
+        return buildListItemsFallback(tabs, groups, expandedGroups)
+    }
+    
+    // Create lookup maps
+    val tabsById = tabs.associateBy { it.id }
+    val groupsById = groups.associateBy { it.id }
+    
+    // Process items in order
+    for (orderItem in currentOrder.primaryOrder) {
+        when (orderItem) {
+            is UnifiedTabOrder.OrderItem.SingleTab -> {
+                val tab = tabsById[orderItem.tabId]
+                if (tab != null && tab.id !in addedTabIds) {
+                    items.add(
+                        ListItem.Tab(
+                            tab = tab,
+                            groupId = null,
+                            isInGroup = false
+                        )
+                    )
+                    addedTabIds.add(tab.id)
+                }
+            }
+            is UnifiedTabOrder.OrderItem.TabGroup -> {
+                val group = groupsById[orderItem.groupId]
+                if (group != null && group.tabIds.any { it in tabsById }) {
+                    // Add group header
+                    items.add(
+                        ListItem.GroupHeader(
+                            groupId = group.id,
+                            title = group.name,
+                            color = group.color,
+                            tabCount = group.tabCount,
+                            isExpanded = expandedGroups.contains(group.id),
+                            contextId = group.contextId
+                        )
+                    )
+                    
+                    // Add tabs in the group if expanded
+                    if (expandedGroups.contains(group.id)) {
+                        for (tabId in group.tabIds) {
+                            val tab = tabsById[tabId]
+                            if (tab != null && tab.id !in addedTabIds) {
+                                items.add(
+                                    ListItem.Tab(
+                                        tab = tab,
+                                        groupId = group.id,
+                                        isInGroup = true
+                                    )
+                                )
+                                addedTabIds.add(tab.id)
+                            }
+                        }
+                    } else {
+                        // Even when collapsed, mark these tabs as added
+                        group.tabIds.forEach { tabId ->
+                            if (tabId in tabsById) {
+                                addedTabIds.add(tabId)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    // Add any remaining tabs that weren't in the order (shouldn't happen normally)
+    tabs.forEach { tab ->
+        if (tab.id !in addedTabIds) {
+            items.add(
+                ListItem.Tab(
+                    tab = tab,
+                    groupId = null,
+                    isInGroup = false
+                )
+            )
+            addedTabIds.add(tab.id)
+        }
+    }
+    
+    return items
+}
+
+private fun buildListItemsFallback(
     tabs: List<TabSessionState>,
     groups: List<com.prirai.android.nira.browser.tabgroups.TabGroupData>,
     expandedGroups: Set<String>
@@ -512,7 +612,7 @@ private suspend fun handleDragOperation(
                 android.util.Log.d("TabSheet", "Reorder in group: $actualDraggedId to index ${operation.targetIndex}")
                 
                 // Find the target tab at the visual index
-                val flatList = buildListItems(tabs, groups, emptySet())
+                val flatList = buildListItemsFallback(tabs, groups, emptySet())
                 val targetItem = flatList.getOrNull(operation.targetIndex)
                 
                 if (targetItem is ListItem.Tab && targetItem.tab.id != actualDraggedId) {
@@ -595,4 +695,5 @@ private suspend fun handleDragOperation(
         }
     }
 }
+
 

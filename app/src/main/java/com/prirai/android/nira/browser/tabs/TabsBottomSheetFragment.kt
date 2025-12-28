@@ -99,11 +99,48 @@ class TabsBottomSheetFragment : DialogFragment() {
         unifiedGroupManager = UnifiedTabGroupManager.getInstance(requireContext())
         tabOrderPersistence = com.prirai.android.nira.browser.tabs.dragdrop.TabOrderPersistence(requireContext())
 
+        // Switch to the correct profile based on the selected tab's context
+        val store = requireContext().components.store
+        val selectedTab = store.state.tabs.find { it.id == store.state.selectedTabId }
+        if (selectedTab != null) {
+            val isPrivate = selectedTab.content.private
+            val tabContextId = selectedTab.contextId
+            
+            // Switch to correct browsing mode
+            if (isPrivate && browsingModeManager.mode != BrowsingMode.Private) {
+                browsingModeManager.mode = BrowsingMode.Private
+            } else if (!isPrivate && browsingModeManager.mode != BrowsingMode.Normal) {
+                browsingModeManager.mode = BrowsingMode.Normal
+            }
+            
+            // Switch to correct profile for normal mode
+            if (!isPrivate) {
+                val profileManager = com.prirai.android.nira.browser.profile.ProfileManager.getInstance(requireContext())
+                when {
+                    tabContextId == null || tabContextId == "profile_default" -> {
+                        val defaultProfile = profileManager.getAllProfiles().find { it.id == "default" }
+                        if (defaultProfile != null && browsingModeManager.currentProfile.id != "default") {
+                            profileManager.setActiveProfile(defaultProfile)
+                            browsingModeManager.currentProfile = defaultProfile
+                        }
+                    }
+                    tabContextId.startsWith("profile_") -> {
+                        val profileId = tabContextId.removePrefix("profile_")
+                        val targetProfile = profileManager.getAllProfiles().find { it.id == profileId }
+                        if (targetProfile != null && browsingModeManager.currentProfile.id != profileId) {
+                            profileManager.setActiveProfile(targetProfile)
+                            browsingModeManager.currentProfile = targetProfile
+                        }
+                    }
+                }
+            }
+        }
+
         setupUI()
         
         if (useComposeTabSystem) {
             // Initialize Compose tab system
-            composeOrderManager = com.prirai.android.nira.browser.tabs.compose.TabOrderManager(requireContext(), unifiedGroupManager)
+            composeOrderManager = com.prirai.android.nira.browser.tabs.compose.TabOrderManager.getInstance(requireContext(), unifiedGroupManager)
             setupComposeTabViews()
         } else if (useNewDragSystem) {
             setupFlatTabsAdapter()
@@ -1291,6 +1328,50 @@ class TabsBottomSheetFragment : DialogFragment() {
     
     private fun handleTabClickCompose(tabId: String) {
         lifecycleScope.launch {
+            // Get the tab to check its context
+            val store = requireContext().components.store
+            val tab = store.state.tabs.find { it.id == tabId }
+            
+            if (tab != null) {
+                // Switch profile/mode if needed based on tab's context
+                val isPrivate = tab.content.private
+                val tabContextId = tab.contextId
+                
+                if (isPrivate) {
+                    // Switch to private mode
+                    if (browsingModeManager.mode != BrowsingMode.Private) {
+                        browsingModeManager.mode = BrowsingMode.Private
+                    }
+                } else {
+                    // Switch to normal mode and determine profile
+                    if (browsingModeManager.mode != BrowsingMode.Normal) {
+                        browsingModeManager.mode = BrowsingMode.Normal
+                    }
+                    
+                    // Switch profile if needed
+                    val profileManager = com.prirai.android.nira.browser.profile.ProfileManager.getInstance(requireContext())
+                    when {
+                        tabContextId == null || tabContextId == "profile_default" -> {
+                            // Default profile
+                            val defaultProfile = profileManager.getAllProfiles().find { it.id == "default" }
+                            if (defaultProfile != null && browsingModeManager.currentProfile.id != "default") {
+                                profileManager.setActiveProfile(defaultProfile)
+                                browsingModeManager.currentProfile = defaultProfile
+                            }
+                        }
+                        tabContextId.startsWith("profile_") -> {
+                            // Other profile
+                            val profileId = tabContextId.removePrefix("profile_")
+                            val targetProfile = profileManager.getAllProfiles().find { it.id == profileId }
+                            if (targetProfile != null && browsingModeManager.currentProfile.id != profileId) {
+                                profileManager.setActiveProfile(targetProfile)
+                                browsingModeManager.currentProfile = targetProfile
+                            }
+                        }
+                    }
+                }
+            }
+            
             requireContext().components.tabsUseCases.selectTab(tabId)
             dismiss()
         }
