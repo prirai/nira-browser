@@ -386,6 +386,14 @@ class UnifiedToolbar @JvmOverloads constructor(
     }
     
     /**
+     * Force update the tab bar with the provided filtered tabs.
+     * Used when fragments need to explicitly refresh the tab bar (e.g., ComposeHomeFragment on load).
+     */
+    fun forceUpdateTabBar(filteredTabs: List<TabSessionState>, selectedTabId: String?) {
+        tabGroupBar?.updateTabs(filteredTabs, selectedTabId)
+    }
+    
+    /**
      * Adds the tab group bar component (TabGroupWithProfileSwitcher) to the unified toolbar.
      *
      * This method:
