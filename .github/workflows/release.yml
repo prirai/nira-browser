@@ -36,7 +36,7 @@ jobs:
 
       - name: Decode keystore
         run: |
-          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > release.keystore
+         echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > app/release.keystore
 
       - name: Build release APKs
         run: |
@@ -78,3 +78,4 @@ jobs:
               --data-binary @"$apk" \
               "$UPLOAD_URL?name=$name"
           done
+
