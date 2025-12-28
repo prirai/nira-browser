@@ -1,62 +1,62 @@
-name: Android Release
+name: Android Release APKs
 
 on:
-  # Trigger when a tag like v1.2.3 is pushed
   push:
     tags:
-      - 'v*.*.*'
+      - "v*.*.*"
 
 jobs:
-  build_and_release:
+  build:
     runs-on: ubuntu-latest
     permissions:
-      contents: write  # for GitHub Releases
+      contents: write
 
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up Java 17
+      - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 17
           cache: gradle
 
-      - name: Prepare Gradle
-        run: |
-          chmod +x gradlew
+      - name: Make Gradle executable
+        run: chmod +x gradlew
 
       - name: Decode keystore
         run: |
-          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > android.keystore
+          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > release.keystore
 
-      - name: Print keystore info (debug)
-        run: |
-          keytool -list -v -keystore android.keystore -storepass "${{ secrets.KEYSTORE_PASSWORD }}" -alias "${{ secrets.KEY_ALIAS }}" || true
-
-      - name: Build Release APKs
+      - name: Build release APKs
         run: |
           ./gradlew clean assembleRelease \
-            -Pandroid.injected.signing.store.file=android.keystore \
+            -Pandroid.injected.signing.store.file=release.keystore \
             -Pandroid.injected.signing.store.password="${{ secrets.KEYSTORE_PASSWORD }}" \
             -Pandroid.injected.signing.key.alias="${{ secrets.KEY_ALIAS }}" \
             -Pandroid.injected.signing.key.password="${{ secrets.KEY_PASSWORD }}"
 
       - name: Create GitHub Release
-        id: create_release
+        id: release
         uses: actions/create-release@v1
         with:
           tag_name: ${{ github.ref_name }}
           release_name: Release ${{ github.ref_name }}
-          draft: false
-          prerelease: false
           generate_release_notes: true
 
-      - name: Upload APKs to Release
-        uses: actions/upload-release-asset@v1
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: app/build/outputs/apk/release
-          asset_name: myapp-${{ github.ref_name }}-release-apks.zip
-          asset_content_type: application/zip
+      - name: Upload APKs (standalone)
+        env:
+          UPLOAD_URL: ${{ steps.release.outputs.upload_url }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for apk in app/release/*.apk; do
+            name=$(basename "$apk")
+            echo "Uploading $name"
+            curl \
+              -X POST \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              -H "Content-Type: application/vnd.android.package-archive" \
+              --data-binary @"$apk" \
+              "$UPLOAD_URL?name=$name"
+          done
