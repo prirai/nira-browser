@@ -21,11 +21,23 @@ private val Context.orderDataStore: DataStore<Preferences> by preferencesDataSto
 /**
  * Manages tab ordering and grouping across all views.
  * Single source of truth for tab positions.
+ * Singleton to ensure all components share the same order state.
  */
-class TabOrderManager(
+class TabOrderManager private constructor(
     private val context: Context,
     private val groupManager: UnifiedTabGroupManager
 ) {
+    
+    companion object {
+        @Volatile
+        private var instance: TabOrderManager? = null
+        
+        fun getInstance(context: Context, groupManager: UnifiedTabGroupManager): TabOrderManager {
+            return instance ?: synchronized(this) {
+                instance ?: TabOrderManager(context.applicationContext, groupManager).also { instance = it }
+            }
+        }
+    }
     
     private val json = Json { ignoreUnknownKeys = true }
     
@@ -44,8 +56,37 @@ class TabOrderManager(
             .first()
             ?: UnifiedTabOrder(profileId, emptyList())
         
-        _currentOrder.value = order
-        return order
+        // Clean up orphaned group references
+        val cleanedOrder = cleanupOrphanedGroups(order)
+        _currentOrder.value = cleanedOrder
+        return cleanedOrder
+    }
+    
+    /**
+     * Clean up orphaned group IDs from unified order
+     */
+    private suspend fun cleanupOrphanedGroups(order: UnifiedTabOrder): UnifiedTabOrder {
+        val allGroups = groupManager.getAllGroups()
+        val validGroupIds = allGroups.map { it.id }.toSet()
+        
+        val cleanedPrimaryOrder = order.primaryOrder.filter { item ->
+            when (item) {
+                is UnifiedTabOrder.OrderItem.TabGroup -> {
+                    // Only keep group items if the group still exists
+                    validGroupIds.contains(item.groupId)
+                }
+                is UnifiedTabOrder.OrderItem.SingleTab -> true
+            }
+        }
+        
+        return if (cleanedPrimaryOrder.size != order.primaryOrder.size) {
+            // Some items were removed, save the cleaned version
+            order.copy(primaryOrder = cleanedPrimaryOrder).also { cleaned ->
+                saveOrder(cleaned)
+            }
+        } else {
+            order
+        }
     }
     
     /**
@@ -324,39 +365,51 @@ class TabOrderManager(
     
     /**
      * Initialize order from current tab state and existing groups
-     * This syncs the Compose order with existing groups
+     * This syncs the Compose order with existing groups while preserving tab positions
      */
     suspend fun initializeFromTabs(profileId: String, tabIds: List<String>) {
         // Get existing groups from UnifiedTabGroupManager
         val existingGroups = groupManager.getAllGroups()
         
         val groupedTabIds = existingGroups.flatMap { it.tabIds }.toSet()
-        val ungroupedTabIds = tabIds.filter { it !in groupedTabIds }
         
-        // Build order: groups first, then ungrouped tabs
-        // This maintains a stable order based on creation time
+        // Build order: Preserve tab positions from tabIds list
+        // Insert groups at the position of their first tab
         val primaryOrder = mutableListOf<UnifiedTabOrder.OrderItem>()
+        val processedTabIds = mutableSetOf<String>()
         
-        // Add groups sorted by creation time
-        existingGroups.sortedBy { it.createdAt }.forEach { group ->
-            // Only include tabs that still exist
+        // Map each group to the position of its first tab in the tabIds list
+        val groupPositions = existingGroups.mapNotNull { group ->
             val validTabIds = group.tabIds.filter { it in tabIds }
-            if (validTabIds.isNotEmpty()) {
-                primaryOrder.add(
-                    UnifiedTabOrder.OrderItem.TabGroup(
-                        groupId = group.id,
-                        groupName = group.name,
-                        color = group.color,
-                        isExpanded = !group.isCollapsed,
-                        tabIds = validTabIds
-                    )
-                )
-            }
-        }
+            if (validTabIds.isEmpty()) return@mapNotNull null
+            
+            val firstTabPosition = tabIds.indexOf(validTabIds.first())
+            if (firstTabPosition == -1) return@mapNotNull null
+            
+            firstTabPosition to UnifiedTabOrder.OrderItem.TabGroup(
+                groupId = group.id,
+                groupName = group.name,
+                color = group.color,
+                isExpanded = !group.isCollapsed,
+                tabIds = validTabIds
+            )
+        }.toMap()
         
-        // Add ungrouped tabs in the order they appear in tabIds
-        ungroupedTabIds.forEach { tabId ->
-            primaryOrder.add(UnifiedTabOrder.OrderItem.SingleTab(tabId))
+        // Process tabs in their original order
+        tabIds.forEachIndexed { index, tabId ->
+            if (tabId in processedTabIds) return@forEachIndexed
+            
+            // If a group starts at this position, add the group
+            if (index in groupPositions) {
+                val groupItem = groupPositions[index]!!
+                primaryOrder.add(groupItem)
+                // Mark all tabs in this group as processed
+                groupItem.tabIds.forEach { processedTabIds.add(it) }
+            } else if (tabId !in groupedTabIds) {
+                // Add ungrouped tab
+                primaryOrder.add(UnifiedTabOrder.OrderItem.SingleTab(tabId))
+                processedTabIds.add(tabId)
+            }
         }
         
         val order = UnifiedTabOrder(
@@ -367,31 +420,45 @@ class TabOrderManager(
     }
     
     /**
-     * Initialize from current state with groups
+     * Initialize from current state with groups, preserving tab positions
      */
     suspend fun initializeFromCurrentState(profileId: String, tabIds: List<String>, groups: List<com.prirai.android.nira.browser.tabgroups.TabGroupData>) {
         val items = mutableListOf<UnifiedTabOrder.OrderItem>()
         val processedTabIds = mutableSetOf<String>()
         
-        // Add groups
-        groups.forEach { group ->
+        // Map each group to the position of its first tab
+        val groupPositions = groups.mapNotNull { group ->
             val validTabIds = group.tabIds.filter { it in tabIds }
-            if (validTabIds.isNotEmpty()) {
-                items.add(UnifiedTabOrder.OrderItem.TabGroup(
-                    groupId = group.id,
-                    groupName = group.name,
-                    color = group.color,
-                    isExpanded = true,
-                    tabIds = validTabIds
-                ))
-                processedTabIds.addAll(validTabIds)
-            }
-        }
+            if (validTabIds.isEmpty()) return@mapNotNull null
+            
+            val firstTabPosition = tabIds.indexOf(validTabIds.first())
+            if (firstTabPosition == -1) return@mapNotNull null
+            
+            firstTabPosition to UnifiedTabOrder.OrderItem.TabGroup(
+                groupId = group.id,
+                groupName = group.name,
+                color = group.color,
+                isExpanded = true,
+                tabIds = validTabIds
+            )
+        }.toMap()
         
-        // Add ungrouped tabs
-        tabIds.forEach { tabId ->
-            if (!processedTabIds.contains(tabId)) {
+        val groupedTabIds = groups.flatMap { it.tabIds }.toSet()
+        
+        // Process tabs in their original order
+        tabIds.forEachIndexed { index, tabId ->
+            if (tabId in processedTabIds) return@forEachIndexed
+            
+            // If a group starts at this position, add the group
+            if (index in groupPositions) {
+                val groupItem = groupPositions[index]!!
+                items.add(groupItem)
+                // Mark all tabs in this group as processed
+                groupItem.tabIds.forEach { processedTabIds.add(it) }
+            } else if (tabId !in groupedTabIds) {
+                // Add ungrouped tab
                 items.add(UnifiedTabOrder.OrderItem.SingleTab(tabId))
+                processedTabIds.add(tabId)
             }
         }
         
@@ -451,5 +518,98 @@ class TabOrderManager(
                 }
             }
         }
+    }
+    
+    /**
+     * Rebuild order for a profile from current tabs and groups.
+     * Used when groups are created/deleted to ensure order stays in sync.
+     */
+    suspend fun rebuildOrderForProfile(profileId: String, tabs: List<mozilla.components.browser.state.state.SessionState>) {
+        // Get all groups for this profile
+        val allGroups = groupManager.getAllGroups()
+        
+        // Determine contextId for filtering
+        val contextId = when (profileId) {
+            "private" -> "private"
+            "default" -> "profile_default"
+            else -> "profile_$profileId"
+        }
+        
+        // Filter groups by contextId
+        val profileGroups = allGroups.filter { group ->
+            when {
+                profileId == "default" -> group.contextId == "profile_default" || group.contextId == null
+                else -> group.contextId == contextId
+            }
+        }
+        
+        // Get tab IDs from tabs
+        val tabIds = tabs.map { it.id }
+        
+        // Load existing order or create new one
+        val existingOrder = try {
+            loadOrder(profileId)
+        } catch (e: Exception) {
+            UnifiedTabOrder(profileId, emptyList())
+        }
+        
+        // Build a map of existing positions
+        val existingPositions = mutableMapOf<String, Int>()
+        existingOrder.primaryOrder.forEachIndexed { index, item ->
+            when (item) {
+                is UnifiedTabOrder.OrderItem.SingleTab -> existingPositions[item.tabId] = index
+                is UnifiedTabOrder.OrderItem.TabGroup -> existingPositions["group_${item.groupId}"] = index
+            }
+        }
+        
+        // Create new order items
+        val newOrder = mutableListOf<UnifiedTabOrder.OrderItem>()
+        val processedTabIds = mutableSetOf<String>()
+        
+        // First, add items that exist in the old order in their old positions
+        val itemsWithPositions = mutableListOf<Pair<Int, UnifiedTabOrder.OrderItem>>()
+        
+        // Process groups
+        profileGroups.forEach { group ->
+            val validTabIds = group.tabIds.filter { it in tabIds }
+            if (validTabIds.isNotEmpty()) {
+                val position = existingPositions["group_${group.id}"] ?: Int.MAX_VALUE
+                itemsWithPositions.add(
+                    position to UnifiedTabOrder.OrderItem.TabGroup(
+                        groupId = group.id,
+                        groupName = group.name,
+                        color = group.color,
+                        isExpanded = true,
+                        tabIds = validTabIds
+                    )
+                )
+                processedTabIds.addAll(validTabIds)
+            }
+        }
+        
+        // Process ungrouped tabs
+        tabIds.forEach { tabId ->
+            if (tabId !in processedTabIds) {
+                val position = existingPositions[tabId] ?: Int.MAX_VALUE
+                itemsWithPositions.add(
+                    position to UnifiedTabOrder.OrderItem.SingleTab(tabId)
+                )
+                processedTabIds.add(tabId)
+            }
+        }
+        
+        // Sort by position and extract items
+        newOrder.addAll(itemsWithPositions.sortedBy { it.first }.map { it.second })
+        
+        // Save the new order
+        val updatedOrder = UnifiedTabOrder(
+            profileId = profileId,
+            primaryOrder = newOrder,
+            lastModified = System.currentTimeMillis()
+        )
+        saveOrder(updatedOrder)
+        _currentOrder.value = updatedOrder
+        
+        android.util.Log.d("TabOrderManager", "Rebuilt order for profile $profileId: ${newOrder.size} items")
     }
 }

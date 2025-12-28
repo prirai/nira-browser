@@ -285,7 +285,9 @@ class UnifiedToolbar @JvmOverloads constructor(
                     )
 
                     // Add the new tab to the island/group using UnifiedTabGroupManager
+                    // Add a small delay to ensure tab is in the store before grouping
                     lifecycleOwner.lifecycleScope.launch {
+                        kotlinx.coroutines.delay(100) // Wait for tab to be added to store
                         val unifiedManager = com.prirai.android.nira.browser.tabgroups.UnifiedTabGroupManager.getInstance(context)
                         unifiedManager.addTabToGroup(newTabId, islandId)
                     }
@@ -834,7 +836,11 @@ class UnifiedToolbar @JvmOverloads constructor(
 
         toolbarSystem.setBackgroundColor(bgColor)
         
-        // Components already have their own background handling
+        // Update status bar immediately for private mode
+        val activity = context as? android.app.Activity
+        if (activity != null && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+            com.prirai.android.nira.theme.ThemeManager.applySystemBarsTheme(activity, isPrivate)
+        }
     }
     
     /**

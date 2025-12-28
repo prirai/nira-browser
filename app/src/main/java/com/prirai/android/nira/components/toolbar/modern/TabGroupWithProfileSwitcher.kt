@@ -49,16 +49,16 @@ class TabGroupWithProfileSwitcher @JvmOverloads constructor(
                 LayoutParams.WRAP_CONTENT
             )
             // Add padding at the end to make room for profile switcher
-            // Profile pill: 40dp (no margin since it's flush to edge)
-            val endPadding = (40 * resources.displayMetrics.density).toInt()
+            // Profile pill: ~100dp estimated (emoji + name + padding)
+            val endPadding = (100 * resources.displayMetrics.density).toInt()
             setPadding(paddingLeft, paddingTop, endPadding, paddingBottom)
         }
         addView(tabGroupView)
 
-        // Create profile switcher pill (above tabs) - emoji only
+        // Create profile switcher pill (above tabs) - show both emoji and name
         profilePillCard = CardView(context).apply {
             layoutParams = LayoutParams(
-                (40 * resources.displayMetrics.density).toInt(), // 40dp width
+                LayoutParams.WRAP_CONTENT, // Auto width to fit content
                 (40 * resources.displayMetrics.density).toInt() // 40dp height
             ).apply {
                 gravity = Gravity.END or Gravity.CENTER_VERTICAL
@@ -87,30 +87,37 @@ class TabGroupWithProfileSwitcher @JvmOverloads constructor(
             // Inner container for pill content
             val pillContent = LinearLayout(context).apply {
                 orientation = LinearLayout.HORIZONTAL
-                gravity = Gravity.CENTER // Center the emoji
-                val padding = (8 * resources.displayMetrics.density).toInt()
-                setPadding(padding, padding, padding, padding)
+                gravity = Gravity.CENTER_VERTICAL
+                val paddingHorizontal = (12 * resources.displayMetrics.density).toInt()
+                val paddingVertical = (8 * resources.displayMetrics.density).toInt()
+                setPadding(paddingHorizontal, paddingVertical, paddingHorizontal, paddingVertical)
                 
-                // Profile emoji only (no name)
+                // Profile emoji
                 profileEmojiText = TextView(context).apply {
                     text = "👤"
-                    textSize = 22f // Larger emoji
+                    textSize = 20f
                     gravity = Gravity.CENTER
-                    includeFontPadding = false // Remove extra padding
+                    includeFontPadding = false
+                    layoutParams = LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.WRAP_CONTENT,
+                        LinearLayout.LayoutParams.WRAP_CONTENT
+                    ).apply {
+                        marginEnd = (4 * resources.displayMetrics.density).toInt()
+                    }
+                }
+                addView(profileEmojiText)
+                
+                // Profile name - always visible
+                profileNameText = TextView(context).apply {
+                    text = "Default"
+                    textSize = 14f
+                    setTextColor(ContextCompat.getColor(context, R.color.m3_on_surface))
                     layoutParams = LinearLayout.LayoutParams(
                         LinearLayout.LayoutParams.WRAP_CONTENT,
                         LinearLayout.LayoutParams.WRAP_CONTENT
                     )
                 }
-                addView(profileEmojiText)
-                
-                // Hidden profile name (kept for updateProfileIcon compatibility)
-                profileNameText = TextView(context).apply {
-                    text = ""
-                    visibility = GONE
-                }
-                
-                // No dropdown icon needed since it's just the emoji
+                addView(profileNameText)
             }
             
             addView(pillContent)
@@ -173,7 +180,7 @@ class TabGroupWithProfileSwitcher @JvmOverloads constructor(
         
         // Adjust tab group padding based on visibility
         val endPadding = if (visible) {
-            (40 * resources.displayMetrics.density).toInt()
+            (100 * resources.displayMetrics.density).toInt()
         } else {
             0
         }

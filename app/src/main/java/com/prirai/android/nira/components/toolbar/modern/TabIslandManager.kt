@@ -3,8 +3,11 @@ package com.prirai.android.nira.components.toolbar.modern
 import android.content.Context
 import com.prirai.android.nira.browser.tabgroups.TabGroupData
 import com.prirai.android.nira.browser.tabgroups.UnifiedTabGroupManager
+import com.prirai.android.nira.ext.components
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import mozilla.components.browser.state.state.SessionState
 
@@ -29,6 +32,9 @@ class TabIslandManager(private val context: Context) {
     
     // Listeners for island changes
     private val changeListeners = mutableListOf<() -> Unit>()
+    
+    // Debouncing for order rebuilding to prevent cascading updates
+    private var rebuildOrderJob: Job? = null
 
     companion object {
         @Volatile
@@ -80,12 +86,29 @@ class TabIslandManager(private val context: Context) {
     private fun saveCollapseState() {
         prefs.edit().putStringSet("collapsed_islands", collapseState.filter { it.value }.keys).apply()
     }
+    
+    /**
+     * Schedule order rebuild with debouncing to prevent cascading updates
+     */
+    private fun scheduleOrderRebuild(profileId: String, contextId: String) {
+        rebuildOrderJob?.cancel()
+        rebuildOrderJob = scope.launch {
+            delay(100) // 100ms debounce
+            val allTabs = context.components.store.state.tabs
+            val orderManager = com.prirai.android.nira.browser.tabs.compose.TabOrderManager.getInstance(context, unifiedManager)
+            orderManager.rebuildOrderForProfile(profileId, allTabs.filter { 
+                val tabContextId = it.contextId ?: "profile_default"
+                tabContextId == contextId || (contextId == "profile_default" && tabContextId == null)
+            })
+        }
+    }
 
 
     /**
-     * Creates a new island from the given tabs
+     * Creates a new island from the given tabs.
+     * Returns the created island with the actual group ID from UnifiedTabGroupManager.
      */
-    fun createIsland(
+    suspend fun createIsland(
         tabIds: List<String>,
         name: String? = null,
         colorIndex: Int? = null
@@ -96,19 +119,66 @@ class TabIslandManager(private val context: Context) {
             TabIsland.DEFAULT_COLORS.random()
         }
         
-        scope.launch {
-            unifiedManager.createGroup(
-                tabIds = tabIds,
-                name = name ?: "",
-                color = color
-            )
+        // Get contextId from the first tab to determine profile
+        val store = context.components.store
+        val allTabs = store.state.tabs
+        val firstTab = allTabs.find { it.id == tabIds.firstOrNull() }
+        
+        // Fallback: if tab not found or has null contextId, check all tabs in the group
+        var contextId = firstTab?.contextId
+        if (contextId == null) {
+            // Try to find contextId from any tab in the group
+            for (tabId in tabIds) {
+                val tab = allTabs.find { it.id == tabId }
+                if (tab?.contextId != null) {
+                    contextId = tab.contextId
+                    break
+                }
+            }
+            // If still null, use selected tab's contextId as fallback
+            if (contextId == null) {
+                val selectedTab = allTabs.find { it.id == store.state.selectedTabId }
+                contextId = selectedTab?.contextId
+            }
+            // Last resort: use default profile
+            if (contextId == null) {
+                contextId = "profile_default"
+            }
         }
         
-        return TabIsland(
-            id = java.util.UUID.randomUUID().toString(),
+        android.util.Log.d("TabIslandManager", "Creating island with tabIds: $tabIds")
+        android.util.Log.d("TabIslandManager", "Store has ${allTabs.size} tabs")
+        android.util.Log.d("TabIslandManager", "First tab ID to find: ${tabIds.firstOrNull()}")
+        android.util.Log.d("TabIslandManager", "First tab found: ${firstTab?.id}, contextId: $contextId, title: ${firstTab?.content?.title}")
+        android.util.Log.d("TabIslandManager", "All tab IDs in store: ${allTabs.map { it.id }}")
+        android.util.Log.d("TabIslandManager", "Final contextId to use: $contextId")
+        
+        // Create group and get the actual group data with correct ID
+        val groupData = unifiedManager.createGroup(
+            tabIds = tabIds,
             name = name ?: "",
             color = color,
-            tabIds = tabIds.toMutableList(),
+            contextId = contextId
+        )
+        
+        android.util.Log.d("TabIslandManager", "Created group ${groupData.id} with contextId: ${groupData.contextId}")
+        
+        // Update TabOrderManager to include the new group in its order (debounced)
+        val profileId = when {
+            contextId == "private" -> "private"
+            contextId == "profile_default" || contextId == null -> "default"
+            contextId.startsWith("profile_") -> contextId.removePrefix("profile_")
+            else -> "default"
+        }
+        
+        scheduleOrderRebuild(profileId, contextId)
+        
+        // Return TabIsland with the actual group ID from unified manager
+        return TabIsland(
+            id = groupData.id, // Use the actual group ID, not a new UUID
+            name = groupData.name,
+            color = groupData.color,
+            tabIds = groupData.tabIds.toMutableList(),
             isCollapsed = false
         )
     }
@@ -285,65 +355,93 @@ class TabIslandManager(private val context: Context) {
     }
 
     /**
-     * Converts tabs list to display items with island information
-     * Maintains the original tab order - islands appear where their first tab was
+     * Converts tabs list to display items using TabOrderManager for consistency.
+     * This ensures tab bar and tab sheet have the same ordering.
      */
     fun createDisplayItems(tabs: List<SessionState>): List<TabPillItem> {
         val displayItems = mutableListOf<TabPillItem>()
-        val processedIslands = mutableSetOf<String>()
-        val processedTabs = mutableSetOf<String>()
-
+        
+        // Get the current context ID to determine which profile we're showing
+        val store = context.components.store
+        val selectedTab = tabs.find { it.id == store.state.selectedTabId }
+        val contextId = selectedTab?.contextId ?: if (tabs.any { it.content.private }) "private" else "profile_default"
+        
+        // Determine profile ID from context ID
+        val profileId = when {
+            contextId == "private" -> "private"
+            contextId == "profile_default" || contextId == null -> "default"
+            contextId.startsWith("profile_") -> contextId.removePrefix("profile_")
+            else -> "default"
+        }
+        
+        // Get the unified order from TabOrderManager (using runBlocking since this is called from UI)
+        val orderManager = com.prirai.android.nira.browser.tabs.compose.TabOrderManager.getInstance(context, unifiedManager)
+        val order = kotlinx.coroutines.runBlocking {
+            orderManager.loadOrder(profileId)
+        }
+        
+        val tabsById = tabs.associateBy { it.id }
         val allGroups = unifiedManager.getAllGroups()
-        val tabToGroupMap = mutableMapOf<String, TabGroupData>()
-        allGroups.forEach { group ->
-            group.tabIds.forEach { tabId ->
-                tabToGroupMap[tabId] = group
+        val groupsById = allGroups.associateBy { it.id }
+        
+        // Process items according to the unified order
+        for (orderItem in order.primaryOrder) {
+            when (orderItem) {
+                is com.prirai.android.nira.browser.tabs.compose.UnifiedTabOrder.OrderItem.SingleTab -> {
+                    val tab = tabsById[orderItem.tabId]
+                    if (tab != null) {
+                        displayItems.add(
+                            TabPillItem.Tab(
+                                session = tab,
+                                islandId = null
+                            )
+                        )
+                    }
+                }
+                is com.prirai.android.nira.browser.tabs.compose.UnifiedTabOrder.OrderItem.TabGroup -> {
+                    val group = groupsById[orderItem.groupId]
+                    if (group != null) {
+                        val island = groupToIsland(group)
+                        val isCollapsed = collapseState[island.id] ?: false
+                        
+                        if (isCollapsed) {
+                            // Show collapsed island pill
+                            displayItems.add(
+                                TabPillItem.CollapsedIsland(
+                                    island = island.copy(isCollapsed = true),
+                                    tabCount = island.size()
+                                )
+                            )
+                        } else {
+                            // Show expanded island group (header + tabs as one unit)
+                            val islandTabs = orderItem.tabIds.mapNotNull { tabId ->
+                                tabsById[tabId]
+                            }
+                            displayItems.add(
+                                TabPillItem.ExpandedIslandGroup(
+                                    island = island.copy(isCollapsed = false),
+                                    tabs = islandTabs
+                                )
+                            )
+                        }
+                    }
+                }
             }
         }
-
-        // Process tabs in their original order
+        
+        // Add any tabs that aren't in the order (safety fallback)
         tabs.forEach { tab ->
-            // Skip if we already added this tab as part of an island
-            if (processedTabs.contains(tab.id)) {
-                return@forEach
-            }
-
-            val group = tabToGroupMap[tab.id]
-
-            if (group != null && !processedIslands.contains(group.id)) {
-                // First tab of an island - add the island here
-                processedIslands.add(group.id)
-
-                val island = groupToIsland(group)
-                val isCollapsed = collapseState[island.id] ?: false
-
-                if (isCollapsed) {
-                    // Show collapsed island pill
-                    displayItems.add(
-                        TabPillItem.CollapsedIsland(
-                            island = island.copy(isCollapsed = true),
-                            tabCount = island.size()
-                        )
-                    )
-                } else {
-                    // Show expanded island group (header + tabs as one unit)
-                    val islandTabs = island.tabIds.mapNotNull { tabId ->
-                        tabs.find { it.id == tabId }
-                    }
-                    displayItems.add(
-                        TabPillItem.ExpandedIslandGroup(
-                            island = island.copy(isCollapsed = false),
-                            tabs = islandTabs
-                        )
-                    )
+            val alreadyAdded = displayItems.any { item ->
+                when (item) {
+                    is TabPillItem.Tab -> item.session.id == tab.id
+                    is TabPillItem.ExpandedIslandGroup -> item.tabs.any { it.id == tab.id }
+                    is TabPillItem.CollapsedIsland -> item.island.tabIds.contains(tab.id)
+                    else -> false
                 }
-
-                // Mark all island tabs as processed
-                island.tabIds.forEach { processedTabs.add(it) }
-            } else if (group == null) {
-                // Tab is not in any island - add it in its original position
-                displayItems.add(TabPillItem.Tab(session = tab))
-                processedTabs.add(tab.id)
+            }
+            if (!alreadyAdded) {
+                // This tab is not in any order, add it at the end
+                displayItems.add(TabPillItem.Tab(session = tab, islandId = null))
             }
         }
 

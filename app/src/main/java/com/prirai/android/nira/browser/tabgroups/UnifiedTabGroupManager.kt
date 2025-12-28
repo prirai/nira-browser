@@ -74,6 +74,67 @@ class UnifiedTabGroupManager private constructor(private val context: Context) {
     private fun initialize() {
         scope.launch {
             loadGroupsFromDatabase()
+            // Migrate groups with null contextId
+            migrateNullContextIdGroups()
+        }
+    }
+    
+    /**
+     * Migrates groups with null contextId by setting it based on their tabs' contextIds
+     */
+    private suspend fun migrateNullContextIdGroups() = withContext(Dispatchers.IO) {
+        try {
+            val groupsToMigrate = groupsCache.values.filter { it.contextId == null }
+            if (groupsToMigrate.isEmpty()) {
+                android.util.Log.d("UnifiedTabGroupManager", "No groups need contextId migration")
+                return@withContext
+            }
+            
+            android.util.Log.d("UnifiedTabGroupManager", "Migrating ${groupsToMigrate.size} groups with null contextId")
+            
+            // Get the store to check tab contextIds
+            val store = (context as? android.app.Application)?.let { app ->
+                (app as? com.prirai.android.nira.BrowserApp)?.components?.store
+            }
+            
+            groupsToMigrate.forEach { group ->
+                // Try to find a contextId from the group's tabs
+                var newContextId: String? = null
+                if (store != null) {
+                    for (tabId in group.tabIds) {
+                        val tab = withContext(Dispatchers.Main) {
+                            store.state.tabs.find { it.id == tabId }
+                        }
+                        if (tab?.contextId != null) {
+                            newContextId = tab.contextId
+                            break
+                        }
+                    }
+                }
+                
+                // If we still don't have a contextId, use default
+                if (newContextId == null) {
+                    newContextId = "profile_default"
+                }
+                
+                android.util.Log.d("UnifiedTabGroupManager", "Migrating group ${group.id} from null to contextId: $newContextId")
+                
+                // Update the group in database
+                val dbGroup = dao.getGroupById(group.id)
+                if (dbGroup != null) {
+                    val updated = dbGroup.copy(contextId = newContextId)
+                    dao.updateGroup(updated)
+                    
+                    // Update cache
+                    groupsCache[group.id] = group.copy(contextId = newContextId)
+                }
+            }
+            
+            // Emit state update
+            emitStateUpdate()
+            android.util.Log.d("UnifiedTabGroupManager", "Context ID migration complete")
+        } catch (e: Exception) {
+            android.util.Log.e("UnifiedTabGroupManager", "Error migrating groups", e)
         }
     }
 
@@ -90,7 +151,7 @@ class UnifiedTabGroupManager private constructor(private val context: Context) {
                     color = parseColor(dbGroup.color),
                     tabIds = tabIds,
                     createdAt = dbGroup.createdAt,
-                    contextId = null  // Will be determined from tabs
+                    contextId = dbGroup.contextId  // Load from database
                 )
                 groupDataList.add(groupData)
             }
@@ -140,7 +201,8 @@ class UnifiedTabGroupManager private constructor(private val context: Context) {
             name = groupName,
             color = colorToString(groupColor),
             createdAt = now,
-            isActive = true
+            isActive = true,
+            contextId = contextId
         )
 
         dao.insertGroup(group)

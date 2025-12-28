@@ -104,6 +104,39 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
         
         // Apply AMOLED mode background if enabled
         applyThemeColors()
+        
+        // Update toolbar styling for private mode
+        updateToolbarForPrivateMode()
+    }
+    
+    private fun updateToolbarForPrivateMode() {
+        val selectedTab = requireContext().components.store.state.tabs.find { 
+            it.id == requireContext().components.store.state.selectedTabId 
+        }
+        val isPrivate = selectedTab?.content?.private == true
+        
+        // Use the UnifiedToolbar instance from this fragment
+        _unifiedToolbar?.applyPrivateMode(isPrivate)
+        
+        // Also update status bar color
+        updateStatusBarForPrivateMode(isPrivate)
+    }
+    
+    private fun updateStatusBarForPrivateMode(isPrivate: Boolean) {
+        val window = requireActivity().window
+        if (isPrivate) {
+            val purpleColor = android.graphics.Color.parseColor("#6200EE")
+            window.statusBarColor = purpleColor
+        } else {
+            // Reset to theme color
+            val typedValue = android.util.TypedValue()
+            requireContext().theme.resolveAttribute(
+                com.google.android.material.R.attr.colorSurface, 
+                typedValue, 
+                true
+            )
+            window.statusBarColor = typedValue.data
+        }
     }
     
     private fun applyThemeColors() {
