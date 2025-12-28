@@ -216,10 +216,8 @@ open class BrowserActivity : LocaleAwareAppCompatActivity(), ComponentCallbacks2
             recreate()
         }
         
-        // Apply system bars theme based on current mode
-        val selectedTab = components.store.state.tabs.find { it.id == components.store.state.selectedTabId }
-        val isPrivate = selectedTab?.content?.private ?: browsingModeManager.mode.isPrivate
-        com.prirai.android.nira.theme.ThemeManager.applySystemBarsTheme(this, isPrivate)
+        // Update toolbar and status bar theme immediately
+        updateToolbarAndStatusBarTheme()
     }
 
     final override fun onNewIntent(intent: Intent) {
@@ -653,6 +651,26 @@ open class BrowserActivity : LocaleAwareAppCompatActivity(), ComponentCallbacks2
         // Remove navigation bar contrast enforcement (removes the white pill/scrim on Android 10+)
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
             window.isNavigationBarContrastEnforced = false
+        }
+    }
+    
+    private fun updateToolbarAndStatusBarTheme() {
+        val selectedTab = components.store.state.tabs.find { it.id == components.store.state.selectedTabId }
+        val isPrivate = selectedTab?.content?.private == true
+        
+        // Update status bar
+        com.prirai.android.nira.theme.ThemeManager.applySystemBarsTheme(this, isPrivate)
+        
+        // Update toolbar background
+        val unifiedToolbar = findViewById<com.prirai.android.nira.components.toolbar.unified.UnifiedToolbar>(R.id.toolbar)
+        if (isPrivate) {
+            val purpleColor = com.prirai.android.nira.theme.ColorConstants.PrivateMode.PURPLE
+            unifiedToolbar?.setBackgroundColor(purpleColor)
+        } else {
+            // Use Material 3 surface color
+            val typedValue = android.util.TypedValue()
+            theme.resolveAttribute(com.google.android.material.R.attr.colorSurface, typedValue, true)
+            unifiedToolbar?.setBackgroundColor(typedValue.data)
         }
     }
     

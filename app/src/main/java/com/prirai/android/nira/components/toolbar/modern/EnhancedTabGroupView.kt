@@ -117,12 +117,27 @@ class EnhancedTabGroupView @JvmOverloads constructor(
         super.onMeasure(widthMeasureSpec, newHeightMeasureSpec)
     }
 
+    // Debounce refresh calls to prevent flickering
+    private var refreshJob: kotlinx.coroutines.Job? = null
+    private val refreshScope = CoroutineScope(Dispatchers.Main)
+    
     private fun setupIslandManager() {
         islandManager = TabIslandManager.getInstance(context)
         
         // Register listener to refresh display when islands change
+        // Use debouncing to prevent multiple rapid refreshes
         islandManager.addChangeListener {
-            android.util.Log.d("EnhancedTabGroupView", "Island change detected, refreshing display")
+            scheduleRefresh()
+        }
+    }
+    
+    /**
+     * Schedule a refresh with debouncing to prevent flickering
+     */
+    private fun scheduleRefresh() {
+        refreshJob?.cancel()
+        refreshJob = refreshScope.launch {
+            kotlinx.coroutines.delay(150) // 150ms debounce to reduce flickering
             refreshDisplay()
         }
     }
@@ -363,18 +378,12 @@ class EnhancedTabGroupView @JvmOverloads constructor(
                         // Dropped on island header - add to island
                         val islandId = targetId.removePrefix("island_")
                         if (currentIsland?.id != islandId) {
-
                             performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS)
                             if (currentIsland != null) {
-
                                 islandManager.removeTabFromIsland(draggedTabId, currentIsland.id)
                             }
                             islandManager.addTabToIsland(draggedTabId, islandId)
-
-                            post {
-                                lastTabIds = emptyList()
-                                refreshDisplay()
-                            }
+                            // Refresh is handled by debounced change listener
                         }
                     }
 
@@ -382,38 +391,21 @@ class EnhancedTabGroupView @JvmOverloads constructor(
                         // Dropped on collapsed island - add to island
                         val islandId = targetId.removePrefix("collapsed_")
                         if (currentIsland?.id != islandId) {
-                            android.util.Log.d(
-                                "EnhancedTabGroupView",
-                                "handleDrop: Adding to collapsed island $islandId"
-                            )
                             performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS)
                             if (currentIsland != null) {
-                                android.util.Log.d(
-                                    "EnhancedTabGroupView",
-                                    "handleDrop: Removing from current island ${currentIsland.id}"
-                                )
                                 islandManager.removeTabFromIsland(draggedTabId, currentIsland.id)
                             }
                             islandManager.addTabToIsland(draggedTabId, islandId)
-
-                            post {
-                                lastTabIds = emptyList()
-                                refreshDisplay()
-                            }
+                            // Refresh is handled by debounced change listener
                         }
                     }
 
                     targetId == "ungroup" -> {
                         // Dropped in empty space - remove from island
                         if (currentIsland != null) {
-
                             performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS)
                             islandManager.removeTabFromIsland(draggedTabId, currentIsland.id)
-
-                            post {
-                                lastTabIds = emptyList()
-                                refreshDisplay()
-                            }
+                            // Refresh is handled by debounced change listener
                         }
                     }
 
@@ -423,20 +415,11 @@ class EnhancedTabGroupView @JvmOverloads constructor(
                         val draggedTab = currentTabs.find { it.id == draggedTabId }
 
                         if (targetTab != null && draggedTab != null) {
-                            android.util.Log.d(
-                                "EnhancedTabGroupView",
-                                "handleDrop: Creating island with tabs $draggedTabId and $targetId"
-                            )
                             performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS)
                             if (currentIsland != null) {
-                                android.util.Log.d(
-                                    "EnhancedTabGroupView",
-                                    "handleDrop: Removing from current island ${currentIsland.id}"
-                                )
                                 islandManager.removeTabFromIsland(draggedTabId, currentIsland.id)
                             }
                             createIslandAtPosition(draggedTabId, targetId)
-
                         }
                     }
                 }
@@ -496,22 +479,22 @@ class EnhancedTabGroupView @JvmOverloads constructor(
                 // Create island with tabs in their current order
                 val orderedTabs = if (pos1 < pos2) listOf(tabId1, tabId2) else listOf(tabId2, tabId1)
 
-                islandManager.createIsland(orderedTabs)
+                CoroutineScope(Dispatchers.Main).launch {
+                    islandManager.createIsland(orderedTabs)
+                    // Refresh is handled by debounced change listener
+                }
             }
 
             island2 != null && island1.id != island2.id -> {
-
                 // Both in different islands, merge into island2
                 islandManager.addTabToIsland(tabId1, island2.id)
+                // Refresh is handled by debounced change listener
             }
             // If both in same island, do nothing
             else -> {
-
             }
         }
 
-
-        refreshDisplay()
         showIslandCreatedFeedback()
     }
 
@@ -753,16 +736,18 @@ class EnhancedTabGroupView @JvmOverloads constructor(
         if (parentIsland != null) {
             // Parent is already in an island, add child to same island
             islandManager.addTabToIsland(newTabId, parentIsland.id)
-            refreshDisplay()
+            // Refresh is handled by debounced change listener
         } else {
             // Parent is not in an island, create a new island for both
             // This implements feature #3: auto-group new tabs with parent
-            islandManager.createIsland(
-                tabIds = listOf(parentTabId, newTabId),
-                name = null
-            )
-            refreshDisplay()
-            showIslandCreatedFeedback()
+            CoroutineScope(Dispatchers.Main).launch {
+                islandManager.createIsland(
+                    tabIds = listOf(parentTabId, newTabId),
+                    name = null
+                )
+                // Refresh is handled by debounced change listener
+                showIslandCreatedFeedback()
+            }
         }
     }
 
@@ -772,9 +757,11 @@ class EnhancedTabGroupView @JvmOverloads constructor(
     fun createIslandFromTabs(tabIds: List<String>, name: String? = null) {
         if (tabIds.size < 2) return
 
-        islandManager.createIsland(tabIds, name)
-        refreshDisplay()
-        showIslandCreatedFeedback()
+        CoroutineScope(Dispatchers.Main).launch {
+            islandManager.createIsland(tabIds, name)
+            // Refresh is handled by debounced change listener
+            showIslandCreatedFeedback()
+        }
     }
 
     /**
@@ -783,7 +770,7 @@ class EnhancedTabGroupView @JvmOverloads constructor(
     fun groupTabsByDomain() {
         val islands = islandManager.groupTabsByDomain(currentTabs)
         if (islands.isNotEmpty()) {
-            refreshDisplay()
+            // Refresh is handled by debounced change listener
             showIslandCreatedFeedback()
         }
     }
@@ -795,8 +782,7 @@ class EnhancedTabGroupView @JvmOverloads constructor(
         // Notify parent component
         onTabClosed?.invoke(tabId)
 
-        // Refresh display
-        refreshDisplay()
+        // Refresh display handled by debounced listener
         animateTabRemoval(tabId)
     }
 
@@ -832,10 +818,7 @@ class EnhancedTabGroupView @JvmOverloads constructor(
         // Remove tab from island
         islandManager.removeTabFromIsland(tabId, islandId)
         performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS)
-        post {
-            lastTabIds = emptyList()
-            refreshDisplay()
-        }
+        // Refresh is handled by debounced change listener
     }
 
     /**
@@ -945,7 +928,7 @@ class EnhancedTabGroupView @JvmOverloads constructor(
                 if (newName.isNotBlank()) {
                     islandManager.renameIsland(islandId, newName)
                     onIslandRenamed?.invoke(islandId, newName)
-                    refreshDisplay()
+                    // Refresh is handled by debounced change listener
                 }
             }
             .setNegativeButton("Cancel", null)
@@ -1020,7 +1003,7 @@ class EnhancedTabGroupView @JvmOverloads constructor(
             .setView(dialogView)
             .setPositiveButton("Apply") { _, _ ->
                 islandManager.changeIslandColor(islandId, colors[selectedColorIndex])
-                refreshDisplay()
+                // Refresh is handled by debounced change listener
             }
             .setNegativeButton("Cancel", null)
             .show()
@@ -1028,7 +1011,7 @@ class EnhancedTabGroupView @JvmOverloads constructor(
 
     private fun ungroupIsland(islandId: String) {
         islandManager.deleteIsland(islandId)
-        refreshDisplay()
+        // Refresh is handled by debounced change listener
     }
 
     private fun closeAllTabsInIsland(islandId: String) {
@@ -1041,7 +1024,7 @@ class EnhancedTabGroupView @JvmOverloads constructor(
 
         // Clean up island
         islandManager.deleteIsland(islandId)
-        refreshDisplay()
+        // Refresh is handled by debounced change listener
     }
     
     private fun showMoveGroupToProfileDialog(islandId: String) {
@@ -1071,7 +1054,7 @@ class EnhancedTabGroupView @JvmOverloads constructor(
                     android.widget.Toast.LENGTH_SHORT
                 ).show()
                 
-                refreshDisplay()
+                // Refresh is handled by debounced change listener
             }
             .setNegativeButton("Cancel", null)
             .show()
@@ -1081,7 +1064,7 @@ class EnhancedTabGroupView @JvmOverloads constructor(
     private fun refreshDisplay() {
         android.util.Log.d(
             "EnhancedTabGroupView",
-            "refreshDisplay: Starting refresh, currentTabs.size=${currentTabs.size}"
+            "refreshDisplay: Starting refresh"
         )
         // Force refresh by clearing last state and recreating display items
         lastTabIds = emptyList()

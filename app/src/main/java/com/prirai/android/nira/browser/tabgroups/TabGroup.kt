@@ -14,7 +14,8 @@ data class TabGroup(
     val name: String = "",
     val color: String = "blue", // Color identifier for visual distinction
     val createdAt: Long = System.currentTimeMillis(),
-    val isActive: Boolean = true
+    val isActive: Boolean = true,
+    val contextId: String? = null // Profile/browsing mode context (null = default, "private", "profile_xxx")
 )
 
 /**

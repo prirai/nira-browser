@@ -65,16 +65,17 @@ class MergedProfileButton @JvmOverloads constructor(
 
     fun setText(emoji: String, name: String) {
         storedName = name
-        textView.text = if (isActive && name.isNotBlank()) "$emoji $name" else emoji
+        // Always show both emoji and name
+        textView.text = if (name.isNotBlank()) "$emoji $name" else emoji
     }
 
     private fun animateToState() {
         // Bezier curve interpolator for smooth animation
         val interpolator = PathInterpolator(0.4f, 0.0f, 0.2f, 1.0f)
         
-        // Update text
+        // Update text - always show both emoji and name
         val emojiOnly = textView.text.toString().split(" ").firstOrNull() ?: ""
-        val newText = if (isActive && storedName.isNotBlank()) {
+        val newText = if (storedName.isNotBlank()) {
             "$emojiOnly $storedName"
         } else {
             emojiOnly
@@ -124,9 +125,9 @@ class MergedProfileButton @JvmOverloads constructor(
     }
 
     private fun applyState() {
-        // Update text to show name when active
+        // Update text to always show name
         val emojiOnly = textView.text.toString().split(" ").firstOrNull() ?: ""
-        textView.text = if (isActive && storedName.isNotBlank()) {
+        textView.text = if (storedName.isNotBlank()) {
             "$emojiOnly $storedName"
         } else {
             emojiOnly

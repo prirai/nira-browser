@@ -129,7 +129,7 @@ class TabGroupBar @JvmOverloads constructor(
                         
                         if (ungroupedTabIds.isNotEmpty()) {
                             TabGroupWithTabs(
-                                group = TabGroup(id = "ungrouped", name = "Tabs", color = "blue", createdAt = 0, isActive = true),
+                                group = TabGroup(id = "ungrouped", name = "Tabs", color = "blue", createdAt = 0, isActive = true, contextId = null),
                                 tabIds = ungroupedTabIds
                             )
                         } else {
