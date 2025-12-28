@@ -426,6 +426,10 @@ class ComposeHomeFragment : Fragment() {
         // Apply private mode if needed
         val isPrivate = components.store.state.selectedTab?.content?.private ?: browsingModeManager.mode.isPrivate
         unifiedToolbar?.applyPrivateMode(isPrivate)
+        
+        // Force tab bar to update with current profile's tabs
+        // This ensures the tab bar shows the correct profile immediately when fragment loads
+        forceTabBarUpdate()
     }
 
     private var lastBackPressTime = 0L
@@ -466,6 +470,29 @@ class ComposeHomeFragment : Fragment() {
                 }
             }
         }
+        
+        // Observe selected tab changes to update tab bar filtering
+        store.flowScoped(viewLifecycleOwner) { flow ->
+            flow.map { state -> state.selectedTabId }
+                .distinctUntilChanged()
+                .collect { _ ->
+                    // Check if fragment is still attached before accessing context
+                    if (!isAdded || context == null) return@collect
+                    
+                    // Update toolbar tab count when selected tab changes
+                    unifiedToolbar?.updateContextualToolbar(
+                        tab = null,
+                        canGoBack = false,
+                        canGoForward = false,
+                        tabCount = getFilteredTabCount(),
+                        isHomepage = true
+                    )
+                    
+                    // Also update private mode state
+                    val isPrivate = store.state.selectedTab?.content?.private ?: browsingModeManager.mode.isPrivate
+                    unifiedToolbar?.applyPrivateMode(isPrivate)
+                }
+        }
 
         // Handle double back press to exit app
         requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner, object : androidx.activity.OnBackPressedCallback(true) {
@@ -499,7 +526,8 @@ class ComposeHomeFragment : Fragment() {
             return
         }
 
-        val isPrivate = browsingModeManager.mode.isPrivate
+        // Check the actual selected tab's private state, not the global browsing mode
+        val isPrivate = components.store.state.selectedTab?.content?.private ?: browsingModeManager.mode.isPrivate
         
         // Use ThemeManager to apply system bars theme
         com.prirai.android.nira.theme.ThemeManager.applySystemBarsTheme(
@@ -516,10 +544,11 @@ class ComposeHomeFragment : Fragment() {
     }
 
     private fun restoreDefaultStyling() {
-        // Use ThemeManager to restore system bars
+        // Use ThemeManager to restore system bars based on actual tab state
+        val isPrivate = components.store.state.selectedTab?.content?.private ?: browsingModeManager.mode.isPrivate
         com.prirai.android.nira.theme.ThemeManager.applySystemBarsTheme(
             requireActivity(),
-            browsingModeManager.mode.isPrivate
+            isPrivate
         )
     }
 
@@ -561,7 +590,7 @@ class ComposeHomeFragment : Fragment() {
         // because it reads from store.state.selectedTab?.contextId in its setContent block
         
         // Update the unified toolbar's tab count and private mode state
-        val isPrivate = browsingModeManager.mode.isPrivate
+        val isPrivate = components.store.state.selectedTab?.content?.private ?: browsingModeManager.mode.isPrivate
         unifiedToolbar?.applyPrivateMode(isPrivate)
         unifiedToolbar?.updateContextualToolbar(
             tab = null,
@@ -750,12 +779,53 @@ class ComposeHomeFragment : Fragment() {
     }
     
     /**
+     * Force the tab bar to update with the current profile's tabs.
+     * Called when ComposeHomeFragment loads to ensure correct filtering immediately.
+     */
+    private fun forceTabBarUpdate() {
+        if (!isAdded || context == null) return
+        
+        val profileManager = com.prirai.android.nira.browser.profile.ProfileManager.getInstance(requireContext())
+        val store = components.store.state
+        val isPrivateMode = profileManager.isPrivateMode()
+        val currentProfile = profileManager.getActiveProfile()
+        
+        // Determine expected contextId based on current browsing mode
+        val expectedContextId = if (isPrivateMode) {
+            "private"
+        } else {
+            "profile_${currentProfile.id}"
+        }
+        
+        // Filter tabs to only show those belonging to current profile/mode
+        val filteredTabs = store.tabs.filter { tab ->
+            if (tab.contextId == null) {
+                // Guest tabs from custom tabs - show in normal mode only
+                !isPrivateMode && !tab.content.private
+            } else {
+                // Regular profile tabs
+                tab.content.private == isPrivateMode && tab.contextId == expectedContextId
+            }
+        }
+        
+        // Force update the tab bar
+        unifiedToolbar?.forceUpdateTabBar(filteredTabs, store.selectedTabId)
+    }
+    
+    /**
      * Get tab count filtered by current profile + guest tabs (null contextId)
+     * Uses the same logic as the tab bar to ensure consistency
      */
     private fun getFilteredTabCount(): Int {
+        // Safety check - return 0 if fragment is not attached
+        if (!isAdded || context == null) return 0
+        
         val store = components.store.state
-        val isPrivateMode = browsingModeManager.mode.isPrivate
-        val currentProfile = browsingModeManager.currentProfile
+        val selectedTab = store.selectedTab
+        
+        // Get the context from the selected tab, just like the tab bar does
+        val contextId = selectedTab?.contextId
+        val isPrivateMode = selectedTab?.content?.private ?: browsingModeManager.mode.isPrivate
         
         return store.tabs.count { tab ->
             val tabIsPrivate = tab.content.private
@@ -765,9 +835,10 @@ class ComposeHomeFragment : Fragment() {
             } else if (isPrivateMode) {
                 tab.contextId == "private"
             } else {
-                val expectedContextId = "profile_${currentProfile.id}"
-                // Include tabs with matching contextId OR guest tabs (null contextId)
-                (tab.contextId == expectedContextId) || (tab.contextId == null)
+                // Use the selected tab's contextId for filtering
+                val expectedContextId = contextId ?: "profile_default"
+                // Include tabs with matching contextId OR guest tabs (null contextId for backward compatibility)
+                (tab.contextId == expectedContextId) || (tab.contextId == null && expectedContextId == "profile_default")
             }
         }
     }
