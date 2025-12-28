@@ -218,6 +218,9 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
                     // Update toolbar profile context based on selected tab
                     val selectedTab = state.tabs.find { it.id == state.selectedTabId }
                     selectedTab?.let { tab ->
+                        // Update toolbar for private mode if needed
+                        updateToolbarForPrivateMode()
+                        
                         // Get the profile for this tab
                         val tabContextId = tab.contextId
                         val profileManager = com.prirai.android.nira.browser.profile.ProfileManager.getInstance(fragmentContext)
