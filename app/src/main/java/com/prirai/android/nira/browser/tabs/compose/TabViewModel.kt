@@ -98,7 +98,42 @@ class TabViewModel(
         currentProfileId?.let { profileId ->
             // Cancel any ongoing operation first
             loadJob?.cancel()
-            loadTabsForProfile(profileId, tabs, selectedTabId)
+            
+            // Immediately reload groups and tabs
+            loadJob = viewModelScope.launch {
+                _selectedTabId.value = selectedTabId
+                
+                // Reload groups from UnifiedTabGroupManager to get latest state
+                val allGroups = groupManager.getAllGroups()
+                
+                // Determine the expected contextId for this profile
+                val profileContextId = when (profileId) {
+                    "private" -> "private"
+                    "default" -> null
+                    else -> "profile_$profileId"
+                }
+                
+                // Filter groups to only show those matching the current profile's contextId
+                val groupsList = allGroups.filter { group ->
+                    when {
+                        profileId == "default" -> group.contextId == null
+                        else -> group.contextId == profileContextId
+                    }
+                }.filter { group ->
+                    // Only show groups that have tabs in the current tab list
+                    group.tabIds.any { tabId -> tabs.any { it.id == tabId } }
+                }
+                
+                _groups.value = groupsList
+                
+                // Preserve currently expanded groups or expand new ones
+                val currentExpanded = _expandedGroups.value
+                val newExpanded = groupsList.map { it.id }.toSet()
+                _expandedGroups.value = currentExpanded + newExpanded
+                
+                // Update tabs based on saved order
+                _tabs.value = getOrderedTabs(tabs, profileId, groupsList)
+            }
         }
     }
     
@@ -205,11 +240,10 @@ class TabViewModel(
                             contextId = contextId1 // Use the common contextId
                         )
                         
-                        // Reload to reflect changes
-                        updateTabs(_tabs.value, _selectedTabId.value)
-                        
-                        // Save new order
+                        // Save new order after group creation completes
                         saveCurrentOrder(profileId)
+                        
+                        // Note: Group events observer will trigger the UI refresh
                     }
                 }
             }
@@ -237,11 +271,10 @@ class TabViewModel(
                             notifyChange = true
                         )
                         
-                        // Reload
-                        updateTabs(_tabs.value, _selectedTabId.value)
-                        
                         // Save order
                         saveCurrentOrder(profileId)
+                        
+                        // Note: Group events observer will trigger the UI refresh
                     }
                 }
             }
@@ -263,11 +296,10 @@ class TabViewModel(
                     groupManager.removeTabFromGroup(group.tabIds[0], notifyChange = true)
                 }
                 
-                // Reload
-                updateTabs(_tabs.value, _selectedTabId.value)
-                
                 // Save order
                 saveCurrentOrder(profileId)
+                
+                // Note: Group events observer will trigger the UI refresh
             }
         }
     }
@@ -279,10 +311,7 @@ class TabViewModel(
         viewModelScope.launch {
             groupManager.renameGroup(groupId, newName)
             
-            // Reload groups
-            currentProfileId?.let { profileId ->
-                updateTabs(_tabs.value, _selectedTabId.value)
-            }
+            // Note: Group events observer will trigger the UI refresh
         }
     }
     
@@ -293,10 +322,7 @@ class TabViewModel(
         viewModelScope.launch {
             groupManager.changeGroupColor(groupId, color)
             
-            // Reload groups
-            currentProfileId?.let { profileId ->
-                updateTabs(_tabs.value, _selectedTabId.value)
-            }
+            // Note: Group events observer will trigger the UI refresh
         }
     }
     
@@ -308,14 +334,13 @@ class TabViewModel(
             currentProfileId?.let { profileId ->
                 val group = groupManager.getGroup(groupId)
                 group?.tabIds?.forEach { tabId ->
-                    groupManager.removeTabFromGroup(tabId, notifyChange = false)
+                    groupManager.removeTabFromGroup(tabId, notifyChange = true)
                 }
-                
-                // Reload
-                updateTabs(_tabs.value, _selectedTabId.value)
                 
                 // Save order
                 saveCurrentOrder(profileId)
+                
+                // Note: Group events observer will trigger the UI refresh
             }
         }
     }
@@ -401,9 +426,9 @@ class TabViewModel(
                     contextId = contextId
                 )
                 
-                // Reload
-                updateTabs(_tabs.value, _selectedTabId.value)
                 saveCurrentOrder(profileId)
+                
+                // Note: Group events observer will trigger the UI refresh
             }
         }
     }
@@ -416,9 +441,9 @@ class TabViewModel(
             currentProfileId?.let { profileId ->
                 groupManager.addTabToGroup(tabId, groupId)
                 
-                // Reload
-                updateTabs(_tabs.value, _selectedTabId.value)
                 saveCurrentOrder(profileId)
+                
+                // Note: Group events observer will trigger the UI refresh
             }
         }
     }
@@ -431,9 +456,9 @@ class TabViewModel(
             currentProfileId?.let { profileId ->
                 groupManager.removeTabFromGroup(tabId)
                 
-                // Reload
-                updateTabs(_tabs.value, _selectedTabId.value)
                 saveCurrentOrder(profileId)
+                
+                // Note: Group events observer will trigger the UI refresh
             }
         }
     }
@@ -446,13 +471,13 @@ class TabViewModel(
             currentProfileId?.let { profileId ->
                 val sourceGroup = groupManager.getGroup(sourceGroupId)
                 sourceGroup?.tabIds?.forEach { tabId ->
-                    groupManager.removeTabFromGroup(tabId, notifyChange = false)
-                    groupManager.addTabToGroup(tabId, targetGroupId, notifyChange = false)
+                    groupManager.removeTabFromGroup(tabId, notifyChange = true)
+                    groupManager.addTabToGroup(tabId, targetGroupId, notifyChange = true)
                 }
                 
-                // Reload
-                updateTabs(_tabs.value, _selectedTabId.value)
                 saveCurrentOrder(profileId)
+                
+                // Note: Group events observer will trigger the UI refresh
             }
         }
     }
@@ -481,8 +506,52 @@ class TabViewModel(
                         tabIds = tabIds
                     )
                     
-                    // Reload
-                    updateTabs(_tabs.value, _selectedTabId.value)
+                    saveCurrentOrder(profileId)
+                    
+                    // Note: Group events observer will trigger the UI refresh
+                }
+            }
+        }
+    }
+    
+    /**
+     * Reorder an entire group to a new position
+     */
+    fun reorderGroup(groupId: String, targetIndex: Int) {
+        viewModelScope.launch {
+            currentProfileId?.let { profileId ->
+                orderManager.loadOrder(profileId)
+                val current = orderManager.currentOrder.value ?: return@launch
+                
+                // Find the group in the order
+                val groupIndex = current.primaryOrder.indexOfFirst {
+                    it is UnifiedTabOrder.OrderItem.TabGroup && it.groupId == groupId
+                }
+                
+                if (groupIndex != -1 && groupIndex != targetIndex) {
+                    orderManager.reorderItem(groupIndex, targetIndex)
+                    saveCurrentOrder(profileId)
+                }
+            }
+        }
+    }
+    
+    /**
+     * Move a tab to a specific position in the overall order
+     */
+    fun moveTabToPosition(tabId: String, targetIndex: Int) {
+        viewModelScope.launch {
+            currentProfileId?.let { profileId ->
+                orderManager.loadOrder(profileId)
+                val current = orderManager.currentOrder.value ?: return@launch
+                
+                // Find the tab in the order
+                val tabIndex = current.primaryOrder.indexOfFirst {
+                    it is UnifiedTabOrder.OrderItem.SingleTab && it.tabId == tabId
+                }
+                
+                if (tabIndex != -1 && tabIndex != targetIndex) {
+                    orderManager.reorderItem(tabIndex, targetIndex.coerceIn(0, current.primaryOrder.size))
                     saveCurrentOrder(profileId)
                 }
             }

@@ -410,6 +410,13 @@ class TabOrderManager(
     suspend fun syncToGroupManager() {
         val current = _currentOrder.value ?: return
         
+        // Determine contextId from profileId
+        val contextId = when (current.profileId) {
+            "private" -> "private"
+            "default" -> null
+            else -> "profile_${current.profileId}"
+        }
+        
         current.primaryOrder.forEach { item ->
             when (item) {
                 is UnifiedTabOrder.OrderItem.SingleTab -> {
@@ -433,11 +440,12 @@ class TabOrderManager(
                             groupManager.removeTabFromGroup(tabId)
                         }
                     } else {
-                        // Create new group
+                        // Create new group with proper contextId
                         groupManager.createGroup(
                             tabIds = item.tabIds,
                             name = item.groupName,
-                            color = item.color
+                            color = item.color,
+                            contextId = contextId
                         )
                     }
                 }

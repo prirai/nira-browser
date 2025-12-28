@@ -1210,66 +1210,54 @@ class TabsBottomSheetFragment : DialogFragment() {
             }
         }
         
-        // Simple approach: Load tabs directly when profile changes, then observe store updates
-        LaunchedEffect(browsingMode, currentProfile, trigger) {
+        // Produce state that updates when store changes OR groups change
+        val tabsState by produceState(
+            initialValue = emptyList<mozilla.components.browser.state.state.TabSessionState>(),
+            browsingMode, currentProfile, trigger
+        ) {
             val store = requireContext().components.store
             val isPrivateMode = browsingMode.isPrivate
             val activeProfile = currentProfile
             val profileId = if (isPrivateMode) "private" else activeProfile.id
             
-            // Collect tabs from store and update ViewModel
-            store.flowScoped(viewLifecycleOwner) { flow ->
-                flow.collect { state ->
-                    // Filter tabs based on mode and profile
-                    val filteredTabs = state.tabs.filter { tab ->
-                        val tabIsPrivate = tab.content.private
-                        if (tabIsPrivate != isPrivateMode) {
-                            false
-                        } else if (isPrivateMode) {
-                            tab.contextId == "private"
-                        } else {
-                            val expectedContextId = "profile_${activeProfile.id}"
-                            // Default profile shows null contextId tabs, other profiles don't
-                            if (activeProfile.id == "default") {
-                                (tab.contextId == expectedContextId) || (tab.contextId == null)
-                            } else {
-                                tab.contextId == expectedContextId
-                            }
-                        }
+            // Helper to filter tabs
+            fun filterTabs(tabs: List<mozilla.components.browser.state.state.TabSessionState>) = tabs.filter { tab ->
+                val tabIsPrivate = tab.content.private
+                if (tabIsPrivate != isPrivateMode) {
+                    false
+                } else if (isPrivateMode) {
+                    tab.contextId == "private"
+                } else {
+                    val expectedContextId = "profile_${activeProfile.id}"
+                    // Default profile shows null contextId tabs, other profiles don't
+                    if (activeProfile.id == "default") {
+                        (tab.contextId == expectedContextId) || (tab.contextId == null)
+                    } else {
+                        tab.contextId == expectedContextId
                     }
-                    
-                    // Update ViewModel with filtered tabs
-                    viewModel.loadTabsForProfile(profileId, filteredTabs, state.selectedTabId)
                 }
             }
-        }
-        
-        // Observe group changes and trigger refresh
-        LaunchedEffect(Unit) {
-            unifiedGroupManager.groupEvents.collect { event ->
-                // When groups change, force a refresh with current store state
-                val store = requireContext().components.store
-                val state = store.state
-                val isPrivateMode = browsingMode.isPrivate
-                val activeProfile = currentProfile
-                
-                val filteredTabs = state.tabs.filter { tab ->
-                    val tabIsPrivate = tab.content.private
-                    if (tabIsPrivate != isPrivateMode) {
-                        false
-                    } else if (isPrivateMode) {
-                        tab.contextId == "private"
-                    } else {
-                        val expectedContextId = "profile_${activeProfile.id}"
-                        if (activeProfile.id == "default") {
-                            (tab.contextId == expectedContextId) || (tab.contextId == null)
-                        } else {
-                            tab.contextId == expectedContextId
-                        }
+            
+            // Collect both store updates AND group events
+            launch {
+                store.flowScoped(viewLifecycleOwner) { flow ->
+                    flow.collect { state ->
+                        val filteredTabs = filterTabs(state.tabs)
+                        value = filteredTabs
+                        viewModel.loadTabsForProfile(profileId, filteredTabs, state.selectedTabId)
                     }
                 }
-                
-                viewModel.forceRefresh(filteredTabs, state.selectedTabId)
+            }
+            
+            // Listen to group events and trigger refresh
+            launch {
+                unifiedGroupManager.groupEvents.collect { event ->
+                    // When groups change, force a refresh with current store state
+                    val state = store.state
+                    val filteredTabs = filterTabs(state.tabs)
+                    value = filteredTabs
+                    viewModel.forceRefresh(filteredTabs, state.selectedTabId)
+                }
             }
         }
         
