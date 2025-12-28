@@ -5,6 +5,13 @@ on:
     tags:
       - "v*.*.*"
 
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing git tag to build (e.g. v1.2.3)"
+        required: true
+        type: string
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -12,8 +19,10 @@ jobs:
       contents: write
 
     steps:
-      - name: Checkout
+      - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
 
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -37,12 +46,21 @@ jobs:
             -Pandroid.injected.signing.key.alias="${{ secrets.KEY_ALIAS }}" \
             -Pandroid.injected.signing.key.password="${{ secrets.KEY_PASSWORD }}"
 
-      - name: Create GitHub Release
+      - name: Resolve tag name
+        id: tag
+        run: |
+          if [ -n "${{ github.event.inputs.tag }}" ]; then
+            echo "name=${{ github.event.inputs.tag }}" >> $GITHUB_OUTPUT
+          else
+            echo "name=${GITHUB_REF_NAME}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create or reuse GitHub Release
         id: release
         uses: actions/create-release@v1
         with:
-          tag_name: ${{ github.ref_name }}
-          release_name: Release ${{ github.ref_name }}
+          tag_name: ${{ steps.tag.outputs.name }}
+          release_name: Release ${{ steps.tag.outputs.name }}
           generate_release_notes: true
 
       - name: Upload APKs (standalone)
@@ -53,7 +71,7 @@ jobs:
           for apk in app/release/*.apk; do
             name=$(basename "$apk")
             echo "Uploading $name"
-            curl \
+            curl -sSf \
               -X POST \
               -H "Authorization: Bearer $GH_TOKEN" \
               -H "Content-Type: application/vnd.android.package-archive" \
