@@ -1,0 +1,62 @@
+name: Android Release
+
+on:
+  # Trigger when a tag like v1.2.3 is pushed
+  push:
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  build_and_release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write  # for GitHub Releases
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+          cache: gradle
+
+      - name: Prepare Gradle
+        run: |
+          chmod +x gradlew
+
+      - name: Decode keystore
+        run: |
+          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > android.keystore
+
+      - name: Print keystore info (debug)
+        run: |
+          keytool -list -v -keystore android.keystore -storepass "${{ secrets.KEYSTORE_PASSWORD }}" -alias "${{ secrets.KEY_ALIAS }}" || true
+
+      - name: Build Release APKs
+        run: |
+          ./gradlew clean assembleRelease \
+            -Pandroid.injected.signing.store.file=android.keystore \
+            -Pandroid.injected.signing.store.password="${{ secrets.KEYSTORE_PASSWORD }}" \
+            -Pandroid.injected.signing.key.alias="${{ secrets.KEY_ALIAS }}" \
+            -Pandroid.injected.signing.key.password="${{ secrets.KEY_PASSWORD }}"
+
+      - name: Create GitHub Release
+        id: create_release
+        uses: actions/create-release@v1
+        with:
+          tag_name: ${{ github.ref_name }}
+          release_name: Release ${{ github.ref_name }}
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+
+      - name: Upload APKs to Release
+        uses: actions/upload-release-asset@v1
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: app/build/outputs/apk/release
+          asset_name: myapp-${{ github.ref_name }}-release-apks.zip
+          asset_content_type: application/zip
