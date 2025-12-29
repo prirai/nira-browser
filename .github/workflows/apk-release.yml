@@ -36,11 +36,14 @@ jobs:
       - name: Build Debug APK
         run: ./gradlew assembleDebug
 
-      - name: Upload Debug APK artifact
+      - name: Upload Debug APKs (per ABI)
         uses: actions/upload-artifact@v4
         with:
-          name: debug-apk
-          path: app/build/outputs/apk/debug/*.apk
+          name: debug-apks
+          path: |
+            app/build/outputs/apk/debug/*arm64-v8a*.apk
+            app/build/outputs/apk/debug/*armeabi-v7a*.apk
+            app/build/outputs/apk/debug/*x86_64*.apk
 
   release:
     runs-on: ubuntu-latest
@@ -73,6 +76,8 @@ jobs:
           distribution: zulu
 
       - uses: gradle/actions/setup-gradle@v5
+        with:
+          cache-encryption-key: ${{ secrets.GRADLE_CACHE_ENCRYPTION_KEY }}
 
       - name: Decode keystore
         run: |

@@ -62,6 +62,12 @@ android {
         }
     }
 
+    variantFilter { variant ->
+        if (variant.buildType.name == "debug") {
+            variant.mergedFlavor.multiDexEnabled = true
+        }
+    }
+
     composeOptions {
         kotlinCompilerExtensionVersion = '1.5.15'
     }
@@ -227,13 +233,13 @@ dependencies {
     implementation "androidx.activity:activity-compose:1.12.1"
     implementation "androidx.lifecycle:lifecycle-viewmodel-compose:2.10.0"
     implementation "io.coil-kt:coil-compose:2.7.0"
-    
+
     // Reorderable library for drag and drop (v3.0.0)
     implementation "sh.calvin.reorderable:reorderable:3.0.0"
-    
+
     // DataStore for preferences
     implementation "androidx.datastore:datastore-preferences:1.1.1"
-    
+
     // Kotlinx Serialization
     implementation "org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3"
 
