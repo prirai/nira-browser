@@ -35,8 +35,8 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
-    kotlinOptions {
-        jvmTarget = "17"
+    kotlin {
+        jvmToolchain(17)
     }
 
     buildTypes {
@@ -224,7 +224,7 @@ dependencies {
     implementation "androidx.compose.material3:material3:1.4.0"
     implementation "androidx.compose.runtime:runtime:1.10.0"
     implementation "androidx.compose.ui:ui-tooling-preview:1.10.0"
-    implementation "androidx.activity:activity-compose:1.12.1"
+    implementation "androidx.activity:activity-compose:1.12.2"
     implementation "androidx.lifecycle:lifecycle-viewmodel-compose:2.10.0"
     implementation "io.coil-kt:coil-compose:2.7.0"
 
@@ -232,7 +232,7 @@ dependencies {
     implementation "sh.calvin.reorderable:reorderable:3.0.0"
 
     // DataStore for preferences
-    implementation "androidx.datastore:datastore-preferences:1.1.1"
+    implementation "androidx.datastore:datastore-preferences:1.2.0"
 
     // Kotlinx Serialization
     implementation "org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3"
