@@ -62,12 +62,6 @@ android {
         }
     }
 
-    variantFilter { variant ->
-        if (variant.buildType.name == "debug") {
-            variant.mergedFlavor.multiDexEnabled = true
-        }
-    }
-
     composeOptions {
         kotlinCompilerExtensionVersion = '1.5.15'
     }
