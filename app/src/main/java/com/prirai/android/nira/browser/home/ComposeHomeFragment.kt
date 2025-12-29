@@ -602,20 +602,18 @@ class ComposeHomeFragment : Fragment() {
     }
 
     private fun restoreLastMode() {
-        val prefs = requireContext().getSharedPreferences("home_prefs", android.content.Context.MODE_PRIVATE)
-        val wasPrivate = prefs.getBoolean("last_was_private", false)
-        val lastProfileId = prefs.getString("last_profile_id", "default")
-
-        if (wasPrivate) {
+        val profileManager = com.prirai.android.nira.browser.profile.ProfileManager.getInstance(requireContext())
+        val isPrivate = profileManager.isPrivateMode()
+        
+        // Sync browsing mode with ProfileManager's state
+        if (isPrivate) {
             browsingModeManager.mode = BrowsingMode.Private
         } else {
             browsingModeManager.mode = BrowsingMode.Normal
-            val profileManager =
-                com.prirai.android.nira.browser.profile.ProfileManager.getInstance(requireContext())
-            val profile = profileManager.getAllProfiles().find { it.id == lastProfileId }
-                ?: com.prirai.android.nira.browser.profile.BrowserProfile.getDefaultProfile()
-            profileManager.setActiveProfile(profile)
         }
+        
+        // ProfileManager already persists the active profile, so we just use it directly
+        // No need to maintain separate SharedPreferences for profile state
     }
 
     private fun setupToolbarGestureHandler(coordinatorLayout: CoordinatorLayout) {
@@ -703,7 +701,9 @@ class ComposeHomeFragment : Fragment() {
                 title = getString(R.string.mozac_browser_menu_new_tab),
                 iconRes = R.drawable.mozac_ic_tab_new_24,
                 onClick = {
-                    val contextId = "profile_${currentProfile.id}"
+                    // Ensure we're using the current active profile
+                    val activeProfile = profileManager.getActiveProfile()
+                    val contextId = "profile_${activeProfile.id}"
                     components.tabsUseCases.addTab(
                         url = "about:homepage",
                         selectTab = true,
@@ -823,9 +823,17 @@ class ComposeHomeFragment : Fragment() {
         val store = components.store.state
         val selectedTab = store.selectedTab
         
-        // Get the context from the selected tab, just like the tab bar does
-        val contextId = selectedTab?.contextId
+        // Determine expected contextId using both selected tab AND active profile
+        val profileManager = com.prirai.android.nira.browser.profile.ProfileManager.getInstance(requireContext())
         val isPrivateMode = selectedTab?.content?.private ?: browsingModeManager.mode.isPrivate
+        val currentProfile = profileManager.getActiveProfile()
+        
+        val expectedContextId = if (isPrivateMode) {
+            "private"
+        } else {
+            // Use active profile to determine context
+            "profile_${currentProfile.id}"
+        }
         
         return store.tabs.count { tab ->
             val tabIsPrivate = tab.content.private
@@ -835,8 +843,6 @@ class ComposeHomeFragment : Fragment() {
             } else if (isPrivateMode) {
                 tab.contextId == "private"
             } else {
-                // Use the selected tab's contextId for filtering
-                val expectedContextId = contextId ?: "profile_default"
                 // Include tabs with matching contextId OR guest tabs (null contextId for backward compatibility)
                 (tab.contextId == expectedContextId) || (tab.contextId == null && expectedContextId == "profile_default")
             }
