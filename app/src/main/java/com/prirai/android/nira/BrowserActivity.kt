@@ -661,16 +661,17 @@ open class BrowserActivity : LocaleAwareAppCompatActivity(), ComponentCallbacks2
         // Update status bar
         com.prirai.android.nira.theme.ThemeManager.applySystemBarsTheme(this, isPrivate)
         
-        // Update toolbar background
-        val unifiedToolbar = findViewById<com.prirai.android.nira.components.toolbar.unified.UnifiedToolbar>(R.id.toolbar)
+        // Update toolbar background - use safe cast as it could be UnifiedToolbar or BrowserToolbar
+        val toolbar = findViewById<View>(R.id.toolbar)
+        val unifiedToolbar = toolbar as? com.prirai.android.nira.components.toolbar.unified.UnifiedToolbar
         if (isPrivate) {
             val purpleColor = com.prirai.android.nira.theme.ColorConstants.PrivateMode.PURPLE
-            unifiedToolbar?.setBackgroundColor(purpleColor)
+            unifiedToolbar?.setBackgroundColor(purpleColor) ?: toolbar?.setBackgroundColor(purpleColor)
         } else {
             // Use Material 3 surface color
             val typedValue = android.util.TypedValue()
             theme.resolveAttribute(com.google.android.material.R.attr.colorSurface, typedValue, true)
-            unifiedToolbar?.setBackgroundColor(typedValue.data)
+            unifiedToolbar?.setBackgroundColor(typedValue.data) ?: toolbar?.setBackgroundColor(typedValue.data)
         }
     }
     

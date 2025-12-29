@@ -26,6 +26,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -55,7 +56,8 @@ sealed class ListItem {
     data class Tab(
         val tab: TabSessionState,
         val groupId: String? = null,
-        val isInGroup: Boolean = false
+        val isInGroup: Boolean = false,
+        val isLastInGroup: Boolean = false
     ) : ListItem()
 }
 
@@ -150,6 +152,7 @@ fun TabSheetListView(
                         tab = item.tab,
                         isSelected = item.tab.id == selectedTabId,
                         isInGroup = item.isInGroup,
+                        isLastInGroup = item.isLastInGroup,
                         groupId = item.groupId,
                         groupColor = group?.color,
                         index = index,
@@ -265,6 +268,7 @@ private fun TabListItem(
     tab: TabSessionState,
     isSelected: Boolean,
     isInGroup: Boolean,
+    isLastInGroup: Boolean,
     groupId: String?,
     groupColor: Int?,
     index: Int,
@@ -280,9 +284,16 @@ private fun TabListItem(
         animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy)
     )
     
+    // Check if currently being dragged
+    val isBeingDragged = dragDropState.isDragging && dragDropState.draggedItemId == tab.id
+    
+    // When dragging, treat as ungrouped for uniform appearance
+    val effectiveIsInGroup = isInGroup && !isBeingDragged
+    val effectiveIsLastInGroup = isLastInGroup && !isBeingDragged
+    
     // Determine border color
     val borderColor = when {
-        groupColor != null -> Color(groupColor) // Group color for tabs in groups
+        groupColor != null && !isBeingDragged -> Color(groupColor) // Group color for tabs in groups
         tab.contextId == null -> Color(0xFFFF9800) // Orange for default profile
         else -> Color.Transparent
     }
@@ -291,12 +302,26 @@ private fun TabListItem(
     val isGroupingTarget = dragDropState.isHoverTarget(tab.id) && 
                           dragDropState.feedbackState.operation is DragOperation.GroupWith
     
+    // Determine corner radius based on position in group
+    val cornerRadius = when {
+        !effectiveIsInGroup -> 12.dp // Normal tabs have full rounding
+        effectiveIsLastInGroup -> 12.dp // Last tab in group has bottom rounding
+        else -> 0.dp // Other tabs in group have no rounding
+    }
+    
+    // Determine which corners to round
+    val shape = when {
+        !effectiveIsInGroup -> RoundedCornerShape(12.dp) // All corners
+        effectiveIsLastInGroup -> RoundedCornerShape(bottomStart = 12.dp, bottomEnd = 12.dp) // Only bottom corners
+        else -> RoundedCornerShape(0.dp) // No corners
+    }
+    
     Row(
         modifier = modifier
             .fillMaxWidth()
             .padding(
-                horizontal = if (isInGroup) 24.dp else 12.dp,
-                vertical = 4.dp
+                horizontal = if (effectiveIsInGroup) 24.dp else 12.dp,
+                vertical = if (effectiveIsInGroup) 0.dp else 4.dp
             )
             .scale(scale)
             .draggableItem(tab.id, dragDropState)
@@ -308,7 +333,7 @@ private fun TabListItem(
                 isInGroup = isInGroup,
                 onDragEnd = onDragEnd
             )
-            .clip(RoundedCornerShape(12.dp))
+            .clip(shape)
             .background(
                 when {
                     isGroupingTarget -> Color(0xFF607D8B) // Grey background for grouping
@@ -316,7 +341,41 @@ private fun TabListItem(
                     else -> MaterialTheme.colorScheme.surface
                 }
             )
-            .border(2.dp, borderColor, RoundedCornerShape(12.dp))
+            .then(
+                // Draw borders: side + bottom for grouped tabs (not last), thinner full border for last, full 2.dp otherwise
+                if (effectiveIsInGroup && !effectiveIsLastInGroup) {
+                    Modifier.drawBehind {
+                        val strokeWidth = 2.dp.toPx()
+                        // Draw left border
+                        drawLine(
+                            color = borderColor,
+                            start = androidx.compose.ui.geometry.Offset(0f, 0f),
+                            end = androidx.compose.ui.geometry.Offset(0f, size.height),
+                            strokeWidth = strokeWidth
+                        )
+                        // Draw right border
+                        drawLine(
+                            color = borderColor,
+                            start = androidx.compose.ui.geometry.Offset(size.width, 0f),
+                            end = androidx.compose.ui.geometry.Offset(size.width, size.height),
+                            strokeWidth = strokeWidth
+                        )
+                        // Draw bottom border
+                        drawLine(
+                            color = borderColor,
+                            start = androidx.compose.ui.geometry.Offset(0f, size.height),
+                            end = androidx.compose.ui.geometry.Offset(size.width, size.height),
+                            strokeWidth = strokeWidth
+                        )
+                    }
+                } else if (effectiveIsInGroup && effectiveIsLastInGroup) {
+                    // Last tab in group: use thinner border
+                    Modifier.border(1.dp, borderColor, shape)
+                } else {
+                    // Ungrouped tabs: use normal 2.dp border
+                    Modifier.border(2.dp, borderColor, shape)
+                }
+            )
             .clickable(onClick = onTabClick)
             .padding(12.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -427,14 +486,17 @@ private fun buildListItemsFromOrder(
                     
                     // Add tabs in the group if expanded
                     if (expandedGroups.contains(group.id)) {
-                        for (tabId in group.tabIds) {
+                        val validTabIds = group.tabIds.filter { it in tabsById && it !in addedTabIds }
+                        validTabIds.forEachIndexed { index, tabId ->
                             val tab = tabsById[tabId]
-                            if (tab != null && tab.id !in addedTabIds) {
+                            if (tab != null) {
+                                val isLastInGroup = (index == validTabIds.size - 1)
                                 items.add(
                                     ListItem.Tab(
                                         tab = tab,
                                         groupId = group.id,
-                                        isInGroup = true
+                                        isInGroup = true,
+                                        isLastInGroup = isLastInGroup
                                     )
                                 )
                                 addedTabIds.add(tab.id)
@@ -502,12 +564,14 @@ private fun buildListItemsFallback(
             val groupTabs = tabs.filter { tab -> 
                 tab.id in group.tabIds && tab.id !in addedTabIds
             }
-            groupTabs.forEach { tab ->
+            groupTabs.forEachIndexed { index, tab ->
+                val isLastInGroup = (index == groupTabs.size - 1)
                 items.add(
                     ListItem.Tab(
                         tab = tab,
                         groupId = group.id,
-                        isInGroup = true
+                        isInGroup = true,
+                        isLastInGroup = isLastInGroup
                     )
                 )
                 addedTabIds.add(tab.id)
