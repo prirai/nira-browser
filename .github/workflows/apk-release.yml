@@ -1,0 +1,104 @@
+name: Android CI
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - "v*.*.*"
+
+  pull_request:
+    branches:
+      - main
+
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing tag to build and attach APKs to (e.g. v1.2.3)"
+        required: false
+        type: string
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: 17
+          distribution: zulu
+
+      - uses: gradle/actions/setup-gradle@v5
+
+      - name: Build Debug APK
+        run: ./gradlew assembleDebug
+
+      - name: Upload Debug APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: debug-apk
+          path: app/build/outputs/apk/debug/*.apk
+
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    # Run on tag push OR manual dispatch
+    if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
+
+    steps:
+      - name: Resolve tag
+        id: tag
+        run: |
+          if [ -n "${{ github.event.inputs.tag }}" ]; then
+            echo "tag=${{ github.event.inputs.tag }}" >> $GITHUB_OUTPUT
+          else
+            echo "tag=${GITHUB_REF_NAME}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Checkout code at tag
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.tag.outputs.tag }}
+          submodules: true
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: 17
+          distribution: zulu
+
+      - uses: gradle/actions/setup-gradle@v5
+
+      - name: Decode keystore
+        run: |
+          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode > "$GITHUB_WORKSPACE/key.jks"
+
+      - name: Build Release APKs (signed)
+        run: |
+          ./gradlew clean assembleRelease \
+            -Pandroid.injected.signing.store.file="$GITHUB_WORKSPACE/key.jks" \
+            -Pandroid.injected.signing.store.password="${{ secrets.KEYSTORE_PASSWORD }}" \
+            -Pandroid.injected.signing.key.alias="${{ secrets.KEY_ALIAS }}" \
+            -Pandroid.injected.signing.key.password="${{ secrets.KEY_PASSWORD }}"
+
+      - name: Create or reuse GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view "${{ steps.tag.outputs.tag }}" \
+          || gh release create "${{ steps.tag.outputs.tag }}" \
+               --title "Release ${{ steps.tag.outputs.tag }}" \
+               --notes "Automated release build"
+
+      - name: Upload Release APKs (standalone)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release upload "${{ steps.tag.outputs.tag }}" \
+            app/build/outputs/apk/release/*.apk \
+            --clobber
