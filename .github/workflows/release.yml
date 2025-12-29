@@ -1,81 +1,58 @@
-name: Android Release APKs
+name: Build Release APK
 
 on:
-  push:
-    tags:
-      - "v*.*.*"
-
   workflow_dispatch:
     inputs:
       tag:
-        description: "Existing git tag to build (e.g. v1.2.3)"
+        description: "Existing tag to attach APKs to (e.g. v1.2.3)"
         required: true
         type: string
 
 jobs:
-  build:
+  build-release-apk:
     runs-on: ubuntu-latest
     permissions:
       contents: write
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.inputs.tag || github.ref }}
+          ref: ${{ github.event.inputs.tag }}
+          submodules: true
 
-      - name: Setup Java
-        uses: actions/setup-java@v4
+      - uses: actions/setup-java@v4
         with:
-          distribution: temurin
-          java-version: 17
-          cache: gradle
+          distribution: zulu
+          java-version: 21
 
-      - name: Make Gradle executable
-        run: chmod +x gradlew
+      - uses: gradle/actions/setup-gradle@v5
 
       - name: Decode keystore
         run: |
-         echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > "$GITHUB_WORKSPACE/release.keystore"
+          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode > "$GITHUB_WORKSPACE/key.jks"
+
       - name: Build release APKs
         run: |
-         ./gradlew clean assembleRelease \
-         -Pandroid.injected.signing.store.file="$GITHUB_WORKSPACE/release.keystore" \
-         -Pandroid.injected.signing.store.password="${{ secrets.KEYSTORE_PASSWORD }}" \
-         -Pandroid.injected.signing.key.alias="${{ secrets.KEY_ALIAS }}" \
-         -Pandroid.injected.signing.key.password="${{ secrets.KEY_PASSWORD }}"
-
-      - name: Resolve tag name
-        id: tag
-        run: |
-          if [ -n "${{ github.event.inputs.tag }}" ]; then
-            echo "name=${{ github.event.inputs.tag }}" >> $GITHUB_OUTPUT
-          else
-            echo "name=${GITHUB_REF_NAME}" >> $GITHUB_OUTPUT
-          fi
+          ./gradlew clean assembleRelease \
+            -Pandroid.injected.signing.store.file="$GITHUB_WORKSPACE/key.jks" \
+            -Pandroid.injected.signing.store.password="${{ secrets.KEYSTORE_PASSWORD }}" \
+            -Pandroid.injected.signing.key.alias="${{ secrets.KEY_ALIAS }}" \
+            -Pandroid.injected.signing.key.password="${{ secrets.KEY_PASSWORD }}"
 
       - name: Create or reuse GitHub Release
-        id: release
-        uses: actions/create-release@v1
-        with:
-          tag_name: ${{ steps.tag.outputs.name }}
-          release_name: Release ${{ steps.tag.outputs.name }}
-          generate_release_notes: true
-
-      - name: Upload APKs (standalone)
-        env:
-          UPLOAD_URL: ${{ steps.release.outputs.upload_url }}
-          GH_TOKEN: ${{ github.token }}
         run: |
-          for apk in app/release/*.apk; do
-            name=$(basename "$apk")
-            echo "Uploading $name"
-            curl -sSf \
-              -X POST \
-              -H "Authorization: Bearer $GH_TOKEN" \
-              -H "Content-Type: application/vnd.android.package-archive" \
-              --data-binary @"$apk" \
-              "$UPLOAD_URL?name=$name"
-          done
+          gh release view "${{ github.event.inputs.tag }}" \
+          || gh release create "${{ github.event.inputs.tag }}" \
+               --title "Release ${{ github.event.inputs.tag }}" \
+               --notes "Automated APK build"
+        env:
+          GH_TOKEN: ${{ github.token }}
 
+      - name: Upload APKs to GitHub Release
+        run: |
+          gh release upload "${{ github.event.inputs.tag }}" \
+            app/release/*.apk \
+            --clobber
+        env:
+          GH_TOKEN: ${{ github.token }}
 
