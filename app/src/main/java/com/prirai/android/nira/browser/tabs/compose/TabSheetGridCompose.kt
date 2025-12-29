@@ -15,6 +15,7 @@ import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -29,6 +30,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.zIndex
 import coil.compose.AsyncImage
 import mozilla.components.browser.state.state.TabSessionState
 import kotlinx.coroutines.launch
@@ -99,7 +101,7 @@ fun TabSheetGridView(
     }
 
     LazyVerticalGrid(
-        columns = GridCells.Fixed(2),
+        columns = GridCells.Fixed(3),
         state = gridState,
         modifier = modifier.fillMaxSize(),
         contentPadding = PaddingValues(8.dp),
@@ -118,8 +120,8 @@ fun TabSheetGridView(
             span = { item ->
                 androidx.compose.foundation.lazy.grid.GridItemSpan(
                     when (item) {
-                        is GridItem.GroupHeader -> 2
-                        is GridItem.GroupRow -> 2
+                        is GridItem.GroupHeader -> 3
+                        is GridItem.GroupRow -> 3
                         else -> 1
                     }
                 )
@@ -242,7 +244,7 @@ private fun GroupHeaderGridItem(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(
-            imageVector = if (isExpanded) Icons.Default.KeyboardArrowDown else Icons.Default.KeyboardArrowRight,
+            imageVector = if (isExpanded) Icons.Default.KeyboardArrowDown else Icons.AutoMirrored.Filled.KeyboardArrowRight,
             contentDescription = null,
             tint = Color(color),
             modifier = Modifier.size(24.dp)
@@ -252,7 +254,7 @@ private fun GroupHeaderGridItem(
         
         Text(
             text = title.ifEmpty { "Unnamed Group" },
-            fontSize = 14.sp,
+            fontSize = 12.sp,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onSurface,
             modifier = Modifier.weight(1f),
@@ -324,6 +326,106 @@ private fun GroupTabsRow(
 }
 
 @Composable
+private fun TabGridItemUnified(
+    tab: TabSessionState,
+    isSelected: Boolean,
+    isInGroup: Boolean,
+    groupId: String?,
+    dragDropState: TabDragDropState,
+    onTabClick: () -> Unit,
+    onTabClose: () -> Unit,
+    onDragEnd: (String, String?, String?) -> Unit,
+    modifier: Modifier = Modifier,
+    thumbnailHeight: androidx.compose.ui.unit.Dp = 100.dp,
+    compactWidth: androidx.compose.ui.unit.Dp? = null
+) {
+    val isHovered = dragDropState.isHovered(tab.id)
+    val borderColor = when {
+        isSelected -> MaterialTheme.colorScheme.primary
+        tab.contextId == null -> Color(0xFFFF9800)
+        else -> Color.Transparent
+    }
+
+    val m = modifier
+        .then(if (compactWidth != null) Modifier.width(compactWidth) else Modifier.fillMaxWidth())
+        .height(if (compactWidth != null) 150.dp else 180.dp)
+        .scale(if (isHovered) 1.05f else 1f)
+        .draggableTab(
+            uiItemId = if (groupId != null) "group_${groupId}_tab_${tab.id}" else "tab_${tab.id}",
+            logicalId = tab.id,
+            dragDropState = dragDropState,
+            fromGroupId = groupId,
+            onDragEnd = onDragEnd
+        )
+
+    Card(
+        modifier = m,
+        shape = RoundedCornerShape(16.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
+        colors = CardDefaults.cardColors(containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant)
+    ) {
+        Column(modifier = Modifier.clickable(onClick = onTabClick)) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp)
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = tab.content.title.ifEmpty { "New Tab" },
+                    style = MaterialTheme.typography.bodyMedium.copy(fontSize = 12.sp),
+                    color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f)
+                )
+                Box(modifier = Modifier.size(40.dp), contentAlignment = Alignment.Center) {
+                    IconButton(onClick = onTabClose, modifier = Modifier.size(40.dp)) {
+                        Box(
+                            modifier = Modifier
+                                .size(28.dp)
+                                .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.95f), CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = "Close tab",
+                                tint = MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Divider between header and thumbnail
+            HorizontalDivider(thickness = 1.dp, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.12f))
+
+            // Thumbnail
+            Box(modifier = Modifier
+                .fillMaxWidth()
+                .height(thumbnailHeight)
+                .zIndex(0f)) {
+                ThumbnailImageView(tab = tab, modifier = Modifier.fillMaxSize()) // ensure thumbnail behind header
+            }
+
+            // URL / subtitle
+            Text(
+                text = tab.content.url.ifEmpty { "" },
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier
+                    .padding(12.dp)
+                    .zIndex(0.1f)
+            )
+        }
+    }
+}
+
+@Composable
 private fun TabGridItemCompact(
     tab: TabSessionState,
     isSelected: Boolean,
@@ -334,88 +436,19 @@ private fun TabGridItemCompact(
     onDragEnd: (String, String?, String?) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val context = LocalContext.current
-    val isHovered = dragDropState.isHovered(tab.id)
-    val borderColor = when {
-        isSelected -> MaterialTheme.colorScheme.primary
-        tab.contextId == null -> Color(0xFFFF9800)
-        else -> Color.Transparent
-    }
-    
-    // Compact width to fit 3 tabs in view
-    Column(
-        modifier = modifier
-            .width(110.dp)
-            .height(150.dp)
-            .scale(if (isHovered) 1.05f else 1f)
-            .draggableTab(
-                uiItemId = "group_${groupId}_tab_${tab.id}",
-                logicalId = tab.id,
-                dragDropState = dragDropState,
-                fromGroupId = groupId,
-                onDragEnd = onDragEnd
-            )
-            .clip(RoundedCornerShape(12.dp))
-            .background(
-                if (isSelected) MaterialTheme.colorScheme.primaryContainer
-                else MaterialTheme.colorScheme.surface
-            )
-            .border(2.dp, borderColor, RoundedCornerShape(12.dp))
-            .clickable(onClick = onTabClick)
-    ) {
-        // Thumbnail with close button overlay
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(90.dp)
-        ) {
-            // Thumbnail - Load from ThumbnailStorage
-            ThumbnailImageView(
-                tab = tab,
-                modifier = Modifier.fillMaxSize()
-            )
-            
-            // Close button overlay
-            IconButton(
-                onClick = onTabClose,
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(2.dp)
-                    .size(20.dp)
-                    .background(
-                        MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
-                        CircleShape
-                    )
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Close,
-                    contentDescription = "Close tab",
-                    tint = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.size(14.dp)
-                )
-            }
-        }
-        
-        // Tab info
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f)
-                .padding(6.dp)
-        ) {
-            Text(
-                text = tab.content.title.ifEmpty { "New Tab" },
-                fontSize = 12.sp,
-                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                color = if (isSelected) 
-                    MaterialTheme.colorScheme.onPrimaryContainer 
-                else 
-                    MaterialTheme.colorScheme.onSurface,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis
-            )
-        }
-    }
+    TabGridItemUnified(
+        tab = tab,
+        isSelected = isSelected,
+        isInGroup = true,
+        groupId = groupId,
+        dragDropState = dragDropState,
+        onTabClick = onTabClick,
+        onTabClose = onTabClose,
+        onDragEnd = onDragEnd,
+        modifier = modifier,
+        thumbnailHeight = 90.dp,
+        compactWidth = 110.dp
+    )
 }
 
 @Composable
@@ -430,87 +463,20 @@ private fun TabGridItem(
     onDragEnd: (String, String?, String?) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val context = LocalContext.current
-    val isHovered = dragDropState.isHovered(tab.id)
-    val borderColor = when {
-        isSelected -> MaterialTheme.colorScheme.primary
-        tab.contextId == null -> Color(0xFFFF9800)
-        else -> Color.Transparent
-    }
-    
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(180.dp)
-            .scale(if (isHovered) 1.05f else 1f)
-            .draggableTab(
-                uiItemId = if (groupId != null) "group_${groupId}_tab_${tab.id}" else "tab_${tab.id}",
-                logicalId = tab.id,
-                dragDropState = dragDropState,
-                fromGroupId = groupId,
-                onDragEnd = onDragEnd
-            )
-            .clip(RoundedCornerShape(12.dp))
-            .background(
-                if (isSelected) MaterialTheme.colorScheme.primaryContainer
-                else MaterialTheme.colorScheme.surface
-            )
-            .border(2.dp, borderColor, RoundedCornerShape(12.dp))
-            .clickable(onClick = onTabClick)
-    ) {
-        // Thumbnail with close button overlay
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(120.dp)
-        ) {
-            // Thumbnail - Load from ThumbnailStorage
-            ThumbnailImageView(
-                tab = tab,
-                modifier = Modifier.fillMaxSize()
-            )
-            
-            // Close button overlay
-            IconButton(
-                onClick = onTabClose,
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(4.dp)
-                    .size(24.dp)
-                    .background(
-                        MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
-                        CircleShape
-                    )
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Close,
-                    contentDescription = "Close tab",
-                    tint = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.size(16.dp)
-                )
-            }
-        }
-        
-        // Tab info
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f)
-                .padding(8.dp)
-        ) {
-            Text(
-                text = tab.content.title.ifEmpty { "New Tab" },
-                fontSize = 14.sp,
-                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                color = if (isSelected) 
-                    MaterialTheme.colorScheme.onPrimaryContainer 
-                else 
-                    MaterialTheme.colorScheme.onSurface,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis
-            )
-        }
-    }
+    // Use unified material3 expressive grid item for all tabs
+    TabGridItemUnified(
+        tab = tab,
+        isSelected = isSelected,
+        isInGroup = isInGroup,
+        groupId = groupId,
+        dragDropState = dragDropState,
+        onTabClick = onTabClick,
+        onTabClose = onTabClose,
+        onDragEnd = onDragEnd,
+        modifier = modifier,
+        thumbnailHeight = 120.dp,
+        compactWidth = null
+    )
 }
 
 private fun buildGridItems(

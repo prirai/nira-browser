@@ -51,9 +51,12 @@ fun ThumbnailImageView(
                     scaleType = ImageView.ScaleType.CENTER_CROP
                     // Set initial placeholder
                     setBackgroundColor(android.graphics.Color.TRANSPARENT)
+                    adjustViewBounds = true
                 }
             },
             update = { imageView ->
+                // Set accessible description
+                imageView.contentDescription = tab.content.title.ifEmpty { tab.content.url }
                 // Load thumbnail after view is measured
                 imageView.post {
                     val width = imageView.width
@@ -75,24 +78,11 @@ fun ThumbnailImageView(
             modifier = Modifier.fillMaxSize()
         )
         
-        // Add vignette overlay at bottom to improve text visibility
-        if (!showPlaceholder && !tab.content.url.startsWith("about:")) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .drawBehind {
-                        val gradient = Brush.verticalGradient(
-                            colors = listOf(
-                                Color.Transparent,
-                                vignetteColor
-                            ),
-                            startY = size.height * 0.7f,
-                            endY = size.height
-                        )
-                        drawRect(brush = gradient)
-                    }
-            )
-        }
+        // Remove vignette - use title + close at top and thumbnail beneath for clarity
+        // No vignette needed now; the thumbnail is shown beneath the title area
+        // (Keep code stub here in case we want to reintroduce an overlay later)
+        
+        // NOTE: no vignette overlay applied
         
         // Overlay placeholder icon for about: pages or if thumbnail fails
         if (showPlaceholder || tab.content.url.startsWith("about:")) {

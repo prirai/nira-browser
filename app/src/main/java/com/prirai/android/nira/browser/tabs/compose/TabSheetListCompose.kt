@@ -360,16 +360,16 @@ private fun TabListItem(
                             end = androidx.compose.ui.geometry.Offset(size.width, size.height),
                             strokeWidth = strokeWidth
                         )
-                        // Draw bottom border
+                        // Draw top border (not bottom) to avoid doubling between stacked grouped tabs
                         drawLine(
                             color = borderColor,
-                            start = androidx.compose.ui.geometry.Offset(0f, size.height),
-                            end = androidx.compose.ui.geometry.Offset(size.width, size.height),
+                            start = androidx.compose.ui.geometry.Offset(0f, 0f),
+                            end = androidx.compose.ui.geometry.Offset(size.width, 0f),
                             strokeWidth = strokeWidth
                         )
                     }
                 } else if (effectiveIsInGroup && effectiveIsLastInGroup) {
-                    // Last tab in group: use thinner border
+                    // Last tab in group: use thinner full border
                     Modifier.border(1.dp, borderColor, shape)
                 } else {
                     // Ungrouped tabs: use normal 2.dp border
