@@ -33,7 +33,7 @@
 
         <!-- Favicon -->
         <ImageView
-            android:id="@+id/tabFavicon"
+            android:id="@+id/faviconImage"
             android:layout_width="16dp"
             android:layout_height="16dp"
             android:layout_marginEnd="6dp"
