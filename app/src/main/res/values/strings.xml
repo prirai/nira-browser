@@ -811,4 +811,5 @@
     <item quantity="one">%1$d selected</item>
     <item quantity="other">%1$d selected</item>
   </plurals>
+    <string name="add_tab_to_group">Add tab to group</string>
 </resources>

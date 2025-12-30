@@ -15,6 +15,7 @@ import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.cardview.widget.CardView
+import com.google.android.material.card.MaterialCardView
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.RecyclerView
 import com.prirai.android.nira.R
@@ -271,11 +272,10 @@ class ModernTabPillAdapter(
 
     // ViewHolder for regular tabs
     inner class TabPillViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
-        private val cardView: CardView = itemView.findViewById(R.id.tabPillCard)
-        private val faviconView: ImageView = itemView.findViewById(R.id.tabFavicon)
+        private val cardView: MaterialCardView = itemView.findViewById(R.id.tabPillCard)
+        private val faviconView: ImageView = itemView.findViewById(R.id.faviconImage)
         private val titleView: TextView = itemView.findViewById(R.id.tabTitle)
-        private val closeButton: ImageView = itemView.findViewById(R.id.tabCloseButton)
-        private val selectionIndicator: View = itemView.findViewById(R.id.selectionIndicator)
+        private val closeButton: ImageView = itemView.findViewById(R.id.closeButton)
 
         private var currentTabId: String? = null
         private var isDragging = false
@@ -713,7 +713,7 @@ class ModernTabPillAdapter(
 
                 val textColor = getThemeColor(itemView.context, com.google.android.material.R.attr.colorOnSurface, R.color.m3_primary_text)
                 titleView.setTextColor(textColor)
-                selectionIndicator.visibility = View.GONE
+                // Selection indicator removed
 
                 cardView.outlineProvider = android.view.ViewOutlineProvider.BACKGROUND
                 cardView.clipToOutline = true
@@ -748,7 +748,7 @@ class ModernTabPillAdapter(
 
                 val textColor = getThemeColor(itemView.context, com.google.android.material.R.attr.colorOnSurface, R.color.m3_primary_text)
                 titleView.setTextColor(textColor)
-                selectionIndicator.visibility = View.GONE
+                // Selection indicator removed
 
                 cardView.clipToOutline = true
             }
@@ -981,7 +981,7 @@ class ModernTabPillAdapter(
                 if (storedTabId != null) {
                     val tabContent: ViewGroup = tabView.findViewById(R.id.tabPillContent)
                     val titleView: TextView = tabView.findViewById(R.id.tabTitle)
-                    val faviconView: ImageView = tabView.findViewById(R.id.tabFavicon)
+                    val faviconView: ImageView = tabView.findViewById(R.id.faviconImage)
 
                     val isSelected = storedTabId == tabId
                     val isLastTab = i == tabCount - 1
@@ -1064,7 +1064,7 @@ class ModernTabPillAdapter(
 
             val separator: View = tabView.findViewById(R.id.tabSeparator)
             val tabContent: ViewGroup = tabView.findViewById(R.id.tabPillContent)
-            val faviconView: ImageView = tabView.findViewById(R.id.tabFavicon)
+            val faviconView: ImageView = tabView.findViewById(R.id.faviconImage)
             val titleView: TextView = tabView.findViewById(R.id.tabTitle)
 
             // Check if guest tab (no profile context)
@@ -1495,7 +1495,7 @@ class ModernTabPillAdapter(
      *
      * Resource IDs used:
      * - R.id.tabPillContent: Container for favicon and title
-     * - R.id.tabFavicon: Tab's favicon image
+     * - R.id.faviconImage: Tab's favicon image
      * - R.id.tabTitle: Tab's title text
      *
      * Animation flow:
@@ -1536,7 +1536,7 @@ class ModernTabPillAdapter(
             }
 
             // Clone favicon if exists
-            val favicon = originalContent.findViewById<ImageView>(R.id.tabFavicon)
+            val favicon = originalContent.findViewById<ImageView>(R.id.faviconImage)
             if (favicon != null) {
                 val clonedFavicon = ImageView(context).apply {
                     val size = (16 * context.resources.displayMetrics.density).toInt()

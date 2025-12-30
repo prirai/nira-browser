@@ -28,7 +28,7 @@ class TabGroupBar @JvmOverloads constructor(
 ) : LinearLayout(context, attrs, defStyleAttr) {
 
     private var binding: TabGroupBarBinding
-    private var adapter: TabGroupAdapter? = null
+    private var adapter: ModernTabGroupAdapter? = null
     private var tabGroupManager: TabGroupManager? = null
     private var listener: TabGroupBarListener? = null
     private var isScrolling = false
@@ -49,9 +49,45 @@ class TabGroupBar @JvmOverloads constructor(
         this.listener = listener
         this.lifecycleOwner = lifecycleOwner
 
-        adapter = TabGroupAdapter { tabId ->
-            listener.onTabSelected(tabId)
-        }
+        adapter = ModernTabGroupAdapter(
+            onTabClick = { tabId ->
+                listener.onTabSelected(tabId)
+            },
+            onAddTabToGroup = { groupId ->
+                // Add new tab to the current group
+                val activity = context as? com.prirai.android.nira.BrowserActivity
+                val store = activity?.components?.store
+                val currentTab = store?.state?.selectedTab
+                
+                if (groupId != null) {
+                    // Adding to a specific group - set contextId and group
+                    val contextId = currentTab?.contextId ?: "profile_default"
+                    activity?.components?.tabsUseCases?.addTab?.invoke(
+                        url = "about:blank",
+                        selectTab = true,
+                        contextId = contextId,
+                        parentId = currentTab?.id  // Set parent to inherit grouping
+                    )
+                    
+                    // Immediately add to group after creation
+                    lifecycleOwner.lifecycleScope.launch {
+                        kotlinx.coroutines.delay(100) // Wait for tab to be created
+                        val newTabId = store?.state?.selectedTabId
+                        if (newTabId != null) {
+                            tabGroupManager.addTabToGroup(newTabId, groupId)
+                        }
+                    }
+                } else {
+                    // Adding to ungrouped tabs - just create normal tab
+                    val contextId = currentTab?.contextId ?: "profile_default"
+                    activity?.components?.tabsUseCases?.addTab?.invoke(
+                        url = "about:blank",
+                        selectTab = true,
+                        contextId = contextId
+                    )
+                }
+            }
+        )
 
         binding.tabGroupsRecyclerView.adapter = adapter
 

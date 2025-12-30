@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <dimen name="tab_pill_stroke">1dp</dimen>
+    <dimen name="tab_pill_selected_stroke">2dp</dimen>
+</resources>

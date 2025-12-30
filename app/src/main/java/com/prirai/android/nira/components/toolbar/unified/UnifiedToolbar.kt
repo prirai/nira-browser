@@ -271,25 +271,45 @@ class UnifiedToolbar @JvmOverloads constructor(
                 },
                 onNewTabInIsland = { islandId ->
                     // Create a new tab and add it to the specified island (tab group)
-                    // Get current profile info for contextId
                     val profileManager = com.prirai.android.nira.browser.profile.ProfileManager.getInstance(context)
                     val currentProfile = profileManager.getActiveProfile()
                     val isPrivateMode = profileManager.isPrivateMode()
                     val contextId = if (isPrivateMode) "private" else "profile_${currentProfile.id}"
                     
+                    // Get the first tab from the island to use as parentId for auto-grouping
+                    val unifiedManager = com.prirai.android.nira.browser.tabgroups.UnifiedTabGroupManager.getInstance(context)
+                    val group = unifiedManager.getGroup(islandId)
+                    val parentTabId = group?.tabIds?.firstOrNull()
+                    
+                    // Create tab with parentId to trigger middleware auto-grouping
                     val newTabId = context.components.tabsUseCases.addTab(
                         url = "about:homepage",
                         selectTab = true,
                         private = isPrivateMode,
-                        contextId = contextId
+                        contextId = contextId,
+                        parentId = parentTabId
                     )
 
-                    // Add the new tab to the island/group using UnifiedTabGroupManager
-                    // Add a small delay to ensure tab is in the store before grouping
+                    // Ensure the tab is added to the correct group
+                    // The middleware should handle this via parentId, but we add a fallback
                     lifecycleOwner.lifecycleScope.launch {
-                        kotlinx.coroutines.delay(100) // Wait for tab to be added to store
-                        val unifiedManager = com.prirai.android.nira.browser.tabgroups.UnifiedTabGroupManager.getInstance(context)
-                        unifiedManager.addTabToGroup(newTabId, islandId)
+                        kotlinx.coroutines.delay(200)
+                        
+                        // Check if tab was already grouped by middleware
+                        if (!unifiedManager.isTabGrouped(newTabId)) {
+                            // If not grouped, add it manually
+                            android.util.Log.d("UnifiedToolbar", "Tab $newTabId not auto-grouped, adding manually to $islandId")
+                            unifiedManager.addTabToGroup(newTabId, islandId)
+                        } else {
+                            // Verify it's in the correct group
+                            val currentGroup = unifiedManager.getGroupForTab(newTabId)
+                            if (currentGroup?.id != islandId) {
+                                // Tab was grouped but in wrong group, move it
+                                android.util.Log.d("UnifiedToolbar", "Tab $newTabId in wrong group, moving to $islandId")
+                                unifiedManager.removeTabFromGroup(newTabId, notifyChange = false)
+                                unifiedManager.addTabToGroup(newTabId, islandId)
+                            }
+                        }
                     }
                 },
                 onProfileSelected = { profile ->

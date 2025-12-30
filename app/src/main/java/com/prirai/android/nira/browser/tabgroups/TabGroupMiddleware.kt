@@ -1,11 +1,11 @@
 package com.prirai.android.nira.browser.tabgroups
 
 import android.util.Log
-import androidx.core.net.toUri
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import mozilla.components.browser.state.action.BrowserAction
+import mozilla.components.browser.state.action.ContentAction
 import mozilla.components.browser.state.action.TabListAction
 import mozilla.components.browser.state.state.BrowserState
 import mozilla.components.lib.state.Middleware
@@ -22,6 +22,9 @@ class TabGroupMiddleware(
         private const val TAG = "TabGroupMiddleware"
     }
 
+    // Track tabs pending grouping (tab ID -> parent ID)
+    private val pendingGrouping = mutableMapOf<String, String?>()
+    
     override fun invoke(
         context: MiddlewareContext<BrowserState, BrowserAction>,
         next: (BrowserAction) -> Unit,
@@ -35,8 +38,10 @@ class TabGroupMiddleware(
             is TabListAction.AddTabAction -> {
                 handleNewTab(context.state, action)
             }
+            is ContentAction.UpdateUrlAction -> {
+                handleUrlUpdate(context.state, action)
+            }
             is TabListAction.SelectTabAction -> {
-                // Update tab group context when switching tabs
                 handleTabSelection(context.state, action)
             }
             else -> {
@@ -75,20 +80,30 @@ class TabGroupMiddleware(
         val newTab = action.tab
         val newTabUrl = newTab.content.url
 
-        Log.d(TAG, "handleNewTab: tabId=${newTab.id}, url=$newTabUrl, source=${newTab.source}")
+        Log.d(TAG, "handleNewTab: tabId=${newTab.id}, url=$newTabUrl, parentId=${newTab.parentId}, source=${newTab.source}")
 
         // Check both the URL in the tab and the URL being loaded
         val effectiveUrl = if (newTabUrl.isBlank() || newTabUrl == "about:blank") {
-            // If the tab has no URL yet, wait for the actual URL to be loaded
-            // We'll catch it on the content update
-            Log.d(TAG, "Tab has blank URL, skipping for now")
+            // If the tab has no URL yet, track it for later when URL is loaded
+            Log.d(TAG, "Tab has blank URL, tracking for pending grouping")
+            
+            // Store parent ID for later grouping when URL is loaded
+            if (newTab.parentId != null) {
+                pendingGrouping[newTab.id] = newTab.parentId
+            } else {
+                // Use current selected tab as parent
+                val selectedTab = state.tabs.find { it.id == state.selectedTabId && it.id != newTab.id }
+                if (selectedTab != null) {
+                    pendingGrouping[newTab.id] = selectedTab.id
+                }
+            }
             return
         } else {
             newTabUrl
         }
 
-        // Don't auto-group tabs with about: or chrome: URLs
-        if (effectiveUrl.startsWith("about:") || effectiveUrl.startsWith("chrome:")) {
+        // Don't auto-group tabs with about: or chrome: URLs except about:homepage
+        if ((effectiveUrl.startsWith("about:") && effectiveUrl != "about:homepage") || effectiveUrl.startsWith("chrome:")) {
             Log.d(TAG, "Skipping system URL: $effectiveUrl")
             return
         }
@@ -139,19 +154,59 @@ class TabGroupMiddleware(
         }
     }
     
+    /**
+     * Handles URL updates for tabs that were created with blank URLs.
+     * This catches tabs opened from context menu that initially have no URL.
+     */
+    private fun handleUrlUpdate(state: BrowserState, action: ContentAction.UpdateUrlAction) {
+        val tabId = action.sessionId
+        val newUrl = action.url
+        
+        // Check if this tab is pending grouping
+        val parentId = pendingGrouping.remove(tabId) ?: return
+        
+        Log.d(TAG, "handleUrlUpdate: tabId=$tabId, url=$newUrl, parentId=$parentId")
+        
+        // Skip system URLs
+        if ((newUrl.startsWith("about:") && newUrl != "about:homepage") || newUrl.startsWith("chrome:")) {
+            Log.d(TAG, "Skipping system URL: $newUrl")
+            return
+        }
+        
+        // Find the parent tab
+        val parentTab = state.tabs.find { it.id == parentId }
+        if (parentTab == null) {
+            Log.d(TAG, "Parent tab not found: $parentId")
+            return
+        }
+        
+        val parentUrl = parentTab.content.url
+        if (parentUrl.isBlank() || parentUrl == "about:blank") {
+            Log.d(TAG, "Parent tab has blank URL")
+            return
+        }
+        
+        Log.d(TAG, "Grouping tab $tabId with parent $parentId")
+        
+        // Group the tabs
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                tabGroupManager.handleNewTabFromLink(
+                    newTabId = tabId,
+                    newTabUrl = newUrl,
+                    sourceTabId = parentId,
+                    sourceTabUrl = parentUrl
+                )
+                Log.d(TAG, "Successfully grouped tabs after URL update")
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to group tabs after URL update", e)
+            }
+        }
+    }
+    
     private fun handleTabSelection(state: BrowserState, action: TabListAction.SelectTabAction) {
         // UnifiedTabGroupManager handles state updates automatically via StateFlow
         // No manual refresh needed
     }
-    
-    /**
-     * Extract domain from URL for comparison.
-     */
-    private fun extractDomain(url: String): String {
-        return try {
-            url.toUri().host?.replace("www.", "") ?: "unknown"
-        } catch (e: Exception) {
-            "unknown"
-        }
-    }
+
 }

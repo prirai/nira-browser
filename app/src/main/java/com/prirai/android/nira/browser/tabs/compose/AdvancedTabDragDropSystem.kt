@@ -142,16 +142,23 @@ class AdvancedDragDropState {
     }
     
     private fun findTarget(fingerPos: Offset, draggedItem: ItemInfo): Pair<String?, DragOperation> {
+        // Find items before and after finger position for insertion
+        val sortedItems = items.values
+            .filter { it.id != draggedItemId && !it.isGroupHeader }
+            .sortedBy { it.index }
+        
+        if (sortedItems.isEmpty()) {
+            return Pair(null, DragOperation.None)
+        }
+        
+        // Find the item whose center is closest to the finger
         var closestItem: ItemInfo? = null
         var minDistance = Float.MAX_VALUE
         
-        items.values.forEach { item ->
-            if (item.id == draggedItemId) return@forEach
-            
+        sortedItems.forEach { item ->
             val itemVisualY = item.position.y + (visualStates[item.id]?.offset ?: 0f)
             val itemCenterY = itemVisualY + (item.size.height / 2f)
             
-            // Distance from finger to item center
             val distance = abs(fingerPos.y - itemCenterY)
             
             if (distance < minDistance) {
@@ -162,50 +169,48 @@ class AdvancedDragDropState {
         
         val target = closestItem ?: return Pair(null, DragOperation.None)
         
-        // Calculate overlap based on finger being within item bounds
+        // Calculate if we're above or below the target center
         val itemVisualY = target.position.y + (visualStates[target.id]?.offset ?: 0f)
-        val itemTop = itemVisualY
-        val itemBottom = itemVisualY + target.size.height
-        val itemCenterY = itemTop + (target.size.height / 2f)
+        val itemCenterY = itemVisualY + (target.size.height / 2f)
+        val isAboveCenter = fingerPos.y < itemCenterY
         
-        // Only activate when finger is within the center 60% of the target
-        val centerThreshold = target.size.height * 0.3f // 30% from center
-        val distanceFromCenter = abs(fingerPos.y - itemCenterY)
-        
-        if (distanceFromCenter > centerThreshold) {
-            return Pair(null, DragOperation.None)
+        // Determine insertion index based on position relative to target
+        val insertionIndex = if (isAboveCenter) {
+            target.index
+        } else {
+            target.index + 1
         }
         
-        // Closer to center = more overlap
-        val overlapRatio = 1f - (distanceFromCenter / centerThreshold)
+        // Check if we should group or reorder
+        val distanceFromCenter = abs(fingerPos.y - itemCenterY)
+        val centerThreshold = target.size.height * 0.3f
         
-        // Determine operation
-        val operation = when {
-            target.isGroupHeader -> {
-                if (overlapRatio > 0.3f) DragOperation.MoveToGroup(target.groupId ?: target.id)
-                else DragOperation.None
-            }
-            
-            // Grouping when finger is near center (< 30% threshold from center)
-            !target.isInGroup && !draggedItem.isInGroup && overlapRatio > 0.5f -> {
-                DragOperation.GroupWith(target.id, target.index)
-            }
-            
-            draggedItem.isInGroup && !target.isInGroup && overlapRatio > 0.5f -> {
-                DragOperation.GroupWith(target.id, target.index)
-            }
-            
-            // Reordering when finger passes center
-            overlapRatio > 0.3f -> {
-                if (draggedItem.isInGroup && !target.isInGroup && draggedItem.groupId != null) {
-                    DragOperation.UngroupAndReorder(target.index)
-                } else if (draggedItem.isInGroup && target.isInGroup && draggedItem.groupId == target.groupId) {
-                    DragOperation.Reorder(target.index)
-                } else if (!draggedItem.isInGroup && !target.isInGroup) {
-                    DragOperation.Reorder(target.index)
-                } else {
-                    DragOperation.None
+        // Grouping logic - only when very close to center
+        if (distanceFromCenter < centerThreshold * 0.5f) {
+            when {
+                !target.isInGroup && !draggedItem.isInGroup -> {
+                    return Pair(target.id, DragOperation.GroupWith(target.id, target.index))
                 }
+                draggedItem.isInGroup && !target.isInGroup -> {
+                    return Pair(target.id, DragOperation.GroupWith(target.id, target.index))
+                }
+            }
+        }
+        
+        // Reordering logic - show insertion point
+        val operation = when {
+            target.isGroupHeader -> DragOperation.None
+            
+            draggedItem.isInGroup && !target.isInGroup && draggedItem.groupId != null -> {
+                DragOperation.UngroupAndReorder(insertionIndex)
+            }
+            
+            draggedItem.isInGroup && target.isInGroup && draggedItem.groupId == target.groupId -> {
+                DragOperation.Reorder(insertionIndex)
+            }
+            
+            !draggedItem.isInGroup && !target.isInGroup -> {
+                DragOperation.Reorder(insertionIndex)
             }
             
             else -> DragOperation.None
@@ -215,22 +220,53 @@ class AdvancedDragDropState {
     }
     
     private fun updateVisuals(operation: DragOperation, draggedItem: ItemInfo) {
-        // Reset all offsets - no displacement animations
+        // Reset all offsets
         visualStates.values.forEach { it.offset = 0f; it.scale = 1f }
         
         when (operation) {
+            is DragOperation.Reorder -> {
+                // Create visual gap at insertion point
+                val insertionIndex = operation.targetIndex
+                val gapSize = draggedItem.size.height + 8f // Item height + padding
+                
+                // Move items down to create gap
+                items.values.forEach { item ->
+                    if (item.id == draggedItemId) return@forEach
+                    
+                    val shouldMoveDown = if (draggedItem.index < insertionIndex) {
+                        // Dragging down: move items between [dragged+1, insertion-1] up
+                        item.index in (draggedItem.index + 1) until insertionIndex
+                    } else {
+                        // Dragging up: move items between [insertion, dragged-1] down
+                        item.index in insertionIndex until draggedItem.index
+                    }
+                    
+                    if (shouldMoveDown) {
+                        visualStates[item.id]?.offset = if (draggedItem.index < insertionIndex) {
+                            -gapSize // Move up when dragging down
+                        } else {
+                            gapSize // Move down when dragging up
+                        }
+                    }
+                }
+                
+                draggedItemId?.let {
+                    visualStates[it]?.scale = 0.98f
+                }
+            }
+            
             is DragOperation.GroupWith -> {
                 hoveredItemId?.let {
-                    visualStates[it]?.scale = 1.02f // Subtle scale up
+                    visualStates[it]?.scale = 1.02f
                 }
                 draggedItemId?.let {
-                    visualStates[it]?.scale = 0.98f // Subtle scale down
+                    visualStates[it]?.scale = 0.98f
                 }
             }
             
             else -> {
                 draggedItemId?.let {
-                    visualStates[it]?.scale = 0.98f // Subtle scale down
+                    visualStates[it]?.scale = 0.98f
                 }
             }
         }

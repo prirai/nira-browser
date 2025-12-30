@@ -51,25 +51,6 @@ import kotlinx.coroutines.launch
 import mozilla.components.lib.state.ext.flowScoped
 import mozilla.components.browser.state.state.TabSessionState
 
-/**
- * Modern Compose-based tab switcher displayed as a fullscreen bottom sheet.
- * 
- * Features:
- * - List and grid view modes
- * - Tab groups with drag-and-drop
- * - Multi-profile support
- * - Private browsing mode
- * - Tab search
- * - Context menus for tab operations
- * 
- * Architecture:
- * - UI: Jetpack Compose (TabSheetListView / TabSheetGridView)
- * - State: TabViewModel with StateFlow
- * - Groups: UnifiedTabGroupManager
- * - Tabs: Mozilla Components Store
- * 
- * @see docs/TAB_ARCHITECTURE.md for detailed architecture documentation
- */
 class TabsBottomSheetFragment : DialogFragment() {
 
     private var _binding: FragmentTabsBottomSheetBinding? = null
@@ -79,31 +60,31 @@ class TabsBottomSheetFragment : DialogFragment() {
     private lateinit var tabGroupManager: TabGroupManager
     private lateinit var unifiedGroupManager: UnifiedTabGroupManager
     
-    // ========== LEGACY CODE (DEPRECATED) ==========
-    // These RecyclerView adapters are kept for backwards compatibility
-    // but are NOT used when useComposeTabSystem = true (default)
-    // TODO: Remove in future release after confirming stability
+    // Old RecyclerView adapters (only used when not using Compose)
     private var tabsAdapter: TabsWithGroupsAdapter? = null
     private var tabsGridAdapter: TabsGridAdapter? = null
     private var dragHelper: TabGroupDragHelper? = null
     private var gridDragHelper: TabGridDragHelper? = null
+    
+    // New flat adapter system (only used when not using Compose)
     private var flatTabsAdapter: com.prirai.android.nira.browser.tabs.dragdrop.FlatTabsAdapter? = null
     private var unifiedDragHelper: com.prirai.android.nira.browser.tabs.dragdrop.UnifiedDragHelper? = null
     private lateinit var tabOrderPersistence: com.prirai.android.nira.browser.tabs.dragdrop.TabOrderPersistence
     private val collapsedGroupIds = mutableSetOf<String>()
-    private var useNewDragSystem = true
-    // ========== END LEGACY CODE ==========
+    private var useNewDragSystem = true // Feature flag
     
-    // Modern Compose tab system (ACTIVE)
-    private var useComposeTabSystem = true // Set to false to use legacy RecyclerView (not recommended)
+    // Compose tab system
+    private var useComposeTabSystem = true // Feature flag to enable Compose
     private var composeOrderManager: com.prirai.android.nira.browser.tabs.compose.TabOrderManager? = null
     private var tabViewModel: com.prirai.android.nira.browser.tabs.compose.TabViewModel? = null
     
-    // Compose state management
-    private val profileStateTrigger = mutableStateOf(0) // Triggers recomposition on profile/mode changes
-    private val showMenuState = mutableStateOf(false) // Controls context menu visibility
-    private val menuTabState = mutableStateOf<TabSessionState?>(null) // Currently selected tab for menu
-    private val menuIsInGroupState = mutableStateOf(false) // Whether selected tab is in a group
+    // Mutable state for Compose to observe profile/mode changes
+    private val profileStateTrigger = mutableStateOf(0)
+    
+    // Menu state for long press handling
+    private val showMenuState = mutableStateOf(false)
+    private val menuTabState = mutableStateOf<TabSessionState?>(null)
+    private val menuIsInGroupState = mutableStateOf(false)
     
     private var isInitializing = true
     private var isGridView = false

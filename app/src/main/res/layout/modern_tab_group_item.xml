@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:paddingHorizontal="4dp"
+    android:paddingVertical="8dp"
+    android:gravity="center_vertical">
+
+    <!-- Tab pills container -->
+    <HorizontalScrollView
+        android:id="@+id/tabPillsScrollView"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:scrollbars="none"
+        android:overScrollMode="never">
+        
+        <LinearLayout
+            android:id="@+id/faviconContainer"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal" />
+    </HorizontalScrollView>
+
+    <!-- Add button -->
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/addTabButton"
+        android:layout_width="36dp"
+        android:layout_height="36dp"
+        android:layout_marginStart="4dp"
+        android:clickable="true"
+        android:focusable="true"
+        app:cardCornerRadius="18dp"
+        app:cardElevation="0dp"
+        app:strokeWidth="1dp"
+        app:strokeColor="?attr/colorPrimary"
+        app:cardBackgroundColor="?attr/colorSurfaceContainerHighest">
+
+        <ImageView
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:padding="8dp"
+            android:src="@drawable/ic_round_add"
+            android:contentDescription="@string/add_tab_to_group"
+            app:tint="?attr/colorPrimary" />
+    </com.google.android.material.card.MaterialCardView>
+
+</LinearLayout>
