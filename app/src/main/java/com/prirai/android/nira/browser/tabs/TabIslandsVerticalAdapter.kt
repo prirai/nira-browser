@@ -390,7 +390,17 @@ class TabIslandsVerticalAdapter(
 
         fun bind() {
             titleText.text = itemView.context.getString(R.string.ungrouped_tabs)
-            titleText.setTextColor(androidx.core.content.ContextCompat.getColor(itemView.context, R.color.m3_primary_text))
+            val theme = itemView.context.theme
+            val typedValue = android.util.TypedValue()
+            val textColor = if (theme.resolveAttribute(
+                    com.google.android.material.R.attr.colorOnSurface, typedValue, true
+                )
+            ) {
+                typedValue.data
+            } else {
+                androidx.core.content.ContextCompat.getColor(itemView.context, R.color.m3_primary_text)
+            }
+            titleText.setTextColor(textColor)
             // Accessibility
             itemView.contentDescription = itemView.context.getString(R.string.ungrouped_tabs_header_description)
         }

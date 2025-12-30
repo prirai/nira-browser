@@ -3,9 +3,9 @@ package com.prirai.android.nira.browser.tabs
 import android.animation.ValueAnimator
 import android.content.Context
 import android.util.AttributeSet
+import android.util.TypedValue
 import android.view.animation.PathInterpolator
 import android.widget.TextView
-import androidx.core.content.ContextCompat
 import com.google.android.material.card.MaterialCardView
 import com.prirai.android.nira.R
 
@@ -24,12 +24,18 @@ class MergedProfileButton @JvmOverloads constructor(
     private var currentPosition: Position = Position.MIDDLE
     private var storedName: String = ""
     
+    private fun getThemeColor(attr: Int): Int {
+        val typedValue = TypedValue()
+        context.theme.resolveAttribute(attr, typedValue, true)
+        return typedValue.data
+    }
+    
     init {
         // Create text view
         textView = TextView(context).apply {
             setPadding(20, 0, 20, 0)
             textSize = 16f
-            setTextColor(ContextCompat.getColor(context, R.color.m3_primary_text))
+            setTextColor(getThemeColor(com.google.android.material.R.attr.colorOnSurface))
             gravity = android.view.Gravity.CENTER
             maxLines = 1
             isSingleLine = true
@@ -43,7 +49,7 @@ class MergedProfileButton @JvmOverloads constructor(
         
         cardElevation = 0f
         radius = 0f
-        setCardBackgroundColor(ContextCompat.getColor(context, R.color.m3_surface_container))
+        setCardBackgroundColor(getThemeColor(com.google.android.material.R.attr.colorSurfaceContainerLow))
     }
 
     fun setActive(active: Boolean, animated: Boolean = true) {
@@ -103,15 +109,15 @@ class MergedProfileButton @JvmOverloads constructor(
         
         // Animate background color
         val startColor = if (!isActive) {
-            ContextCompat.getColor(context, R.color.m3_surface_container)
+            getThemeColor(com.google.android.material.R.attr.colorSurfaceContainerLow)
         } else {
-            ContextCompat.getColor(context, R.color.m3_primary_container)
+            getThemeColor(com.google.android.material.R.attr.colorPrimaryContainer)
         }
         
         val endColor = if (isActive) {
-            ContextCompat.getColor(context, R.color.m3_primary_container)
+            getThemeColor(com.google.android.material.R.attr.colorPrimaryContainer)
         } else {
-            ContextCompat.getColor(context, R.color.m3_surface_container)
+            getThemeColor(com.google.android.material.R.attr.colorSurfaceContainerLow)
         }
         
         ValueAnimator.ofArgb(startColor, endColor).apply {
@@ -119,6 +125,28 @@ class MergedProfileButton @JvmOverloads constructor(
             this.interpolator = interpolator
             addUpdateListener { animator ->
                 setCardBackgroundColor(animator.animatedValue as Int)
+            }
+            start()
+        }
+        
+        // Update text color for better contrast
+        val textStartColor = if (!isActive) {
+            getThemeColor(com.google.android.material.R.attr.colorOnSurface)
+        } else {
+            getThemeColor(com.google.android.material.R.attr.colorOnPrimaryContainer)
+        }
+        
+        val textEndColor = if (isActive) {
+            getThemeColor(com.google.android.material.R.attr.colorOnPrimaryContainer)
+        } else {
+            getThemeColor(com.google.android.material.R.attr.colorOnSurface)
+        }
+        
+        ValueAnimator.ofArgb(textStartColor, textEndColor).apply {
+            duration = 300
+            this.interpolator = interpolator
+            addUpdateListener { animator ->
+                textView.setTextColor(animator.animatedValue as Int)
             }
             start()
         }
@@ -135,11 +163,19 @@ class MergedProfileButton @JvmOverloads constructor(
         
         // Update background color
         val color = if (isActive) {
-            ContextCompat.getColor(context, R.color.m3_primary_container)
+            getThemeColor(com.google.android.material.R.attr.colorPrimaryContainer)
         } else {
-            ContextCompat.getColor(context, R.color.m3_surface_container)
+            getThemeColor(com.google.android.material.R.attr.colorSurfaceContainerLow)
         }
         setCardBackgroundColor(color)
+        
+        // Update text color
+        val textColor = if (isActive) {
+            getThemeColor(com.google.android.material.R.attr.colorOnPrimaryContainer)
+        } else {
+            getThemeColor(com.google.android.material.R.attr.colorOnSurface)
+        }
+        textView.setTextColor(textColor)
     }
 
     private fun updateCornerRadius() {

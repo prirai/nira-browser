@@ -13,8 +13,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.decodeFromString
+import com.prirai.android.nira.ext.components
 
 private val Context.orderDataStore: DataStore<Preferences> by preferencesDataStore(name = "tab_order")
 
@@ -115,30 +114,7 @@ class TabOrderManager private constructor(
         saveOrder(current.copy(primaryOrder = newOrder))
         syncToGroupManager()
     }
-    
-    /**
-     * Reorder a tab within a group
-     */
-    suspend fun reorderTabInGroup(groupId: String, fromIndex: Int, toIndex: Int) {
-        val current = _currentOrder.value ?: return
-        if (fromIndex == toIndex) return
-        
-        val newOrder = current.primaryOrder.map { item ->
-            if (item is UnifiedTabOrder.OrderItem.TabGroup && item.groupId == groupId) {
-                val newTabIds = item.tabIds.toMutableList()
-                val tabId = newTabIds.removeAt(fromIndex)
-                newTabIds.add(toIndex, tabId)
-                item.copy(tabIds = newTabIds)
-            } else {
-                item
-            }
-        }
-        saveOrder(current.copy(primaryOrder = newOrder))
-        syncToGroupManager()
-    }
-    
-    // === GROUPING OPERATIONS ===
-    
+
     /**
      * Create a new group from multiple tabs
      */
@@ -266,6 +242,78 @@ class TabOrderManager private constructor(
     }
     
     /**
+     * Add a new tab to a specific group
+     */
+    suspend fun addNewTabToGroup(groupId: String) {
+        android.util.Log.d("TabOrderManager", "addNewTabToGroup called for group: $groupId")
+        
+        // Get the group to determine its contextId
+        val group = groupManager.getGroup(groupId)
+        if (group == null) {
+            android.util.Log.e("TabOrderManager", "Group $groupId not found")
+            return
+        }
+        
+        val contextId = group.contextId
+        android.util.Log.d("TabOrderManager", "Group contextId: $contextId, tabIds: ${group.tabIds}")
+        
+        // Use context to get components
+        val store = context.components.store
+        val tabsUseCases = context.components.tabsUseCases
+        
+        // Add a new tab
+        android.util.Log.d("TabOrderManager", "Creating new tab with contextId: $contextId")
+        tabsUseCases.addTab(
+            url = "about:homepage",
+            private = contextId == "private",
+            contextId = contextId,
+            selectTab = true
+        )
+        
+        // Wait longer and retry to ensure tab is created
+        kotlinx.coroutines.delay(300)
+        var newTabId = store.state.selectedTabId
+        
+        // Retry up to 3 times if tab ID not available
+        var retries = 0
+        while (newTabId == null && retries < 3) {
+            kotlinx.coroutines.delay(200)
+            newTabId = store.state.selectedTabId
+            retries++
+        }
+        
+        if (newTabId == null) {
+            android.util.Log.e("TabOrderManager", "Failed to get new tab ID after creating tab")
+            return
+        }
+        
+        android.util.Log.d("TabOrderManager", "New tab created with ID: $newTabId")
+        
+        // Verify the tab exists in store
+        val newTab = store.state.tabs.find { it.id == newTabId }
+        if (newTab == null) {
+            android.util.Log.e("TabOrderManager", "Tab $newTabId not found in store")
+            return
+        }
+        
+        android.util.Log.d("TabOrderManager", "New tab contextId: ${newTab.contextId}")
+        
+        // Add the new tab to the group in the order
+        android.util.Log.d("TabOrderManager", "Adding tab $newTabId to group $groupId in order")
+        addTabToGroup(newTabId, groupId)
+        
+        // Also add it directly to the group manager if not already there
+        android.util.Log.d("TabOrderManager", "Syncing tab to group manager")
+        groupManager.addTabToGroup(newTabId, groupId)
+        
+        // Force refresh by updating the order timestamp
+        val current = _currentOrder.value ?: return
+        _currentOrder.value = current.copy(lastModified = System.currentTimeMillis())
+        
+        android.util.Log.d("TabOrderManager", "Successfully added new tab $newTabId to group $groupId")
+    }
+    
+    /**
      * Remove a tab completely from the order
      */
     suspend fun removeTab(tabId: String) {
@@ -305,120 +353,7 @@ class TabOrderManager private constructor(
         }
         saveOrder(current.copy(primaryOrder = newOrder))
     }
-    
-    /**
-     * Rename a group
-     */
-    suspend fun renameGroup(groupId: String, newName: String) {
-        // Update in UnifiedTabGroupManager
-        groupManager.renameGroup(groupId, newName)
-        
-        // Update local order
-        val current = _currentOrder.value ?: return
-        val newOrder = current.primaryOrder.map { item ->
-            if (item is UnifiedTabOrder.OrderItem.TabGroup && item.groupId == groupId) {
-                item.copy(groupName = newName)
-            } else {
-                item
-            }
-        }
-        saveOrder(current.copy(primaryOrder = newOrder))
-    }
-    
-    /**
-     * Change group color
-     */
-    suspend fun changeGroupColor(groupId: String, newColor: Int) {
-        // Update in UnifiedTabGroupManager
-        groupManager.changeGroupColor(groupId, newColor)
-        
-        // Update local order
-        val current = _currentOrder.value ?: return
-        val newOrder = current.primaryOrder.map { item ->
-            if (item is UnifiedTabOrder.OrderItem.TabGroup && item.groupId == groupId) {
-                item.copy(color = newColor)
-            } else {
-                item
-            }
-        }
-        saveOrder(current.copy(primaryOrder = newOrder))
-    }
-    
-    /**
-     * Disband a group (ungroup all tabs)
-     */
-    suspend fun disbandGroup(groupId: String) {
-        // Remove from UnifiedTabGroupManager
-        groupManager.deleteGroup(groupId)
-        
-        // Update local order - ungroup all tabs
-        val current = _currentOrder.value ?: return
-        val newOrder = current.primaryOrder.flatMap { item ->
-            if (item is UnifiedTabOrder.OrderItem.TabGroup && item.groupId == groupId) {
-                item.tabIds.map { UnifiedTabOrder.OrderItem.SingleTab(it) }
-            } else {
-                listOf(item)
-            }
-        }
-        saveOrder(current.copy(primaryOrder = newOrder))
-    }
-    
-    /**
-     * Initialize order from current tab state and existing groups
-     * This syncs the Compose order with existing groups while preserving tab positions
-     */
-    suspend fun initializeFromTabs(profileId: String, tabIds: List<String>) {
-        // Get existing groups from UnifiedTabGroupManager
-        val existingGroups = groupManager.getAllGroups()
-        
-        val groupedTabIds = existingGroups.flatMap { it.tabIds }.toSet()
-        
-        // Build order: Preserve tab positions from tabIds list
-        // Insert groups at the position of their first tab
-        val primaryOrder = mutableListOf<UnifiedTabOrder.OrderItem>()
-        val processedTabIds = mutableSetOf<String>()
-        
-        // Map each group to the position of its first tab in the tabIds list
-        val groupPositions = existingGroups.mapNotNull { group ->
-            val validTabIds = group.tabIds.filter { it in tabIds }
-            if (validTabIds.isEmpty()) return@mapNotNull null
-            
-            val firstTabPosition = tabIds.indexOf(validTabIds.first())
-            if (firstTabPosition == -1) return@mapNotNull null
-            
-            firstTabPosition to UnifiedTabOrder.OrderItem.TabGroup(
-                groupId = group.id,
-                groupName = group.name,
-                color = group.color,
-                isExpanded = !group.isCollapsed,
-                tabIds = validTabIds
-            )
-        }.toMap()
-        
-        // Process tabs in their original order
-        tabIds.forEachIndexed { index, tabId ->
-            if (tabId in processedTabIds) return@forEachIndexed
-            
-            // If a group starts at this position, add the group
-            if (index in groupPositions) {
-                val groupItem = groupPositions[index]!!
-                primaryOrder.add(groupItem)
-                // Mark all tabs in this group as processed
-                groupItem.tabIds.forEach { processedTabIds.add(it) }
-            } else if (tabId !in groupedTabIds) {
-                // Add ungrouped tab
-                primaryOrder.add(UnifiedTabOrder.OrderItem.SingleTab(tabId))
-                processedTabIds.add(tabId)
-            }
-        }
-        
-        val order = UnifiedTabOrder(
-            profileId = profileId,
-            primaryOrder = primaryOrder
-        )
-        saveOrder(order)
-    }
-    
+
     /**
      * Initialize from current state with groups, preserving tab positions
      */
@@ -480,7 +415,7 @@ class TabOrderManager private constructor(
         // Determine contextId from profileId
         val contextId = when (current.profileId) {
             "private" -> "private"
-            "default" -> null
+            "default" -> "profile_default"
             else -> "profile_${current.profileId}"
         }
         

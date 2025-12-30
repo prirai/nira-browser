@@ -11,6 +11,18 @@ import androidx.compose.runtime.produceState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.animation.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
 import androidx.fragment.app.DialogFragment
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.NavHostFragment
@@ -37,6 +49,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import mozilla.components.lib.state.ext.flowScoped
+import mozilla.components.browser.state.state.TabSessionState
 
 class TabsBottomSheetFragment : DialogFragment() {
 
@@ -67,6 +80,11 @@ class TabsBottomSheetFragment : DialogFragment() {
     
     // Mutable state for Compose to observe profile/mode changes
     private val profileStateTrigger = mutableStateOf(0)
+    
+    // Menu state for long press handling
+    private val showMenuState = mutableStateOf(false)
+    private val menuTabState = mutableStateOf<TabSessionState?>(null)
+    private val menuIsInGroupState = mutableStateOf(false)
     
     private var isInitializing = true
     private var isGridView = false
@@ -1235,6 +1253,16 @@ class TabsBottomSheetFragment : DialogFragment() {
         // Trigger recomposition when profile/mode changes
         val trigger by profileStateTrigger
         
+        // Menu state
+        val showMenu by showMenuState
+        val menuTab by menuTabState
+        val menuIsInGroup by menuIsInGroupState
+        
+        // Update profile button visibility based on menu state - use SideEffect for immediate execution
+        androidx.compose.runtime.SideEffect {
+            binding.profileButtonContainer.visibility = if (showMenu) View.GONE else View.VISIBLE
+        }
+        
         // Capture current browsing mode and profile based on trigger
         // This ensures we get fresh values on each profile switch
         val browsingMode = remember(trigger) { browsingModeManager.mode }
@@ -1298,31 +1326,78 @@ class TabsBottomSheetFragment : DialogFragment() {
             }
         }
         
-        // Choose view based on grid mode
-        if (isGridView) {
-            TabSheetGridView(
-                viewModel = viewModel,
-                onTabClick = ::handleTabClickCompose,
-                onTabClose = ::handleTabCloseCompose,
-                onGroupClick = { groupId ->
-                    viewModel.toggleGroupExpanded(groupId)
-                },
-                onGroupOptionsClick = { groupId ->
-                    showGroupOptionsDialog(groupId, viewModel)
-                }
-            )
-        } else {
-            TabSheetListView(
-                viewModel = viewModel,
-                onTabClick = ::handleTabClickCompose,
-                onTabClose = ::handleTabCloseCompose,
-                onGroupClick = { groupId ->
-                    viewModel.toggleGroupExpanded(groupId)
-                },
-                onGroupOptionsClick = { groupId ->
-                    showGroupOptionsDialog(groupId, viewModel)
-                }
-            )
+        // Wrapper Box to hold tabs and menu overlay
+        androidx.compose.foundation.layout.Box(
+            modifier = androidx.compose.ui.Modifier.fillMaxSize()
+        ) {
+            // Choose view based on grid mode
+            if (isGridView) {
+                TabSheetGridView(
+                    viewModel = viewModel,
+                    onTabClick = ::handleTabClickCompose,
+                    onTabClose = ::handleTabCloseCompose,
+                    onTabLongPress = ::handleTabLongPressCompose,
+                    onGroupClick = { groupId ->
+                        viewModel.toggleGroupExpanded(groupId)
+                    },
+                    onGroupOptionsClick = { groupId ->
+                        showGroupOptionsDialog(groupId, viewModel)
+                    }
+                )
+            } else {
+                TabSheetListView(
+                    viewModel = viewModel,
+                    onTabClick = ::handleTabClickCompose,
+                    onTabClose = ::handleTabCloseCompose,
+                    onTabLongPress = ::handleTabLongPressCompose,
+                    onGroupClick = { groupId ->
+                        viewModel.toggleGroupExpanded(groupId)
+                    },
+                    onGroupOptionsClick = { groupId ->
+                        showGroupOptionsDialog(groupId, viewModel)
+                    }
+                )
+            }
+            
+            // Menu overlay - shows at bottom when tab is long-pressed
+            if (showMenu && menuTab != null) {
+                // Clickable background to dismiss menu when clicking outside
+                androidx.compose.foundation.layout.Box(
+                    modifier = androidx.compose.ui.Modifier
+                        .fillMaxSize()
+                        .clickable(
+                            indication = null,
+                            interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+                        ) {
+                            showMenuState.value = false
+                            menuTabState.value = null
+                        }
+                )
+                
+                TabContextMenu(
+                    tab = menuTab!!,
+                    isInGroup = menuIsInGroup,
+                    onDismiss = {
+                        showMenuState.value = false
+                        menuTabState.value = null
+                    },
+                    onMoveToProfile = {
+                        showMoveToProfileDialog(listOf(menuTab!!.id))
+                        showMenuState.value = false
+                        menuTabState.value = null
+                    },
+                    onRemoveFromGroup = {
+                        lifecycleScope.launch {
+                            tabViewModel?.removeTabFromGroup(menuTab!!.id)
+                        }
+                        showMenuState.value = false
+                        menuTabState.value = null
+                    },
+                    modifier = androidx.compose.ui.Modifier
+                        .align(androidx.compose.ui.Alignment.BottomCenter)
+                        .fillMaxWidth()
+                )
+            }
         }
     }
     
@@ -1381,6 +1456,56 @@ class TabsBottomSheetFragment : DialogFragment() {
         lifecycleScope.launch {
             requireContext().components.tabsUseCases.removeTab(tabId)
         }
+    }
+    
+    private fun handleTabLongPressCompose(tab: TabSessionState, isInGroup: Boolean) {
+        // Show menu in place of profile switcher
+        menuTabState.value = tab
+        menuIsInGroupState.value = isInGroup
+        showMenuState.value = true
+    }
+    
+    private fun showUngroupedTabMenuDialog(tabId: String, tabTitle: String) {
+        val options = arrayOf("Move to Profile", "Duplicate Tab", "Pin Tab")
+        
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle(tabTitle.ifEmpty { "Tab" })
+            .setItems(options) { _, which ->
+                when (which) {
+                    0 -> showMoveToProfileDialog(listOf(tabId))
+                    1 -> {
+                        android.widget.Toast.makeText(requireContext(), "Duplicate tab coming soon", android.widget.Toast.LENGTH_SHORT).show()
+                    }
+                    2 -> {
+                        android.widget.Toast.makeText(requireContext(), "Pin tab coming soon", android.widget.Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+            .show()
+    }
+    
+    private fun showGroupedTabMenuDialog(tabId: String, groupId: String, tabTitle: String) {
+        val options = arrayOf("Remove from Island", "Move to Profile", "Duplicate Tab", "Pin Tab")
+        
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle(tabTitle.ifEmpty { "Tab" })
+            .setItems(options) { _, which ->
+                when (which) {
+                    0 -> {
+                        lifecycleScope.launch {
+                            tabViewModel?.removeTabFromGroup(tabId)
+                        }
+                    }
+                    1 -> showMoveToProfileDialog(listOf(tabId))
+                    2 -> {
+                        android.widget.Toast.makeText(requireContext(), "Duplicate tab coming soon", android.widget.Toast.LENGTH_SHORT).show()
+                    }
+                    3 -> {
+                        android.widget.Toast.makeText(requireContext(), "Pin tab coming soon", android.widget.Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+            .show()
     }
     
     private fun showGroupOptionsDialog(groupId: String, viewModel: TabViewModel) {
@@ -1550,5 +1675,117 @@ class TabsBottomSheetFragment : DialogFragment() {
     private fun showGroupedTabOptionsMenu(tabId: String, groupId: String, view: View) {
         // Alias for the existing method
         showGroupTabOptionsMenu(tabId, groupId, view)
+    }
+    
+    @androidx.compose.runtime.Composable
+    private fun TabContextMenu(
+        tab: TabSessionState,
+        isInGroup: Boolean,
+        onDismiss: () -> Unit,
+        onMoveToProfile: () -> Unit,
+        onRemoveFromGroup: () -> Unit,
+        modifier: androidx.compose.ui.Modifier = androidx.compose.ui.Modifier
+    ) {
+        androidx.compose.animation.AnimatedVisibility(
+            visible = true,
+            enter = androidx.compose.animation.slideInVertically { it } + androidx.compose.animation.fadeIn(),
+            exit = androidx.compose.animation.slideOutVertically { it } + androidx.compose.animation.fadeOut(),
+            modifier = modifier
+        ) {
+            androidx.compose.material3.Surface(
+                modifier = androidx.compose.ui.Modifier
+                    .fillMaxWidth()
+                    .padding(8.dp),
+                color = androidx.compose.material3.MaterialTheme.colorScheme.surfaceContainerHigh,
+                shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
+                tonalElevation = 4.dp,
+                shadowElevation = 8.dp
+            ) {
+                androidx.compose.foundation.layout.Column(
+                    modifier = androidx.compose.ui.Modifier.padding(8.dp)
+                ) {
+                    // Tab title
+                    androidx.compose.foundation.layout.Row(
+                        modifier = androidx.compose.ui.Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 12.dp, vertical = 8.dp),
+                        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+                        horizontalArrangement = androidx.compose.foundation.layout.Arrangement.SpaceBetween
+                    ) {
+                        androidx.compose.material3.Text(
+                            text = tab.content.title.ifEmpty { "Tab" },
+                            style = androidx.compose.material3.MaterialTheme.typography.titleMedium,
+                            maxLines = 1,
+                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                            modifier = androidx.compose.ui.Modifier.weight(1f)
+                        )
+                        
+                        androidx.compose.material3.IconButton(onClick = onDismiss) {
+                            androidx.compose.material3.Icon(
+                                imageVector = androidx.compose.material.icons.Icons.Default.Close,
+                                contentDescription = "Close menu"
+                            )
+                        }
+                    }
+                    
+                    androidx.compose.material3.HorizontalDivider(
+                        modifier = androidx.compose.ui.Modifier.padding(vertical = 4.dp)
+                    )
+                    
+                    // Menu options
+                    if (isInGroup) {
+                        MenuOption(
+                            icon = androidx.compose.material.icons.Icons.Default.Clear,
+                            text = "Remove from Group",
+                            onClick = onRemoveFromGroup
+                        )
+                    }
+                    
+                    MenuOption(
+                        icon = androidx.compose.material.icons.Icons.Default.AccountCircle,
+                        text = "Move to Profile",
+                        onClick = onMoveToProfile
+                    )
+                    
+                    MenuOption(
+                        icon = androidx.compose.material.icons.Icons.Default.Close,
+                        text = "Close Tab",
+                        onClick = {
+                            handleTabCloseCompose(tab.id)
+                            onDismiss()
+                        }
+                    )
+                }
+            }
+        }
+    }
+    
+    @androidx.compose.runtime.Composable
+    private fun MenuOption(
+        icon: androidx.compose.ui.graphics.vector.ImageVector,
+        text: String,
+        onClick: () -> Unit
+    ) {
+        androidx.compose.foundation.layout.Row(
+            modifier = androidx.compose.ui.Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onClick)
+                .padding(horizontal = 12.dp, vertical = 12.dp),
+            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+        ) {
+            androidx.compose.material3.Icon(
+                imageVector = icon,
+                contentDescription = null,
+                modifier = androidx.compose.ui.Modifier.size(24.dp),
+                tint = androidx.compose.material3.MaterialTheme.colorScheme.onSurface
+            )
+            
+            androidx.compose.foundation.layout.Spacer(modifier = androidx.compose.ui.Modifier.width(16.dp))
+            
+            androidx.compose.material3.Text(
+                text = text,
+                style = androidx.compose.material3.MaterialTheme.typography.bodyLarge
+            )
+        }
     }
 }

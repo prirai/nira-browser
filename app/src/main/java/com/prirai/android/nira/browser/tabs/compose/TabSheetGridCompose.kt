@@ -5,6 +5,8 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items as lazyListItems
@@ -24,6 +26,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -64,6 +67,7 @@ fun TabSheetGridView(
     viewModel: TabViewModel,
     onTabClick: (String) -> Unit,
     onTabClose: (String) -> Unit,
+    onTabLongPress: (TabSessionState, Boolean) -> Unit = { _, _ -> },
     onGroupClick: (String) -> Unit,
     onGroupOptionsClick: (String) -> Unit,
     modifier: Modifier = Modifier
@@ -163,6 +167,7 @@ fun TabSheetGridView(
                         dragDropState = dragDropState,
                         onTabClick = onTabClick,
                         onTabClose = onTabClose,
+                        onTabLongPress = onTabLongPress,
                         onDragEnd = { draggedId, hoveredId, fromGroupId ->
                             scope.launch {
                                 handleGridDragEnd(
@@ -187,6 +192,7 @@ fun TabSheetGridView(
                         dragDropState = dragDropState,
                         onTabClick = { onTabClick(item.tab.id) },
                         onTabClose = { onTabClose(item.tab.id) },
+                        onTabLongPress = { onTabLongPress(item.tab, item.isInGroup) },
                         onDragEnd = { draggedId, hoveredId, fromGroupId ->
                             scope.launch {
                                 handleGridDragEnd(
@@ -295,6 +301,7 @@ private fun GroupTabsRow(
     dragDropState: TabDragDropState,
     onTabClick: (String) -> Unit,
     onTabClose: (String) -> Unit,
+    onTabLongPress: (TabSessionState, Boolean) -> Unit,
     onDragEnd: (String, String?, String?) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -319,6 +326,7 @@ private fun GroupTabsRow(
                 dragDropState = dragDropState,
                 onTabClick = { onTabClick(tab.id) },
                 onTabClose = { onTabClose(tab.id) },
+                onTabLongPress = { onTabLongPress(tab, true) },
                 onDragEnd = onDragEnd
             )
         }
@@ -334,6 +342,7 @@ private fun TabGridItemUnified(
     dragDropState: TabDragDropState,
     onTabClick: () -> Unit,
     onTabClose: () -> Unit,
+    onTabLongPress: () -> Unit = {},
     onDragEnd: (String, String?, String?) -> Unit,
     modifier: Modifier = Modifier,
     thumbnailHeight: androidx.compose.ui.unit.Dp = 100.dp,
@@ -365,11 +374,24 @@ private fun TabGridItemUnified(
         colors = CardDefaults.cardColors(containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant)
     ) {
         Column(modifier = Modifier.clickable(onClick = onTabClick)) {
+            // Thumbnail at top - takes most of the space
+            Box(modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f)
+                .zIndex(0f)) {
+                ThumbnailImageView(tab = tab, modifier = Modifier.fillMaxSize())
+            }
+
+            // Divider between thumbnail and footer
+            HorizontalDivider(thickness = 1.dp, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.12f))
+
+            // Title and close button at bottom
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(48.dp)
-                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                    .height(40.dp)
+                    .background(if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface)
+                    .padding(horizontal = 8.dp, vertical = 4.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
@@ -380,11 +402,11 @@ private fun TabGridItemUnified(
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f)
                 )
-                Box(modifier = Modifier.size(40.dp), contentAlignment = Alignment.Center) {
-                    IconButton(onClick = onTabClose, modifier = Modifier.size(40.dp)) {
+                Box(modifier = Modifier.size(32.dp), contentAlignment = Alignment.Center) {
+                    IconButton(onClick = onTabClose, modifier = Modifier.size(32.dp)) {
                         Box(
                             modifier = Modifier
-                                .size(28.dp)
+                                .size(24.dp)
                                 .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.95f), CircleShape),
                             contentAlignment = Alignment.Center
                         ) {
@@ -392,35 +414,12 @@ private fun TabGridItemUnified(
                                 imageVector = Icons.Default.Close,
                                 contentDescription = "Close tab",
                                 tint = MaterialTheme.colorScheme.onSurface,
-                                modifier = Modifier.size(18.dp)
+                                modifier = Modifier.size(16.dp)
                             )
                         }
                     }
                 }
             }
-
-            // Divider between header and thumbnail
-            HorizontalDivider(thickness = 1.dp, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.12f))
-
-            // Thumbnail
-            Box(modifier = Modifier
-                .fillMaxWidth()
-                .height(thumbnailHeight)
-                .zIndex(0f)) {
-                ThumbnailImageView(tab = tab, modifier = Modifier.fillMaxSize()) // ensure thumbnail behind header
-            }
-
-            // URL / subtitle
-            Text(
-                text = tab.content.url.ifEmpty { "" },
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier
-                    .padding(12.dp)
-                    .zIndex(0.1f)
-            )
         }
     }
 }
@@ -433,6 +432,7 @@ private fun TabGridItemCompact(
     dragDropState: TabDragDropState,
     onTabClick: () -> Unit,
     onTabClose: () -> Unit,
+    onTabLongPress: () -> Unit = {},
     onDragEnd: (String, String?, String?) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -444,6 +444,7 @@ private fun TabGridItemCompact(
         dragDropState = dragDropState,
         onTabClick = onTabClick,
         onTabClose = onTabClose,
+        onTabLongPress = onTabLongPress,
         onDragEnd = onDragEnd,
         modifier = modifier,
         thumbnailHeight = 90.dp,
@@ -460,6 +461,7 @@ private fun TabGridItem(
     dragDropState: TabDragDropState,
     onTabClick: () -> Unit,
     onTabClose: () -> Unit,
+    onTabLongPress: () -> Unit = {},
     onDragEnd: (String, String?, String?) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -472,6 +474,7 @@ private fun TabGridItem(
         dragDropState = dragDropState,
         onTabClick = onTabClick,
         onTabClose = onTabClose,
+        onTabLongPress = onTabLongPress,
         onDragEnd = onDragEnd,
         modifier = modifier,
         thumbnailHeight = 120.dp,

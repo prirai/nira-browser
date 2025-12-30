@@ -13,6 +13,7 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -67,6 +68,7 @@ fun TabSheetListView(
     viewModel: TabViewModel,
     onTabClick: (String) -> Unit,
     onTabClose: (String) -> Unit,
+    onTabLongPress: (TabSessionState, Boolean) -> Unit = { _, _ -> },
     onGroupClick: (String) -> Unit,
     onGroupOptionsClick: (String) -> Unit,
     modifier: Modifier = Modifier
@@ -159,6 +161,7 @@ fun TabSheetListView(
                         dragDropState = dragDropState,
                         onTabClick = { onTabClick(item.tab.id) },
                         onTabClose = { onTabClose(item.tab.id) },
+                        onTabLongPress = { onTabLongPress(item.tab, item.isInGroup) },
                         onDragEnd = { operation ->
                             scope.launch {
                                 handleDragOperation(
@@ -275,6 +278,7 @@ private fun TabListItem(
     dragDropState: AdvancedDragDropState,
     onTabClick: () -> Unit,
     onTabClose: () -> Unit,
+    onTabLongPress: () -> Unit = {},
     onDragEnd: (DragOperation) -> Unit,
     modifier: Modifier = Modifier
 ) {

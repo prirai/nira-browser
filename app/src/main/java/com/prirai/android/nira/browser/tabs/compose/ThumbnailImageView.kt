@@ -26,6 +26,7 @@ import mozilla.components.concept.base.images.ImageLoadRequest
 /**
  * Composable that displays a tab thumbnail using Mozilla's ThumbnailLoader.
  * Falls back to a placeholder icon if thumbnail is not available.
+ * Crops the thumbnail to show only the top 60-70% of the image.
  */
 @Composable
 fun ThumbnailImageView(
@@ -35,29 +36,22 @@ fun ThumbnailImageView(
     val context = LocalContext.current
     val thumbnailLoader = remember { ThumbnailLoader(context.components.thumbnailStorage) }
     val backgroundColor = MaterialTheme.colorScheme.surfaceVariant
-    val vignetteColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.4f)
     
     Box(
         modifier = modifier.background(backgroundColor),
         contentAlignment = Alignment.Center
     ) {
-        // Show placeholder icon by default
         var showPlaceholder by remember { mutableStateOf(true) }
         
-        // Thumbnail ImageView using AndroidView
         AndroidView(
             factory = { ctx ->
                 ImageView(ctx).apply {
                     scaleType = ImageView.ScaleType.CENTER_CROP
-                    // Set initial placeholder
                     setBackgroundColor(android.graphics.Color.TRANSPARENT)
-                    adjustViewBounds = true
                 }
             },
             update = { imageView ->
-                // Set accessible description
                 imageView.contentDescription = tab.content.title.ifEmpty { tab.content.url }
-                // Load thumbnail after view is measured
                 imageView.post {
                     val width = imageView.width
                     val height = imageView.height
@@ -68,6 +62,32 @@ fun ThumbnailImageView(
                                 imageView,
                                 ImageLoadRequest(tab.id, size, isPrivate = tab.content.private)
                             )
+                            
+                            imageView.drawable?.let { drawable ->
+                                val drawableWidth = drawable.intrinsicWidth
+                                val drawableHeight = drawable.intrinsicHeight
+                                
+                                if (drawableWidth > 0 && drawableHeight > 0) {
+                                    val matrix = android.graphics.Matrix()
+                                    
+                                    val scale = maxOf(
+                                        width.toFloat() / drawableWidth,
+                                        height.toFloat() / drawableHeight
+                                    )
+                                    
+                                    val scaledHeight = drawableHeight * scale
+                                    val offsetY = -(scaledHeight * 0.0f)
+                                    
+                                    matrix.setScale(scale, scale)
+                                    matrix.postTranslate(
+                                        (width - drawableWidth * scale) / 2f,
+                                        offsetY
+                                    )
+                                    
+                                    imageView.scaleType = ImageView.ScaleType.MATRIX
+                                    imageView.imageMatrix = matrix
+                                }
+                            }
                             showPlaceholder = false
                         } catch (e: Exception) {
                             showPlaceholder = true
@@ -78,13 +98,6 @@ fun ThumbnailImageView(
             modifier = Modifier.fillMaxSize()
         )
         
-        // Remove vignette - use title + close at top and thumbnail beneath for clarity
-        // No vignette needed now; the thumbnail is shown beneath the title area
-        // (Keep code stub here in case we want to reintroduce an overlay later)
-        
-        // NOTE: no vignette overlay applied
-        
-        // Overlay placeholder icon for about: pages or if thumbnail fails
         if (showPlaceholder || tab.content.url.startsWith("about:")) {
             Icon(
                 imageVector = Icons.Default.Image,

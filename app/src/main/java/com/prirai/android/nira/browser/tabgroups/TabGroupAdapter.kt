@@ -348,12 +348,20 @@ class TabGroupAdapter(
                     androidx.core.content.ContextCompat.getColor(context, R.color.m3_primary)
                 }
 
-                val borderWidth = (3 * context.resources.displayMetrics.density).toInt()
-                setCardBackgroundColor(
+                val surfaceTypedValue = android.util.TypedValue()
+                val surfaceColor = if (theme.resolveAttribute(
+                        com.google.android.material.R.attr.colorSurfaceContainerHigh, surfaceTypedValue, true
+                    )
+                ) {
+                    surfaceTypedValue.data
+                } else {
                     androidx.core.content.ContextCompat.getColor(
                         context, R.color.m3_surface_container_background
                     )
-                )
+                }
+
+                val borderWidth = (3 * context.resources.displayMetrics.density).toInt()
+                setCardBackgroundColor(surfaceColor)
                 strokeColor = primaryColor
                 strokeWidth = borderWidth
 

@@ -114,12 +114,21 @@ class TabsGridAdapter(
             colorStripe.visibility = View.VISIBLE
             moreButton.visibility = View.VISIBLE
             
-            groupCard.setCardBackgroundColor(
+            val theme = itemView.context.theme
+            val typedValue = android.util.TypedValue()
+            val surfaceColor = if (theme.resolveAttribute(
+                    com.google.android.material.R.attr.colorSurfaceContainerHigh, typedValue, true
+                )
+            ) {
+                typedValue.data
+            } else {
                 androidx.core.content.ContextCompat.getColor(
                     itemView.context,
                     R.color.m3_surface_container_high
                 )
-            )
+            }
+            
+            groupCard.setCardBackgroundColor(surfaceColor)
             
             moreButton.setOnClickListener {
                 onGroupMoreClick(item.groupId, it)
@@ -143,13 +152,24 @@ class TabsGridAdapter(
             val isGuestTab = tab.contextId == null // Orange border for guest tabs (null contextId)
             
             // Set stroke based on selection and guest status
+            val theme = cardView.context.theme
+            val primaryTypedValue = android.util.TypedValue()
+            val primaryColor = if (theme.resolveAttribute(
+                    android.R.attr.colorPrimary, primaryTypedValue, true
+                )
+            ) {
+                primaryTypedValue.data
+            } else {
+                androidx.core.content.ContextCompat.getColor(
+                    cardView.context,
+                    R.color.m3_primary
+                )
+            }
+            
             when {
                 isSelected -> {
                     cardView.strokeWidth = (3 * cardView.context.resources.displayMetrics.density).toInt()
-                    cardView.strokeColor = androidx.core.content.ContextCompat.getColor(
-                        cardView.context,
-                        R.color.m3_primary
-                    )
+                    cardView.strokeColor = primaryColor
                 }
                 isGuestTab -> {
                     cardView.strokeWidth = (3 * cardView.context.resources.displayMetrics.density).toInt()
@@ -287,10 +307,31 @@ class GridGroupTabsAdapter(
             thumbnail.outlineProvider = android.view.ViewOutlineProvider.BACKGROUND
             
             // Set stroke based on selection and guest status
+            val theme = cardView.context.theme
+            val primaryTypedValue = android.util.TypedValue()
+            val primaryColor = if (theme.resolveAttribute(
+                    android.R.attr.colorPrimary, primaryTypedValue, true
+                )
+            ) {
+                primaryTypedValue.data
+            } else {
+                androidx.core.content.ContextCompat.getColor(cardView.context, R.color.m3_primary)
+            }
+            
+            val outlineTypedValue = android.util.TypedValue()
+            val outlineColor = if (theme.resolveAttribute(
+                    com.google.android.material.R.attr.colorOutlineVariant, outlineTypedValue, true
+                )
+            ) {
+                outlineTypedValue.data
+            } else {
+                androidx.core.content.ContextCompat.getColor(cardView.context, R.color.m3_outline_variant)
+            }
+            
             when {
                 isSelected -> {
                     cardView.strokeWidth = (2 * cardView.context.resources.displayMetrics.density).toInt()
-                    cardView.strokeColor = androidx.core.content.ContextCompat.getColor(cardView.context, R.color.m3_primary)
+                    cardView.strokeColor = primaryColor
                 }
                 isGuestTab -> {
                     cardView.strokeWidth = (2 * cardView.context.resources.displayMetrics.density).toInt()
@@ -298,7 +339,7 @@ class GridGroupTabsAdapter(
                 }
                 else -> {
                     cardView.strokeWidth = (1 * cardView.context.resources.displayMetrics.density).toInt()
-                    cardView.strokeColor = androidx.core.content.ContextCompat.getColor(cardView.context, R.color.m3_outline_variant)
+                    cardView.strokeColor = outlineColor
                 }
             }
             
