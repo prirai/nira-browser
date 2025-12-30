@@ -700,7 +700,8 @@ class ModernTabPillAdapter(
                     }
                 }
                 val gradient = GradientDrawable().apply {
-                    cornerRadius = 20f
+                    val radiusDp = 20f * itemView.resources.displayMetrics.density
+                    cornerRadius = radiusDp
                     setColor(backgroundColor)
                     // Consistent border width for all selected tabs (3dp)
                     val strokeWidth = (3 * itemView.resources.displayMetrics.density).toInt()
@@ -721,7 +722,8 @@ class ModernTabPillAdapter(
             } else {
                 // Unselected: Subtle pill with guest/island color hint
                 val gradient = GradientDrawable().apply {
-                    cornerRadius = 20f
+                    val radiusDp = 20f * itemView.resources.displayMetrics.density
+                    cornerRadius = radiusDp
                     setColor(backgroundColor)
                     when {
                         isGuestTab -> {
