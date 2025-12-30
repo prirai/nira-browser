@@ -578,8 +578,10 @@ class UnifiedTabGroupManager private constructor(private val context: Context) {
             return@withContext
         }
 
-        // Skip system URLs
-        if (newTabUrl.startsWith("about:") || newTabUrl.startsWith("chrome:")) {
+        // Skip system URLs, but allow about:blank and about:homepage
+        // This ensures empty tabs opened in groups (via + button or context menu) stay grouped
+        if (newTabUrl.startsWith("chrome:") ||
+            (newTabUrl.startsWith("about:") && newTabUrl != "about:blank" && newTabUrl != "about:homepage")) {
             return@withContext
         }
 

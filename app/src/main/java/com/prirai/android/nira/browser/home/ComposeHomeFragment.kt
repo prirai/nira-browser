@@ -289,9 +289,8 @@ class ComposeHomeFragment : Fragment() {
             }
 
             override fun onTabCounterClicked() {
-                val tabsBottomSheet =
-                    com.prirai.android.nira.browser.tabs.TabsBottomSheetFragment.newInstance()
-                tabsBottomSheet.show(parentFragmentManager, com.prirai.android.nira.browser.tabs.TabsBottomSheetFragment.TAG)
+                val tabsBottomSheet = com.prirai.android.nira.browser.tabs.modern.ModernTabSheet()
+                tabsBottomSheet.show(parentFragmentManager, "modern_tab_sheet")
             }
 
             override fun onScrolled(offset: Int) {
@@ -396,11 +395,10 @@ class ComposeHomeFragment : Fragment() {
             }
 
             override fun onTabCountClicked() {
-                val tabsBottomSheet =
-                    com.prirai.android.nira.browser.tabs.TabsBottomSheetFragment.newInstance()
+                val tabsBottomSheet = com.prirai.android.nira.browser.tabs.modern.ModernTabSheet()
                 tabsBottomSheet.show(
                     parentFragmentManager,
-                    com.prirai.android.nira.browser.tabs.TabsBottomSheetFragment.TAG
+                    "modern_tab_sheet"
                 )
             }
 

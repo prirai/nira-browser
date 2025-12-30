@@ -281,7 +281,8 @@ class UnifiedToolbar @JvmOverloads constructor(
                     val group = unifiedManager.getGroup(islandId)
                     val parentTabId = group?.tabIds?.firstOrNull()
                     
-                    // Create tab with parentId to trigger middleware auto-grouping
+                    // Create tab - we don't rely on middleware auto-grouping anymore to avoid race conditions
+                    // Instead, we explicitly add the tab to the group immediately after creation
                     val newTabId = context.components.tabsUseCases.addTab(
                         url = "about:homepage",
                         selectTab = true,
@@ -290,25 +291,14 @@ class UnifiedToolbar @JvmOverloads constructor(
                         parentId = parentTabId
                     )
 
-                    // Ensure the tab is added to the correct group
-                    // The middleware should handle this via parentId, but we add a fallback
+                    // EXPLICITLY add to group immediately
+                    // This bypasses middleware race conditions with system URLs
                     lifecycleOwner.lifecycleScope.launch {
-                        kotlinx.coroutines.delay(200)
-                        
-                        // Check if tab was already grouped by middleware
-                        if (!unifiedManager.isTabGrouped(newTabId)) {
-                            // If not grouped, add it manually
-                            android.util.Log.d("UnifiedToolbar", "Tab $newTabId not auto-grouped, adding manually to $islandId")
+                        try {
+                            android.util.Log.d("UnifiedToolbar", "Explicitly adding new tab $newTabId to group $islandId")
                             unifiedManager.addTabToGroup(newTabId, islandId)
-                        } else {
-                            // Verify it's in the correct group
-                            val currentGroup = unifiedManager.getGroupForTab(newTabId)
-                            if (currentGroup?.id != islandId) {
-                                // Tab was grouped but in wrong group, move it
-                                android.util.Log.d("UnifiedToolbar", "Tab $newTabId in wrong group, moving to $islandId")
-                                unifiedManager.removeTabFromGroup(newTabId, notifyChange = false)
-                                unifiedManager.addTabToGroup(newTabId, islandId)
-                            }
+                        } catch (e: Exception) {
+                            android.util.Log.e("UnifiedToolbar", "Failed to add tab to group", e)
                         }
                     }
                 },

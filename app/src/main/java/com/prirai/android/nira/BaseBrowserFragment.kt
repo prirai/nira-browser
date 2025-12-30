@@ -243,11 +243,10 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
                 thumbnailsFeature.get()?.requestScreenshot()
 
                 // Show the new bottom sheet tabs dialog
-                val tabsBottomSheet =
-                    com.prirai.android.nira.browser.tabs.TabsBottomSheetFragment.newInstance()
+                val tabsBottomSheet = com.prirai.android.nira.browser.tabs.modern.ModernTabSheet()
                 tabsBottomSheet.show(
                     parentFragmentManager,
-                    com.prirai.android.nira.browser.tabs.TabsBottomSheetFragment.TAG
+                    "modern_tab_sheet"
                 )
             }
         )
