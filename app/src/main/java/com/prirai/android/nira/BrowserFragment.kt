@@ -417,11 +417,10 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
 
                 override fun onTabCountClicked() {
                     try {
-                        val tabsBottomSheet =
-                            com.prirai.android.nira.browser.tabs.TabsBottomSheetFragment.newInstance()
+                    val tabsBottomSheet = com.prirai.android.nira.browser.tabs.modern.ModernTabSheet()
                         tabsBottomSheet.show(
                             parentFragmentManager,
-                            com.prirai.android.nira.browser.tabs.TabsBottomSheetFragment.TAG
+                        "modern_tab_sheet"
                         )
                     } catch (e: Exception) {
                         // Silently handle tab sheet opening failure
