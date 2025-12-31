@@ -155,13 +155,7 @@ class TabSearchAdapter(
             chipGroup.visibility = View.GONE
             
             // Only show group chip if it exists (profile is in sub-header now)
-            item.groupName?.let { groupName ->
-                if (groupName.isNotEmpty()) {
-                    chipGroup.visibility = View.VISIBLE
-                    val groupChip = createChip(groupName)
-                    chipGroup.addView(groupChip)
-                }
-            }
+
             
             // Show/hide divider
             divider.visibility = if (showDivider) View.VISIBLE else View.GONE

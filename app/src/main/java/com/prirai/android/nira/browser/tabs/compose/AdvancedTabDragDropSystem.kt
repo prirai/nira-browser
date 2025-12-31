@@ -24,9 +24,6 @@ import kotlin.math.abs
 sealed class DragOperation {
     object None : DragOperation()
     data class Reorder(val targetIndex: Int) : DragOperation()
-    data class GroupWith(val targetId: String, val targetIndex: Int) : DragOperation()
-    data class MoveToGroup(val groupId: String) : DragOperation()
-    data class UngroupAndReorder(val targetIndex: Int) : DragOperation()
 }
 
 /**
@@ -60,17 +57,14 @@ class AdvancedDragDropState {
         private set
     
     companion object {
-        private const val GROUPING_THRESHOLD = 0.4f // Less sensitive
+        // No constants needed
     }
     
     data class ItemInfo(
         val id: String,
         val position: Offset,
         val size: IntSize,
-        val index: Int,
-        val isGroupHeader: Boolean = false,
-        val groupId: String? = null,
-        val isInGroup: Boolean = false
+        val index: Int
     )
     
     data class VisualState(
@@ -82,12 +76,9 @@ class AdvancedDragDropState {
         id: String,
         position: Offset,
         size: IntSize,
-        index: Int,
-        isGroupHeader: Boolean = false,
-        groupId: String? = null,
-        isInGroup: Boolean = false
+        index: Int
     ) {
-        items[id] = ItemInfo(id, position, size, index, isGroupHeader, groupId, isInGroup)
+        items[id] = ItemInfo(id, position, size, index)
         if (!visualStates.containsKey(id)) {
             visualStates[id] = VisualState()
         }
@@ -99,7 +90,6 @@ class AdvancedDragDropState {
     
     fun getDraggedItemOffset(): Float {
         val draggedId = draggedItemId ?: return 0f
-        val draggedItem = items[draggedId] ?: return 0f
         
         // Calculate offset: finger position - initial position
         return fingerPosition.y - initialDragOffset.y
@@ -134,9 +124,7 @@ class AdvancedDragDropState {
         
         // Update feedback
         feedbackState = when (operation) {
-            is DragOperation.GroupWith -> DragFeedbackState(operation, 1.05f, true)
             is DragOperation.Reorder -> DragFeedbackState(operation, 1f, false)
-            is DragOperation.MoveToGroup -> DragFeedbackState(operation, 1.05f, false)
             else -> DragFeedbackState()
         }
     }
@@ -144,7 +132,7 @@ class AdvancedDragDropState {
     private fun findTarget(fingerPos: Offset, draggedItem: ItemInfo): Pair<String?, DragOperation> {
         // Find items before and after finger position for insertion
         val sortedItems = items.values
-            .filter { it.id != draggedItemId && !it.isGroupHeader }
+            .filter { it.id != draggedItemId }
             .sortedBy { it.index }
         
         if (sortedItems.isEmpty()) {
@@ -181,40 +169,8 @@ class AdvancedDragDropState {
             target.index + 1
         }
         
-        // Check if we should group or reorder
-        val distanceFromCenter = abs(fingerPos.y - itemCenterY)
-        val centerThreshold = target.size.height * 0.3f
-        
-        // Grouping logic - only when very close to center
-        if (distanceFromCenter < centerThreshold * 0.5f) {
-            when {
-                !target.isInGroup && !draggedItem.isInGroup -> {
-                    return Pair(target.id, DragOperation.GroupWith(target.id, target.index))
-                }
-                draggedItem.isInGroup && !target.isInGroup -> {
-                    return Pair(target.id, DragOperation.GroupWith(target.id, target.index))
-                }
-            }
-        }
-        
         // Reordering logic - show insertion point
-        val operation = when {
-            target.isGroupHeader -> DragOperation.None
-            
-            draggedItem.isInGroup && !target.isInGroup && draggedItem.groupId != null -> {
-                DragOperation.UngroupAndReorder(insertionIndex)
-            }
-            
-            draggedItem.isInGroup && target.isInGroup && draggedItem.groupId == target.groupId -> {
-                DragOperation.Reorder(insertionIndex)
-            }
-            
-            !draggedItem.isInGroup && !target.isInGroup -> {
-                DragOperation.Reorder(insertionIndex)
-            }
-            
-            else -> DragOperation.None
-        }
+        val operation = DragOperation.Reorder(insertionIndex)
         
         return Pair(target.id, operation)
     }
@@ -250,15 +206,6 @@ class AdvancedDragDropState {
                     }
                 }
                 
-                draggedItemId?.let {
-                    visualStates[it]?.scale = 0.98f
-                }
-            }
-            
-            is DragOperation.GroupWith -> {
-                hoveredItemId?.let {
-                    visualStates[it]?.scale = 1.02f
-                }
                 draggedItemId?.let {
                     visualStates[it]?.scale = 0.98f
                 }
@@ -318,9 +265,6 @@ fun Modifier.advancedDraggable(
     id: String,
     index: Int,
     dragDropState: AdvancedDragDropState,
-    isGroupHeader: Boolean = false,
-    groupId: String? = null,
-    isInGroup: Boolean = false,
     enabled: Boolean = true,
     onDragEnd: (DragOperation) -> Unit = {}
 ): Modifier {
@@ -333,10 +277,7 @@ fun Modifier.advancedDraggable(
                 id = id,
                 position = itemGlobalPosition,
                 size = coordinates.size,
-                index = index,
-                isGroupHeader = isGroupHeader,
-                groupId = groupId,
-                isInGroup = isInGroup
+                index = index
             )
         }
         .then(

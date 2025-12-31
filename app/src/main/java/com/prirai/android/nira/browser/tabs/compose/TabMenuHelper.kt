@@ -15,9 +15,6 @@ object TabMenuHelper {
         context: Context,
         anchorView: View,
         tab: TabSessionState,
-        isInGroup: Boolean,
-        viewModel: TabViewModel,
-        scope: CoroutineScope,
         onMoveToProfile: (String) -> Unit,
         onDismiss: () -> Unit = {}
     ) {
@@ -38,10 +35,8 @@ object TabMenuHelper {
                 title = "Duplicate Tab",
                 iconRes = R.drawable.control_point_duplicate_24px,
                 onClick = {
-                    scope.launch {
                         // Duplicate the tab - would need implementation
                         onDismiss()
-                    }
                 }
             ))
             
@@ -51,94 +46,17 @@ object TabMenuHelper {
                 title = "Pin Tab",
                 iconRes = R.drawable.ic_pin_outline,
                 onClick = {
-                    scope.launch {
-                        // Pin/unpin functionality - would need implementation
-                        onDismiss()
-                    }
+                    // Pin/unpin functionality - would need implementation
+                    onDismiss()
                 }
             ))
             
-            // Option 4: Remove from Group (only for grouped tabs)
-            if (isInGroup) {
-                add(Material3BrowserMenu.MenuItem.Action(
-                    id = "remove_from_group",
-                    title = "Remove from Island",
-                    iconRes = R.drawable.ungroup_24px,
-                    onClick = {
-                        scope.launch {
-                            viewModel.removeTabFromGroup(tab.id)
-                            onDismiss()
-                        }
-                    }
-                ))
-            }
+
         }
         
         val menu = Material3BrowserMenu(context, menuItems)
         menu.show(anchorView, preferBottom = false)
     }
     
-    fun showGroupMenu(
-        context: Context,
-        anchorView: View,
-        groupId: String,
-        viewModel: TabViewModel,
-        scope: CoroutineScope,
-        onRename: (String) -> Unit,
-        onChangeColor: (String) -> Unit,
-        onMoveToProfile: (String) -> Unit,
-        onDismiss: () -> Unit = {}
-    ) {
-        val menuItems = listOf(
-            Material3BrowserMenu.MenuItem.Action(
-                id = "rename",
-                title = "Rename Island",
-                iconRes = R.drawable.ic_edit,
-                onClick = {
-                    onRename(groupId)
-                }
-            ),
-            Material3BrowserMenu.MenuItem.Action(
-                id = "change_color",
-                title = "Change Color",
-                iconRes = R.drawable.ic_palette,
-                onClick = {
-                    onChangeColor(groupId)
-                }
-            ),
-            Material3BrowserMenu.MenuItem.Action(
-                id = "move_to_profile",
-                title = "Move Group to Profile",
-                iconRes = R.drawable.ic_profile,
-                onClick = {
-                    onMoveToProfile(groupId)
-                }
-            ),
-            Material3BrowserMenu.MenuItem.Action(
-                id = "ungroup",
-                title = "Ungroup All Tabs",
-                iconRes = R.drawable.ungroup_24px,
-                onClick = {
-                    scope.launch {
-                        // Ungroup all tabs - would need proper implementation
-                        onDismiss()
-                    }
-                }
-            ),
-            Material3BrowserMenu.MenuItem.Action(
-                id = "close_all",
-                title = "Close All Tabs",
-                iconRes = R.drawable.ic_close_small,
-                onClick = {
-                    scope.launch {
-                        // Close all tabs in group - would need proper implementation
-                        onDismiss()
-                    }
-                }
-            )
-        )
-        
-        val menu = Material3BrowserMenu(context, menuItems)
-        menu.show(anchorView, preferBottom = false)
-    }
+
 }

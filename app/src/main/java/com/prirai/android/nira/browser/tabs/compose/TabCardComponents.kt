@@ -39,11 +39,6 @@ fun TabCard(
     tab: TabSessionState,
     isSelected: Boolean,
     isDragging: Boolean,
-    isInGroup: Boolean = false,
-    isFirstInGroup: Boolean = false,
-    isLastInGroup: Boolean = false,
-    groupColor: Color? = null,
-    showDragHandle: Boolean = true,
     onTabClick: () -> Unit,
     onTabClose: () -> Unit,
     onLongPress: () -> Unit,
@@ -55,13 +50,11 @@ fun TabCard(
     
     val borderColor = when {
         hasNullContext -> Color(0xFFFF9800) // Orange for null context
-        groupColor != null -> groupColor
         else -> Color.Transparent
     }
     
     val borderWidth = when {
         hasNullContext -> 2.dp
-        isInGroup -> 0.dp
         else -> 0.dp
     }
     
@@ -74,14 +67,13 @@ fun TabCard(
                     onLongPress = { onLongPress() }
                 )
             },
-        shape = getTabShape(isInGroup, isFirstInGroup, isLastInGroup),
+        shape = getTabShape(),
         elevation = CardDefaults.cardElevation(
             defaultElevation = getTabElevation(isDragging)
         ),
         colors = CardDefaults.cardColors(
             containerColor = when {
                 isSelected -> MaterialTheme.colorScheme.primaryContainer
-                isInGroup && groupColor != null -> groupColor.copy(alpha = 0.05f)
                 else -> MaterialTheme.colorScheme.surface
             }
         ),
@@ -94,7 +86,7 @@ fun TabCard(
             verticalAlignment = Alignment.CenterVertically
         ) {
             // Drag handle indicator (subtle dots)
-            if (showDragHandle && !isCompact) {
+            if (!isCompact) {
                 Column(
                     modifier = Modifier
                         .padding(end = 8.dp)
@@ -265,96 +257,4 @@ fun ThumbnailImage(
 /**
  * Group header card
  */
-@Composable
-fun GroupHeaderCard(
-    group: UnifiedTabOrder.OrderItem.TabGroup,
-    isExpanded: Boolean,
-    isTarget: Boolean,
-    onHeaderClick: () -> Unit,
-    onMoreClick: () -> Unit,
-    onLongPress: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Card(
-        modifier = modifier
-            .fillMaxWidth()
-            .dragFeedbackScale(isTarget, false)
-            .pointerInput(Unit) {
-                detectTapGestures(
-                    onTap = { onHeaderClick() },
-                    onLongPress = { onLongPress() }
-                )
-            },
-        shape = getGroupHeaderShape(),
-        colors = CardDefaults.cardColors(
-            containerColor = if (isTarget) {
-                getDragTargetColor(DragFeedback.MoveToGroup)
-            } else {
-                Color(group.color).copy(alpha = 0.15f)
-            }
-        ),
-        border = BorderStroke(1.dp, Color(group.color).copy(alpha = 0.3f))
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(TabVisualConstants.GROUP_HEADER_HEIGHT)
-                .padding(horizontal = 16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            // Group color indicator
-            Box(
-                modifier = Modifier
-                    .size(28.dp)
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(Color(group.color))
-            )
-            
-            Spacer(modifier = Modifier.width(12.dp))
-            
-            // Expand/collapse icon
-            Icon(
-                imageVector = if (isExpanded) {
-                    Icons.Default.ExpandMore
-                } else {
-                    Icons.Default.ChevronRight
-                },
-                contentDescription = if (isExpanded) "Collapse" else "Expand",
-                tint = MaterialTheme.colorScheme.onSurface
-            )
-            
-            Spacer(modifier = Modifier.width(8.dp))
-            
-            // Group name
-            Text(
-                text = group.groupName,
-                style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.weight(1f),
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            
-            // Tab count badge
-            Surface(
-                shape = RoundedCornerShape(12.dp),
-                color = Color(group.color).copy(alpha = 0.2f),
-                modifier = Modifier.padding(end = 8.dp)
-            ) {
-                Text(
-                    text = "${group.tabIds.size}",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = Color(group.color),
-                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                )
-            }
-            
-            // More options button
-            IconButton(onClick = onMoreClick) {
-                Icon(
-                    imageVector = Icons.Default.MoreVert,
-                    contentDescription = "Group options",
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        }
-    }
-}
+

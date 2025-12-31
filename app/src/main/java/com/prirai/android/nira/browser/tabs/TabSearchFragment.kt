@@ -290,15 +290,10 @@ class TabSearchFragment : BottomSheetDialogFragment() {
                     val profileId = tab.contextId?.removePrefix("profile_") ?: ""
                     val profile = allProfiles.find { it.id == profileId }
                     
-                    // Find group for this tab
-                    val unifiedGroupManager = com.prirai.android.nira.browser.tabgroups.UnifiedTabGroupManager.getInstance(requireContext())
-                    val group = unifiedGroupManager.getAllGroups().find { it.tabIds.contains(tab.id) }
-                    
                     results.add(
                         SearchResultItem.TabResult(
                             tab = tab,
-                            profileName = profile?.let { "${it.emoji} ${it.name}" } ?: "Unknown",
-                            groupName = group?.name
+                            profileName = profile?.let { "${it.emoji} ${it.name}" } ?: "Unknown"
                         )
                     )
                 }
@@ -416,8 +411,7 @@ sealed class SearchResultItem {
     
     data class TabResult(
         val tab: TabSessionState,
-        val profileName: String,
-        val groupName: String?
+        val profileName: String
     ) : SearchResultItem()
     
     data class BookmarkResult(

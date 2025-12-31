@@ -16,12 +16,9 @@ import androidx.compose.ui.unit.dp
  */
 object TabVisualConstants {
     val TAB_CORNER_RADIUS = 12.dp
-    val GROUP_CORNER_RADIUS = 16.dp
     val TAB_ELEVATION_NORMAL = 1.dp
     val TAB_ELEVATION_DRAGGING = 8.dp
     val TAB_SPACING_NORMAL = 8.dp
-    val TAB_SPACING_IN_GROUP = 2.dp
-    val GROUP_HEADER_HEIGHT = 48.dp
     val TAB_HEIGHT = 72.dp
     val TAB_HEIGHT_GRID = 120.dp
     val INSERTION_LINE_WIDTH = 3.dp
@@ -32,42 +29,12 @@ object TabVisualConstants {
  * Get shape for tab based on position in group
  */
 @Composable
-fun getTabShape(
-    isInGroup: Boolean,
-    isFirstInGroup: Boolean,
-    isLastInGroup: Boolean
-): Shape {
-    return when {
-        !isInGroup -> RoundedCornerShape(TabVisualConstants.TAB_CORNER_RADIUS)
-        isFirstInGroup && isLastInGroup -> RoundedCornerShape(TabVisualConstants.TAB_CORNER_RADIUS)
-        isFirstInGroup -> RoundedCornerShape(
-            topStart = 0.dp,
-            topEnd = 0.dp,
-            bottomStart = 0.dp,
-            bottomEnd = 0.dp
-        )
-        isLastInGroup -> RoundedCornerShape(
-            topStart = 0.dp,
-            topEnd = 0.dp,
-            bottomStart = TabVisualConstants.TAB_CORNER_RADIUS,
-            bottomEnd = TabVisualConstants.TAB_CORNER_RADIUS
-        )
-        else -> RoundedCornerShape(0.dp)
-    }
+
+fun getTabShape(): Shape {
+    return RoundedCornerShape(TabVisualConstants.TAB_CORNER_RADIUS)
 }
 
-/**
- * Get shape for group header
- */
-@Composable
-fun getGroupHeaderShape(): Shape {
-    return RoundedCornerShape(
-        topStart = TabVisualConstants.GROUP_CORNER_RADIUS,
-        topEnd = TabVisualConstants.GROUP_CORNER_RADIUS,
-        bottomStart = 0.dp,
-        bottomEnd = 0.dp
-    )
-}
+
 
 /**
  * Animate scale for drag feedback
@@ -104,17 +71,7 @@ fun getTabElevation(isDragging: Boolean): Dp {
     }
 }
 
-/**
- * Get spacing between items
- */
-@Composable
-fun getTabSpacing(isInGroup: Boolean): Dp {
-    return if (isInGroup) {
-        TabVisualConstants.TAB_SPACING_IN_GROUP
-    } else {
-        TabVisualConstants.TAB_SPACING_NORMAL
-    }
-}
+
 
 /**
  * Colors for drag targets with Material 3 theming
@@ -122,27 +79,9 @@ fun getTabSpacing(isInGroup: Boolean): Dp {
 @Composable
 fun getDragTargetColor(feedbackType: DragFeedback): Color {
     return when (feedbackType) {
-        DragFeedback.GroupWith -> MaterialTheme.colorScheme.primaryContainer
-        DragFeedback.MoveToGroup -> MaterialTheme.colorScheme.secondaryContainer
         DragFeedback.Reorder -> MaterialTheme.colorScheme.primary
-        DragFeedback.Ungroup -> MaterialTheme.colorScheme.tertiaryContainer
         DragFeedback.None -> Color.Transparent
     }
 }
 
-/**
- * Generate random color for new groups
- */
-fun generateRandomGroupColor(): Int {
-    val colors = listOf(
-        0xFFE53935.toInt(), // Red
-        0xFF1E88E5.toInt(), // Blue
-        0xFF43A047.toInt(), // Green
-        0xFFFB8C00.toInt(), // Orange
-        0xFF8E24AA.toInt(), // Purple
-        0xFFD81B60.toInt(), // Pink
-        0xFF00897B.toInt(), // Teal
-        0xFFFDD835.toInt()  // Yellow
-    )
-    return colors.random()
-}
+

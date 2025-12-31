@@ -27,16 +27,11 @@ import kotlinx.coroutines.withContext
 import kotlin.math.abs
 
 /**
- * Enhanced adapter for Tab Islands with beautiful tab pills, island headers,
- * colored indicators, and collapse/expand functionality.
+ * Enhanced adapter for beautiful tab pills.
  */
 class ModernTabPillAdapter(
     private var onTabClick: (String) -> Unit,
     private var onTabClose: (String) -> Unit,
-    private var onIslandHeaderClick: (String) -> Unit = {},
-    private var onIslandLongPress: (String) -> Unit = {},
-    private var onIslandPlusClick: (String) -> Unit = {},
-    private var onTabUngroupFromIsland: ((String, String) -> Unit)? = null,
     private var onTabDuplicate: ((String) -> Unit)? = null
 ) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
@@ -46,9 +41,6 @@ class ModernTabPillAdapter(
 
     companion object {
         private const val VIEW_TYPE_TAB = 0
-        private const val VIEW_TYPE_ISLAND_HEADER = 1
-        private const val VIEW_TYPE_COLLAPSED_ISLAND = 2
-        private const val VIEW_TYPE_EXPANDED_ISLAND_GROUP = 3
         
         private fun getThemeColor(context: Context, attr: Int, fallbackColorRes: Int): Int {
             val theme = context.theme
@@ -64,9 +56,6 @@ class ModernTabPillAdapter(
     override fun getItemViewType(position: Int): Int {
         return when (displayItems[position]) {
             is TabPillItem.Tab -> VIEW_TYPE_TAB
-            is TabPillItem.IslandHeader -> VIEW_TYPE_ISLAND_HEADER
-            is TabPillItem.CollapsedIsland -> VIEW_TYPE_COLLAPSED_ISLAND
-            is TabPillItem.ExpandedIslandGroup -> VIEW_TYPE_EXPANDED_ISLAND_GROUP
         }
     }
 
@@ -77,25 +66,6 @@ class ModernTabPillAdapter(
                     .inflate(R.layout.modern_tab_pill_item, parent, false)
                 TabPillViewHolder(view)
             }
-
-            VIEW_TYPE_ISLAND_HEADER -> {
-                val view = LayoutInflater.from(parent.context)
-                    .inflate(R.layout.tab_island_header_item, parent, false)
-                IslandHeaderViewHolder(view)
-            }
-
-            VIEW_TYPE_COLLAPSED_ISLAND -> {
-                val view = LayoutInflater.from(parent.context)
-                    .inflate(R.layout.tab_island_collapsed_item, parent, false)
-                CollapsedIslandViewHolder(view)
-            }
-
-            VIEW_TYPE_EXPANDED_ISLAND_GROUP -> {
-                val view = LayoutInflater.from(parent.context)
-                    .inflate(R.layout.tab_island_group_item, parent, false)
-                ExpandedIslandGroupViewHolder(view)
-            }
-
             else -> throw IllegalArgumentException("Unknown view type: $viewType")
         }
     }
@@ -105,23 +75,6 @@ class ModernTabPillAdapter(
             is TabPillItem.Tab -> {
                 val isSelected = item.session.id == selectedTabId
                 (holder as TabPillViewHolder).bind(item, isSelected)
-            }
-
-            is TabPillItem.IslandHeader -> {
-                (holder as IslandHeaderViewHolder).bind(item.island)
-            }
-
-            is TabPillItem.CollapsedIsland -> {
-                (holder as CollapsedIslandViewHolder).bind(item.island, item.tabCount)
-            }
-
-            is TabPillItem.ExpandedIslandGroup -> {
-                val viewHolder = holder as ExpandedIslandGroupViewHolder
-                viewHolder.bind(item.island, item.tabs)
-                // Update selection state for tabs in the group
-                if (selectedTabId != null) {
-                    viewHolder.updateTabSelection(selectedTabId!!, item.island)
-                }
             }
         }
     }
@@ -145,14 +98,6 @@ class ModernTabPillAdapter(
                         val wasSelected = item.session.id == oldSelectedId
                         val isSelected = item.session.id == selectedId
                         if (wasSelected || isSelected) {
-                            notifyItemChanged(index)
-                        }
-                    }
-
-                    is TabPillItem.ExpandedIslandGroup -> {
-                        // Check if any tab in the group was selected/deselected
-                        val hasSelectedTab = item.tabs.any { it.id == oldSelectedId || it.id == selectedId }
-                        if (hasSelectedTab) {
                             notifyItemChanged(index)
                         }
                     }
@@ -203,38 +148,7 @@ class ModernTabPillAdapter(
 
         return when {
             item1 is TabPillItem.Tab && item2 is TabPillItem.Tab ->
-                item1.session.id == item2.session.id &&
-                        item1.islandId == item2.islandId &&
-                        item1.islandColor == item2.islandColor &&
-                        item1.session.content.title == item2.session.content.title &&
-                        item1.session.content.url == item2.session.content.url &&
-                        item1.session.content.loading == item2.session.content.loading &&
-                        item1.session.content.icon == item2.session.content.icon
-
-            item1 is TabPillItem.IslandHeader && item2 is TabPillItem.IslandHeader ->
-                item1.island.id == item2.island.id &&
-                        item1.island.isCollapsed == item2.island.isCollapsed &&
-                        item1.island.name == item2.island.name &&
-                        item1.island.color == item2.island.color
-
-            item1 is TabPillItem.CollapsedIsland && item2 is TabPillItem.CollapsedIsland ->
-                item1.island.id == item2.island.id &&
-                        item1.tabCount == item2.tabCount &&
-                        item1.island.name == item2.island.name &&
-                        item1.island.color == item2.island.color
-
-            item1 is TabPillItem.ExpandedIslandGroup && item2 is TabPillItem.ExpandedIslandGroup ->
-                item1.island.id == item2.island.id &&
-                        item1.tabs.map { it.id } == item2.tabs.map { it.id } &&
-                        item1.island.name == item2.island.name &&
-                        item1.island.color == item2.island.color &&
-                        item1.tabs.zip(item2.tabs).all { (tab1, tab2) ->
-                            tab1.content.title == tab2.content.title &&
-                                    tab1.content.url == tab2.content.url &&
-                                    tab1.content.loading == tab2.content.loading &&
-                                    tab1.content.icon == tab2.content.icon
-                        }
-
+                item1.session.id == item2.session.id
             else -> false
         }
     }
@@ -255,18 +169,10 @@ class ModernTabPillAdapter(
     fun updateCallbacks(
         onTabClick: (String) -> Unit,
         onTabClose: (String) -> Unit,
-        onIslandHeaderClick: (String) -> Unit = {},
-        onIslandLongPress: (String) -> Unit = {},
-        onIslandPlusClick: (String) -> Unit = {},
-        onTabUngroupFromIsland: ((String, String) -> Unit)? = null,
         onTabDuplicate: ((String) -> Unit)? = null
     ) {
         this.onTabClick = onTabClick
         this.onTabClose = onTabClose
-        this.onIslandHeaderClick = onIslandHeaderClick
-        this.onIslandLongPress = onIslandLongPress
-        this.onIslandPlusClick = onIslandPlusClick
-        this.onTabUngroupFromIsland = onTabUngroupFromIsland
         this.onTabDuplicate = onTabDuplicate
     }
 
@@ -667,7 +573,6 @@ class ModernTabPillAdapter(
         }
 
         private fun applyPillStyling(isSelected: Boolean, item: TabPillItem.Tab) {
-            val islandColor = item.islandColor
             val isGuestTab = item.session.contextId == null
             
             // Get default background color from Material 3 theme
@@ -682,13 +587,12 @@ class ModernTabPillAdapter(
             }
             
             // Guest tab color: distinctive orange/amber
-            val guestTabColor = com.prirai.android.nira.theme.ColorConstants.TabGroups.ORANGE
+            val guestTabColor = 0xFFFF9800.toInt() // Orange
 
             if (isSelected) {
                 // Selected: Show prominent border with island/guest color
                 val borderColor = when {
                     isGuestTab -> guestTabColor
-                    islandColor != null -> islandColor
                     else -> {
                         // Use Material 3 primary color (supports dynamic colors)
                         val primaryTypedValue = android.util.TypedValue()
@@ -728,11 +632,6 @@ class ModernTabPillAdapter(
                             // Guest tabs: orange border (2dp, same as island tabs)
                             val strokeWidth = (2 * itemView.resources.displayMetrics.density).toInt()
                             setStroke(strokeWidth, guestTabColor)
-                        }
-                        islandColor != null -> {
-                            // Island tabs: subtle colored border (2dp)
-                            val strokeWidth = (2 * itemView.resources.displayMetrics.density).toInt()
-                            setStroke(strokeWidth, islandColor)
                         }
                         else -> {
                             // Regular tabs: very subtle border (1dp)
@@ -788,790 +687,8 @@ class ModernTabPillAdapter(
     }
 
     // ViewHolder for island headers
-    inner class IslandHeaderViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
-        private val nameText: TextView = itemView.findViewById(R.id.islandName)
-        private val colorIndicator: View = itemView.findViewById(R.id.islandColorIndicator)
-        private val collapseButton: ImageView = itemView.findViewById(R.id.islandCollapseButton)
-        private val containerCard: CardView = itemView.findViewById(R.id.islandHeaderCard)
-
-        fun bind(island: TabIsland) {
-            // Keep name blank if not set
-            nameText.text = island.name
-            colorIndicator.setBackgroundColor(island.color)
-
-            // Update collapse button icon
-            collapseButton.setImageResource(
-                if (island.isCollapsed) R.drawable.ic_expand_more
-                else R.drawable.ic_expand_less
-            )
-
-            // Click to collapse/expand
-            containerCard.setOnClickListener {
-                onIslandHeaderClick(island.id)
-                animateHeaderClick()
-            }
-
-            // Long press for rename/options
-            containerCard.setOnLongClickListener {
-                onIslandLongPress(island.id)
-                itemView.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS)
-                true
-            }
-        }
-
-        private fun animateHeaderClick() {
-            containerCard.animate()
-                .scaleX(0.95f)
-                .scaleY(0.95f)
-                .setDuration(100)
-                .withEndAction {
-                    containerCard.animate()
-                        .scaleX(1f)
-                        .scaleY(1f)
-                        .setDuration(100)
-                        .start()
-                }
-                .start()
-        }
-    }
-
-    // ViewHolder for collapsed islands
-    inner class CollapsedIslandViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
-        private val nameText: TextView = itemView.findViewById(R.id.collapsedIslandName)
-        private val tabCountText: TextView = itemView.findViewById(R.id.collapsedIslandTabCount)
-        private val containerCard: CardView = itemView.findViewById(R.id.collapsedIslandCard)
-
-        fun bind(island: TabIsland, tabCount: Int) {
-            // Keep name blank if not set
-            nameText.text = island.name
-            tabCountText.text = "$tabCount"
-
-            // Apply island color with proper dark mode support
-            val isDark = isDarkMode()
-            val backgroundColor = if (isDark) {
-                // In dark mode, use darker, more muted versions
-                adjustColorForDarkMode(island.color)
-            } else {
-                // In light mode, use lighter, pastel versions
-                adjustColorForLightMode(island.color)
-            }
-            
-            // Use the original brighter color for the stroke
-            val strokeColor = island.color
-            
-            val gradient = GradientDrawable().apply {
-                cornerRadius = 20f
-                setColor(backgroundColor)
-                // Add stroke with original color for better definition
-                setStroke(3, strokeColor)
-                alpha = 255
-            }
-            containerCard.background = gradient
-            containerCard.elevation = 8f
-            
-            // Adjust text colors based on background
-            val textColor = com.prirai.android.nira.theme.ColorConstants.getColorFromAttr(
-                containerCard.context,
-                com.google.android.material.R.attr.colorOnSurfaceVariant,
-                if (isDark) 0xFFE0E0E0.toInt() else 0xFF424242.toInt()
-            )
-            nameText.setTextColor(textColor)
-            tabCountText.setTextColor(textColor)
-
-            // Click to expand
-            containerCard.setOnClickListener {
-                onIslandHeaderClick(island.id)
-                animateExpand()
-            }
-
-            // Long press for options
-            containerCard.setOnLongClickListener {
-                onIslandLongPress(island.id)
-                itemView.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS)
-                true
-            }
-        }
-
-        private fun animateExpand() {
-            containerCard.animate()
-                .scaleX(1.1f)
-                .scaleY(1.1f)
-                .setDuration(100)
-                .withEndAction {
-                    containerCard.animate()
-                        .scaleX(1f)
-                        .scaleY(1f)
-                        .setDuration(100)
-                        .start()
-                }
-                .start()
-        }
-        
-        private fun isDarkMode(): Boolean {
-            return when (itemView.resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) {
-                android.content.res.Configuration.UI_MODE_NIGHT_YES -> true
-                else -> false
-            }
-        }
-    }
-
-    // ViewHolder for expanded island groups (header + tabs as one unit)
-    inner class ExpandedIslandGroupViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
-        private val nameText: TextView = itemView.findViewById(R.id.islandName)
-        private val colorIndicator: View = itemView.findViewById(R.id.islandColorIndicator)
-        private val collapseButton: ImageView = itemView.findViewById(R.id.islandCollapseButton)
-        private val plusButton: ImageView = itemView.findViewById(R.id.islandPlusButton)
-        private val headerSection: ViewGroup = itemView.findViewById(R.id.islandHeaderSection)
-        private val tabsContainer: ViewGroup = itemView.findViewById(R.id.islandTabsContainer)
-        private val groupCard: CardView = itemView.findViewById(R.id.islandGroupCard)
-
-        fun bind(island: TabIsland, tabs: List<SessionState>) {
-            // Keep name blank if not set
-            nameText.text = island.name
-            colorIndicator.setBackgroundColor(island.color)
-
-            // Update collapse button icon
-            collapseButton.setImageResource(R.drawable.ic_expand_less)
-
-            // Setup header click for collapse
-            headerSection.setOnClickListener {
-                onIslandHeaderClick(island.id)
-                animateHeaderClick()
-            }
-
-            // Long press for rename/options
-            headerSection.setOnLongClickListener {
-                onIslandLongPress(island.id)
-                itemView.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS)
-                true
-            }
-
-            // Setup plus button to add new tab to island
-            plusButton.setOnClickListener {
-                onIslandPlusClick(island.id)
-                animatePlusButtonClick()
-                itemView.performHapticFeedback(android.view.HapticFeedbackConstants.VIRTUAL_KEY)
-            }
-
-            // Clear previous tabs
-            tabsContainer.removeAllViews()
-
-            // Add each tab to the container
-            tabs.forEachIndexed { index, tab ->
-                val isLastTab = index == tabs.size - 1
-                val tabView = createTabPillView(tab, island, index, isLastTab)
-                // Store tab ID and contextId as tags for later updates
-                tabView.tag = tab.id
-                tabView.setTag(R.id.tag_context_id, tab.contextId)
-                tabsContainer.addView(tabView)
-            }
-        }
-
-        fun updateTabSelection(tabId: String, island: TabIsland) {
-            // Update selection state for tabs in this group
-            val tabCount = tabsContainer.childCount
-            val guestTabColor = com.prirai.android.nira.theme.ColorConstants.TabGroups.ORANGE
-            
-            for (i in 0 until tabCount) {
-                val tabView = tabsContainer.getChildAt(i)
-                val storedTabId = tabView.tag as? String
-                val contextId = tabView.getTag(R.id.tag_context_id) as? String
-                val isGuestTab = contextId == null
-                
-                if (storedTabId != null) {
-                    val tabContent: ViewGroup = tabView.findViewById(R.id.tabPillContent)
-                    val titleView: TextView = tabView.findViewById(R.id.tabTitle)
-                    val faviconView: ImageView = tabView.findViewById(R.id.faviconImage)
-
-                    val isSelected = storedTabId == tabId
-                    val isLastTab = i == tabCount - 1
-                    
-                    if (isSelected) {
-                        // Selected tab: show border with rounded corners on last tab
-                        // Get background color from Material 3 theme
-                        val typedValue = android.util.TypedValue()
-                        val theme = itemView.context.theme
-                        val backgroundColor = if (theme.resolveAttribute(com.google.android.material.R.attr.colorSurfaceVariant, typedValue, true)) {
-                            typedValue.data
-                        } else {
-                            getThemeColor(itemView.context, com.google.android.material.R.attr.colorSurfaceContainerHigh, R.color.m3_surface_container_background)
-                        }
-                        
-                        val gradient = GradientDrawable().apply {
-                            setColor(backgroundColor)
-                            // Prominent border for selected state (3dp stroke width)
-                            val strokeWidth = (3 * itemView.resources.displayMetrics.density).toInt()
-                            // Use guest tab color for guest tabs, otherwise use island color
-                            val borderColor = if (isGuestTab) guestTabColor else island.color
-                            setStroke(strokeWidth, borderColor)
-                            // Only round top-right and bottom-right corners for last tab
-                            if (isLastTab) {
-                                val radius = 12f * itemView.resources.displayMetrics.density
-                                cornerRadii = floatArrayOf(
-                                    0f, 0f,              // top-left
-                                    radius, radius,      // top-right (rounded)
-                                    radius, radius,      // bottom-right (rounded)
-                                    0f, 0f               // bottom-left
-                                )
-                            }
-                        }
-                        tabContent.background = gradient
-                        val textColor = getThemeColor(itemView.context, com.google.android.material.R.attr.colorOnSurface, R.color.m3_primary_text)
-                        titleView.setTextColor(textColor)
-                        titleView.setTypeface(null, android.graphics.Typeface.BOLD)
-                        faviconView.alpha = 1.0f
-                    } else {
-                        // Unselected tab: show orange border for guest tabs
-                        val typedValue = android.util.TypedValue()
-                        val theme = itemView.context.theme
-                        val backgroundColor = if (theme.resolveAttribute(com.google.android.material.R.attr.colorSurfaceVariant, typedValue, true)) {
-                            typedValue.data
-                        } else {
-                            getThemeColor(itemView.context, com.google.android.material.R.attr.colorSurfaceContainerHigh, R.color.m3_surface_container_background)
-                        }
-                        
-                        val gradient = GradientDrawable().apply {
-                            setColor(backgroundColor)
-                            // Show orange border for guest tabs even when not selected
-                            if (isGuestTab) {
-                                val strokeWidth = (2 * itemView.resources.displayMetrics.density).toInt()
-                                setStroke(strokeWidth, guestTabColor)
-                            }
-                            // Only round top-right and bottom-right corners for last tab
-                            if (isLastTab) {
-                                val radius = 12f * itemView.resources.displayMetrics.density
-                                cornerRadii = floatArrayOf(
-                                    0f, 0f,              // top-left
-                                    radius, radius,      // top-right (rounded)
-                                    radius, radius,      // bottom-right (rounded)
-                                    0f, 0f               // bottom-left
-                                )
-                            }
-                        }
-                        tabContent.background = gradient
-                        val textColor = getThemeColor(itemView.context, com.google.android.material.R.attr.colorOnSurface, R.color.m3_primary_text)
-                        titleView.setTextColor(textColor)
-                        titleView.setTypeface(null, android.graphics.Typeface.NORMAL)
-                        faviconView.alpha = 0.8f
-                    }
-                }
-            }
-        }
-
-        private fun createTabPillView(tab: SessionState, island: TabIsland, index: Int, isLastTab: Boolean): View {
-            val tabView = LayoutInflater.from(itemView.context)
-                .inflate(R.layout.tab_pill_in_group, tabsContainer, false)
-
-            val separator: View = tabView.findViewById(R.id.tabSeparator)
-            val tabContent: ViewGroup = tabView.findViewById(R.id.tabPillContent)
-            val faviconView: ImageView = tabView.findViewById(R.id.faviconImage)
-            val titleView: TextView = tabView.findViewById(R.id.tabTitle)
-
-            // Check if guest tab (no profile context)
-            val isGuestTab = tab.contextId == null
-            val guestTabColor = com.prirai.android.nira.theme.ColorConstants.TabGroups.ORANGE
-
-            // Show separator for all tabs (acts as divider from header/previous tab)
-            separator.visibility = View.VISIBLE
-
-            // Set title
-            // Show title if available, only show "Loading..." when actively loading a real URL
-            val isRealUrl = !tab.content.url.isNullOrBlank() &&
-                    !tab.content.url.startsWith("about:")
-            val title = when {
-                !tab.content.title.isNullOrBlank() -> tab.content.title
-                tab.content.loading && isRealUrl -> "Loading..."
-                !tab.content.url.isNullOrBlank() && !tab.content.url.startsWith("about:") -> tab.content.url
-                else -> "New Tab"
-            }
-            titleView.text = title
-
-            // Load favicon - check content icon, then cache, then generate
-            loadFaviconForGroupTab(tab, faviconView)
-
-            // Apply styling based on selection
-            // NOTE: Last tab is NO LONGER rounded because plus button is at the end
-            val isSelected = tab.id == selectedTabId
-            if (isSelected) {
-                // Selected tab: show border but DON'T round last tab anymore
-                // Get background color from Material 3 theme
-                val typedValue = android.util.TypedValue()
-                val theme = itemView.context.theme
-                val backgroundColor = if (theme.resolveAttribute(com.google.android.material.R.attr.colorSurfaceVariant, typedValue, true)) {
-                    typedValue.data
-                } else {
-                    getThemeColor(itemView.context, com.google.android.material.R.attr.colorSurfaceContainerHigh, R.color.m3_surface_container_background)
-                }
-                
-                val gradient = GradientDrawable().apply {
-                    setColor(backgroundColor)
-                    // Prominent border for selected state (3dp stroke width)
-                    val strokeWidth = (3 * itemView.resources.displayMetrics.density).toInt()
-                    // Use guest tab color for guest tabs, otherwise use island color
-                    val borderColor = if (isGuestTab) guestTabColor else island.color
-                    setStroke(strokeWidth, borderColor)
-                    // No rounding needed - plus button is now at the end
-                }
-                tabContent.background = gradient
-                val textColor = getThemeColor(itemView.context, com.google.android.material.R.attr.colorOnSurface, R.color.m3_primary_text)
-                titleView.setTextColor(textColor)
-                titleView.setTypeface(null, android.graphics.Typeface.BOLD)
-                faviconView.alpha = 1.0f
-            } else {
-                // Unselected tab: show orange border for guest tabs
-                val typedValue = android.util.TypedValue()
-                val theme = itemView.context.theme
-                val backgroundColor = if (theme.resolveAttribute(com.google.android.material.R.attr.colorSurfaceVariant, typedValue, true)) {
-                    typedValue.data
-                } else {
-                    getThemeColor(itemView.context, com.google.android.material.R.attr.colorSurfaceContainerHigh, R.color.m3_surface_container_background)
-                }
-                
-                val gradient = GradientDrawable().apply {
-                    setColor(backgroundColor)
-                    // Show orange border for guest tabs even when not selected
-                    if (isGuestTab) {
-                        val strokeWidth = (2 * itemView.resources.displayMetrics.density).toInt()
-                        setStroke(strokeWidth, guestTabColor)
-                    }
-                    // No rounding needed - plus button is now at the end
-                }
-                tabContent.background = gradient
-                val textColor = getThemeColor(itemView.context, com.google.android.material.R.attr.colorOnSurface, R.color.m3_primary_text)
-                titleView.setTextColor(textColor)
-                titleView.setTypeface(null, android.graphics.Typeface.NORMAL)
-                faviconView.alpha = 0.8f
-            }
-
-            // Make view clickable
-            tabContent.isClickable = true
-            tabContent.isFocusable = true
-
-            // Regular click handler - simpler approach
-            tabContent.setOnClickListener {
-                onTabClick(tab.id)
-                itemView.performHapticFeedback(android.view.HapticFeedbackConstants.VIRTUAL_KEY)
-            }
-
-            // Add swipe-up gesture for delete OR long-press drag to ungroup
-            setupTabGestures(tabView, tabContent, tab.id, island.id)
-
-            return tabView
-        }
-
-        private fun loadFaviconForGroupTab(tab: SessionState, faviconView: ImageView) {
-            // Try to get favicon from tab content first
-            val existingIcon = tab.content.icon
-            if (existingIcon != null) {
-                faviconView.setImageBitmap(existingIcon)
-                return
-            }
-
-            // Load from cache (memory and disk) or generate
-            scope.launch {
-                try {
-                    val context = itemView.context
-                    val faviconCache = com.prirai.android.nira.utils.FaviconCache.getInstance(context)
-
-                    // This will check memory cache first, then disk cache
-                    val cachedFavicon = faviconCache.loadFavicon(tab.content.url ?: "")
-
-                    if (cachedFavicon != null) {
-                        faviconView.setImageBitmap(cachedFavicon)
-                    } else {
-                        // Generate favicon if not in cache
-                        val favicon = withContext(Dispatchers.IO) {
-                            generateBeautifulFavicon(tab.content.url ?: "", itemView.context)
-                        }
-                        faviconView.setImageBitmap(favicon)
-                    }
-                } catch (e: Exception) {
-                    faviconView.setImageResource(R.drawable.ic_language)
-                }
-            }
-        }
-
-        private fun setupTabGestures(tabView: View, tabContent: ViewGroup, tabId: String, islandId: String) {
-            var startY = 0f
-            var startX = 0f
-            var isDragging = false
-            var hasMoved = false
-            var dragClone: View? = null
-            var decorView: ViewGroup? = null
-            val handler = android.os.Handler(android.os.Looper.getMainLooper())
-            var longPressRunnable: Runnable? = null
-
-            // Disable default long-click listener - we'll handle it manually
-            tabContent.isLongClickable = false
-
-            tabContent.setOnTouchListener { v, event ->
-                when (event.action) {
-                    android.view.MotionEvent.ACTION_DOWN -> {
-                        isDragging = false
-                        hasMoved = false
-                        startY = event.rawY
-                        startX = event.rawX
-                        
-                        // Start manual long-press timer
-                        longPressRunnable = Runnable {
-                            if (!hasMoved && !isDragging) {
-                                // Still no movement after long-press duration
-                                v.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS)
-                                showTabContextMenu(tabView, tabId, islandId)
-                            }
-                        }
-                        handler.postDelayed(longPressRunnable!!, android.view.ViewConfiguration.getLongPressTimeout().toLong())
-                        
-                        false // Let parent handle scrolling
-                    }
-
-                    android.view.MotionEvent.ACTION_MOVE -> {
-                        val deltaY = startY - event.rawY
-                        val deltaX = abs(event.rawX - startX)
-                        
-                        // Cancel long-press if any movement
-                        if (deltaX > 10 || Math.abs(deltaY) > 10) {
-                            longPressRunnable?.let { handler.removeCallbacks(it) }
-                        }
-                        
-                        // Detect horizontal scrolling
-                        if (deltaX > 20 && deltaX > Math.abs(deltaY)) {
-                            // Don't consume event - let RecyclerView scroll
-                            return@setOnTouchListener false
-                        }
-                        
-                        // Detect vertical movement for swipe
-                        if (Math.abs(deltaY) > 5) {
-                            hasMoved = true
-                        }
-
-                        // Check if user is trying to swipe up for delete
-                        if (deltaY > 30 && deltaX < 20 && !isDragging) {
-                            isDragging = true
-                            v.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS)
-                            
-                            // Create clone and add to DecorView
-                            val activity = itemView.context as? android.app.Activity
-                            decorView = activity?.window?.decorView as? ViewGroup
-                            
-                            if (decorView != null) {
-                                // Hide original
-                                tabView.alpha = 0f
-
-                                // Create clone
-                                dragClone = createGroupedTabClone(tabView, itemView.context)
-
-                                // Position clone at original location
-                                val location = IntArray(2)
-                                tabView.getLocationInWindow(location)
-                                dragClone?.x = location[0].toFloat()
-                                dragClone?.y = location[1].toFloat()
-                                
-                                // Add to decorView
-                                decorView?.addView(dragClone, ViewGroup.LayoutParams(
-                                    tabView.width,
-                                    tabView.height
-                                ))
-                            }
-                        }
-
-                        if (isDragging && dragClone != null) {
-                            // Update clone position to follow finger
-                            val location = IntArray(2)
-                            tabView.getLocationInWindow(location)
-                            
-                            dragClone?.y = location[1].toFloat() - deltaY
-                            
-                            // Visual feedback during drag
-                            val progress = (deltaY / 100f).coerceIn(0f, 1f)
-                            dragClone?.scaleX = 1f - (progress * 0.2f)
-                            dragClone?.scaleY = 1f - (progress * 0.2f)
-                            dragClone?.rotation = -progress * 10f
-                            dragClone?.alpha = 1f - (progress * 0.3f)
-                            true
-                        } else {
-                            false
-                        }
-                    }
-
-                    android.view.MotionEvent.ACTION_UP, android.view.MotionEvent.ACTION_CANCEL -> {
-                        longPressRunnable?.let { handler.removeCallbacks(it) }
-
-                        if (isDragging) {
-                            val deltaY = startY - event.rawY
-                            if (deltaY > 100) {
-                                // Animate clone flying away
-                                dragClone?.animate()
-                                    ?.translationY(-500f)
-                                    ?.rotation(-30f)
-                                    ?.scaleX(0.3f)
-                                    ?.scaleY(0.3f)
-                                    ?.alpha(0f)
-                                    ?.setDuration(250)
-                                    ?.withEndAction {
-                                        decorView?.removeView(dragClone)
-                                        onTabClose(tabId)
-                                    }
-                                    ?.start()
-                            } else {
-                                // Spring back - animate clone back and show original
-                                dragClone?.animate()
-                                    ?.scaleX(1f)
-                                    ?.scaleY(1f)
-                                    ?.rotation(0f)
-                                    ?.alpha(0f)
-                                    ?.setDuration(200)
-                                    ?.withEndAction {
-                                        decorView?.removeView(dragClone)
-                                        tabView.alpha = 1f
-                                    }
-                                    ?.start()
-                            }
-                            true
-                        } else if (hasMoved) {
-                            // Finger moved but didn't drag up - don't trigger click
-                            true
-                        } else {
-                            // No movement - allow click to proceed
-                            false
-                        }
-                    }
-
-                    else -> false
-                }
-            }
-        }
-
-        private fun showTabContextMenu(anchorView: View, tabId: String, islandId: String) {
-            val wrapper = android.view.ContextThemeWrapper(itemView.context, R.style.RoundedPopupMenu)
-            val popupMenu = android.widget.PopupMenu(wrapper, anchorView, android.view.Gravity.NO_GRAVITY,
-                0, R.style.RoundedPopupMenu)
-
-            val duplicateItem = popupMenu.menu.add(0, 1, 0, "Duplicate Tab")
-            duplicateItem.setIcon(R.drawable.control_point_duplicate_24px)
-
-            val removeItem = popupMenu.menu.add(0, 2, 1, "Remove from Group")
-            removeItem.setIcon(R.drawable.ungroup_24px)
-
-            val moveToProfileItem = popupMenu.menu.add(0, 3, 2, "Move to Profile")
-            moveToProfileItem.setIcon(R.drawable.move_item_24px)
-
-            val closeItem = popupMenu.menu.add(0, 4, 3, "Close Tab")
-            closeItem.setIcon(R.drawable.ic_round_close)
-            
-            // Force icons to show
-            try {
-                val popup = android.widget.PopupMenu::class.java.getDeclaredField("mPopup")
-                popup.isAccessible = true
-                val menu = popup.get(popupMenu)
-                menu.javaClass.getDeclaredMethod("setForceShowIcon", Boolean::class.java)
-                    .invoke(menu, true)
-            } catch (e: Exception) {
-                // Ignore if reflection fails
-            }
-            
-            popupMenu.setOnMenuItemClickListener { menuItem ->
-                when (menuItem.itemId) {
-                    1 -> {
-                        // Duplicate tab
-                        itemView.performHapticFeedback(android.view.HapticFeedbackConstants.VIRTUAL_KEY)
-                        onTabDuplicate?.invoke(tabId)
-                        true
-                    }
-                    2 -> {
-                        // Remove from group
-                        itemView.performHapticFeedback(android.view.HapticFeedbackConstants.VIRTUAL_KEY)
-                        onTabUngroupFromIsland?.invoke(tabId, islandId)
-                        true
-                    }
-                    3 -> {
-                        // Move to Profile
-                        itemView.performHapticFeedback(android.view.HapticFeedbackConstants.VIRTUAL_KEY)
-                        showMoveToProfileDialog(listOf(tabId))
-                        true
-                    }
-                    4 -> {
-                        // Close tab
-                        itemView.performHapticFeedback(android.view.HapticFeedbackConstants.VIRTUAL_KEY)
-                        onTabClose(tabId)
-                        true
-                    }
-                    else -> false
-                }
-            }
-            
-            // Show menu above the anchor view
-            popupMenu.gravity = android.view.Gravity.TOP
-            popupMenu.show()
-        }
-        
-        private fun showMoveToProfileDialog(tabIds: List<String>) {
-            val profileManager = com.prirai.android.nira.browser.profile.ProfileManager.getInstance(itemView.context)
-            val profiles = profileManager.getAllProfiles()
-            
-            val items = profiles.map { "${it.emoji} ${it.name}" }.toMutableList()
-            items.add("🕵️ Private")
-            
-            com.google.android.material.dialog.MaterialAlertDialogBuilder(itemView.context)
-                .setTitle("Move tab to Profile")
-                .setItems(items.toTypedArray()) { _, which ->
-                    val targetProfileId = if (which == items.size - 1) {
-                        "private"
-                    } else {
-                        profiles[which].id
-                    }
-                    
-                    // Migrate tabs
-                    val migratedCount = profileManager.migrateTabsToProfile(tabIds, targetProfileId)
-                    
-                    // Show confirmation
-                    android.widget.Toast.makeText(
-                        itemView.context,
-                        "Moved $migratedCount tab to ${items[which]}",
-                        android.widget.Toast.LENGTH_SHORT
-                    ).show()
-                }
-                .setNegativeButton("Cancel", null)
-                .show()
-        }
-
-        private fun animateHeaderClick() {
-            headerSection.animate()
-                .scaleX(0.95f)
-                .scaleY(0.95f)
-                .setDuration(100)
-                .withEndAction {
-                    headerSection.animate()
-                        .scaleX(1f)
-                        .scaleY(1f)
-                        .setDuration(100)
-                        .start()
-                }
-                .start()
-        }
-
-        private fun animatePlusButtonClick() {
-            plusButton.animate()
-                .scaleX(1.3f)
-                .scaleY(1.3f)
-                .setDuration(100)
-                .withEndAction {
-                    plusButton.animate()
-                        .scaleX(1f)
-                        .scaleY(1f)
-                        .setDuration(100)
-                        .start()
-                }
-                .start()
-        }
-    }
-
-    /**
-     * Creates a visual clone of a grouped tab pill for drag-to-delete animation.
-     *
-     * This function creates a detached copy of a tab pill view that can be dragged
-     * independently over the web content area. It's used to provide visual feedback
-     * during the drag-to-delete gesture for grouped tabs.
-     *
-     * Purpose:
-     * - Provides a floating clone that follows the user's finger during drag gesture
-     * - Allows the clone to appear over the web content (outside RecyclerView bounds)
-     * - Maintains the same visual appearance as the original pill during drag
-     * - Essential for the drag-to-delete user experience on grouped tabs
-     *
-     * Implementation:
-     * - Creates a new FrameLayout with matching dimensions and elevation
-     * - Clones the background drawable to maintain visual consistency
-     * - Recursively finds and clones child views (favicon and title)
-     * - Preserves all visual properties: text, colors, sizes, padding
-     *
-     * Visual structure cloned:
-     * ```
-     * FrameLayout (clone root, elevated)
-     *   └── LinearLayout (tabPillContent)
-     *       ├── ImageView (tabFavicon) - 16dp, optional
-     *       └── TextView (tabTitle) - ellipsized, single line
-     * ```
-     *
-     * Resource IDs used:
-     * - R.id.tabPillContent: Container for favicon and title
-     * - R.id.faviconImage: Tab's favicon image
-     * - R.id.tabTitle: Tab's title text
-     *
-     * Animation flow:
-     * 1. User long-presses on grouped tab pill
-     * 2. This function creates a clone of the pill view
-     * 3. Clone is added to UnifiedToolbar's overlay container
-     * 4. Clone follows finger with elevation shadow
-     * 5. On drag-up beyond threshold, tab closes and clone animates away
-     *
-     * @param originalView The tab pill view to clone (from RecyclerView)
-     * @param context Android context for creating new views
-     * @return Detached clone view ready to be added to overlay container
-     *
-     * @see ModernTabPillViewHolder.handleLongPress where this is called
-     * @see UnifiedToolbar drag handling for animation logic
-     */
-    private fun createGroupedTabClone(originalView: View, context: Context): View {
-        // Create a clone of the tab view with same appearance
-        val clone = android.widget.FrameLayout(context).apply {
-            layoutParams = ViewGroup.LayoutParams(originalView.width, originalView.height)
-            elevation = 16f
-            background = originalView.background?.constantState?.newDrawable()?.mutate()
-        }
-
-        // Find and clone the tab content
-        val originalContent = originalView.findViewById<ViewGroup>(R.id.tabPillContent)
-
-        if (originalContent != null) {
-            val clonedContent = android.widget.LinearLayout(context).apply {
-                orientation = android.widget.LinearLayout.HORIZONTAL
-                gravity = android.view.Gravity.CENTER_VERTICAL
-                layoutParams = ViewGroup.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT,
-                    ViewGroup.LayoutParams.MATCH_PARENT
-                )
-                val padding = (8 * context.resources.displayMetrics.density).toInt()
-                setPadding(padding, padding, padding, padding)
-            }
-
-            // Clone favicon if exists
-            val favicon = originalContent.findViewById<ImageView>(R.id.faviconImage)
-            if (favicon != null) {
-                val clonedFavicon = ImageView(context).apply {
-                    val size = (16 * context.resources.displayMetrics.density).toInt()
-                    layoutParams = android.widget.LinearLayout.LayoutParams(size, size).apply {
-                        marginEnd = (6 * context.resources.displayMetrics.density).toInt()
-                    }
-                    setImageDrawable(favicon.drawable)
-                }
-                clonedContent.addView(clonedFavicon)
-            }
-
-            // Clone title
-            val title = originalContent.findViewById<TextView>(R.id.tabTitle)
-            if (title != null) {
-                val clonedTitle = TextView(context).apply {
-                    layoutParams = android.widget.LinearLayout.LayoutParams(
-                        0,
-                        ViewGroup.LayoutParams.WRAP_CONTENT,
-                        1f
-                    )
-                    text = title.text
-                    textSize = title.textSize / context.resources.displayMetrics.scaledDensity
-                    setTextColor(title.currentTextColor)
-                    maxLines = 1
-                    ellipsize = android.text.TextUtils.TruncateAt.END
-                }
-                clonedContent.addView(clonedTitle)
-            }
-
-            clone.addView(clonedContent)
-        }
-
-        return clone
-    }
-
+// Island ViewHolders removed.
+// Helper methods removed.
     /**
      * Generates a beautiful Material Design favicon with gradient and letter
      */
@@ -1588,7 +705,7 @@ class ModernTabPillAdapter(
 
         val colors = intArrayOf(
             com.prirai.android.nira.theme.ColorConstants.Profiles.DEFAULT_COLOR,
-            com.prirai.android.nira.theme.ColorConstants.TabGroups.TEAL
+            0xFF009688.toInt() // Teal
         )
 
         val gradient = RadialGradient(
@@ -1624,34 +741,14 @@ class ModernTabPillAdapter(
 
         return bitmap
     }
-    
-    /**
-     * Adjusts island color for dark mode - makes it darker and more saturated
-     */
-    private fun adjustColorForDarkMode(color: Int): Int {
-        val hsv = FloatArray(3)
-        Color.colorToHSV(color, hsv)
-        
-        // Reduce brightness significantly for dark mode
-        hsv[2] = (hsv[2] * 0.3f).coerceIn(0.2f, 0.4f)
-        // Increase saturation slightly
-        hsv[1] = (hsv[1] * 1.2f).coerceAtMost(1f)
-        
-        return Color.HSVToColor(hsv)
-    }
-    
-    /**
-     * Adjusts island color for light mode - makes it lighter and more pastel
-     */
-    private fun adjustColorForLightMode(color: Int): Int {
-        val hsv = FloatArray(3)
-        Color.colorToHSV(color, hsv)
-        
-        // Increase brightness for light mode (pastel colors)
-        hsv[2] = (hsv[2] * 1.2f).coerceIn(0.85f, 0.95f)
-        // Reduce saturation for softer colors
-        hsv[1] = (hsv[1] * 0.5f).coerceIn(0.3f, 0.6f)
-        
-        return Color.HSVToColor(hsv)
-    }
+}
+
+/**
+ * Item types for the adapter
+ */
+sealed class TabPillItem {
+    data class Tab(
+        val session: SessionState,
+        val islandId: String? = null // Keeping for compatibility, but unused
+    ) : TabPillItem()
 }

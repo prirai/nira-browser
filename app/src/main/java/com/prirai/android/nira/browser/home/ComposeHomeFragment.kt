@@ -262,7 +262,7 @@ class ComposeHomeFragment : Fragment() {
 
     private fun setupUnifiedToolbar(coordinatorLayout: CoordinatorLayout) {
         val prefs = UserPreferences(requireContext())
-        requireContext().components.tabGroupManager
+
 
         // Create toolbar interactor
         val toolbarInteractor = object : BrowserToolbarViewInteractor {

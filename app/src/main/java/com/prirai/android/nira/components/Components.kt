@@ -96,11 +96,9 @@ open class Components(private val applicationContext: Context) {
 
     val clipboardHandler by lazy { ClipboardHandler(applicationContext) }
 
-    val faviconCache by lazy { FaviconCache.getInstance(applicationContext) }
 
-    val tabGroupManager by lazy {
-        com.prirai.android.nira.browser.tabgroups.UnifiedTabGroupManager.getInstance(applicationContext)
-    }
+
+    val faviconCache by lazy { FaviconCache.getInstance(applicationContext) }
 
     val fileSizeFormatter by lazy { DefaultFileSizeFormatter(applicationContext) }
 
@@ -218,8 +216,8 @@ open class Components(private val applicationContext: Context) {
                         PromptMiddleware(),
                         LastAccessMiddleware(),
                         SaveToPDFMiddleware(applicationContext),
-                        com.prirai.android.nira.browser.tabgroups.TabGroupMiddleware(tabGroupManager),
                         profileMiddleware,  // Use the exposed instance
+                        SessionPrioritizationMiddleware(),
                         SessionPrioritizationMiddleware(),
                         EnhancedStateCaptureMiddleware(
                             scope = CoroutineScope(SupervisorJob() + Dispatchers.Main),

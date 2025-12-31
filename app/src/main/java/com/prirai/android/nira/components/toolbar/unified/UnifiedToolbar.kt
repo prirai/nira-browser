@@ -14,7 +14,6 @@ import com.prirai.android.nira.components.toolbar.BrowserToolbarViewInteractor
 import com.prirai.android.nira.components.toolbar.ToolbarIntegration
 import com.prirai.android.nira.components.toolbar.ToolbarPosition
 import com.prirai.android.nira.components.toolbar.modern.ModernToolbarSystem
-import com.prirai.android.nira.components.toolbar.modern.TabGroupWithProfileSwitcher
 import com.prirai.android.nira.ext.components
 import com.prirai.android.nira.preferences.UserPreferences
 import com.prirai.android.nira.toolbar.ContextualBottomToolbar
@@ -58,7 +57,6 @@ class UnifiedToolbar @JvmOverloads constructor(
     private val toolbarSystem: ModernToolbarSystem = ModernToolbarSystem(context, attrs, defStyleAttr)
 
     // Toolbar components
-    private var tabGroupBar: TabGroupWithProfileSwitcher? = null
     private var addressBarContainer: ViewGroup? = null
     private var browserToolbar: BrowserToolbar? = null
     private var browserToolbarView: BrowserToolbarView? = null
@@ -83,7 +81,6 @@ class UnifiedToolbar @JvmOverloads constructor(
     private var contextualToolbarListener: ContextualBottomToolbar.ContextualToolbarListener? = null
 
     // Configuration
-    private var showTabGroupBar: Boolean = prefs.showTabGroupBar
     private var showContextualToolbar: Boolean = prefs.showContextualToolbar
     
     // Bottom components container reference (for TOP toolbar mode)
@@ -225,7 +222,6 @@ class UnifiedToolbar @JvmOverloads constructor(
                 // BOTTOM: Contextual Toolbar -> Address Bar -> Tab Bar (all together)
                 addContextualToolbar()
                 addAddressBar(parent, lifecycleOwner, interactor, customTabSession, store)
-                addTabGroupBar(store, lifecycleOwner)
                 // Add browser actions to address bar if contextual toolbar is disabled
                 if (!showContextualToolbar) {
                     addBrowserActionsToAddressBar()
@@ -245,172 +241,13 @@ class UnifiedToolbar @JvmOverloads constructor(
      * without immediately adding it to the toolbar system (needed for TOP toolbar mode).
      */
     @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
-    private fun createTabGroupBar(
-        store: BrowserStore,
-        lifecycleOwner: LifecycleOwner
-    ) {
-        if (!showTabGroupBar) {
-            return
-        }
-
-        tabGroupBar = TabGroupWithProfileSwitcher(context).apply {
-            // Material 3 theming is already applied by TabGroupWithProfileSwitcher
-            
-            // Setup with all required callbacks for tab interaction and profile management
-            setup(
-                onTabSelected = { tabId ->
-                    // Delegate to external callback set via setOnTabSelectedListener()
-                    onTabSelectedCallback?.invoke(tabId)
-                },
-                onTabClosed = { tabId ->
-                    // Close the tab using browser's tab management system
-                    context.components.tabsUseCases.removeTab(tabId)
-                },
-                onIslandRenamed = { islandId, newName ->
-                    // Island renaming is handled by the tab group system
-                },
-                onNewTabInIsland = { islandId ->
-                    // Create a new tab and add it to the specified island (tab group)
-                    val profileManager = com.prirai.android.nira.browser.profile.ProfileManager.getInstance(context)
-                    val currentProfile = profileManager.getActiveProfile()
-                    val isPrivateMode = profileManager.isPrivateMode()
-                    val contextId = if (isPrivateMode) "private" else "profile_${currentProfile.id}"
-                    
-                    // Get the first tab from the island to use as parentId for auto-grouping
-                    val unifiedManager = com.prirai.android.nira.browser.tabgroups.UnifiedTabGroupManager.getInstance(context)
-                    val group = unifiedManager.getGroup(islandId)
-                    val parentTabId = group?.tabIds?.firstOrNull()
-                    
-                    // Create tab with parentId to trigger middleware auto-grouping
-                    val newTabId = context.components.tabsUseCases.addTab(
-                        url = "about:homepage",
-                        selectTab = true,
-                        private = isPrivateMode,
-                        contextId = contextId,
-                        parentId = parentTabId
-                    )
-
-                    // Ensure the tab is added to the correct group
-                    // The middleware should handle this via parentId, but we add a fallback
-                    lifecycleOwner.lifecycleScope.launch {
-                        kotlinx.coroutines.delay(200)
-                        
-                        // Check if tab was already grouped by middleware
-                        if (!unifiedManager.isTabGrouped(newTabId)) {
-                            // If not grouped, add it manually
-                            android.util.Log.d("UnifiedToolbar", "Tab $newTabId not auto-grouped, adding manually to $islandId")
-                            unifiedManager.addTabToGroup(newTabId, islandId)
-                        } else {
-                            // Verify it's in the correct group
-                            val currentGroup = unifiedManager.getGroupForTab(newTabId)
-                            if (currentGroup?.id != islandId) {
-                                // Tab was grouped but in wrong group, move it
-                                android.util.Log.d("UnifiedToolbar", "Tab $newTabId in wrong group, moving to $islandId")
-                                unifiedManager.removeTabFromGroup(newTabId, notifyChange = false)
-                                unifiedManager.addTabToGroup(newTabId, islandId)
-                            }
-                        }
-                    }
-                },
-                onProfileSelected = { profile ->
-                    // Switch to the selected profile and reload to apply changes
-                    val profileManager = com.prirai.android.nira.browser.profile.ProfileManager.getInstance(context)
-                    profileManager.setActiveProfile(profile)
-                    profileManager.setPrivateMode(false) // Switching to a profile exits private mode
-                    
-                    // Manually trigger tab bar update with filtered tabs
-                    // Include guest tabs (contextId == null) in addition to profile tabs
-                    val expectedContextId = "profile_${profile.id}"
-                    val state = store.state
-                    val filteredTabs = state.tabs.filter { tab ->
-                        if (tab.contextId == null) {
-                            // Guest tabs from custom tabs - always show in current profile
-                            tab.content.private == false
-                        } else {
-                            tab.content.private == false && tab.contextId == expectedContextId
-                        }
-                    }
-                    
-                    tabGroupBar?.updateTabs(filteredTabs, state.selectedTabId)
-                    tabGroupBar?.updateProfileIcon(profile)
-                    
-                    context.components.sessionUseCases.reload()
-                },
-                onPrivateModeSelected = {
-                    // Private mode was already set by the menu handler, just update the UI
-                    val profileManager = com.prirai.android.nira.browser.profile.ProfileManager.getInstance(context)
-                    val isPrivateMode = profileManager.isPrivateMode()
-                    val currentProfile = profileManager.getActiveProfile()
-                    
-                    // Manually trigger tab bar update with filtered tabs
-                    // Include guest tabs in normal mode, but not in private mode
-                    val expectedContextId = if (isPrivateMode) {
-                        "private"
-                    } else {
-                        "profile_${currentProfile.id}"
-                    }
-                    val state = store.state
-                    val filteredTabs = state.tabs.filter { tab ->
-                        if (tab.contextId == null && !isPrivateMode) {
-                            // Guest tabs from custom tabs - show in normal mode
-                            tab.content.private == false
-                        } else {
-                            tab.content.private == isPrivateMode && tab.contextId == expectedContextId
-                        }
-                    }
-                    
-                    tabGroupBar?.updateTabs(filteredTabs, state.selectedTabId)
-                    
-                    context.components.sessionUseCases.reload()
-                }
-            )
-        }
-
-        // Observe browser store and filter tabs by current profile and private mode.
-        // This ensures that:
-        // 1. Each profile only sees its own tabs (contextId matches "profile_{id}")
-        // 2. Private mode only shows private tabs (contextId = "private")
-        // 3. Guest tabs from custom tabs (contextId == null) are shown in normal mode
-        // 4. Tab bar updates automatically when profile switches or tabs change
-        lifecycleOwner.lifecycleScope.launch {
-            store.flowScoped { flow ->
-                flow.collect { state ->
-                    val profileManager = com.prirai.android.nira.browser.profile.ProfileManager.getInstance(context)
-                    val isPrivateMode = profileManager.isPrivateMode()
-                    val currentProfile = profileManager.getActiveProfile()
-                    
-                    // Determine expected contextId based on current browsing mode
-                    // Private mode uses "private", normal mode uses "profile_{id}"
-                    val expectedContextId = if (isPrivateMode) {
-                        "private"
-                    } else {
-                        "profile_${currentProfile.id}"
-                    }
-                    
-                    // Filter tabs to only show those belonging to current profile/mode
-                    // Also include guest tabs (contextId == null) which come from custom tabs
-                    val filteredTabs = state.tabs.filter { tab ->
-                        if (tab.contextId == null) {
-                            // Guest tabs from custom tabs - always show in current profile if not private
-                            !isPrivateMode && !tab.content.private
-                        } else {
-                            // Regular profile tabs
-                            tab.content.private == isPrivateMode && tab.contextId == expectedContextId
-                        }
-                    }
-                    
-                    tabGroupBar?.updateTabs(filteredTabs, state.selectedTabId)
-                }
-            }
-        }
-    }
     
     /**
      * Force update the tab bar with the provided filtered tabs.
      * Used when fragments need to explicitly refresh the tab bar (e.g., ComposeHomeFragment on load).
      */
     fun forceUpdateTabBar(filteredTabs: List<TabSessionState>, selectedTabId: String?) {
-        tabGroupBar?.updateTabs(filteredTabs, selectedTabId)
+        // No-op
     }
     
     /**
@@ -431,15 +268,7 @@ class UnifiedToolbar @JvmOverloads constructor(
      * @param store The browser store to observe for tab changes
      * @param lifecycleOwner Lifecycle owner to scope the store observation
      */
-    private fun addTabGroupBar(
-        store: BrowserStore,
-        lifecycleOwner: LifecycleOwner
-    ) {
-        createTabGroupBar(store, lifecycleOwner)
-        if (tabGroupBar != null) {
-            toolbarSystem.addComponent(tabGroupBar!!, ModernToolbarSystem.ComponentType.TAB_GROUP)
-        }
-    }
+
 
     /**
      * Add address bar component - using BrowserToolbarView for proper integration
@@ -530,11 +359,6 @@ class UnifiedToolbar @JvmOverloads constructor(
     private fun addBottomComponentsForTopToolbar(store: BrowserStore, lifecycleOwner: LifecycleOwner) {
         // For top toolbar mode, create components but don't add them to a container yet
         // The container will be created lazily in getBottomComponentsContainer()
-        
-        // Create tab group bar if enabled
-        if (showTabGroupBar) {
-            createTabGroupBar(store, lifecycleOwner)
-        }
         
         // Always create contextual toolbar (it might be hidden)
         contextualToolbar = ContextualBottomToolbar(context).apply {
@@ -775,10 +599,7 @@ class UnifiedToolbar @JvmOverloads constructor(
      */
     fun getContextualToolbar(): ContextualBottomToolbar? = contextualToolbar
 
-    /**
-     * Get the tab group bar component
-     */
-    fun getTabGroupBar(): TabGroupWithProfileSwitcher? = tabGroupBar
+
     
     /**
      * Get a container with bottom components (tab bar and contextual) for TOP toolbar mode.
@@ -809,7 +630,8 @@ class UnifiedToolbar @JvmOverloads constructor(
             }
             
             // Add tab bar if it exists
-            tabGroupBar?.let { container.addView(it) }
+            // Tab bar removed
+
             
             // Add contextual toolbar if it exists
             contextualToolbar?.let { container.addView(it) }
@@ -824,13 +646,14 @@ class UnifiedToolbar @JvmOverloads constructor(
      * Update component visibility based on settings
      */
     fun updateComponentVisibility(
-        showTabBar: Boolean = showTabGroupBar,
+        showTabBar: Boolean = true, // Ignored
         showContextual: Boolean = showContextualToolbar
     ) {
-        showTabGroupBar = showTabBar
+        // showTabGroupBar = showTabBar // Removed
         showContextualToolbar = showContextual
 
-        tabGroupBar?.visibility = if (showTabBar) VISIBLE else GONE
+        // tabGroupBar?.visibility = if (showTabBar) VISIBLE else GONE // Removed
+
         contextualToolbar?.visibility = if (showContextual) VISIBLE else GONE
     }
 

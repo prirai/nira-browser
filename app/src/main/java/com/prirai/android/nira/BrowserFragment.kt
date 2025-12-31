@@ -236,7 +236,6 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
                             if (profile != null && currentProfile.id != profileId) {
                                 // Switch to this profile context in the toolbar
                                 profileManager.setActiveProfile(profile)
-                                unifiedToolbar?.getTabGroupBar()?.updateProfileIcon(profile)
                             }
                         }
                     }
@@ -471,31 +470,7 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
     // Kept for potential backward compatibility
 
 
-    private fun handleNewTabInIsland(islandId: String) {
-        // Navigate to Compose home fragment
-        try {
-            androidx.navigation.fragment.NavHostFragment.findNavController(this).navigate(R.id.homeFragment)
-        } catch (e: Exception) {
-            // Fallback: Create a new tab and automatically add it to the specified island
-            val store = requireContext().components.store
-            val state = store.state
-            val selectedTab = state.tabs.find { it.id == state.selectedTabId }
 
-            // Create new tab with current tab as parent to enable auto-grouping
-            val newTabId = requireContext().components.tabsUseCases.addTab.invoke(
-                url = "about:homepage",
-                selectTab = true,
-                parentId = selectedTab?.id
-            )
-
-            // Manually add to island since we're creating from plus button
-            if (newTabId != null) {
-                val islandManager =
-                    com.prirai.android.nira.components.toolbar.modern.TabIslandManager.getInstance(requireContext())
-                islandManager.addTabToIsland(newTabId, islandId)
-            }
-        }
-    }
 
     private fun observeTabChangesForModernToolbar() {
         // Track last known tab IDs for detecting new tabs
@@ -710,25 +685,21 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
         
         val bottomMargin = if (prefs.toolbarPosition == com.prirai.android.nira.components.toolbar.ToolbarPosition.BOTTOM.ordinal) {
             // BOTTOM toolbar: sum all components + nav bar
-            val tabGroupBar = unifiedToolbar?.getTabGroupBar()
             val browserToolbar = unifiedToolbar?.getBrowserToolbar()
             val contextualToolbar = unifiedToolbar?.getContextualToolbar()
             
             var totalHeight = navBarHeight
             contextualToolbar?.let { if (prefs.showContextualToolbar && it.isVisible) totalHeight += it.height }
             browserToolbar?.let { totalHeight += it.asView()?.height ?: 0 }
-            tabGroupBar?.let { if (prefs.showTabGroupBar && it.isVisible) totalHeight += it.height }
             
-            if (totalHeight > navBarHeight) totalHeight else (160 * resources.displayMetrics.density).toInt() + navBarHeight
+            if (totalHeight > navBarHeight) totalHeight else (100 * resources.displayMetrics.density).toInt() + navBarHeight
         } else {
             // TOP toolbar: Calculate total bottom height (bottom components + nav bar)
             // This is the INITIAL position when toolbars are visible
-            val tabGroupBar = unifiedToolbar?.getTabGroupBar()
             val contextualToolbar = unifiedToolbar?.getContextualToolbar()
             
             var totalHeight = navBarHeight  // Always include nav bar
             contextualToolbar?.let { if (prefs.showContextualToolbar && it.isVisible) totalHeight += it.height }
-            tabGroupBar?.let { if (prefs.showTabGroupBar && it.isVisible) totalHeight += it.height }
             
             // Return full height including nav bar
             totalHeight
@@ -768,12 +739,10 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
         val windowInsets = androidx.core.view.ViewCompat.getRootWindowInsets(view?.findViewById(R.id.fullscreenToggleButton) ?: return 0)
         val navBarHeight = windowInsets?.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars())?.bottom ?: 0
         
-        val tabGroupBar = unifiedToolbar?.getTabGroupBar()
         val contextualToolbar = unifiedToolbar?.getContextualToolbar()
         
         var totalHeight = navBarHeight
         contextualToolbar?.let { if (prefs.showContextualToolbar && it.isVisible) totalHeight += it.height }
-        tabGroupBar?.let { if (prefs.showTabGroupBar && it.isVisible) totalHeight += it.height }
         
         return totalHeight
     }

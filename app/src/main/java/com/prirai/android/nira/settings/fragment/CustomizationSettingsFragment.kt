@@ -226,18 +226,7 @@ class CustomizationSettingsFragment : BaseSettingsFragment() {
             }
         )
 
-        switchPreference(
-            preference = requireContext().resources.getString(R.string.key_show_tab_group_bar),
-            isChecked = UserPreferences(requireContext()).showTabGroupBar,
-            onCheckChange = {
-                UserPreferences(requireContext()).showTabGroupBar = it
-                Toast.makeText(
-                    context,
-                    requireContext().resources.getText(R.string.app_restart),
-                    Toast.LENGTH_LONG
-                ).show()
-            }
-        )
+
 
     }
 

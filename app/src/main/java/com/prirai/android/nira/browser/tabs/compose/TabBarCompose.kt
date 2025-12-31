@@ -62,65 +62,30 @@ fun TabBarCompose(
                 horizontalArrangement = Arrangement.spacedBy(0.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
+                val tabItems = currentOrder.primaryOrder.filterIsInstance<UnifiedTabOrder.OrderItem.SingleTab>()
+                
                 items(
-                    items = currentOrder.primaryOrder,
-                    key = { item ->
-                        when (item) {
-                            is UnifiedTabOrder.OrderItem.SingleTab -> item.tabId
-                            is UnifiedTabOrder.OrderItem.TabGroup -> item.groupId
-                        }
-                    }
+                    items = tabItems,
+                    key = { item -> item.tabId }
                 ) { item ->
-                    ReorderableItem(reorderableLazyListState, key = when (item) {
-                        is UnifiedTabOrder.OrderItem.SingleTab -> item.tabId
-                        is UnifiedTabOrder.OrderItem.TabGroup -> item.groupId
-                    }) { isDragging ->
+                    ReorderableItem(reorderableLazyListState, key = item.tabId) { isDragging ->
                         Row {
-                            when (item) {
-                                is UnifiedTabOrder.OrderItem.SingleTab -> {
-                                    val tab = tabs.find { it.id == item.tabId }
-                                    if (tab != null) {
-                                        TabBarTabItem(
-                                            tab = tab,
-                                            isSelected = tab.id == selectedTabId,
-                                            isDragging = isDragging,
-                                            dragDropState = dragDropState,
-                                            onTabClick = onTabClick,
-                                            onTabClose = onTabClose,
-                                            orderManager = orderManager,
-                                            modifier = Modifier.draggableHandle()
-                                        )
-                                    }
-                                }
-                                is UnifiedTabOrder.OrderItem.TabGroup -> {
-                                    TabBarGroupItem(
-                                        group = item,
-                                        tabs = tabs,
-                                        selectedTabId = selectedTabId,
-                                        isDragging = isDragging,
-                                        dragDropState = dragDropState,
-                                        onTabClick = onTabClick,
-                                        orderManager = orderManager,
-                                        modifier = Modifier.draggableHandle()
-                                    )
-                                }
+                            val tab = tabs.find { it.id == item.tabId }
+                            if (tab != null) {
+                                TabBarTabItem(
+                                    tab = tab,
+                                    isSelected = tab.id == selectedTabId,
+                                    isDragging = isDragging,
+                                    dragDropState = dragDropState,
+                                    onTabClick = onTabClick,
+                                    onTabClose = onTabClose,
+                                    orderManager = orderManager,
+                                    modifier = Modifier.draggableHandle()
+                                )
                             }
                             
-                            // Add divider after ungrouped tabs (not after groups or before next group)
-                            val currentIndex = currentOrder.primaryOrder.indexOf(item)
-                            val nextItem = currentOrder.primaryOrder.getOrNull(currentIndex + 1)
-                            if (item is UnifiedTabOrder.OrderItem.SingleTab && 
-                                nextItem is UnifiedTabOrder.OrderItem.SingleTab) {
-                                VerticalDivider(
-                                    modifier = Modifier
-                                        .height(40.dp)
-                                        .padding(vertical = 8.dp),
-                                    thickness = 1.dp,
-                                    color = MaterialTheme.colorScheme.outlineVariant
-                                )
-                            } else if (nextItem != null) {
-                                Spacer(modifier = Modifier.width(8.dp))
-                            }
+                            // Add divider after tabs
+                            Spacer(modifier = Modifier.width(8.dp))
                         }
                     }
                 }
@@ -155,7 +120,7 @@ private fun TabBarTabItem(
                     detectTapGestures(
                         onTap = { onTabClick(tab.id) },
                         onLongPress = {
-                            dragDropState.startDrag(tab.id, null)
+                            dragDropState.startDrag(tab.id)
                         }
                     )
                 },
@@ -164,7 +129,7 @@ private fun TabBarTabItem(
                 defaultElevation = getTabElevation(isDragging)
             ),
             colors = CardDefaults.cardColors(
-                containerColor = if (isTarget) getDragTargetColor(DragFeedback.GroupWith) else MaterialTheme.colorScheme.primaryContainer
+                containerColor = if (isTarget) getDragTargetColor(DragFeedback.Reorder) else MaterialTheme.colorScheme.primaryContainer
             )
         ) {
             Row(
@@ -204,7 +169,7 @@ private fun TabBarTabItem(
                     detectTapGestures(
                         onTap = { onTabClick(tab.id) },
                         onLongPress = {
-                            dragDropState.startDrag(tab.id, null)
+                            dragDropState.startDrag(tab.id)
                         }
                     )
                 }
@@ -236,90 +201,5 @@ private fun TabBarTabItem(
     }
 }
 
-@Composable
-private fun TabBarGroupItem(
-    group: UnifiedTabOrder.OrderItem.TabGroup,
-    tabs: List<TabSessionState>,
-    selectedTabId: String?,
-    isDragging: Boolean,
-    dragDropState: TabDragDropState,
-    onTabClick: (String) -> Unit,
-    orderManager: TabOrderManager,
-    modifier: Modifier = Modifier
-) {
-    val scope = rememberCoroutineScope()
-    val isTarget = dragDropState.currentTarget is DragTarget.Group &&
-                   (dragDropState.currentTarget as DragTarget.Group).groupId == group.groupId
-    
-    Card(
-        modifier = modifier
-            .width(140.dp)
-            .height(56.dp)
-            .dragFeedbackScale(isTarget, false)
-            .pointerInput(Unit) {
-                detectTapGestures(
-                    onTap = {
-                        scope.launch {
-                            orderManager.toggleGroupExpansion(group.groupId)
-                        }
-                    }
-                )
-            },
-        shape = RoundedCornerShape(TabVisualConstants.TAB_CORNER_RADIUS),
-        colors = CardDefaults.cardColors(
-            containerColor = if (isTarget) {
-                getDragTargetColor(DragFeedback.MoveToGroup)
-            } else {
-                Color(group.color).copy(alpha = 0.15f)
-            }
-        )
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(24.dp)
-                    .clip(CircleShape)
-                    .background(Color(group.color))
-            )
-            
-            Spacer(modifier = Modifier.width(8.dp))
-            
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = group.groupName,
-                    style = MaterialTheme.typography.bodyMedium,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Text(
-                    text = "${group.tabIds.size} tabs",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            
-            // Add '+' button to create new tab in group
-            IconButton(
-                onClick = {
-                    scope.launch {
-                        orderManager.addNewTabToGroup(group.groupId)
-                    }
-                },
-                modifier = Modifier.size(24.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Add,
-                    contentDescription = "Add tab to group",
-                    modifier = Modifier.size(16.dp),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        }
-    }
-}
+
 

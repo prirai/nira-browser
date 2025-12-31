@@ -16,39 +16,17 @@ data class UnifiedTabOrder(
     sealed class OrderItem {
         @Serializable
         data class SingleTab(val tabId: String) : OrderItem()
-        
-        @Serializable
-        data class TabGroup(
-            val groupId: String,
-            val groupName: String,
-            val color: Int,
-            val isExpanded: Boolean,
-            val tabIds: List<String>
-        ) : OrderItem()
     }
     
     /**
      * Get all tab IDs in flat order
      */
     fun getAllTabIds(): List<String> {
-        return primaryOrder.flatMap { item ->
-            when (item) {
-                is OrderItem.SingleTab -> listOf(item.tabId)
-                is OrderItem.TabGroup -> item.tabIds
-            }
-        }
+        return primaryOrder.map { (it as OrderItem.SingleTab).tabId }
     }
     
     /**
-     * Find which group contains a specific tab
-     */
-    fun findGroupContaining(tabId: String): OrderItem.TabGroup? {
-        return primaryOrder.filterIsInstance<OrderItem.TabGroup>()
-            .find { tabId in it.tabIds }
-    }
-    
-    /**
-     * Get the flat position of a tab (across all groups)
+     * Get the flat position of a tab
      */
     fun getTabPosition(tabId: String): Int? {
         val allTabs = getAllTabIds()
@@ -60,10 +38,7 @@ data class UnifiedTabOrder(
      */
     fun getItemPosition(itemId: String): Int? {
         return primaryOrder.indexOfFirst { item ->
-            when (item) {
-                is OrderItem.SingleTab -> item.tabId == itemId
-                is OrderItem.TabGroup -> item.groupId == itemId
-            }
+            (item as OrderItem.SingleTab).tabId == itemId
         }.takeIf { it >= 0 }
     }
 }

@@ -29,8 +29,7 @@ class TabListViewHolder(
     @VisibleForTesting
     internal val closeView: AppCompatImageButton = itemView.findViewById(R.id.mozac_browser_tabstray_close)
 
-    @VisibleForTesting
-    internal val groupIndicator: TextView? = itemView.findViewById(R.id.tabGroupIndicator)
+
 
     override var tab: TabSessionState? = null
 
@@ -58,8 +57,7 @@ class TabListViewHolder(
 
         titleView.text = title
 
-        // Update group indicator
-        updateGroupIndicator(tab.id)
+
 
         itemView.setOnClickListener {
             delegate.onTabSelected(tab)
@@ -142,26 +140,5 @@ class TabListViewHolder(
         itemView.setBackgroundResource(backgroundResource)
     }
 
-    private fun updateGroupIndicator(tabId: String) {
-        groupIndicator?.let { indicator ->
-            CoroutineScope(Dispatchers.Main).launch {
-                try {
-                    val tabGroupManager = itemView.context.components.tabGroupManager
-                    val groupData = tabGroupManager.getGroupForTab(tabId)
-                    val groupName = groupData?.name
 
-                    // Only show indicator if group name is not null and not blank
-                    if (groupName != null && groupName.isNotBlank()) {
-                        indicator.text = groupName
-                        indicator.isVisible = true
-                    } else {
-                        indicator.isVisible = false
-                    }
-                } catch (e: Exception) {
-                    // Fallback if tab groups not initialized
-                    indicator.isVisible = false
-                }
-            }
-        }
-    }
 }
