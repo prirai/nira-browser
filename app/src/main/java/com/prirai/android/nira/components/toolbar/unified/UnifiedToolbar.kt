@@ -14,7 +14,7 @@ import com.prirai.android.nira.components.toolbar.BrowserToolbarViewInteractor
 import com.prirai.android.nira.components.toolbar.ToolbarIntegration
 import com.prirai.android.nira.components.toolbar.ToolbarPosition
 import com.prirai.android.nira.components.toolbar.modern.ModernToolbarSystem
-import com.prirai.android.nira.components.toolbar.modern.TabGroupWithProfileSwitcher
+import com.prirai.android.nira.components.toolbar.modern.ComposeTabBarWithProfileSwitcher
 import com.prirai.android.nira.ext.components
 import com.prirai.android.nira.preferences.UserPreferences
 import com.prirai.android.nira.toolbar.ContextualBottomToolbar
@@ -35,7 +35,7 @@ import androidx.core.view.isNotEmpty
  * UnifiedToolbar - Centralized toolbar component that unifies tab bar, address bar, and contextual toolbar.
  *
  * Uses the proper components:
- * - TabGroupWithProfileSwitcher: Enhanced tab bar with profile pill
+ * - ComposeTabBarWithProfileSwitcher: Compose-based tab bar with profile pill
  * - BrowserToolbar: Address bar for URL/search
  * - ContextualBottomToolbar: Context-aware action buttons
  * 
@@ -58,7 +58,7 @@ class UnifiedToolbar @JvmOverloads constructor(
     private val toolbarSystem: ModernToolbarSystem = ModernToolbarSystem(context, attrs, defStyleAttr)
 
     // Toolbar components
-    private var tabGroupBar: TabGroupWithProfileSwitcher? = null
+    private var tabGroupBar: ComposeTabBarWithProfileSwitcher? = null
     private var addressBarContainer: ViewGroup? = null
     private var browserToolbar: BrowserToolbar? = null
     private var browserToolbarView: BrowserToolbarView? = null
@@ -240,7 +240,7 @@ class UnifiedToolbar @JvmOverloads constructor(
     }
 
     /**
-     * Creates the tab group bar component (TabGroupWithProfileSwitcher).
+     * Creates the tab group bar component (ComposeTabBarWithProfileSwitcher).
      * This is separated from addTabGroupBar to allow creating the component
      * without immediately adding it to the toolbar system (needed for TOP toolbar mode).
      */
@@ -253,8 +253,8 @@ class UnifiedToolbar @JvmOverloads constructor(
             return
         }
 
-        tabGroupBar = TabGroupWithProfileSwitcher(context).apply {
-            // Material 3 theming is already applied by TabGroupWithProfileSwitcher
+        tabGroupBar = ComposeTabBarWithProfileSwitcher(context).apply {
+            // Material 3 theming is already applied by ComposeTabBarWithProfileSwitcher
             
             // Setup with all required callbacks for tab interaction and profile management
             setup(
@@ -266,58 +266,12 @@ class UnifiedToolbar @JvmOverloads constructor(
                     // Close the tab using browser's tab management system
                     context.components.tabsUseCases.removeTab(tabId)
                 },
-                onIslandRenamed = { islandId, newName ->
-                    // Island renaming is handled by the tab group system
-                },
-                onNewTabInIsland = { islandId ->
-                    // Create a new tab and add it to the specified island (tab group)
-                    val profileManager = com.prirai.android.nira.browser.profile.ProfileManager.getInstance(context)
-                    val currentProfile = profileManager.getActiveProfile()
-                    val isPrivateMode = profileManager.isPrivateMode()
-                    val contextId = if (isPrivateMode) "private" else "profile_${currentProfile.id}"
-                    
-                    // Get the first tab from the island to use as parentId for auto-grouping
-                    val unifiedManager = com.prirai.android.nira.browser.tabgroups.UnifiedTabGroupManager.getInstance(context)
-                    val group = unifiedManager.getGroup(islandId)
-                    val parentTabId = group?.tabIds?.firstOrNull()
-                    
-                    // Create tab with parentId to trigger middleware auto-grouping
-                    val newTabId = context.components.tabsUseCases.addTab(
-                        url = "about:homepage",
-                        selectTab = true,
-                        private = isPrivateMode,
-                        contextId = contextId,
-                        parentId = parentTabId
-                    )
-
-                    // Ensure the tab is added to the correct group
-                    // The middleware should handle this via parentId, but we add a fallback
-                    lifecycleOwner.lifecycleScope.launch {
-                        kotlinx.coroutines.delay(200)
-                        
-                        // Check if tab was already grouped by middleware
-                        if (!unifiedManager.isTabGrouped(newTabId)) {
-                            // If not grouped, add it manually
-                            android.util.Log.d("UnifiedToolbar", "Tab $newTabId not auto-grouped, adding manually to $islandId")
-                            unifiedManager.addTabToGroup(newTabId, islandId)
-                        } else {
-                            // Verify it's in the correct group
-                            val currentGroup = unifiedManager.getGroupForTab(newTabId)
-                            if (currentGroup?.id != islandId) {
-                                // Tab was grouped but in wrong group, move it
-                                android.util.Log.d("UnifiedToolbar", "Tab $newTabId in wrong group, moving to $islandId")
-                                unifiedManager.removeTabFromGroup(newTabId, notifyChange = false)
-                                unifiedManager.addTabToGroup(newTabId, islandId)
-                            }
-                        }
-                    }
-                },
                 onProfileSelected = { profile ->
                     // Switch to the selected profile and reload to apply changes
                     val profileManager = com.prirai.android.nira.browser.profile.ProfileManager.getInstance(context)
                     profileManager.setActiveProfile(profile)
                     profileManager.setPrivateMode(false) // Switching to a profile exits private mode
-                    
+
                     // Manually trigger tab bar update with filtered tabs
                     // Include guest tabs (contextId == null) in addition to profile tabs
                     val expectedContextId = "profile_${profile.id}"
@@ -330,10 +284,10 @@ class UnifiedToolbar @JvmOverloads constructor(
                             tab.content.private == false && tab.contextId == expectedContextId
                         }
                     }
-                    
+
                     tabGroupBar?.updateTabs(filteredTabs, state.selectedTabId)
                     tabGroupBar?.updateProfileIcon(profile)
-                    
+
                     context.components.sessionUseCases.reload()
                 },
                 onPrivateModeSelected = {
@@ -341,7 +295,7 @@ class UnifiedToolbar @JvmOverloads constructor(
                     val profileManager = com.prirai.android.nira.browser.profile.ProfileManager.getInstance(context)
                     val isPrivateMode = profileManager.isPrivateMode()
                     val currentProfile = profileManager.getActiveProfile()
-                    
+
                     // Manually trigger tab bar update with filtered tabs
                     // Include guest tabs in normal mode, but not in private mode
                     val expectedContextId = if (isPrivateMode) {
@@ -358,9 +312,9 @@ class UnifiedToolbar @JvmOverloads constructor(
                             tab.content.private == isPrivateMode && tab.contextId == expectedContextId
                         }
                     }
-                    
+
                     tabGroupBar?.updateTabs(filteredTabs, state.selectedTabId)
-                    
+
                     context.components.sessionUseCases.reload()
                 }
             )
@@ -414,10 +368,10 @@ class UnifiedToolbar @JvmOverloads constructor(
     }
     
     /**
-     * Adds the tab group bar component (TabGroupWithProfileSwitcher) to the unified toolbar.
+     * Adds the tab group bar component (ComposeTabBarWithProfileSwitcher) to the unified toolbar.
      *
      * This method:
-     * 1. Creates TabGroupWithProfileSwitcher with all necessary callbacks
+     * 1. Creates ComposeTabBarWithProfileSwitcher with all necessary callbacks
      * 2. Sets up profile switching and private mode toggling
      * 3. Observes browser store to filter tabs by current profile and private mode
      * 4. Adds the component to the ModernToolbarSystem
@@ -778,7 +732,7 @@ class UnifiedToolbar @JvmOverloads constructor(
     /**
      * Get the tab group bar component
      */
-    fun getTabGroupBar(): TabGroupWithProfileSwitcher? = tabGroupBar
+    fun getTabGroupBar(): ComposeTabBarWithProfileSwitcher? = tabGroupBar
     
     /**
      * Get a container with bottom components (tab bar and contextual) for TOP toolbar mode.

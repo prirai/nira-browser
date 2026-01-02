@@ -29,8 +29,16 @@ import mozilla.components.feature.tabs.tabstray.TabsFeature
 import mozilla.components.support.base.feature.ViewBoundFeatureWrapper
 
 
-// A fragment for displaying the tabs tray.
-
+/**
+ * @deprecated This legacy dialog-based tab switcher is deprecated and should not be used.
+ * Use TabsBottomSheetFragment instead, which provides a modern Compose-based bottom sheet interface.
+ * This class is kept for reference only and may be removed in a future release.
+ */
+@Deprecated(
+    message = "Use TabsBottomSheetFragment instead",
+    replaceWith = ReplaceWith("TabsBottomSheetFragment"),
+    level = DeprecationLevel.WARNING
+)
 class TabsTrayFragment : Fragment() {
     private val tabsFeature: ViewBoundFeatureWrapper<TabsFeature> = ViewBoundFeatureWrapper()
 

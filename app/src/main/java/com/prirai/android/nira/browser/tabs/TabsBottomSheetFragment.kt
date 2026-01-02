@@ -1717,8 +1717,8 @@ class TabsBottomSheetFragment : DialogFragment() {
                     .padding(8.dp),
                 color = androidx.compose.material3.MaterialTheme.colorScheme.surfaceContainerHigh,
                 shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
-                tonalElevation = 4.dp,
-                shadowElevation = 8.dp
+                tonalElevation = 0.dp,
+                shadowElevation = 0.dp
             ) {
                 androidx.compose.foundation.layout.Column(
                     modifier = androidx.compose.ui.Modifier.padding(8.dp)
