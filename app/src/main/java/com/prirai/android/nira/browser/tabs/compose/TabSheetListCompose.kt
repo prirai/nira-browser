@@ -1,10 +1,12 @@
 package com.prirai.android.nira.browser.tabs.compose
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -14,6 +16,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -30,6 +33,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
@@ -43,6 +47,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.Dispatchers
 import android.content.Context
+import sh.calvin.reorderable.*
+
 
 sealed class ListItem {
     data class GroupHeader(
@@ -62,7 +68,7 @@ sealed class ListItem {
     ) : ListItem()
 }
 
-@OptIn(ExperimentalFoundationApi::class)
+@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun TabSheetListView(
     viewModel: TabViewModel,
@@ -82,7 +88,14 @@ fun TabSheetListView(
     
     val scope = rememberCoroutineScope()
     val listState = rememberLazyListState()
-    val dragDropState = rememberAdvancedDragDropState()
+    
+    // Menu state
+    var menuTab by remember { mutableStateOf<TabSessionState?>(null) }
+    var menuIsInGroup by remember { mutableStateOf(false) }
+    var showTabMenu by remember { mutableStateOf(false) }
+    var showGroupMenu by remember { mutableStateOf(false) }
+    var menuGroupId by remember { mutableStateOf<String?>(null) }
+    var menuGroupName by remember { mutableStateOf<String?>(null) }
     
     // Build list items from tabs and groups using UnifiedTabOrder
     val listItems = remember(tabs, groups, expandedGroups, currentOrder) {
@@ -105,6 +118,31 @@ fun TabSheetListView(
         }
         out
     }
+    
+    // Use reorderable library for unified drag-and-drop
+    val reorderableState = sh.calvin.reorderable.rememberReorderableLazyColumnState(listState) { from, to ->
+        scope.launch {
+            val result = UnifiedDragDropHandler.handleDrop(
+                viewModel = viewModel,
+                fromIndex = from.index,
+                toIndex = to.index,
+                items = uniqueListItems,
+                tabs = tabs,
+                groups = groups
+            )
+            
+            // Provide feedback based on result
+            when (result) {
+                is DropResult.GroupCreated -> {
+                    android.util.Log.d("TabSheet", "Group created successfully")
+                }
+                is DropResult.Error -> {
+                    android.util.Log.e("TabSheet", "Drop failed: ${result.message}")
+                }
+                else -> {}
+            }
+        }
+    }
 
     LazyColumn(
         state = listState,
@@ -120,65 +158,124 @@ fun TabSheetListView(
                 }
             }
         ) { index, item ->
-            when (item) {
-                is ListItem.GroupHeader -> {
-                    GroupHeaderItem(
-                        groupId = item.groupId,
-                        title = item.title,
-                        color = item.color,
-                        tabCount = item.tabCount,
-                        isExpanded = item.isExpanded,
-                        contextId = item.contextId,
-                        index = index,
-                        dragDropState = dragDropState,
-                        onHeaderClick = { onGroupClick(item.groupId) },
-                        onOptionsClick = { onGroupOptionsClick(item.groupId) },
-                        onDragEnd = { operation ->
-                            scope.launch {
-                                handleDragOperation(
-                                    viewModel,
-                                    operation,
-                                    "group_${item.groupId}",
-                                    null,
-                                    tabs,
-                                    groups
+            ReorderableItem(reorderableState, key = when (item) {
+                is ListItem.GroupHeader -> "group_${item.groupId}"
+                is ListItem.Tab -> if (item.groupId != null) "group_${item.groupId}_tab_${item.tab.id}" else "tab_${item.tab.id}"
+            }) { isDragging ->
+                when (item) {
+                    is ListItem.GroupHeader -> {
+                        GroupHeaderItem(
+                            groupId = item.groupId,
+                            title = item.title,
+                            color = item.color,
+                            tabCount = item.tabCount,
+                            isExpanded = item.isExpanded,
+                            contextId = item.contextId,
+                            isDragging = isDragging,
+                            onHeaderClick = { onGroupClick(item.groupId) },
+                            onOptionsClick = { 
+                                menuGroupId = item.groupId
+                                menuGroupName = item.title
+                                showGroupMenu = true
+                                onGroupOptionsClick(item.groupId)
+                            },
+                            modifier = Modifier
+                                .animateItem()
+                                .longPressDraggableHandle(
+                                    onDragStarted = {},
+                                    onDragStopped = {}
                                 )
+                        )
+                    }
+                    is ListItem.Tab -> {
+                        val group = groups.find { it.tabIds.contains(item.tab.id) }
+                        val dismissState = rememberSwipeToDismissBoxState(
+                            confirmValueChange = { dismissValue ->
+                                if (dismissValue == SwipeToDismissBoxValue.EndToStart) {
+                                    onTabClose(item.tab.id)
+                                    true
+                                } else {
+                                    false
+                                }
                             }
-                        },
-                        modifier = Modifier.animateItem()
-                    )
-                }
-                is ListItem.Tab -> {
-                    val group = groups.find { it.tabIds.contains(item.tab.id) }
-                    TabListItem(
-                        tab = item.tab,
-                        isSelected = item.tab.id == selectedTabId,
-                        isInGroup = item.isInGroup,
-                        isLastInGroup = item.isLastInGroup,
-                        groupId = item.groupId,
-                        groupColor = group?.color,
-                        index = index,
-                        dragDropState = dragDropState,
-                        onTabClick = { onTabClick(item.tab.id) },
-                        onTabClose = { onTabClose(item.tab.id) },
-                        onTabLongPress = { onTabLongPress(item.tab, item.isInGroup) },
-                        onDragEnd = { operation ->
-                            scope.launch {
-                                handleDragOperation(
-                                    viewModel,
-                                    operation,
-                                    item.tab.id,
-                                    item.groupId,
-                                    tabs,
-                                    groups
-                                )
-                            }
-                        },
-                        modifier = Modifier.animateItem()
-                    )
+                        )
+                        
+                        SwipeToDismissBox(
+                            state = dismissState,
+                            backgroundContent = {
+                                val color = when (dismissState.targetValue) {
+                                    SwipeToDismissBoxValue.EndToStart -> MaterialTheme.colorScheme.errorContainer
+                                    else -> Color.Transparent
+                                }
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .background(color)
+                                        .padding(horizontal = 20.dp),
+                                    contentAlignment = Alignment.CenterEnd
+                                ) {
+                                    if (dismissState.targetValue == SwipeToDismissBoxValue.EndToStart) {
+                                        Icon(
+                                            imageVector = Icons.Default.Delete,
+                                            contentDescription = "Delete",
+                                            tint = MaterialTheme.colorScheme.onErrorContainer
+                                        )
+                                    }
+                                }
+                            },
+                            enableDismissFromStartToEnd = false,
+                            enableDismissFromEndToStart = true
+                        ) {
+                            TabListItem(
+                                tab = item.tab,
+                                isSelected = item.tab.id == selectedTabId,
+                                isInGroup = item.isInGroup,
+                                isLastInGroup = item.isLastInGroup,
+                                groupId = item.groupId,
+                                groupColor = group?.color,
+                                isDragging = isDragging,
+                                onTabClick = { onTabClick(item.tab.id) },
+                                onTabClose = { onTabClose(item.tab.id) },
+                                onTabLongPress = { 
+                                    menuTab = item.tab
+                                    menuIsInGroup = item.isInGroup
+                                    showTabMenu = true
+                                    onTabLongPress(item.tab, item.isInGroup)
+                                },
+                                modifier = Modifier
+                                    .animateItem()
+                                    .longPressDraggableHandle(
+                                        onDragStarted = {},
+                                        onDragStopped = {}
+                                    )
+                            )
+                        }
+                    }
                 }
             }
         }
+    }
+    
+    // Show tab menu
+    if (showTabMenu && menuTab != null) {
+        TabContextMenu(
+            tab = menuTab!!,
+            isInGroup = menuIsInGroup,
+            onDismiss = { showTabMenu = false },
+            viewModel = viewModel,
+            scope = scope
+        )
+    }
+    
+    // Show group menu  
+    if (showGroupMenu && menuGroupId != null) {
+        GroupContextMenu(
+            groupId = menuGroupId!!,
+            groupName = menuGroupName ?: "Group",
+            onDismiss = { showGroupMenu = false },
+            viewModel = viewModel,
+            scope = scope
+        )
     }
 }
 
@@ -190,35 +287,58 @@ private fun GroupHeaderItem(
     tabCount: Int,
     isExpanded: Boolean,
     contextId: String?,
-    index: Int,
-    dragDropState: AdvancedDragDropState,
+    isDragging: Boolean,
     onHeaderClick: () -> Unit,
     onOptionsClick: () -> Unit,
-    onDragEnd: (DragOperation) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val scope = rememberCoroutineScope()
     val scale by animateFloatAsState(
-        targetValue = dragDropState.getTargetScale("group_$groupId"),
+        targetValue = if (isDragging) 1.05f else 1f,
         animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy)
     )
     val borderColor = if (contextId == null) Color(0xFFFF9800) else Color.Transparent
+    
+    // Swipe state for swipe-right-for-menu gesture
+    val offsetX = remember { Animatable(0f) }
     
     Row(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 12.dp, vertical = 4.dp)
             .scale(scale)
-            .advancedDraggable(
-                id = "group_$groupId",
-                index = index,
-                dragDropState = dragDropState,
-                isGroupHeader = true,
-                groupId = groupId,
-                onDragEnd = onDragEnd
-            )
             .clip(RoundedCornerShape(12.dp))
             .background(Color(color).copy(alpha = 0.15f))
             .border(2.dp, borderColor, RoundedCornerShape(12.dp))
+            .pointerInput(groupId) {
+                detectHorizontalDragGestures(
+                    onDragEnd = {
+                        scope.launch {
+                            if (offsetX.value > 100f) {
+                                // Swipe right threshold met - show menu
+                                onOptionsClick()
+                            }
+                            // Always snap back
+                            offsetX.animateTo(0f, animationSpec = tween(200))
+                        }
+                    },
+                    onDragCancel = {
+                        scope.launch {
+                            offsetX.animateTo(0f, animationSpec = tween(200))
+                        }
+                    },
+                    onHorizontalDrag = { change, dragAmount ->
+                        // Only allow rightward swipes
+                        if (dragAmount > 0) {
+                            scope.launch {
+                                val newValue = (offsetX.value + dragAmount).coerceAtMost(150f)
+                                offsetX.snapTo(newValue)
+                            }
+                            change.consume()
+                        }
+                    }
+                )
+            }
             .clickable(onClick = onHeaderClick)
             .padding(12.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -251,18 +371,6 @@ private fun GroupHeaderItem(
                 .padding(horizontal = 8.dp, vertical = 4.dp)
         )
         
-        Spacer(modifier = Modifier.width(8.dp))
-        
-        IconButton(
-            onClick = onOptionsClick,
-            modifier = Modifier.size(32.dp)
-        ) {
-            Icon(
-                imageVector = Icons.Default.MoreVert,
-                contentDescription = "Group options",
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
     }
 }
 
@@ -274,46 +382,34 @@ private fun TabListItem(
     isLastInGroup: Boolean,
     groupId: String?,
     groupColor: Int?,
-    index: Int,
-    dragDropState: AdvancedDragDropState,
+    isDragging: Boolean,
     onTabClick: () -> Unit,
     onTabClose: () -> Unit,
     onTabLongPress: () -> Unit = {},
-    onDragEnd: (DragOperation) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     val scale by animateFloatAsState(
-        targetValue = dragDropState.getTargetScale(tab.id),
+        targetValue = if (isDragging) 1.05f else 1f,
         animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy)
     )
     
-    // Check if currently being dragged
-    val isBeingDragged = dragDropState.isDragging && dragDropState.draggedItemId == tab.id
+    // Swipe state for swipe-right-for-menu gesture
+    val offsetX = remember { Animatable(0f) }
     
     // When dragging, treat as ungrouped for uniform appearance
-    val effectiveIsInGroup = isInGroup && !isBeingDragged
-    val effectiveIsLastInGroup = isLastInGroup && !isBeingDragged
+    val effectiveIsInGroup = isInGroup && !isDragging
+    val effectiveIsLastInGroup = isLastInGroup && !isDragging
     
     // Determine border color
     val borderColor = when {
-        groupColor != null && !isBeingDragged -> Color(groupColor) // Group color for tabs in groups
+        groupColor != null && !isDragging -> Color(groupColor) // Group color for tabs in groups
         tab.contextId == null -> Color(0xFFFF9800) // Orange for default profile
         else -> Color.Transparent
     }
     
-    // Check if this tab is a grouping target
-    val isGroupingTarget = dragDropState.isHoverTarget(tab.id) && 
-                          dragDropState.feedbackState.operation is DragOperation.GroupWith
-    
     // Determine corner radius based on position in group
-    val cornerRadius = when {
-        !effectiveIsInGroup -> 12.dp // Normal tabs have full rounding
-        effectiveIsLastInGroup -> 12.dp // Last tab in group has bottom rounding
-        else -> 0.dp // Other tabs in group have no rounding
-    }
-    
-    // Determine which corners to round
     val shape = when {
         !effectiveIsInGroup -> RoundedCornerShape(12.dp) // All corners
         effectiveIsLastInGroup -> RoundedCornerShape(bottomStart = 12.dp, bottomEnd = 12.dp) // Only bottom corners
@@ -328,19 +424,9 @@ private fun TabListItem(
                 vertical = if (effectiveIsInGroup) 0.dp else 4.dp
             )
             .scale(scale)
-            .draggableItem(tab.id, dragDropState)
-            .advancedDraggable(
-                id = tab.id,
-                index = index,
-                dragDropState = dragDropState,
-                groupId = groupId,
-                isInGroup = isInGroup,
-                onDragEnd = onDragEnd
-            )
             .clip(shape)
             .background(
                 when {
-                    isGroupingTarget -> Color(0xFF607D8B) // Grey background for grouping
                     isSelected -> MaterialTheme.colorScheme.primaryContainer
                     else -> MaterialTheme.colorScheme.surface
                 }
@@ -380,6 +466,35 @@ private fun TabListItem(
                     Modifier.border(2.dp, borderColor, shape)
                 }
             )
+            .pointerInput(tab.id) {
+                detectHorizontalDragGestures(
+                    onDragEnd = {
+                        scope.launch {
+                            if (offsetX.value > 100f) {
+                                // Swipe right threshold met - show menu
+                                onTabLongPress()
+                            }
+                            // Always snap back
+                            offsetX.animateTo(0f, animationSpec = tween(200))
+                        }
+                    },
+                    onDragCancel = {
+                        scope.launch {
+                            offsetX.animateTo(0f, animationSpec = tween(200))
+                        }
+                    },
+                    onHorizontalDrag = { change, dragAmount ->
+                        // Only allow rightward swipes for menu
+                        if (dragAmount > 0) {
+                            scope.launch {
+                                val newValue = (offsetX.value + dragAmount).coerceAtMost(150f)
+                                offsetX.snapTo(newValue)
+                            }
+                            change.consume()
+                        }
+                    }
+                )
+            }
             .clickable(onClick = onTabClick)
             .padding(12.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -417,23 +532,6 @@ private fun TabListItem(
                     MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
-            )
-        }
-        
-        Spacer(modifier = Modifier.width(8.dp))
-        
-        // Close button
-        IconButton(
-            onClick = onTabClose,
-            modifier = Modifier.size(32.dp)
-        ) {
-            Icon(
-                imageVector = Icons.Default.Close,
-                contentDescription = "Close tab",
-                tint = if (isSelected) 
-                    MaterialTheme.colorScheme.onPrimaryContainer 
-                else 
-                    MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }
@@ -605,163 +703,5 @@ private fun buildListItemsFallback(
     return items
 }
 
-private suspend fun handleDragOperation(
-    viewModel: TabViewModel,
-    operation: DragOperation,
-    draggedId: String,
-    fromGroupId: String?,
-    tabs: List<TabSessionState>,
-    groups: List<com.prirai.android.nira.browser.tabgroups.TabGroupData>
-) {
-    // Handle group header drag (draggedId starts with "group_")
-    val isDraggingGroup = draggedId.startsWith("group_")
-    val actualDraggedId = if (isDraggingGroup) draggedId.removePrefix("group_") else draggedId
-    
-    when (operation) {
-        is DragOperation.GroupWith -> {
-            if (isDraggingGroup) {
-                // Dragging group header over ungrouped tab - add tab to group
-                val targetTab = tabs.find { it.id == operation.targetId }
-                val draggedGroup = groups.find { it.id == actualDraggedId }
-                
-                if (targetTab != null && draggedGroup != null) {
-                    // Check context compatibility
-                    if (targetTab.contextId == draggedGroup.contextId) {
-                        android.util.Log.d("TabSheet", "Adding tab ${operation.targetId} to group $actualDraggedId")
-                        viewModel.addTabToGroup(operation.targetId, actualDraggedId)
-                    }
-                }
-            } else if (fromGroupId != null) {
-                // Dragging grouped tab over ungrouped tab - remove from group and create new group
-                val draggedTab = tabs.find { it.id == actualDraggedId }
-                val targetTab = tabs.find { it.id == operation.targetId }
-                
-                android.util.Log.d("TabSheet", "Grouped tab over ungrouped: $actualDraggedId (from group $fromGroupId) and ${operation.targetId}")
-                
-                if (draggedTab != null && targetTab != null) {
-                    if (draggedTab.contextId == targetTab.contextId) {
-                        // First remove from current group
-                        viewModel.removeTabFromGroup(actualDraggedId)
-                        // Then create new group
-                        kotlinx.coroutines.delay(50)
-                        val contextId = draggedTab.contextId ?: targetTab.contextId
-                        viewModel.createGroup(listOf(actualDraggedId, operation.targetId), contextId = contextId)
-                    } else {
-                        android.util.Log.d("TabSheet", "Context IDs don't match - cannot group")
-                    }
-                }
-            } else {
-                // Group two ungrouped tabs together
-                val draggedTab = tabs.find { it.id == actualDraggedId }
-                val targetTab = tabs.find { it.id == operation.targetId }
-                
-                android.util.Log.d("TabSheet", "Grouping tabs: $actualDraggedId and ${operation.targetId}")
-                
-                if (draggedTab != null && targetTab != null) {
-                    // Check contextId compatibility
-                    if (draggedTab.contextId == targetTab.contextId) {
-                        val contextId = draggedTab.contextId ?: targetTab.contextId
-                        android.util.Log.d("TabSheet", "Creating group with contextId: $contextId")
-                        viewModel.createGroup(listOf(actualDraggedId, operation.targetId), contextId = contextId)
-                    } else {
-                        android.util.Log.d("TabSheet", "Context IDs don't match - cannot group")
-                    }
-                }
-            }
-        }
-        
-        is DragOperation.Reorder -> {
-            if (isDraggingGroup) {
-                // Reorder entire group
-                android.util.Log.d("TabSheet", "Reorder group: $actualDraggedId to index ${operation.targetIndex}")
-                viewModel.reorderGroup(actualDraggedId, operation.targetIndex)
-            } else if (fromGroupId != null) {
-                // Reordering within a group
-                android.util.Log.d("TabSheet", "Reorder in group: $actualDraggedId to index ${operation.targetIndex}")
-                
-                // Find the target tab at the visual index
-                val flatList = buildListItemsFallback(tabs, groups, emptySet())
-                val targetItem = flatList.getOrNull(operation.targetIndex)
-                
-                if (targetItem is ListItem.Tab && targetItem.tab.id != actualDraggedId) {
-                    android.util.Log.d("TabSheet", "Reorder target: ${targetItem.tab.id}")
-                    viewModel.reorderTabInGroup(actualDraggedId, targetItem.tab.id, fromGroupId)
-                }
-            } else {
-                // Reordering ungrouped tabs
-                android.util.Log.d("TabSheet", "Reorder ungrouped: $actualDraggedId to index ${operation.targetIndex}")
-                
-                // Get only ungrouped tabs
-                val ungroupedTabs = tabs.filter { tab ->
-                    groups.none { group -> group.tabIds.contains(tab.id) }
-                }
-                
-                val currentIndex = ungroupedTabs.indexOfFirst { it.id == actualDraggedId }
-                val targetTab = ungroupedTabs.getOrNull(operation.targetIndex)
-                
-                if (currentIndex != -1 && targetTab != null && targetTab.id != actualDraggedId) {
-                    val targetIndexInAll = tabs.indexOf(targetTab)
-                    android.util.Log.d("TabSheet", "Reorder from $currentIndex to $targetIndexInAll")
-                    viewModel.reorderTabs(tabs.indexOf(ungroupedTabs[currentIndex]), targetIndexInAll)
-                }
-            }
-        }
-        
-        is DragOperation.MoveToGroup -> {
-            val targetGroupId = operation.groupId.removePrefix("group_")
-            
-            if (isDraggingGroup && actualDraggedId != targetGroupId) {
-                // Merging two groups
-                android.util.Log.d("TabSheet", "Merging groups: $actualDraggedId into $targetGroupId")
-                viewModel.mergeGroups(actualDraggedId, targetGroupId)
-            } else if (!isDraggingGroup) {
-                // Move tab to a group
-                val targetGroup = groups.find { it.id == targetGroupId }
-                val draggedTab = tabs.find { it.id == actualDraggedId }
-                
-                if (draggedTab != null && targetGroup != null) {
-                    // Check contextId compatibility
-                    if (draggedTab.contextId == targetGroup.contextId) {
-                        if (fromGroupId != null && fromGroupId != targetGroupId) {
-                            // Moving from one group to another
-                            android.util.Log.d("TabSheet", "Moving tab from group $fromGroupId to $targetGroupId")
-                            viewModel.removeTabFromGroup(actualDraggedId)
-                            kotlinx.coroutines.delay(50)
-                            viewModel.addTabToGroup(actualDraggedId, targetGroupId)
-                        } else if (fromGroupId == null) {
-                            // Adding ungrouped tab to group
-                            android.util.Log.d("TabSheet", "Adding ungrouped tab $actualDraggedId to group $targetGroupId")
-                            viewModel.addTabToGroup(actualDraggedId, targetGroupId)
-                        }
-                    }
-                }
-            }
-        }
-        
-        is DragOperation.UngroupAndReorder -> {
-            // Ungroup tab and place it at ungrouped position
-            if (fromGroupId != null && !isDraggingGroup) {
-                android.util.Log.d("TabSheet", "Ungrouping tab $actualDraggedId to index ${operation.targetIndex}")
-                viewModel.removeTabFromGroup(actualDraggedId)
-                
-                // Position the ungrouped tab at the target index
-                kotlinx.coroutines.delay(50)
-                viewModel.moveTabToPosition(actualDraggedId, operation.targetIndex)
-            }
-        }
-        
-        DragOperation.None -> {
-            // Handle dropping without a specific target
-            // Issue 4-6: Ungroup if from a group, and position based on drop location
-            if (fromGroupId != null && !isDraggingGroup) {
-                // Dragging a grouped tab outside without a clear target - ungroup it
-                android.util.Log.d("TabSheet", "Ungrouping tab $actualDraggedId (dropped without target)")
-                viewModel.removeTabFromGroup(actualDraggedId)
-                // The tab will automatically appear at the end of ungrouped tabs
-            }
-            // For other cases (ungrouped tab or group header), do nothing
-        }
-    }
-}
 
 

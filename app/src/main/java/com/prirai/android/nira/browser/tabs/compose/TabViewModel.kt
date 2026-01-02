@@ -133,6 +133,11 @@ class TabViewModel(
             _groups.value = groupsList
             _expandedGroups.value = groupsList.map { it.id }.toSet()
             _selectedTabId.value = selectedTabId
+            
+            // Auto-expand group containing selected tab
+            selectedTabId?.let { tabId ->
+                orderManager.expandGroupContainingTab(tabId)
+            }
         }
     }
     
@@ -179,6 +184,11 @@ class TabViewModel(
                 
                 // Update tabs based on saved order
                 _tabs.value = getOrderedTabs(tabs, profileId, groupsList)
+                
+                // Auto-expand group containing selected tab
+                selectedTabId?.let { tabId ->
+                    orderManager.expandGroupContainingTab(tabId)
+                }
             }
         }
     }
@@ -663,8 +673,12 @@ class TabViewModel(
                 }
                 
                 if (groupIndex != -1 && groupIndex != targetIndex) {
-                    orderManager.reorderItem(groupIndex, targetIndex)
-                    saveCurrentOrder(profileId)
+                    val size = current.primaryOrder.size
+                    val validTargetIndex = targetIndex.coerceIn(0, size - 1)
+                    if (groupIndex != validTargetIndex) {
+                        orderManager.reorderItem(groupIndex, validTargetIndex)
+                        saveCurrentOrder(profileId)
+                    }
                 }
             }
         }
@@ -685,10 +699,96 @@ class TabViewModel(
                 }
                 
                 if (tabIndex != -1 && tabIndex != targetIndex) {
-                    orderManager.reorderItem(tabIndex, targetIndex.coerceIn(0, current.primaryOrder.size))
-                    saveCurrentOrder(profileId)
+                    val size = current.primaryOrder.size
+                    val validTargetIndex = targetIndex.coerceIn(0, size - 1)
+                    if (tabIndex != validTargetIndex) {
+                        orderManager.reorderItem(tabIndex, validTargetIndex)
+                        saveCurrentOrder(profileId)
+                    }
                 }
             }
         }
+    }
+    
+    // ========== Unified Menu Actions ==========
+    
+    /**
+     * Create a new tab in the current profile
+     */
+    fun createNewTab() {
+        viewModelScope.launch {
+            val profileId = _currentProfileId.value ?: return@launch
+            // This will be handled by the caller (e.g., BrowserActivity)
+            // through the components.tabsUseCases.addTab()
+        }
+    }
+    
+    /**
+     * Duplicate a tab
+     */
+    fun duplicateTab(tabId: String) {
+        viewModelScope.launch {
+            // This will be handled by the caller (e.g., BrowserActivity)
+            // through the components.tabsUseCases.addTab() with same URL
+        }
+    }
+    
+    /**
+     * Toggle pin status of a tab
+     */
+    fun togglePinTab(tabId: String) {
+        viewModelScope.launch {
+            // This will be handled by the caller
+            // through components.tabsUseCases.pinTab() or unpinTab()
+        }
+    }
+    
+    /**
+     * Show dialog to add tab to a group
+     */
+    fun showAddToGroupDialog(tabId: String) {
+        // This will be handled by the caller to show the group selection dialog
+    }
+    
+    /**
+     * Enter multi-select mode for batch operations
+     */
+    fun enterMultiSelectMode() {
+        // This will be handled by the caller to enter multi-select mode
+    }
+    
+    /**
+     * Close a specific tab
+     */
+    fun closeTab(tabId: String) {
+        viewModelScope.launch {
+            // This will be handled by the caller
+            // through components.tabsUseCases.removeTab(tabId)
+        }
+    }
+    
+    /**
+     * Close all tabs in a group
+     */
+    fun closeAllTabsInGroup(groupId: String) {
+        viewModelScope.launch {
+            val group = _groups.value.find { it.id == groupId } ?: return@launch
+            // This will be handled by the caller
+            // to close all tabs in group.tabIds
+        }
+    }
+    
+    /**
+     * Ungroup all tabs in a group (alias for ungroupAll)
+     */
+    fun ungroupAllTabs(groupId: String) {
+        ungroupAll(groupId)
+    }
+    
+    /**
+     * Create group with tabs (alias for createGroup)
+     */
+    fun createGroupWithTabs(tabIds: List<String>, name: String? = null) {
+        createGroup(tabIds, name)
     }
 }

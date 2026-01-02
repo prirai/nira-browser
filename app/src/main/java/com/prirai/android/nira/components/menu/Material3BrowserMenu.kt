@@ -100,7 +100,7 @@ class Material3BrowserMenu(
             menuHeight,
             true
         ).apply {
-            elevation = 8f * context.resources.displayMetrics.density
+            elevation = 0f
             setBackgroundDrawable(ContextCompat.getDrawable(context, R.drawable.menu_background))
             
             // Get anchor screen position
