@@ -6,6 +6,7 @@ import android.view.ViewGroup
 import android.widget.FrameLayout
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -15,6 +16,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -22,7 +24,8 @@ import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.lifecycleScope
 import com.prirai.android.nira.browser.profile.BrowserProfile
 import com.prirai.android.nira.browser.profile.ProfileManager
-import com.prirai.android.nira.browser.tabs.compose.TabBarCompose
+import com.prirai.android.nira.browser.tabs.compose.TabBarComposeWithMenus
+import com.prirai.android.nira.browser.tabs.compose.TabViewModel
 import com.prirai.android.nira.browser.tabs.compose.TabOrderManager
 import com.prirai.android.nira.browser.tabgroups.UnifiedTabGroupManager
 import com.prirai.android.nira.ext.components
@@ -32,6 +35,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import mozilla.components.browser.state.state.TabSessionState
 import mozilla.components.lib.state.ext.flowScoped
+
 
 /**
  * Compose-based tab bar with profile switcher pill.
@@ -56,6 +60,7 @@ class ComposeTabBarWithProfileSwitcher @JvmOverloads constructor(
 
     private var tabOrderManager: TabOrderManager? = null
     private var groupManager: UnifiedTabGroupManager? = null
+    private var tabViewModel: TabViewModel? = null
 
     init {
         clipToPadding = false
@@ -70,6 +75,7 @@ class ComposeTabBarWithProfileSwitcher @JvmOverloads constructor(
         // Initialize managers
         groupManager = UnifiedTabGroupManager.getInstance(context)
         tabOrderManager = TabOrderManager.getInstance(context, groupManager!!)
+        tabViewModel = TabViewModel(context, groupManager!!)
     }
 
     fun setup(
@@ -98,63 +104,61 @@ class ComposeTabBarWithProfileSwitcher @JvmOverloads constructor(
     private fun TabBarWithProfileSwitcherContent() {
         val profileManager = remember { ProfileManager.getInstance(context) }
         
-        // Use mutableStateOf to make these reactive and update when changed
-        var currentProfile by remember { mutableStateOf(profileManager.getActiveProfile()) }
-        var isPrivateMode by remember { mutableStateOf(profileManager.isPrivateMode()) }
-
-        // State for tabs and selected tab
-        var tabs by remember { mutableStateOf(emptyList<TabSessionState>()) }
-        var selectedTabId by remember { mutableStateOf<String?>(null) }
-
-        // Collect store updates and also update profile state
+        // State for tabs and selected tab - observe store state changes
         val store = context.components.store
         val lifecycleOwner = context as LifecycleOwner
-
-        LaunchedEffect(Unit) {
+        
+        // Use produceState to observe store state changes reactively
+        val browserState = produceState(initialValue = store.state, store) {
             store.flowScoped(lifecycleOwner) { flow ->
                 flow.collect { state ->
-                    // Update profile state on each collection to catch profile switches
-                    currentProfile = profileManager.getActiveProfile()
-                    isPrivateMode = profileManager.isPrivateMode()
-                    
-                    val filteredTabs = state.tabs.filter { tab ->
-                        val tabIsPrivate = tab.content.private
-                        if (tabIsPrivate != isPrivateMode) {
-                            false
-                        } else if (isPrivateMode) {
-                            tab.contextId == "private"
-                        } else {
-                            val expectedContextId = "profile_${currentProfile.id}"
-                            (tab.contextId == expectedContextId) || (tab.contextId == null)
-                        }
-                    }
-                    tabs = filteredTabs
-                    selectedTabId = state.selectedTabId
+                    value = state
                 }
             }
         }
+        
+        // Derive reactive state from browserState
+        val currentProfile = remember(browserState.value) { profileManager.getActiveProfile() }
+        val isPrivateMode = remember(browserState.value) { profileManager.isPrivateMode() }
+        
+        // Filter tabs based on current profile - this will update when browserState changes
+        val tabs = remember(browserState.value.tabs, currentProfile, isPrivateMode) {
+            browserState.value.tabs.filter { tab ->
+                val tabIsPrivate = tab.content.private
+                if (tabIsPrivate != isPrivateMode) {
+                    false
+                } else if (isPrivateMode) {
+                    tab.contextId == "private"
+                } else {
+                    val expectedContextId = "profile_${currentProfile.id}"
+                    (tab.contextId == expectedContextId) || (tab.contextId == null)
+                }
+            }
+        }
+        
+        val selectedTabId = browserState.value.selectedTabId
 
         val orderManager = tabOrderManager ?: return
+        val viewModel = tabViewModel ?: return
+        
+        // Update viewModel with current tabs
+        LaunchedEffect(tabs, selectedTabId, currentProfile, isPrivateMode) {
+            val profileId = if (isPrivateMode) "private" else currentProfile.id
+            viewModel.loadTabsForProfile(profileId, tabs, selectedTabId)
+        }
 
         Box(modifier = Modifier.fillMaxWidth()) {
             // Tab bar (background layer)
-            TabBarCompose(
+            TabBarComposeWithMenus(
                 tabs = tabs,
                 orderManager = orderManager,
+                viewModel = viewModel,
                 selectedTabId = selectedTabId,
                 onTabClick = { tabId ->
                     onTabSelected?.invoke(tabId)
                 },
                 onTabClose = { tabId ->
                     onTabClosed?.invoke(tabId)
-                },
-                onTabLongPress = { tab, isInGroup ->
-                    // Show unified menu for tabs
-                    // Note: We'll handle this at the parent level since we need View reference
-                },
-                onGroupLongPress = { groupId ->
-                    // Show unified menu for groups
-                    // Note: We'll handle this at the parent level since we need View reference
                 }
             )
             
@@ -162,8 +166,8 @@ class ComposeTabBarWithProfileSwitcher @JvmOverloads constructor(
             ProfileSwitcherFloatingIcon(
                 currentProfile = currentProfile,
                 isPrivateMode = isPrivateMode,
-                onProfileClick = {
-                    // Show profile switcher menu
+                onProfileLongClick = {
+                    // Show profile switcher menu on long press
                     showProfileSwitcherMenu()
                 },
                 modifier = Modifier
@@ -177,27 +181,90 @@ class ComposeTabBarWithProfileSwitcher @JvmOverloads constructor(
     private fun ProfileSwitcherFloatingIcon(
         currentProfile: BrowserProfile,
         isPrivateMode: Boolean,
-        onProfileClick: () -> Unit,
+        onProfileLongClick: () -> Unit,
         modifier: Modifier = Modifier
     ) {
-        // Floating circular profile icon with elevation
-        Surface(
-            modifier = modifier
-                .size(40.dp)
-                .clip(CircleShape)
-                .clickable(onClick = onProfileClick),
-            color = MaterialTheme.colorScheme.primaryContainer,
-            tonalElevation = 8.dp,
-            shadowElevation = 4.dp
+        val scope = rememberCoroutineScope()
+        var isExpanded by remember { mutableStateOf(false) }
+        
+        // Auto-collapse after 3 seconds when expanded
+        LaunchedEffect(isExpanded) {
+            if (isExpanded) {
+                kotlinx.coroutines.delay(3000)
+                isExpanded = false
+            }
+        }
+        
+        // Floating profile icon with expand/collapse animation
+        androidx.compose.animation.AnimatedVisibility(
+            visible = isExpanded,
+            modifier = modifier,
+            enter = androidx.compose.animation.fadeIn() + androidx.compose.animation.expandHorizontally(),
+            exit = androidx.compose.animation.fadeOut() + androidx.compose.animation.shrinkHorizontally()
         ) {
-            Box(
-                contentAlignment = Alignment.Center,
-                modifier = Modifier.fillMaxSize()
+            // Expanded: Show icon + name
+            Surface(
+                modifier = Modifier
+                    .height(40.dp)
+                    .clip(RoundedCornerShape(20.dp))
+                    .pointerInput(Unit) {
+                        detectTapGestures(
+                            onLongPress = { onProfileLongClick() }
+                        )
+                    },
+                color = MaterialTheme.colorScheme.primaryContainer,
+                tonalElevation = 8.dp,
+                shadowElevation = 4.dp
             ) {
-                Text(
-                    text = if (isPrivateMode) "🕵️" else currentProfile.emoji,
-                    style = MaterialTheme.typography.bodyLarge
-                )
+                Row(
+                    modifier = Modifier
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        text = if (isPrivateMode) "🕵️" else currentProfile.emoji,
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                    Text(
+                        text = if (isPrivateMode) "Private" else currentProfile.name,
+                        style = MaterialTheme.typography.bodyMedium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+        }
+        
+        // Collapsed icon (always visible)
+        androidx.compose.animation.AnimatedVisibility(
+            visible = !isExpanded,
+            modifier = modifier
+        ) {
+            // Collapsed: Show icon only - tap to expand, long-press for menu
+            Surface(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(CircleShape)
+                    .pointerInput(Unit) {
+                        detectTapGestures(
+                            onTap = { isExpanded = true },
+                            onLongPress = { onProfileLongClick() }
+                        )
+                    },
+                color = MaterialTheme.colorScheme.primaryContainer,
+                tonalElevation = 8.dp,
+                shadowElevation = 4.dp
+            ) {
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    Text(
+                        text = if (isPrivateMode) "🕵️" else currentProfile.emoji,
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                }
             }
         }
     }

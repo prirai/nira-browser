@@ -9,9 +9,18 @@ import kotlinx.coroutines.launch
 import mozilla.components.browser.state.state.TabSessionState
 
 /**
- * Unified menu system for all tab views.
- * Ensures consistent menu items across tab bar, list view, and grid view.
+ * DEPRECATED: Old menu system using Material3BrowserMenu (View-based).
+ * This file is kept for reference but is NO LONGER USED.
+ * 
+ * The new menu system uses TabMenuCompose.kt with ModalBottomSheet (Compose-based).
+ * See: TabMenuCompose.kt - TabContextMenu() and GroupContextMenu()
+ * 
+ * DO NOT USE THIS FILE. It will be removed in a future update.
  */
+@Deprecated(
+    message = "Use TabMenuCompose.kt instead",
+    replaceWith = ReplaceWith("TabContextMenu", "com.prirai.android.nira.browser.tabs.compose")
+)
 object UnifiedTabMenus {
     
     /**

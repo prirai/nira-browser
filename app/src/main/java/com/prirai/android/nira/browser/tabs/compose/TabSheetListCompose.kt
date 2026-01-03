@@ -11,6 +11,7 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -22,6 +23,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -297,80 +299,101 @@ private fun GroupHeaderItem(
         targetValue = if (isDragging) 1.05f else 1f,
         animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy)
     )
-    val borderColor = if (contextId == null) Color(0xFFFF9800) else Color.Transparent
     
     // Swipe state for swipe-right-for-menu gesture
     val offsetX = remember { Animatable(0f) }
     
-    Row(
+    // Group container with color background - NO border/stroke
+    Surface(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 4.dp)
-            .scale(scale)
-            .clip(RoundedCornerShape(12.dp))
-            .background(Color(color).copy(alpha = 0.15f))
-            .border(2.dp, borderColor, RoundedCornerShape(12.dp))
-            .pointerInput(groupId) {
-                detectHorizontalDragGestures(
-                    onDragEnd = {
-                        scope.launch {
-                            if (offsetX.value > 100f) {
-                                // Swipe right threshold met - show menu
-                                onOptionsClick()
-                            }
-                            // Always snap back
-                            offsetX.animateTo(0f, animationSpec = tween(200))
-                        }
-                    },
-                    onDragCancel = {
-                        scope.launch {
-                            offsetX.animateTo(0f, animationSpec = tween(200))
-                        }
-                    },
-                    onHorizontalDrag = { change, dragAmount ->
-                        // Only allow rightward swipes
-                        if (dragAmount > 0) {
+            .padding(horizontal = 8.dp, vertical = 4.dp)
+            .scale(scale),
+        shape = RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp, bottomStart = if (!isExpanded) 12.dp else 0.dp, bottomEnd = if (!isExpanded) 12.dp else 0.dp),
+        color = Color(color).copy(alpha = 0.1f)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .pointerInput(groupId) {
+                    detectHorizontalDragGestures(
+                        onDragEnd = {
                             scope.launch {
-                                val newValue = (offsetX.value + dragAmount).coerceAtMost(150f)
-                                offsetX.snapTo(newValue)
+                                if (offsetX.value > 100f) {
+                                    onOptionsClick()
+                                }
+                                offsetX.animateTo(0f, animationSpec = tween(200))
                             }
-                            change.consume()
+                        },
+                        onDragCancel = {
+                            scope.launch {
+                                offsetX.animateTo(0f, animationSpec = tween(200))
+                            }
+                        },
+                        onHorizontalDrag = { change, dragAmount ->
+                            if (dragAmount > 0) {
+                                scope.launch {
+                                    val newValue = (offsetX.value + dragAmount).coerceAtMost(150f)
+                                    offsetX.snapTo(newValue)
+                                }
+                                change.consume()
+                            }
                         }
+                    )
+                }
+                .clickable(onClick = onHeaderClick)
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = if (isExpanded) Icons.Default.KeyboardArrowDown else Icons.Default.KeyboardArrowRight,
+                    contentDescription = null,
+                    tint = Color(color),
+                    modifier = Modifier.size(20.dp)
+                )
+                
+                Text(
+                    text = title.ifEmpty { "Unnamed Group" },
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                
+                // Count badge with border
+                Surface(
+                    shape = CircleShape,
+                    color = Color(color).copy(alpha = 0.2f),
+                    border = BorderStroke(2.dp, Color(color))
+                ) {
+                    Box(
+                        modifier = Modifier.size(28.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "$tabCount",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(color)
+                        )
                     }
+                }
+            }
+            
+            IconButton(onClick = onOptionsClick) {
+                Icon(
+                    imageVector = Icons.Default.MoreVert,
+                    contentDescription = "Group options",
+                    tint = Color(color)
                 )
             }
-            .clickable(onClick = onHeaderClick)
-            .padding(12.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Icon(
-            imageVector = if (isExpanded) Icons.Default.KeyboardArrowDown else Icons.Default.KeyboardArrowRight,
-            contentDescription = null,
-            tint = Color(color),
-            modifier = Modifier.size(24.dp)
-        )
-        
-        Spacer(modifier = Modifier.width(8.dp))
-        
-        Text(
-            text = title.ifEmpty { "Unnamed Group" },
-            fontSize = 16.sp,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurface,
-            modifier = Modifier.weight(1f),
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
-        )
-        
-        Text(
-            text = "$tabCount",
-            fontSize = 14.sp,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier
-                .background(Color(color).copy(alpha = 0.3f), RoundedCornerShape(12.dp))
-                .padding(horizontal = 8.dp, vertical = 4.dp)
-        )
-        
+        }
     }
 }
 
@@ -402,79 +425,37 @@ private fun TabListItem(
     val effectiveIsInGroup = isInGroup && !isDragging
     val effectiveIsLastInGroup = isLastInGroup && !isDragging
     
-    // Determine border color
-    val borderColor = when {
-        groupColor != null && !isDragging -> Color(groupColor) // Group color for tabs in groups
-        tab.contextId == null -> Color(0xFFFF9800) // Orange for default profile
-        else -> Color.Transparent
+    // Determine background color - use group color background for tabs in groups
+    val backgroundColor = when {
+        isSelected -> MaterialTheme.colorScheme.primaryContainer
+        effectiveIsInGroup && groupColor != null -> Color(groupColor).copy(alpha = 0.1f)
+        else -> MaterialTheme.colorScheme.surface
     }
     
     // Determine corner radius based on position in group
     val shape = when {
-        !effectiveIsInGroup -> RoundedCornerShape(12.dp) // All corners
-        effectiveIsLastInGroup -> RoundedCornerShape(bottomStart = 12.dp, bottomEnd = 12.dp) // Only bottom corners
-        else -> RoundedCornerShape(0.dp) // No corners
+        !effectiveIsInGroup -> RoundedCornerShape(12.dp)
+        effectiveIsLastInGroup -> RoundedCornerShape(bottomStart = 12.dp, bottomEnd = 12.dp)
+        else -> RoundedCornerShape(0.dp)
     }
     
     Row(
         modifier = modifier
             .fillMaxWidth()
             .padding(
-                horizontal = if (effectiveIsInGroup) 24.dp else 12.dp,
+                horizontal = if (effectiveIsInGroup) 8.dp else 12.dp,
                 vertical = if (effectiveIsInGroup) 0.dp else 4.dp
             )
             .scale(scale)
             .clip(shape)
-            .background(
-                when {
-                    isSelected -> MaterialTheme.colorScheme.primaryContainer
-                    else -> MaterialTheme.colorScheme.surface
-                }
-            )
-            .then(
-                // Draw borders: side + bottom for grouped tabs (not last), thinner full border for last, full 2.dp otherwise
-                if (effectiveIsInGroup && !effectiveIsLastInGroup) {
-                    Modifier.drawBehind {
-                        val strokeWidth = 2.dp.toPx()
-                        // Draw left border
-                        drawLine(
-                            color = borderColor,
-                            start = androidx.compose.ui.geometry.Offset(0f, 0f),
-                            end = androidx.compose.ui.geometry.Offset(0f, size.height),
-                            strokeWidth = strokeWidth
-                        )
-                        // Draw right border
-                        drawLine(
-                            color = borderColor,
-                            start = androidx.compose.ui.geometry.Offset(size.width, 0f),
-                            end = androidx.compose.ui.geometry.Offset(size.width, size.height),
-                            strokeWidth = strokeWidth
-                        )
-                        // Draw top border (not bottom) to avoid doubling between stacked grouped tabs
-                        drawLine(
-                            color = borderColor,
-                            start = androidx.compose.ui.geometry.Offset(0f, 0f),
-                            end = androidx.compose.ui.geometry.Offset(size.width, 0f),
-                            strokeWidth = strokeWidth
-                        )
-                    }
-                } else if (effectiveIsInGroup && effectiveIsLastInGroup) {
-                    // Last tab in group: use thinner full border
-                    Modifier.border(1.dp, borderColor, shape)
-                } else {
-                    // Ungrouped tabs: use normal 2.dp border
-                    Modifier.border(2.dp, borderColor, shape)
-                }
-            )
+            .background(backgroundColor)
             .pointerInput(tab.id) {
                 detectHorizontalDragGestures(
                     onDragEnd = {
                         scope.launch {
                             if (offsetX.value > 100f) {
-                                // Swipe right threshold met - show menu
                                 onTabLongPress()
                             }
-                            // Always snap back
                             offsetX.animateTo(0f, animationSpec = tween(200))
                         }
                     },
@@ -484,7 +465,6 @@ private fun TabListItem(
                         }
                     },
                     onHorizontalDrag = { change, dragAmount ->
-                        // Only allow rightward swipes for menu
                         if (dragAmount > 0) {
                             scope.launch {
                                 val newValue = (offsetX.value + dragAmount).coerceAtMost(150f)

@@ -1343,6 +1343,38 @@ class TabsBottomSheetFragment : DialogFragment() {
                     viewModel.forceRefresh(filteredTabs, state.selectedTabId)
                 }
             }
+            
+            // Listen to duplicate tab events
+            launch {
+                viewModel.duplicateTabEvent.collect { request ->
+                    android.util.Log.d("TabSheet", "Received duplicate tab request: ${request.url}, group: ${request.groupId}")
+                    
+                    // Create new tab using components
+                    val newTabId = requireContext().components.tabsUseCases.addTab(
+                        url = request.url,
+                        selectTab = true,
+                        startLoading = true,
+                        private = browsingMode.isPrivate,
+                        contextId = if (browsingMode.isPrivate) "private" else "profile_${currentProfile.id}"
+                    )
+                    
+                    android.util.Log.d("TabSheet", "Created new tab: $newTabId")
+                    
+                    // Add to group if needed
+                    if (request.groupId != null) {
+                        kotlinx.coroutines.delay(100) // Small delay to ensure tab is in store
+                        unifiedGroupManager.addTabToGroup(request.groupId, newTabId)
+                        android.util.Log.d("TabSheet", "Added tab to group: ${request.groupId}")
+                        
+                        // Force UI refresh
+                        kotlinx.coroutines.delay(100)
+                        val state = store.state
+                        val filteredTabs = filterTabs(state.tabs)
+                        value = filteredTabs
+                        viewModel.forceRefresh(filteredTabs, state.selectedTabId)
+                    }
+                }
+            }
         }
         
         // Wrapper Box to hold tabs and menu overlay
@@ -1356,11 +1388,11 @@ class TabsBottomSheetFragment : DialogFragment() {
                     onTabClick = ::handleTabClickCompose,
                     onTabClose = ::handleTabCloseCompose,
                     onTabLongPress = ::handleTabLongPressCompose,
-                    onGroupClick = { groupId ->
+                    onGroupClick = { groupId -> 
                         viewModel.toggleGroupExpanded(groupId)
                     },
                     onGroupOptionsClick = { groupId ->
-                        showGroupOptionsDialog(groupId, viewModel)
+                        // Show group options menu - could be enhanced
                     }
                 )
             } else {
@@ -1369,11 +1401,11 @@ class TabsBottomSheetFragment : DialogFragment() {
                     onTabClick = ::handleTabClickCompose,
                     onTabClose = ::handleTabCloseCompose,
                     onTabLongPress = ::handleTabLongPressCompose,
-                    onGroupClick = { groupId ->
+                    onGroupClick = { groupId -> 
                         viewModel.toggleGroupExpanded(groupId)
                     },
                     onGroupOptionsClick = { groupId ->
-                        showGroupOptionsDialog(groupId, viewModel)
+                        // Show group options menu - could be enhanced
                     }
                 )
             }

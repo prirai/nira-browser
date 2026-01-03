@@ -354,16 +354,19 @@ class TabOrderManager private constructor(
      * Toggle group expansion state
      */
     suspend fun toggleGroupExpansion(groupId: String) {
+        android.util.Log.d("TabOrderManager", "toggleGroupExpansion called for: $groupId")
         // Just update local order for UI state
         val current = _currentOrder.value ?: return
         val newOrder = current.primaryOrder.map { item ->
             if (item is UnifiedTabOrder.OrderItem.TabGroup && item.groupId == groupId) {
+                android.util.Log.d("TabOrderManager", "Found group $groupId, current isExpanded=${item.isExpanded}, toggling to ${!item.isExpanded}")
                 item.copy(isExpanded = !item.isExpanded)
             } else {
                 item
             }
         }
         saveOrder(current.copy(primaryOrder = newOrder))
+        android.util.Log.d("TabOrderManager", "Group expansion toggled successfully")
     }
     
     /**
