@@ -262,13 +262,25 @@ class TabViewModel(
      * Toggle group expanded/collapsed state
      */
     fun toggleGroupExpanded(groupId: String) {
+        android.util.Log.d("TabViewModel", "toggleGroupExpanded called for: $groupId")
         val current = _expandedGroups.value.toMutableSet()
         if (current.contains(groupId)) {
+            android.util.Log.d("TabViewModel", "Collapsing group $groupId")
             current.remove(groupId)
         } else {
+            android.util.Log.d("TabViewModel", "Expanding group $groupId")
             current.add(groupId)
         }
         _expandedGroups.value = current
+        
+        // Also update in the order manager to keep them in sync
+        viewModelScope.launch {
+            try {
+                orderManager.toggleGroupExpansion(groupId)
+            } catch (e: Exception) {
+                android.util.Log.e("TabViewModel", "Error toggling group in order manager", e)
+            }
+        }
     }
     
     /**
@@ -348,29 +360,6 @@ class TabViewModel(
                         // Note: Group events observer will trigger the UI refresh
                     }
                 }
-            }
-        }
-    }
-    
-    /**
-     * Ungroup a tab from its group
-     */
-    fun ungroupTab(tabId: String, groupId: String) {
-        viewModelScope.launch {
-            _currentProfileId.value?.let { profileId ->
-                // Remove tab from group
-                groupManager.removeTabFromGroup(tabId, notifyChange = true)
-                
-                // If group now has only 1 tab, ungroup that tab too
-                val group = groupManager.getGroup(groupId)
-                if (group != null && group.tabIds.size == 1) {
-                    groupManager.removeTabFromGroup(group.tabIds[0], notifyChange = true)
-                }
-                
-                // Save order
-                saveCurrentOrder(profileId)
-                
-                // Note: Group events observer will trigger the UI refresh
             }
         }
     }
@@ -728,10 +717,37 @@ class TabViewModel(
      */
     fun duplicateTab(tabId: String) {
         viewModelScope.launch {
-            // This will be handled by the caller (e.g., BrowserActivity)
-            // through the components.tabsUseCases.addTab() with same URL
+            val tab = _tabs.value.find { it.id == tabId }
+            if (tab == null) {
+                android.util.Log.e("TabViewModel", "Cannot duplicate - tab not found: $tabId")
+                return@launch
+            }
+            
+            // Get group if tab is in a group
+            val groupId = _groups.value.find { group -> 
+                group.tabIds.contains(tabId) 
+            }?.id
+            
+            android.util.Log.d("TabViewModel", "Duplicating tab $tabId in group $groupId, url: ${tab.content.url}")
+            
+            // Note: Actual tab creation must be handled by the caller through:
+            // components.tabsUseCases.addTab(url = tab.content.url, private = tab.content.private)
+            // Then if groupId != null: addTabToGroup(newTabId, groupId)
+            
+            // For now, we'll emit an event that can be observed
+            _duplicateTabEvent.emit(DuplicateTabRequest(tabId, tab.content.url, groupId))
         }
     }
+    
+    // Event flow for duplicate tab requests
+    private val _duplicateTabEvent = MutableSharedFlow<DuplicateTabRequest>()
+    val duplicateTabEvent: SharedFlow<DuplicateTabRequest> = _duplicateTabEvent.asSharedFlow()
+    
+    data class DuplicateTabRequest(
+        val originalTabId: String,
+        val url: String,
+        val groupId: String?
+    )
     
     /**
      * Toggle pin status of a tab
@@ -768,6 +784,59 @@ class TabViewModel(
     }
     
     /**
+     * Close all other tabs except the specified one
+     */
+    fun closeOtherTabs(keepTabId: String) {
+        viewModelScope.launch {
+            _currentProfileId.value?.let { profileId ->
+                // Get all tab IDs except the one to keep
+                val tabsToClose = _tabs.value.filter { it.id != keepTabId }.map { it.id }
+                // This will be handled by the caller to close these tabs
+                // The caller should iterate through tabsToClose and call removeTab() for each
+            }
+        }
+    }
+    
+    /**
+     * Pin a tab (move to first position in its group or root)
+     */
+    fun pinTab(tabId: String) {
+        viewModelScope.launch {
+            _currentProfileId.value?.let { profileId ->
+                val tab = _tabs.value.find { it.id == tabId } ?: return@launch
+                val group = _groups.value.find { it.tabIds.contains(tabId) }
+                
+                if (group != null) {
+                    // Tab is in a group - move to first position in that group
+                    val updatedTabIds = listOf(tabId) + group.tabIds.filter { it != tabId }
+                    groupManager.updateGroup(
+                        groupId = group.id,
+                        name = group.name,
+                        color = group.color,
+                        tabIds = updatedTabIds
+                    )
+                } else {
+                    // Tab is not in a group - move to first position in root
+                    moveTabToPosition(tabId, 0)
+                }
+                
+                saveCurrentOrder(profileId)
+            }
+        }
+    }
+    
+    /**
+     * Pin a group (move to first position in order)
+     */
+    fun pinGroup(groupId: String) {
+        viewModelScope.launch {
+            _currentProfileId.value?.let { profileId ->
+                reorderGroup(groupId, 0)
+            }
+        }
+    }
+    
+    /**
      * Close all tabs in a group
      */
     fun closeAllTabsInGroup(groupId: String) {
@@ -775,6 +844,46 @@ class TabViewModel(
             val group = _groups.value.find { it.id == groupId } ?: return@launch
             // This will be handled by the caller
             // to close all tabs in group.tabIds
+        }
+    }
+    
+    /**
+     * Create a new tab in a specific group
+     */
+    fun createNewTabInGroup(groupId: String) {
+        viewModelScope.launch {
+            // This will be handled by the caller (e.g., BrowserActivity)
+            // through the components.tabsUseCases.addTab() and then addTabToGroup
+        }
+    }
+    
+    /**
+     * Move a group to a different profile
+     */
+    fun moveGroupToProfile(groupId: String, profileId: String) {
+        viewModelScope.launch {
+            val group = groupManager.getGroup(groupId) ?: return@launch
+            
+            // Update the group's contextId to match the new profile
+            val newContextId = when (profileId) {
+                "private" -> "private"
+                "default" -> "profile_default"
+                else -> "profile_$profileId"
+            }
+            
+            // Update the group
+            groupManager.updateGroup(
+                groupId = groupId,
+                name = group.name,
+                color = group.color,
+                tabIds = group.tabIds,
+                contextId = newContextId
+            )
+            
+            // Refresh the UI
+            _currentProfileId.value?.let { currentProfile ->
+                refreshGroupsForProfile(currentProfile)
+            }
         }
     }
     
@@ -790,5 +899,91 @@ class TabViewModel(
      */
     fun createGroupWithTabs(tabIds: List<String>, name: String? = null) {
         createGroup(tabIds, name)
+    }
+    
+    // Methods for drag-and-drop integration
+    
+    /**
+     * Create a new group from two tabs
+     */
+    fun createGroupFromTabs(tabId1: String, tabId2: String) {
+        groupTabsTogether(tabId1, tabId2)
+    }
+    
+    /**
+     * Add tab to group, removing from previous group if needed
+     */
+    fun addTabToGroup(tabId: String, groupId: String, fromGroupId: String?) {
+        viewModelScope.launch {
+            _currentProfileId.value?.let { profileId ->
+                // If tab was in another group, remove it first
+                if (fromGroupId != null) {
+                    groupManager.removeTabFromGroup(tabId, notifyChange = false)
+                }
+                
+                // Add to new group
+                groupManager.addTabToGroup(tabId, groupId, position = null, notifyChange = true)
+                
+                saveCurrentOrder(profileId)
+            }
+        }
+    }
+    
+    /**
+     * Ungroup a tab (remove from group)
+     */
+    fun ungroupTab(tabId: String, groupId: String?) {
+        viewModelScope.launch {
+            _currentProfileId.value?.let { profileId ->
+                groupManager.removeTabFromGroup(tabId, notifyChange = true)
+                
+                // If group has only 1 tab left, ungroup that too
+                if (groupId != null) {
+                    val group = groupManager.getGroup(groupId)
+                    if (group != null && group.tabIds.size == 1) {
+                        groupManager.removeTabFromGroup(group.tabIds[0], notifyChange = true)
+                    }
+                }
+                
+                saveCurrentOrder(profileId)
+            }
+        }
+    }
+    
+    /**
+     * Reorder a group to a new position
+     */
+    fun reorderGroup(groupId: String, targetGroupId: String) {
+        viewModelScope.launch {
+            _currentProfileId.value?.let { profileId ->
+                val order = orderManager.currentOrder.value ?: return@launch
+                
+                val fromIndex = order.primaryOrder.indexOfFirst { 
+                    it is UnifiedTabOrder.OrderItem.TabGroup && it.groupId == groupId 
+                }
+                val toIndex = order.primaryOrder.indexOfFirst { 
+                    it is UnifiedTabOrder.OrderItem.TabGroup && it.groupId == targetGroupId 
+                }
+                
+                if (fromIndex >= 0 && toIndex >= 0 && fromIndex != toIndex) {
+                    orderManager.reorderItem(fromIndex, toIndex)
+                    saveCurrentOrder(profileId)
+                }
+            }
+        }
+    }
+    
+    /**
+     * Toggle group collapse state
+     */
+    fun toggleGroupCollapse(groupId: String) {
+        toggleGroupExpanded(groupId)
+    }
+    
+    /**
+     * Select a tab
+     */
+    fun selectTab(tabId: String) {
+        _selectedTabId.value = tabId
     }
 }

@@ -19,6 +19,22 @@ object UnifiedDragDropHandler {
     
     private const val TAG = "UnifiedDragDrop"
     
+    // Helper extension properties to extract group data from either type
+    private val ListItem.isGroupItem: Boolean
+        get() = this is ListItem.GroupHeader
+    
+    private val ListItem.groupIdOrNull: String?
+        get() = when (this) {
+            is ListItem.GroupHeader -> this.groupId
+            else -> null
+        }
+    
+    private val ListItem.groupContextIdOrNull: String?
+        get() = when (this) {
+            is ListItem.GroupHeader -> this.contextId
+            else -> null
+        }
+    
     /**
      * Handle drop from reorderable library callback.
      * 
@@ -48,33 +64,28 @@ object UnifiedDragDropHandler {
         
         return when {
             // Scenario 1: Root element → Root element (simple reorder)
-            draggedItem is ListItem.GroupHeader && targetItem is ListItem.GroupHeader -> {
-                reorderGroupToGroup(viewModel, draggedItem, targetItem, toIndex)
+            draggedItem.isGroupItem && targetItem.isGroupItem -> {
+                reorderGroupToGroup(viewModel, draggedItem.groupIdOrNull!!, targetItem.groupIdOrNull!!, toIndex)
             }
             
-            draggedItem is ListItem.GroupHeader && targetItem is ListItem.Tab && !targetItem.isInGroup -> {
-                reorderGroupToRootPosition(viewModel, draggedItem, toIndex)
+            draggedItem.isGroupItem && targetItem is ListItem.Tab && !targetItem.isInGroup -> {
+                reorderGroupToRootPosition(viewModel, draggedItem.groupIdOrNull!!, toIndex)
             }
             
-            draggedItem is ListItem.Tab && !draggedItem.isInGroup && targetItem is ListItem.GroupHeader -> {
+            draggedItem is ListItem.Tab && !draggedItem.isInGroup && targetItem.isGroupItem -> {
                 reorderTabToRootPosition(viewModel, draggedItem, toIndex)
             }
             
             draggedItem is ListItem.Tab && !draggedItem.isInGroup && 
             targetItem is ListItem.Tab && !targetItem.isInGroup -> {
-                // When moving a root tab to another root tab's position:
-                // - If they're different tabs, reorder
-                // - This provides smooth reordering UX
-                // For grouping, users can:
-                // 1. Drag tab to group header
-                // 2. Use context menu to create/join groups
-                // 3. Use batch selection (future enhancement)
+                // When dropping a root tab on another root tab, just reorder
+                // Don't auto-group - grouping should be an explicit action (drag onto group header or use menu)
                 reorderRootTabs(viewModel, draggedItem, targetItem, toIndex)
             }
             
             // Scenario 2: Tab → Group header (add to group)
-            draggedItem is ListItem.Tab && targetItem is ListItem.GroupHeader -> {
-                addTabToGroup(viewModel, draggedItem, targetItem, tabs, groups)
+            draggedItem is ListItem.Tab && targetItem.isGroupItem -> {
+                addTabToGroup(viewModel, draggedItem, targetItem.groupIdOrNull!!, targetItem.groupContextIdOrNull, tabs, groups)
             }
             
             // Scenario 3: Grouped tab → Outside group (ungroup)
@@ -98,9 +109,10 @@ object UnifiedDragDropHandler {
             }
             
             // Scenario 6: Group → Group (merge groups - on exact drop)
-            draggedItem is ListItem.GroupHeader && targetItem is ListItem.GroupHeader &&
+            draggedItem.isGroupItem && targetItem.isGroupItem &&
             fromIndex == toIndex -> {
-                mergeGroups(viewModel, draggedItem, targetItem)
+                mergeGroups(viewModel, draggedItem.groupIdOrNull!!, draggedItem.groupContextIdOrNull, 
+                    targetItem.groupIdOrNull!!, targetItem.groupContextIdOrNull)
             }
             
             else -> {
@@ -110,38 +122,24 @@ object UnifiedDragDropHandler {
         }
     }
     
-    /**
-     * Determine if two tabs should be grouped together based on proximity
-     * 
-     * When using the reorderable library, tabs are grouped when:
-     * - They are dropped adjacent to each other (distance of 1)
-     * - This allows for intuitive grouping by dragging one tab next to another
-     */
-    private fun shouldGroupTogether(fromIndex: Int, toIndex: Int): Boolean {
-        // Group when dropped adjacent (next to each other)
-        // This happens when you drag a tab and drop it right next to another tab
-        val distance = kotlin.math.abs(fromIndex - toIndex)
-        return distance == 1
-    }
-    
     private suspend fun reorderGroupToGroup(
         viewModel: TabViewModel,
-        dragged: ListItem.GroupHeader,
-        target: ListItem.GroupHeader,
+        draggedGroupId: String,
+        targetGroupId: String,
         targetIndex: Int
     ): DropResult {
-        Log.d(TAG, "Reorder group ${dragged.groupId} to position $targetIndex")
-        viewModel.reorderGroup(dragged.groupId, targetIndex)
+        Log.d(TAG, "Reorder group $draggedGroupId to position $targetIndex")
+        viewModel.reorderGroup(draggedGroupId, targetIndex)
         return DropResult.Reordered
     }
     
     private suspend fun reorderGroupToRootPosition(
         viewModel: TabViewModel,
-        dragged: ListItem.GroupHeader,
+        draggedGroupId: String,
         targetIndex: Int
     ): DropResult {
-        Log.d(TAG, "Reorder group ${dragged.groupId} to root position $targetIndex")
-        viewModel.reorderGroup(dragged.groupId, targetIndex)
+        Log.d(TAG, "Reorder group $draggedGroupId to root position $targetIndex")
+        viewModel.reorderGroup(draggedGroupId, targetIndex)
         return DropResult.Reordered
     }
     
@@ -187,11 +185,12 @@ object UnifiedDragDropHandler {
     private suspend fun addTabToGroup(
         viewModel: TabViewModel,
         dragged: ListItem.Tab,
-        targetGroup: ListItem.GroupHeader,
+        targetGroupId: String,
+        targetGroupContextId: String?,
         tabs: List<TabSessionState>,
         groups: List<com.prirai.android.nira.browser.tabgroups.TabGroupData>
     ): DropResult {
-        val group = groups.find { it.id == targetGroup.groupId }
+        val group = groups.find { it.id == targetGroupId }
         if (group == null) {
             return DropResult.Error("Group not found")
         }
@@ -203,14 +202,14 @@ object UnifiedDragDropHandler {
         }
         
         // If tab is in a different group, remove it first
-        if (dragged.groupId != null && dragged.groupId != targetGroup.groupId) {
-            Log.d(TAG, "Moving tab ${dragged.tab.id} from group ${dragged.groupId} to ${targetGroup.groupId}")
+        if (dragged.groupId != null && dragged.groupId != targetGroupId) {
+            Log.d(TAG, "Moving tab ${dragged.tab.id} from group ${dragged.groupId} to $targetGroupId")
             viewModel.removeTabFromGroup(dragged.tab.id)
             delay(50)
         }
         
-        Log.d(TAG, "Adding tab ${dragged.tab.id} to group ${targetGroup.groupId}")
-        viewModel.addTabToGroup(dragged.tab.id, targetGroup.groupId)
+        Log.d(TAG, "Adding tab ${dragged.tab.id} to group $targetGroupId")
+        viewModel.addTabToGroup(dragged.tab.id, targetGroupId)
         return DropResult.AddedToGroup
     }
     
@@ -267,21 +266,23 @@ object UnifiedDragDropHandler {
     
     private suspend fun mergeGroups(
         viewModel: TabViewModel,
-        dragged: ListItem.GroupHeader,
-        target: ListItem.GroupHeader
+        draggedGroupId: String,
+        draggedContextId: String?,
+        targetGroupId: String,
+        targetContextId: String?
     ): DropResult {
-        if (dragged.groupId == target.groupId) {
+        if (draggedGroupId == targetGroupId) {
             return DropResult.NoChange
         }
         
         // Check context compatibility
-        if (dragged.contextId != target.contextId) {
+        if (draggedContextId != targetContextId) {
             Log.w(TAG, "Cannot merge groups with different contexts")
             return DropResult.Error("Incompatible contexts")
         }
         
-        Log.d(TAG, "Merging group ${dragged.groupId} into ${target.groupId}")
-        viewModel.mergeGroups(dragged.groupId, target.groupId)
+        Log.d(TAG, "Merging group $draggedGroupId into $targetGroupId")
+        viewModel.mergeGroups(draggedGroupId, targetGroupId)
         return DropResult.GroupsMerged
     }
     

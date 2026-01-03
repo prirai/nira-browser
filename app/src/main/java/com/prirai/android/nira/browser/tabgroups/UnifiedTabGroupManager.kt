@@ -361,7 +361,8 @@ class UnifiedTabGroupManager private constructor(private val context: Context) {
         groupId: String,
         name: String? = null,
         color: Int? = null,
-        tabIds: List<String>? = null
+        tabIds: List<String>? = null,
+        contextId: String? = null
     ): Boolean = withContext(Dispatchers.IO) {
         val group = groupsCache[groupId] ?: return@withContext false
         val dbGroup = dao.getGroupById(groupId) ?: return@withContext false
@@ -369,11 +370,13 @@ class UnifiedTabGroupManager private constructor(private val context: Context) {
         val updatedName = name ?: group.name
         val updatedColor = color ?: group.color
         val updatedTabIds = tabIds ?: group.tabIds
+        val updatedContextId = contextId ?: group.contextId
 
         // Update database
         val updatedDbGroup = dbGroup.copy(
             name = updatedName,
-            color = colorToString(updatedColor)
+            color = colorToString(updatedColor),
+            contextId = updatedContextId
         )
         dao.updateGroup(updatedDbGroup)
 
@@ -394,7 +397,8 @@ class UnifiedTabGroupManager private constructor(private val context: Context) {
         val updatedGroup = group.copy(
             name = updatedName,
             color = updatedColor,
-            tabIds = updatedTabIds
+            tabIds = updatedTabIds,
+            contextId = updatedContextId
         )
         groupsCache[groupId] = updatedGroup
 
