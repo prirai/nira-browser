@@ -44,7 +44,7 @@ fun TabContextMenu(
         ) {
             TabMenuHeader(tab)
             HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-            
+
             TabMenuItem(
                 icon = { Icon(painterResource(R.drawable.mozac_ic_tab_new_24), "New Tab") },
                 text = "New Tab",
@@ -55,7 +55,7 @@ fun TabContextMenu(
                     }
                 }
             )
-            
+
             TabMenuItem(
                 icon = { Icon(painterResource(R.drawable.control_point_duplicate_24px), "Duplicate") },
                 text = "Duplicate Tab",
@@ -66,9 +66,9 @@ fun TabContextMenu(
                     }
                 }
             )
-            
+
             HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-            
+
             if (isInGroup) {
                 TabMenuItem(
                     icon = { Icon(painterResource(R.drawable.ungroup_24px), "Remove from Island") },
@@ -92,7 +92,7 @@ fun TabContextMenu(
                     }
                 )
             }
-            
+
             TabMenuItem(
                 icon = { Icon(painterResource(R.drawable.ic_pin_outline), "Pin Tab") },
                 text = "Pin Tab",
@@ -103,9 +103,9 @@ fun TabContextMenu(
                     }
                 }
             )
-            
+
             HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-            
+
             TabMenuItem(
                 icon = { Icon(painterResource(R.drawable.ic_share), "Share") },
                 text = "Share Tab",
@@ -114,7 +114,7 @@ fun TabContextMenu(
                     // Share functionality will be handled by the caller
                 }
             )
-            
+
             TabMenuItem(
                 icon = { Icon(painterResource(R.drawable.ic_select_all_24), "Select Tabs") },
                 text = "Select Tabs",
@@ -125,9 +125,9 @@ fun TabContextMenu(
                     }
                 }
             )
-            
+
             HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-            
+
             TabMenuItem(
                 icon = { Icon(painterResource(R.drawable.ic_close_small), "Close Tab") },
                 text = "Close Tab",
@@ -138,7 +138,7 @@ fun TabContextMenu(
                     }
                 }
             )
-            
+
             TabMenuItem(
                 icon = { Icon(painterResource(R.drawable.ic_round_close), "Close Other Tabs") },
                 text = "Close Other Tabs",
@@ -166,10 +166,10 @@ fun GroupContextMenu(
     var showRenameDialog by remember { mutableStateOf(false) }
     var showColorPicker by remember { mutableStateOf(false) }
     var showProfilePicker by remember { mutableStateOf(false) }
-    
+
     val groups by viewModel.groups.collectAsState()
     val currentGroup = groups.find { it.id == groupId }
-    
+
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         modifier = modifier
@@ -184,22 +184,23 @@ fun GroupContextMenu(
                 style = MaterialTheme.typography.titleMedium,
                 modifier = Modifier.padding(16.dp)
             )
-            
+
             HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-            
+
             TabMenuItem(
                 icon = { Icon(painterResource(R.drawable.mozac_ic_tab_new_24), "New Tab in Group") },
                 text = "New Tab in Island",
                 onClick = {
                     scope.launch {
-                        viewModel.createNewTabInGroup(groupId)
+                        val contextId = currentGroup?.contextId ?: "profile_default"
+                        viewModel.createNewTabInGroup(groupId, contextId)
                         onDismiss()
                     }
                 }
             )
-            
+
             HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-            
+
             TabMenuItem(
                 icon = { Icon(painterResource(R.drawable.ic_edit), "Rename") },
                 text = "Rename Island",
@@ -207,7 +208,7 @@ fun GroupContextMenu(
                     showRenameDialog = true
                 }
             )
-            
+
             TabMenuItem(
                 icon = { Icon(painterResource(R.drawable.ic_palette), "Change Color") },
                 text = "Change Color",
@@ -215,7 +216,7 @@ fun GroupContextMenu(
                     showColorPicker = true
                 }
             )
-            
+
             TabMenuItem(
                 icon = { Icon(painterResource(R.drawable.ic_expand_more), "Collapse") },
                 text = "Collapse/Expand",
@@ -226,7 +227,7 @@ fun GroupContextMenu(
                     }
                 }
             )
-            
+
             TabMenuItem(
                 icon = { Icon(painterResource(R.drawable.ic_pin_outline), "Pin Island") },
                 text = "Pin Island",
@@ -237,9 +238,9 @@ fun GroupContextMenu(
                     }
                 }
             )
-            
+
             HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-            
+
             TabMenuItem(
                 icon = { Icon(painterResource(R.drawable.ungroup_24px), "Ungroup") },
                 text = "Ungroup All Tabs",
@@ -250,7 +251,7 @@ fun GroupContextMenu(
                     }
                 }
             )
-            
+
             TabMenuItem(
                 icon = { Icon(painterResource(R.drawable.ic_close_small), "Close All") },
                 text = "Close All Tabs",
@@ -261,7 +262,7 @@ fun GroupContextMenu(
                     }
                 }
             )
-            
+
             TabMenuItem(
                 icon = { Icon(painterResource(R.drawable.ic_profile), "Move to Profile") },
                 text = "Move to Profile",
@@ -271,7 +272,7 @@ fun GroupContextMenu(
             )
         }
     }
-    
+
     // Show dialogs
     if (showRenameDialog && currentGroup != null) {
         RenameGroupDialog(
@@ -289,7 +290,7 @@ fun GroupContextMenu(
             }
         )
     }
-    
+
     if (showColorPicker && currentGroup != null) {
         ColorPickerDialog(
             currentColor = currentGroup.color,
@@ -306,7 +307,7 @@ fun GroupContextMenu(
             }
         )
     }
-    
+
     if (showProfilePicker) {
         ProfilePickerDialog(
             onConfirm = { profileId ->
@@ -340,7 +341,7 @@ private fun TabMenuHeader(tab: TabSessionState) {
                 modifier = Modifier.size(24.dp)
             )
         }
-        
+
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = tab.content.title.ifEmpty { "New Tab" },
@@ -388,7 +389,7 @@ fun RenameGroupDialog(
     onDismiss: () -> Unit
 ) {
     var name by remember { mutableStateOf(currentName) }
-    
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Rename Island") },
@@ -442,7 +443,7 @@ fun ColorPickerDialog(
         0xFFFFB74D.toInt(), // Orange
         0xFFFF8A65.toInt()  // Deep Orange
     )
-    
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Choose Color") },
@@ -491,7 +492,7 @@ fun ProfilePickerDialog(
             "personal" to "Personal Profile"
         )
     }
-    
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Move to Profile") },

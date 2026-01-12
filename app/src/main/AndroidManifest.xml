@@ -1,52 +1,63 @@
-<?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools">
+<?xml version="1.0" encoding="utf-8" ?>
+<manifest
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+>
 
   <uses-permission android:name="android.permission.CAMERA" />
   <uses-feature
-      android:name="android.hardware.camera"
-      android:required="false" />
+        android:name="android.hardware.camera"
+        android:required="false"
+    />
   <uses-feature
-      android:name="android.hardware.camera.autofocus"
-      android:required="false" />
+        android:name="android.hardware.camera.autofocus"
+        android:required="false"
+    />
   <uses-permission android:name="android.permission.RECORD_AUDIO" />
-  <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
-  <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
+  <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+  <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
   <uses-permission android:name="android.permission.INTERNET" />
   <uses-permission
-      android:name="android.permission.WRITE_EXTERNAL_STORAGE"
-      android:maxSdkVersion="28"
-      tools:ignore="ScopedStorage"
-      />
+        android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="28"
+        tools:ignore="ScopedStorage"
+    />
   <uses-permission android:name="android.permission.BLUETOOTH" />
-  <uses-permission android:name="com.android.launcher.permission.INSTALL_SHORTCUT" />
+  <uses-permission
+        android:name="com.android.launcher.permission.INSTALL_SHORTCUT"
+    />
   <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
   <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+  <uses-permission android:name="android.permission.VIBRATE" />
 
   <application
-    android:name=".BrowserApp"
-    android:allowBackup="true"
-    android:fullBackupContent="@xml/backup_rules"
-    android:dataExtractionRules="@xml/backup_rules"
-      android:icon="@mipmap/ic_launcher"
-    android:label="@string/app_name"
-    android:roundIcon="@mipmap/ic_launcher_round"
-    android:supportsRtl="true"
-    android:theme="@style/AppThemeNotActionBar">
+        android:name=".BrowserApp"
+        android:allowBackup="true"
+        android:fullBackupContent="@xml/backup_rules"
+        android:dataExtractionRules="@xml/backup_rules"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/AppThemeNotActionBar"
+    >
 
     <!-- WebAuthn/FIDO2 asset links metadata -->
     <meta-data
-        android:name="asset_statements"
-        android:resource="@string/asset_statements" />
+            android:name="asset_statements"
+            android:resource="@string/asset_statements"
+        />
 
-    <activity android:name=".BrowserActivity"
-        android:theme="@style/SplashTheme"
-        android:launchMode="singleTask"
-        android:resizeableActivity="true"
-        android:supportsPictureInPicture="true"
-        android:windowSoftInputMode="adjustResize"
-        android:configChanges="keyboard|keyboardHidden|mcc|mnc|orientation|screenSize|locale|layoutDirection|smallestScreenSize|screenLayout"
-        android:exported="true">
+    <activity
+            android:name=".BrowserActivity"
+            android:theme="@style/SplashTheme"
+            android:launchMode="singleTask"
+            android:resizeableActivity="true"
+            android:supportsPictureInPicture="true"
+            android:windowSoftInputMode="adjustResize"
+            android:configChanges="keyboard|keyboardHidden|mcc|mnc|orientation|screenSize|locale|layoutDirection|smallestScreenSize|screenLayout"
+            android:exported="true"
+        >
       <intent-filter>
         <action android:name="android.intent.action.MAIN" />
 
@@ -56,75 +67,87 @@
 
     <!-- Onboarding Activity -->
     <activity
-        android:name=".onboarding.OnboardingActivity"
-        android:theme="@style/AppThemeNotActionBar"
-        android:exported="false" />
+            android:name=".onboarding.OnboardingActivity"
+            android:theme="@style/AppThemeNotActionBar"
+            android:exported="false"
+        />
 
     <!-- Custom Tabs Activity for external apps -->
     <activity
-        android:name=".customtabs.ExternalAppBrowserActivity"
-        android:autoRemoveFromRecents="true"
-        android:configChanges="keyboard|keyboardHidden|mcc|mnc|orientation|screenSize|layoutDirection|smallestScreenSize|screenLayout"
-        android:exported="false"
-        android:persistableMode="persistNever"
-        android:taskAffinity=""
-        android:theme="@style/SplashTheme"
-        android:resizeableActivity="true"
-        android:supportsPictureInPicture="true"
-        android:windowSoftInputMode="adjustResize|stateAlwaysHidden" />
+            android:name=".customtabs.ExternalAppBrowserActivity"
+            android:autoRemoveFromRecents="true"
+            android:configChanges="keyboard|keyboardHidden|mcc|mnc|orientation|screenSize|layoutDirection|smallestScreenSize|screenLayout"
+            android:exported="false"
+            android:persistableMode="persistNever"
+            android:taskAffinity=""
+            android:theme="@style/SplashTheme"
+            android:resizeableActivity="true"
+            android:supportsPictureInPicture="true"
+            android:windowSoftInputMode="adjustResize|stateAlwaysHidden"
+        />
 
     <activity
-        android:name=".addons.AddonsActivity"
-        android:label="@string/mozac_feature_addons_addons"
-        android:parentActivityName=".BrowserActivity"
-        android:theme="@style/AppThemeAddons" />
+            android:name=".addons.AddonsActivity"
+            android:label="@string/mozac_feature_addons_addons"
+            android:parentActivityName=".BrowserActivity"
+            android:theme="@style/AppThemeAddons"
+        />
 
     <activity
-        android:name=".settings.activity.SettingsActivity"
-        android:label="@string/settings"
-        android:theme="@style/AppThemeSettings"/>
+            android:name=".settings.activity.SettingsActivity"
+            android:label="@string/settings"
+            android:theme="@style/AppThemeSettings"
+        />
 
     <activity
-        android:name=".addons.AddonDetailsActivity"
-        android:label="@string/mozac_feature_addons_addons"
-        android:theme="@style/AppThemeAddons" />
-
-    <activity android:name=".addons.InstalledAddonDetailsActivity"
-        android:label="@string/mozac_feature_addons_addons"
-        android:parentActivityName=".addons.AddonsActivity"
-        android:theme="@style/AppThemeAddons" />
+            android:name=".addons.AddonDetailsActivity"
+            android:label="@string/mozac_feature_addons_addons"
+            android:theme="@style/AppThemeAddons"
+        />
 
     <activity
-        android:name=".addons.PermissionsDetailsActivity"
-        android:label="@string/mozac_feature_addons_addons"
-        android:theme="@style/AppThemeAddons" />
+            android:name=".addons.InstalledAddonDetailsActivity"
+            android:label="@string/mozac_feature_addons_addons"
+            android:parentActivityName=".addons.AddonsActivity"
+            android:theme="@style/AppThemeAddons"
+        />
 
     <activity
-        android:name=".addons.AddonSettingsActivity"
-        android:label="@string/mozac_feature_addons_addons"
-        android:theme="@style/AppThemeAddons" />
+            android:name=".addons.PermissionsDetailsActivity"
+            android:label="@string/mozac_feature_addons_addons"
+            android:theme="@style/AppThemeAddons"
+        />
 
     <activity
-        android:name=".addons.NotYetSupportedAddonActivity"
-        android:label="@string/mozac_feature_addons_addons"
-        android:theme="@style/AppThemeAddons" />
+            android:name=".addons.AddonSettingsActivity"
+            android:label="@string/mozac_feature_addons_addons"
+            android:theme="@style/AppThemeAddons"
+        />
 
     <activity
-        android:name=".history.HistoryActivity"
-        android:label="@string/action_history"
-        android:theme="@style/AppThemeAddons" />
+            android:name=".addons.NotYetSupportedAddonActivity"
+            android:label="@string/mozac_feature_addons_addons"
+            android:theme="@style/AppThemeAddons"
+        />
 
     <activity
-        android:name=".IntentReceiverActivity"
-        android:relinquishTaskIdentity="true"
-        android:taskAffinity=""
-        android:exported="true"
-        android:excludeFromRecents="true" >
+            android:name=".history.HistoryActivity"
+            android:label="@string/action_history"
+            android:theme="@style/AppThemeAddons"
+        />
+
+    <activity
+            android:name=".IntentReceiverActivity"
+            android:relinquishTaskIdentity="true"
+            android:taskAffinity=""
+            android:exported="true"
+            android:excludeFromRecents="true"
+        >
 
       <intent-filter>
         <action android:name="android.intent.action.MAIN" />
-        <category android:name="android.intent.category.APP_BROWSER"/>
-        <category android:name="android.intent.category.DEFAULT"/>
+        <category android:name="android.intent.category.APP_BROWSER" />
+        <category android:name="android.intent.category.DEFAULT" />
       </intent-filter>
 
       <intent-filter>
@@ -178,7 +201,7 @@
       </intent-filter>
 
       <intent-filter>
-        <action android:name="android.nfc.action.NDEF_DISCOVERED"/>
+        <action android:name="android.nfc.action.NDEF_DISCOVERED" />
         <category android:name="android.intent.category.DEFAULT" />
         <data android:scheme="http" />
         <data android:scheme="https" />
@@ -187,41 +210,47 @@
     </activity>
 
     <service
-        android:name=".media.MediaSessionService"
-        android:foregroundServiceType="mediaPlayback"
-        android:exported="false" />
+            android:name=".media.MediaSessionService"
+            android:foregroundServiceType="mediaPlayback"
+            android:exported="false"
+        />
 
     <service
-        android:name=".downloads.DownloadService"
-        android:foregroundServiceType="dataSync"
-        android:exported="false" />
+            android:name=".downloads.DownloadService"
+            android:foregroundServiceType="dataSync"
+            android:exported="false"
+        />
 
     <!-- Custom Tabs Service -->
     <service
-        android:name=".customtabs.CustomTabsService"
-        android:exported="true"
-        tools:ignore="ExportedService">
+            android:name=".customtabs.CustomTabsService"
+            android:exported="true"
+            tools:ignore="ExportedService"
+        >
       <intent-filter>
-        <action android:name="android.support.customtabs.action.CustomTabsService" />
+        <action
+                    android:name="android.support.customtabs.action.CustomTabsService"
+                />
       </intent-filter>
     </service>
 
     <!-- WebApp Activity for PWAs - Fullscreen, no browser chrome -->
     <activity
-        android:name=".webapp.WebAppActivity"
-        android:configChanges="orientation|screenSize|keyboard|keyboardHidden"
-        android:exported="true"
-        android:launchMode="singleTop"
-        android:excludeFromRecents="false"
-        android:documentLaunchMode="intoExisting"
-        android:theme="@style/WebAppTheme">
-      
+            android:name=".webapp.WebAppActivity"
+            android:configChanges="orientation|screenSize|keyboard|keyboardHidden"
+            android:exported="true"
+            android:launchMode="singleTop"
+            android:excludeFromRecents="false"
+            android:documentLaunchMode="intoExisting"
+            android:theme="@style/WebAppTheme"
+        >
+
       <!-- Handle PWA shortcuts created by webAppUseCases.addToHomescreen() -->
       <!-- Removed LAUNCHER category to prevent showing in app drawer -->
       <intent-filter>
         <action android:name="android.intent.action.MAIN" />
       </intent-filter>
-      
+
       <!-- Handle Mozilla PWA launches -->
       <intent-filter>
         <action android:name="mozilla.components.feature.pwa.VIEW_PWA" />

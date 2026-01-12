@@ -25,11 +25,21 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import mozilla.components.browser.state.state.TabSessionState
 import kotlinx.coroutines.launch
+import com.prirai.android.nira.browser.tabs.compose.DragLayer
+import com.prirai.android.nira.browser.tabs.compose.DraggableItemType
+import com.prirai.android.nira.browser.tabs.compose.DropTargetType
+import com.prirai.android.nira.browser.tabs.compose.InsertionIndicator
+import com.prirai.android.nira.browser.tabs.compose.draggableItem
+import com.prirai.android.nira.browser.tabs.compose.dragVisualFeedback
+import com.prirai.android.nira.browser.tabs.compose.dropTarget
+import com.prirai.android.nira.browser.tabs.compose.rememberDragCoordinator
 
 /**
  * List view for tab sheet
@@ -39,6 +49,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun TabSheetListView(
     viewModel: TabViewModel,
+    orderManager: TabOrderManager,
     onTabClick: (String) -> Unit,
     onTabClose: (String) -> Unit,
     onTabLongPress: (TabSessionState, Boolean) -> Unit = { _, _ -> },
@@ -54,6 +65,13 @@ fun TabSheetListView(
 
     val scope = rememberCoroutineScope()
     val listState = rememberLazyListState()
+
+    // Create drag coordinator
+    val coordinator = rememberDragCoordinator(
+        scope = scope,
+        viewModel = viewModel,
+        orderManager = orderManager
+    )
 
     // Menu state
     var menuTab by remember { mutableStateOf<TabSessionState?>(null) }
@@ -79,151 +97,320 @@ fun TabSheetListView(
         UnifiedItemBuilder.deduplicateItems(items)
     }
 
-    LazyColumn(
-        state = listState,
-        modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(vertical = 8.dp)
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .onGloballyPositioned { layoutCoordinates ->
+                // Track scroll container bounds for auto-scroll
+                val bounds = layoutCoordinates.boundsInRoot()
+                coordinator.setScrollContainerBounds(bounds)
+            }
     ) {
-        items(
-            items = uniqueItems,
-            key = { it.id }
-        ) { item ->
-            when (item) {
-                is UnifiedItem.GroupHeader -> {
-                    GroupHeaderItem(
-                        groupId = item.groupId,
-                        title = item.title,
-                        color = item.color,
-                        tabCount = item.tabCount,
-                        isExpanded = item.isExpanded,
-                        onHeaderClick = { onGroupClick(item.groupId) },
-                        onOptionsClick = {
-                            menuGroupId = item.groupId
-                            menuGroupName = item.title
-                            showGroupMenu = true
-                            onGroupOptionsClick(item.groupId)
-                        },
-                        modifier = Modifier.animateItem()
-                    )
-                }
-
-                is UnifiedItem.GroupedTab -> {
-                    val group = groups.find { it.id == item.groupId }
-                    val dismissState = rememberSwipeToDismissBoxState(
-                        confirmValueChange = { dismissValue ->
-                            if (dismissValue == SwipeToDismissBoxValue.EndToStart) {
-                                onTabClose(item.tab.id)
-                                true
-                            } else {
-                                false
-                            }
-                        }
-                    )
-
-                    SwipeToDismissBox(
-                        state = dismissState,
-                        backgroundContent = {
-                            val color = when (dismissState.targetValue) {
-                                SwipeToDismissBoxValue.EndToStart -> MaterialTheme.colorScheme.errorContainer
-                                else -> Color.Transparent
-                            }
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .background(color)
-                                    .padding(horizontal = 20.dp),
-                                contentAlignment = Alignment.CenterEnd
-                            ) {
-                                if (dismissState.targetValue == SwipeToDismissBoxValue.EndToStart) {
-                                    Icon(
-                                        imageVector = Icons.Default.Delete,
-                                        contentDescription = "Delete",
-                                        tint = MaterialTheme.colorScheme.onErrorContainer
-                                    )
-                                }
-                            }
-                        },
-                        enableDismissFromStartToEnd = false,
-                        enableDismissFromEndToStart = true
-                    ) {
-                        TabListItem(
-                            tab = item.tab,
-                            isSelected = item.tab.id == selectedTabId,
-                            isInGroup = true,
-                            isLastInGroup = item.isLastInGroup,
+        // Static layer
+        LazyColumn(
+            state = listState,
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(vertical = 8.dp)
+        ) {
+            items(
+                items = uniqueItems,
+                key = { it.id }
+            ) { item ->
+                when (item) {
+                    is UnifiedItem.GroupHeader -> {
+                        GroupHeaderItem(
                             groupId = item.groupId,
-                            groupColor = group?.color,
-                            onTabClick = { onTabClick(item.tab.id) },
-                            onTabClose = { onTabClose(item.tab.id) },
-                            onTabLongPress = {
-                                menuTab = item.tab
-                                menuIsInGroup = true
-                                showTabMenu = true
+                            title = item.title,
+                            color = item.color,
+                            tabCount = item.tabCount,
+                            isExpanded = item.isExpanded,
+                            onHeaderClick = { onGroupClick(item.groupId) },
+                            onOptionsClick = {
+                                menuGroupId = item.groupId
+                                menuGroupName = item.title
+                                showGroupMenu = true
+                                onGroupOptionsClick(item.groupId)
                             },
-                            modifier = Modifier.animateItem()
+                            modifier = Modifier
+                                .animateItem()
+                                .draggableItem(
+                                    itemType = DraggableItemType.Group(item.groupId),
+                                    coordinator = coordinator
+                                )
+                                .dropTarget(
+                                    id = item.groupId,
+                                    type = DropTargetType.GROUP_HEADER,
+                                    coordinator = coordinator,
+                                    metadata = mapOf<String, Any>(
+                                        "groupId" to item.groupId,
+                                        "contextId" to (item.contextId ?: "")
+                                    )
+                                )
+                                .dragVisualFeedback(item.groupId, coordinator)
                         )
                     }
-                }
 
-                is UnifiedItem.SingleTab -> {
-                    val dismissState = rememberSwipeToDismissBoxState(
-                        confirmValueChange = { dismissValue ->
-                            if (dismissValue == SwipeToDismissBoxValue.EndToStart) {
-                                onTabClose(item.tab.id)
-                                true
-                            } else {
-                                false
-                            }
-                        }
-                    )
+                    is UnifiedItem.GroupedTab -> {
+                        val group = groups.find { it.id == item.groupId }
+                        val dismissState = rememberSwipeToDismissBoxState(
+                            confirmValueChange = { dismissValue ->
+                                when (dismissValue) {
+                                    SwipeToDismissBoxValue.EndToStart -> {
+                                        onTabClose(item.tab.id)
+                                        true
+                                    }
 
-                    SwipeToDismissBox(
-                        state = dismissState,
-                        backgroundContent = {
-                            val color = when (dismissState.targetValue) {
-                                SwipeToDismissBoxValue.EndToStart -> MaterialTheme.colorScheme.errorContainer
-                                else -> Color.Transparent
-                            }
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .background(color)
-                                    .padding(horizontal = 20.dp),
-                                contentAlignment = Alignment.CenterEnd
-                            ) {
-                                if (dismissState.targetValue == SwipeToDismissBoxValue.EndToStart) {
-                                    Icon(
-                                        imageVector = Icons.Default.Delete,
-                                        contentDescription = "Delete",
-                                        tint = MaterialTheme.colorScheme.onErrorContainer
-                                    )
+                                    SwipeToDismissBoxValue.StartToEnd -> {
+                                        menuTab = item.tab
+                                        menuIsInGroup = true
+                                        showTabMenu = true
+                                        false
+                                    }
+
+                                    else -> false
                                 }
                             }
-                        },
-                        enableDismissFromStartToEnd = false,
-                        enableDismissFromEndToStart = true
-                    ) {
-                        TabListItem(
-                            tab = item.tab,
-                            isSelected = item.tab.id == selectedTabId,
-                            isInGroup = false,
-                            isLastInGroup = false,
-                            groupId = null,
-                            groupColor = null,
-                            onTabClick = { onTabClick(item.tab.id) },
-                            onTabClose = { onTabClose(item.tab.id) },
-                            onTabLongPress = {
-                                menuTab = item.tab
-                                menuIsInGroup = false
-                                showTabMenu = true
-                            },
-                            modifier = Modifier.animateItem()
                         )
+
+                        SwipeToDismissBox(
+                            state = dismissState,
+                            backgroundContent = {
+                                val color = when (dismissState.targetValue) {
+                                    SwipeToDismissBoxValue.EndToStart -> MaterialTheme.colorScheme.errorContainer
+                                    SwipeToDismissBoxValue.StartToEnd -> MaterialTheme.colorScheme.primaryContainer
+                                    else -> Color.Transparent
+                                }
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .background(color)
+                                        .padding(horizontal = 20.dp),
+                                    contentAlignment = if (dismissState.targetValue == SwipeToDismissBoxValue.EndToStart)
+                                        Alignment.CenterEnd else Alignment.CenterStart
+                                ) {
+                                    when (dismissState.targetValue) {
+                                        SwipeToDismissBoxValue.EndToStart -> {
+                                            Icon(
+                                                imageVector = Icons.Default.Delete,
+                                                contentDescription = "Delete",
+                                                tint = MaterialTheme.colorScheme.onErrorContainer
+                                            )
+                                        }
+
+                                        SwipeToDismissBoxValue.StartToEnd -> {
+                                            Icon(
+                                                imageVector = Icons.Default.MoreVert,
+                                                contentDescription = "Menu",
+                                                tint = MaterialTheme.colorScheme.onPrimaryContainer
+                                            )
+                                        }
+
+                                        else -> {}
+                                    }
+                                }
+                            },
+                            enableDismissFromStartToEnd = true,
+                            enableDismissFromEndToStart = true
+                        ) {
+                            TabListItem(
+                                tab = item.tab,
+                                isSelected = item.tab.id == selectedTabId,
+                                isInGroup = true,
+                                isLastInGroup = item.isLastInGroup,
+                                groupId = item.groupId,
+                                groupColor = group?.color,
+                                onTabClick = { onTabClick(item.tab.id) },
+                                onTabClose = { onTabClose(item.tab.id) },
+                                onTabLongPress = {
+                                    // Long press now only used for drag - menu via swipe right
+                                },
+                                modifier = Modifier
+                                    .animateItem()
+                                    .draggableItem(
+                                        itemType = DraggableItemType.Tab(
+                                            item.tab.id,
+                                            item.groupId
+                                        ),
+                                        coordinator = coordinator
+                                    )
+                                    .dropTarget(
+                                        id = item.tab.id,
+                                        type = DropTargetType.TAB,
+                                        coordinator = coordinator,
+                                        metadata = mapOf(
+                                            "tabId" to item.tab.id,
+                                            "groupId" to item.groupId
+                                        )
+                                    )
+                                    .dragVisualFeedback(item.tab.id, coordinator)
+                            )
+                        }
+                    }
+
+                    is UnifiedItem.SingleTab -> {
+                        val dismissState = rememberSwipeToDismissBoxState(
+                            confirmValueChange = { dismissValue ->
+                                when (dismissValue) {
+                                    SwipeToDismissBoxValue.EndToStart -> {
+                                        onTabClose(item.tab.id)
+                                        true
+                                    }
+
+                                    SwipeToDismissBoxValue.StartToEnd -> {
+                                        menuTab = item.tab
+                                        menuIsInGroup = false
+                                        showTabMenu = true
+                                        false
+                                    }
+
+                                    else -> false
+                                }
+                            }
+                        )
+
+                        SwipeToDismissBox(
+                            state = dismissState,
+                            backgroundContent = {
+                                val color = when (dismissState.targetValue) {
+                                    SwipeToDismissBoxValue.EndToStart -> MaterialTheme.colorScheme.errorContainer
+                                    SwipeToDismissBoxValue.StartToEnd -> MaterialTheme.colorScheme.primaryContainer
+                                    else -> Color.Transparent
+                                }
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .background(color)
+                                        .padding(horizontal = 20.dp),
+                                    contentAlignment = if (dismissState.targetValue == SwipeToDismissBoxValue.EndToStart)
+                                        Alignment.CenterEnd else Alignment.CenterStart
+                                ) {
+                                    when (dismissState.targetValue) {
+                                        SwipeToDismissBoxValue.EndToStart -> {
+                                            Icon(
+                                                imageVector = Icons.Default.Delete,
+                                                contentDescription = "Delete",
+                                                tint = MaterialTheme.colorScheme.onErrorContainer
+                                            )
+                                        }
+
+                                        SwipeToDismissBoxValue.StartToEnd -> {
+                                            Icon(
+                                                imageVector = Icons.Default.MoreVert,
+                                                contentDescription = "Menu",
+                                                tint = MaterialTheme.colorScheme.onPrimaryContainer
+                                            )
+                                        }
+
+                                        else -> {}
+                                    }
+                                }
+                            },
+                            enableDismissFromStartToEnd = true,
+                            enableDismissFromEndToStart = true
+                        ) {
+                            TabListItem(
+                                tab = item.tab,
+                                isSelected = item.tab.id == selectedTabId,
+                                isInGroup = false,
+                                isLastInGroup = false,
+                                groupId = null,
+                                groupColor = null,
+                                onTabClick = { onTabClick(item.tab.id) },
+                                onTabClose = { onTabClose(item.tab.id) },
+                                onTabLongPress = {
+                                    // Long press now only used for drag - menu via swipe right
+                                },
+                                modifier = Modifier
+                                    .animateItem()
+                                    .draggableItem(
+                                        itemType = DraggableItemType.Tab(item.tab.id),
+                                        coordinator = coordinator
+                                    )
+                                    .dropTarget(
+                                        id = item.tab.id,
+                                        type = DropTargetType.TAB,
+                                        coordinator = coordinator,
+                                        metadata = mapOf("tabId" to item.tab.id)
+                                    )
+                                    .dragVisualFeedback(item.tab.id, coordinator)
+                            )
+                        }
+                    }
+
+                    is UnifiedItem.GroupRow -> {
+                        // GroupRow is not used in list view
+                    }
+                }
+            }
+        }
+
+        // Insertion indicator layer
+        InsertionIndicator(coordinator = coordinator)
+
+        // Drag layer
+        DragLayer(coordinator = coordinator) { draggedItem ->
+            when (draggedItem) {
+                is DraggableItemType.Tab -> {
+                    val tab = tabs.find { it.id == draggedItem.tabId }
+                    val item = uniqueItems.find {
+                        when (it) {
+                            is UnifiedItem.SingleTab -> it.tab.id == draggedItem.tabId
+                            is UnifiedItem.GroupedTab -> it.tab.id == draggedItem.tabId
+                            else -> false
+                        }
+                    }
+                    if (tab != null) {
+                        when (item) {
+                            is UnifiedItem.GroupedTab -> {
+                                val group = groups.find { it.id == item.groupId }
+                                TabListItem(
+                                    tab = tab,
+                                    isSelected = false,
+                                    isInGroup = true,
+                                    isLastInGroup = false,
+                                    groupId = item.groupId,
+                                    groupColor = group?.color,
+                                    onTabClick = {},
+                                    onTabClose = {},
+                                    onTabLongPress = {},
+                                    modifier = Modifier
+                                )
+                            }
+
+                            else -> {
+                                TabListItem(
+                                    tab = tab,
+                                    isSelected = false,
+                                    isInGroup = false,
+                                    isLastInGroup = false,
+                                    groupId = null,
+                                    groupColor = null,
+                                    onTabClick = {},
+                                    onTabClose = {},
+                                    onTabLongPress = {},
+                                    modifier = Modifier
+                                )
+                            }
+                        }
                     }
                 }
 
-                is UnifiedItem.GroupRow -> {
-                    // GroupRow is not used in list view
+                is DraggableItemType.Group -> {
+                    val item = uniqueItems.find {
+                        it is UnifiedItem.GroupHeader && it.groupId == draggedItem.groupId
+                    } as? UnifiedItem.GroupHeader
+                    if (item != null) {
+                        GroupHeaderItem(
+                            groupId = item.groupId,
+                            title = item.title,
+                            color = item.color,
+                            tabCount = item.tabCount,
+                            isExpanded = false,
+                            onHeaderClick = {},
+                            onOptionsClick = {},
+                            modifier = Modifier
+                        )
+                    }
                 }
             }
         }
@@ -336,17 +523,13 @@ private fun GroupHeaderItem(
                 }
             }
 
-            // Options menu button
-            IconButton(
-                onClick = onOptionsClick,
-                modifier = Modifier.size(40.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.MoreVert,
-                    contentDescription = "Group options",
-                    tint = Color(color)
-                )
-            }
+            // Drag handle
+            Icon(
+                imageVector = Icons.Default.DragHandle,
+                contentDescription = "Drag to reorder",
+                tint = Color(color).copy(alpha = 0.6f),
+                modifier = Modifier.size(24.dp)
+            )
         }
     }
 }
@@ -410,12 +593,6 @@ private fun TabListItem(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .clickable { onTabClick() }
-                .pointerInput(tab.id) {
-                    detectTapGestures(
-                        onLongPress = { onTabLongPress() }
-                    )
-                }
                 .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
@@ -423,7 +600,9 @@ private fun TabListItem(
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
-                modifier = Modifier.weight(1f)
+                modifier = Modifier
+                    .weight(1f)
+                    .clickable { onTabClick() }
             ) {
                 // Favicon
                 if (tab.content.icon != null) {
@@ -476,23 +655,13 @@ private fun TabListItem(
                 }
             }
 
-            // Close button
-            IconButton(
-                onClick = {
-                    scope.launch {
-                        // Animate close
-                        scale.animateTo(0.8f, animationSpec = tween(200))
-                        onTabClose()
-                    }
-                },
-                modifier = Modifier.size(40.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Close,
-                    contentDescription = "Close tab",
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
+            // Drag handle - drag is handled by draggableItem modifier on parent
+            Icon(
+                imageVector = Icons.Default.DragHandle,
+                contentDescription = "Long press to drag",
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                modifier = Modifier.size(24.dp)
+            )
         }
     }
 }

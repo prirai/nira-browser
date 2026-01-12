@@ -153,127 +153,21 @@ class ComposeTabBarWithProfileSwitcher @JvmOverloads constructor(
             viewModel.loadTabsForProfile(profileId, tabs, selectedTabId)
         }
 
-        Box(modifier = Modifier.fillMaxWidth()) {
-            // Tab bar (background layer)
-            TabBarCompose(
-                tabs = tabs,
-                viewModel = viewModel,
-                orderManager = orderManager,
-                selectedTabId = selectedTabId,
-                onTabClick = { tabId: String ->
-                    onTabSelected?.invoke(tabId)
-                },
-                onTabClose = { tabId: String ->
-                    onTabClosed?.invoke(tabId)
-                }
-            )
-
-            // Floating profile icon (overlay layer - top-left corner)
-            ProfileSwitcherFloatingIcon(
-                currentProfile = currentProfile,
-                isPrivateMode = isPrivateMode,
-                onProfileLongClick = {
-                    // Show profile switcher menu on long press
-                    showProfileSwitcherMenu()
-                },
-                modifier = Modifier
-                    .align(Alignment.TopStart)
-                    .padding(8.dp)
-            )
-        }
+        // Tab bar only - profile switching available via menu
+        TabBarCompose(
+            tabs = tabs,
+            viewModel = viewModel,
+            orderManager = orderManager,
+            selectedTabId = selectedTabId,
+            onTabClick = { tabId: String ->
+                onTabSelected?.invoke(tabId)
+            },
+            onTabClose = { tabId: String ->
+                onTabClosed?.invoke(tabId)
+            }
+        )
     }
 
-    @Composable
-    private fun ProfileSwitcherFloatingIcon(
-        currentProfile: BrowserProfile,
-        isPrivateMode: Boolean,
-        onProfileLongClick: () -> Unit,
-        modifier: Modifier = Modifier
-    ) {
-        val scope = rememberCoroutineScope()
-        var isExpanded by remember { mutableStateOf(false) }
-
-        // Auto-collapse after 3 seconds when expanded
-        LaunchedEffect(isExpanded) {
-            if (isExpanded) {
-                kotlinx.coroutines.delay(3000)
-                isExpanded = false
-            }
-        }
-
-        // Floating profile icon with expand/collapse animation
-        androidx.compose.animation.AnimatedVisibility(
-            visible = isExpanded,
-            modifier = modifier,
-            enter = androidx.compose.animation.fadeIn() + androidx.compose.animation.expandHorizontally(),
-            exit = androidx.compose.animation.fadeOut() + androidx.compose.animation.shrinkHorizontally()
-        ) {
-            // Expanded: Show icon + name
-            Surface(
-                modifier = Modifier
-                    .height(40.dp)
-                    .clip(RoundedCornerShape(20.dp))
-                    .pointerInput(Unit) {
-                        detectTapGestures(
-                            onLongPress = { onProfileLongClick() }
-                        )
-                    },
-                color = MaterialTheme.colorScheme.primaryContainer,
-                tonalElevation = 8.dp,
-                shadowElevation = 4.dp
-            ) {
-                Row(
-                    modifier = Modifier
-                        .padding(horizontal = 12.dp, vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Text(
-                        text = if (isPrivateMode) "🕵️" else currentProfile.emoji,
-                        style = MaterialTheme.typography.bodyLarge
-                    )
-                    Text(
-                        text = if (isPrivateMode) "Private" else currentProfile.name,
-                        style = MaterialTheme.typography.bodyMedium,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
-            }
-        }
-
-        // Collapsed icon (always visible)
-        androidx.compose.animation.AnimatedVisibility(
-            visible = !isExpanded,
-            modifier = modifier
-        ) {
-            // Collapsed: Show icon only - tap to expand, long-press for menu
-            Surface(
-                modifier = Modifier
-                    .size(40.dp)
-                    .clip(CircleShape)
-                    .pointerInput(Unit) {
-                        detectTapGestures(
-                            onTap = { isExpanded = true },
-                            onLongPress = { onProfileLongClick() }
-                        )
-                    },
-                color = MaterialTheme.colorScheme.primaryContainer,
-                tonalElevation = 8.dp,
-                shadowElevation = 4.dp
-            ) {
-                Box(
-                    contentAlignment = Alignment.Center,
-                    modifier = Modifier.fillMaxSize()
-                ) {
-                    Text(
-                        text = if (isPrivateMode) "🕵️" else currentProfile.emoji,
-                        style = MaterialTheme.typography.bodyLarge
-                    )
-                }
-            }
-        }
-    }
 
     private fun showProfileSwitcherMenu() {
         // Simple profile switcher - could be enhanced with a proper dialog
