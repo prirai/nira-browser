@@ -366,6 +366,8 @@ class TabsBottomSheetFragment : DialogFragment() {
     }
 
     private fun setupDragAndDrop() {
+        // DEPRECATED - old RecyclerView drag system
+        /*
         // List view drag helper
         dragHelper = TabGroupDragHelper(
             adapter = tabsAdapter!!,
@@ -383,6 +385,7 @@ class TabsBottomSheetFragment : DialogFragment() {
             onUpdate = { updateGridDisplay() }
         )
         gridDragHelper!!.attachToRecyclerView(binding.tabsGridRecyclerView)
+        */
     }
     
     private fun setupMergedProfileButtons() {
@@ -1181,6 +1184,8 @@ class TabsBottomSheetFragment : DialogFragment() {
     // ============ NEW FLAT ADAPTER SYSTEM ============
     
     private fun setupFlatTabsAdapter() {
+        // DEPRECATED - using Compose tab views now
+        /*
         flatTabsAdapter = com.prirai.android.nira.browser.tabs.dragdrop.FlatTabsAdapter(
             onTabClick = { tabId ->
                 requireContext().components.tabsUseCases.selectTab(tabId)
@@ -1222,9 +1227,12 @@ class TabsBottomSheetFragment : DialogFragment() {
             layoutManager = LinearLayoutManager(requireContext())
             adapter = flatTabsAdapter
         }
+        */
     }
     
     private fun setupNewDragAndDrop() {
+        // DEPRECATED - using Compose tab views now
+        /*
         unifiedDragHelper = com.prirai.android.nira.browser.tabs.dragdrop.UnifiedDragHelper(
             adapter = flatTabsAdapter!!,
             groupManager = unifiedGroupManager,
@@ -1236,6 +1244,7 @@ class TabsBottomSheetFragment : DialogFragment() {
             spanCount = 1
         )
         unifiedDragHelper!!.attachToRecyclerView(binding.tabsRecyclerView)
+        */
     }
     
     private fun setupComposeTabViews() {
@@ -1656,71 +1665,16 @@ class TabsBottomSheetFragment : DialogFragment() {
     }
     
     private fun updateFlatTabsDisplay() {
-        if (!isAdded || context == null || flatTabsAdapter == null) return
-        
-        lifecycleScope.launch {
-            val store = requireContext().components.store.state
-            val isPrivateMode = browsingModeManager.mode.isPrivate
-            val currentProfile = browsingModeManager.currentProfile
-            
-            // Filter tabs
-            val filteredTabs = store.tabs.filter { tab ->
-                val tabIsPrivate = tab.content.private
-                if (tabIsPrivate != isPrivateMode) {
-                    false
-                } else if (isPrivateMode) {
-                    tab.contextId == "private"
-                } else {
-                    val expectedContextId = "profile_${currentProfile.id}"
-                    (tab.contextId == expectedContextId) || (tab.contextId == null)
-                }
-            }
-            
-            // Get groups
-            val allGroups = unifiedGroupManager.getAllGroups()
-            
-            // Load custom order
-            val profileKey = if (isPrivateMode) "private" else currentProfile.id
-            val customOrder = tabOrderPersistence.loadOrder(profileKey)
-            
-            // Build flat list with custom order
-            val builder = com.prirai.android.nira.browser.tabs.dragdrop.TabListBuilder(collapsedGroupIds)
-            val flatList = builder.buildList(filteredTabs, allGroups, customOrder)
-            
-            // Update adapter
-            flatTabsAdapter?.updateItems(flatList, store.selectedTabId)
-            
-            // Show/hide empty state
-            if (filteredTabs.isEmpty()) {
-                binding.tabsRecyclerView.visibility = View.GONE
-                binding.emptyStateLayout.visibility = View.VISIBLE
-            } else {
-                binding.tabsRecyclerView.visibility = View.VISIBLE
-                binding.emptyStateLayout.visibility = View.GONE
-            }
-        }
+        // DEPRECATED - using Compose tab system now
+        return
     }
     
     /**
      * Save current tab order for persistence
      */
     private fun saveCurrentTabOrder() {
-        lifecycleScope.launch {
-            val currentList = flatTabsAdapter!!.currentList
-            val tabIds = currentList.mapNotNull { item ->
-                when (item) {
-                    is com.prirai.android.nira.browser.tabs.dragdrop.TabListItem.UngroupedTab -> item.tab.id
-                    is com.prirai.android.nira.browser.tabs.dragdrop.TabListItem.GroupedTab -> item.tab.id
-                    else -> null
-                }
-            }
-            
-            val isPrivateMode = browsingModeManager.mode.isPrivate
-            val currentProfile = browsingModeManager.currentProfile
-            val profileKey = if (isPrivateMode) "private" else currentProfile.id
-            
-            tabOrderPersistence.saveOrder(profileKey, tabIds)
-        }
+        // DEPRECATED - using Compose TabOrderManager now
+        return
     }
     
     private fun showGroupedTabOptionsMenu(tabId: String, groupId: String, view: View) {

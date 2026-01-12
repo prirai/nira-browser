@@ -24,7 +24,7 @@ import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.lifecycleScope
 import com.prirai.android.nira.browser.profile.BrowserProfile
 import com.prirai.android.nira.browser.profile.ProfileManager
-import com.prirai.android.nira.browser.tabs.compose.TabBarComposeWithMenus
+import com.prirai.android.nira.browser.tabs.compose.TabBarCompose
 import com.prirai.android.nira.browser.tabs.compose.TabViewModel
 import com.prirai.android.nira.browser.tabs.compose.TabOrderManager
 import com.prirai.android.nira.browser.tabgroups.UnifiedTabGroupManager
@@ -67,10 +67,12 @@ class ComposeTabBarWithProfileSwitcher @JvmOverloads constructor(
         clipChildren = false
 
         // Add compose view
-        addView(composeView, LayoutParams(
-            LayoutParams.MATCH_PARENT,
-            LayoutParams.WRAP_CONTENT
-        ))
+        addView(
+            composeView, LayoutParams(
+                LayoutParams.MATCH_PARENT,
+                LayoutParams.WRAP_CONTENT
+            )
+        )
 
         // Initialize managers
         groupManager = UnifiedTabGroupManager.getInstance(context)
@@ -103,11 +105,11 @@ class ComposeTabBarWithProfileSwitcher @JvmOverloads constructor(
     @Composable
     private fun TabBarWithProfileSwitcherContent() {
         val profileManager = remember { ProfileManager.getInstance(context) }
-        
+
         // State for tabs and selected tab - observe store state changes
         val store = context.components.store
         val lifecycleOwner = context as LifecycleOwner
-        
+
         // Use produceState to observe store state changes reactively
         val browserState = produceState(initialValue = store.state, store) {
             store.flowScoped(lifecycleOwner) { flow ->
@@ -116,11 +118,11 @@ class ComposeTabBarWithProfileSwitcher @JvmOverloads constructor(
                 }
             }
         }
-        
+
         // Derive reactive state from browserState
         val currentProfile = remember(browserState.value) { profileManager.getActiveProfile() }
         val isPrivateMode = remember(browserState.value) { profileManager.isPrivateMode() }
-        
+
         // Filter tabs based on current profile - this will update when browserState changes
         val tabs = remember(browserState.value.tabs, currentProfile, isPrivateMode) {
             browserState.value.tabs.filter { tab ->
@@ -135,33 +137,37 @@ class ComposeTabBarWithProfileSwitcher @JvmOverloads constructor(
                 }
             }
         }
-        
+
         val selectedTabId = browserState.value.selectedTabId
 
         val orderManager = tabOrderManager ?: return
         val viewModel = tabViewModel ?: return
-        
-        // Update viewModel with current tabs
+
+        // Update orderManager and viewModel with current tabs
         LaunchedEffect(tabs, selectedTabId, currentProfile, isPrivateMode) {
             val profileId = if (isPrivateMode) "private" else currentProfile.id
+
+            // Rebuild order to include any new tabs
+            orderManager.rebuildOrderForProfile(profileId, tabs)
+
             viewModel.loadTabsForProfile(profileId, tabs, selectedTabId)
         }
 
         Box(modifier = Modifier.fillMaxWidth()) {
             // Tab bar (background layer)
-            TabBarComposeWithMenus(
+            TabBarCompose(
                 tabs = tabs,
-                orderManager = orderManager,
                 viewModel = viewModel,
+                orderManager = orderManager,
                 selectedTabId = selectedTabId,
-                onTabClick = { tabId ->
+                onTabClick = { tabId: String ->
                     onTabSelected?.invoke(tabId)
                 },
-                onTabClose = { tabId ->
+                onTabClose = { tabId: String ->
                     onTabClosed?.invoke(tabId)
                 }
             )
-            
+
             // Floating profile icon (overlay layer - top-left corner)
             ProfileSwitcherFloatingIcon(
                 currentProfile = currentProfile,
@@ -186,7 +192,7 @@ class ComposeTabBarWithProfileSwitcher @JvmOverloads constructor(
     ) {
         val scope = rememberCoroutineScope()
         var isExpanded by remember { mutableStateOf(false) }
-        
+
         // Auto-collapse after 3 seconds when expanded
         LaunchedEffect(isExpanded) {
             if (isExpanded) {
@@ -194,7 +200,7 @@ class ComposeTabBarWithProfileSwitcher @JvmOverloads constructor(
                 isExpanded = false
             }
         }
-        
+
         // Floating profile icon with expand/collapse animation
         androidx.compose.animation.AnimatedVisibility(
             visible = isExpanded,
@@ -235,7 +241,7 @@ class ComposeTabBarWithProfileSwitcher @JvmOverloads constructor(
                 }
             }
         }
-        
+
         // Collapsed icon (always visible)
         androidx.compose.animation.AnimatedVisibility(
             visible = !isExpanded,

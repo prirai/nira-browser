@@ -1,28 +1,20 @@
 package com.prirai.android.nira.browser.tabs.compose
 
-import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.gestures.awaitEachGesture
-import androidx.compose.foundation.gestures.awaitFirstDown
-import androidx.compose.foundation.gestures.waitForUpOrCancellation
-import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items as lazyListItems
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.*
@@ -33,49 +25,21 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.compose.ui.zIndex
 import coil.compose.AsyncImage
 import mozilla.components.browser.state.state.TabSessionState
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.withTimeoutOrNull
-import sh.calvin.reorderable.*
 
-
-
-sealed class GridItem {
-    data class GroupHeader(
-        val groupId: String,
-        val title: String,
-        val color: Int,
-        val tabCount: Int,
-        val isExpanded: Boolean,
-        val contextId: String?
-    ) : GridItem()
-    
-    data class GroupRow(
-        val groupId: String,
-        val tabs: List<TabSessionState>,
-        val groupColor: Int
-    ) : GridItem()
-
-    data class Tab(
-        val tab: TabSessionState,
-        val groupId: String? = null,
-        val isInGroup: Boolean = false
-    ) : GridItem()
-}
-
-@OptIn(ExperimentalFoundationApi::class)
+/**
+ * Grid view for tab sheet
+ * Refactored to use UnifiedItemBuilder and custom drag system
+ */
+@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun TabSheetGridView(
     viewModel: TabViewModel,
@@ -91,10 +55,10 @@ fun TabSheetGridView(
     val expandedGroups by viewModel.expandedGroups.collectAsState()
     val selectedTabId by viewModel.selectedTabId.collectAsState()
     val currentOrder by viewModel.currentOrder.collectAsState()
-    
+
     val scope = rememberCoroutineScope()
     val gridState = rememberLazyGridState()
-    
+
     // Menu state
     var menuTab by remember { mutableStateOf<TabSessionState?>(null) }
     var menuIsInGroup by remember { mutableStateOf(false) }
@@ -102,84 +66,21 @@ fun TabSheetGridView(
     var showGroupMenu by remember { mutableStateOf(false) }
     var menuGroupId by remember { mutableStateOf<String?>(null) }
     var menuGroupName by remember { mutableStateOf<String?>(null) }
-    
-    // Build grid items from tabs and groups using unified order
-    val gridItems = remember(tabs, groups, expandedGroups, currentOrder) {
-        buildGridItems(tabs, groups, expandedGroups, currentOrder)
+
+    // Build unified items using UnifiedItemBuilder
+    val items = remember(tabs, groups, expandedGroups, currentOrder) {
+        UnifiedItemBuilder.buildItems(
+            order = currentOrder,
+            tabs = tabs,
+            groups = groups,
+            expandedGroups = expandedGroups,
+            viewMode = ViewMode.GRID
+        )
     }
 
-    val uniqueGridItems = remember(gridItems) {
-        val seen = mutableSetOf<String>()
-        val out = mutableListOf<GridItem>()
-        for (it in gridItems) {
-            val key = when (it) {
-                is GridItem.GroupHeader -> "group_${it.groupId}"
-                is GridItem.GroupRow -> "grouprow_${it.groupId}"
-                is GridItem.Tab -> if (it.groupId != null) "group_${it.groupId}_tab_${it.tab.id}" else "tab_${it.tab.id}"
-            }
-            if (!seen.contains(key)) {
-                seen.add(key)
-                out.add(it)
-            }
-        }
-        out
-    }
-    
-    // Use reorderable library for unified drag-and-drop
-    val reorderableState = sh.calvin.reorderable.rememberReorderableLazyGridState(gridState) { from, to ->
-        scope.launch {
-            // Convert grid items to list items for unified handler
-            val listItems = uniqueGridItems.map { gridItem ->
-                when (gridItem) {
-                    is GridItem.GroupHeader -> ListItem.GroupHeader(
-                        groupId = gridItem.groupId,
-                        title = gridItem.title,
-                        color = gridItem.color,
-                        tabCount = gridItem.tabCount,
-                        isExpanded = gridItem.isExpanded,
-                        contextId = gridItem.contextId
-                    )
-                    is GridItem.Tab -> ListItem.Tab(
-                        tab = gridItem.tab,
-                        groupId = gridItem.groupId,
-                        isInGroup = gridItem.isInGroup,
-                        isLastInGroup = false
-                    )
-                    is GridItem.GroupRow -> {
-                        // GroupRow items are full-width, treat as group header for dragging
-                        val group = groups.find { it.id == gridItem.groupId }
-                        ListItem.GroupHeader(
-                            groupId = gridItem.groupId,
-                            title = group?.name ?: "Group",
-                            color = gridItem.groupColor,
-                            tabCount = gridItem.tabs.size,
-                            isExpanded = true,
-                            contextId = group?.contextId
-                        )
-                    }
-                }
-            }
-            
-            val result = UnifiedDragDropHandler.handleDrop(
-                viewModel = viewModel,
-                fromIndex = from.index,
-                toIndex = to.index,
-                items = listItems,
-                tabs = tabs,
-                groups = groups
-            )
-            
-            // Provide feedback based on result
-            when (result) {
-                is DropResult.GroupCreated -> {
-                    android.util.Log.d("TabSheet", "Group created successfully")
-                }
-                is DropResult.Error -> {
-                    android.util.Log.e("TabSheet", "Drop failed: ${result.message}")
-                }
-                else -> {}
-            }
-        }
+    // Deduplicate items
+    val uniqueItems = remember(items) {
+        UnifiedItemBuilder.deduplicateItems(items)
     }
 
     LazyVerticalGrid(
@@ -191,106 +92,93 @@ fun TabSheetGridView(
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         items(
-            items = uniqueGridItems,
-            key = { item ->
-                when (item) {
-                    is GridItem.GroupHeader -> "group_${item.groupId}"
-                    is GridItem.GroupRow -> "grouprow_${item.groupId}" // Keep for backwards compatibility
-                    is GridItem.Tab -> if (item.groupId != null) "group_${item.groupId}_tab_${item.tab.id}" else "tab_${item.tab.id}"
-                }
-            },
+            items = uniqueItems,
+            key = { it.id },
             span = { item ->
-                androidx.compose.foundation.lazy.grid.GridItemSpan(
-                    when (item) {
-                        is GridItem.GroupHeader -> 3 // Full width
-                        is GridItem.GroupRow -> 3 // Full width (deprecated but kept for safety)
-                        else -> 1 // Regular grid item (3 per row)
-                    }
-                )
+                // Group headers and rows span all columns
+                when (item) {
+                    is UnifiedItem.GroupHeader -> androidx.compose.foundation.lazy.grid.GridItemSpan(3)
+                    is UnifiedItem.GroupRow -> androidx.compose.foundation.lazy.grid.GridItemSpan(3)
+                    else -> androidx.compose.foundation.lazy.grid.GridItemSpan(1)
+                }
             }
         ) { item ->
-            ReorderableItem(reorderableState, key = when (item) {
-                is GridItem.GroupHeader -> "group_${item.groupId}"
-                is GridItem.GroupRow -> "grouprow_${item.groupId}"
-                is GridItem.Tab -> if (item.groupId != null) "group_${item.groupId}_tab_${item.tab.id}" else "tab_${item.tab.id}"
-            }) { isDragging ->
-                when (item) {
-                    is GridItem.GroupHeader -> {
-                        GroupHeaderGridItem(
-                            groupId = item.groupId,
-                            title = item.title,
-                            color = item.color,
-                            tabCount = item.tabCount,
-                            isExpanded = item.isExpanded,
-                            contextId = item.contextId,
-                            isDragging = isDragging,
-                            onHeaderClick = { 
-                                viewModel.toggleGroupExpanded(item.groupId)
-                            },
-                            onOptionsClick = { 
-                                menuGroupId = item.groupId
-                                menuGroupName = item.title
-                                showGroupMenu = true
-                                onGroupOptionsClick(item.groupId)
-                            },
-                            modifier = Modifier
-                                .animateItem()
-                                .longPressDraggableHandle(
-                                    onDragStarted = {},
-                                    onDragStopped = {}
-                                )
-                        )
-                    }
-                    is GridItem.GroupRow -> {
-                        // Deprecated: GroupRow is no longer used, tabs are flattened
-                        // Keep this for backwards compatibility in case old data exists
-                        GroupTabsRow(
-                            groupId = item.groupId,
-                            tabs = item.tabs,
-                            groupColor = item.groupColor,
-                            selectedTabId = selectedTabId,
-                            isDragging = isDragging,
-                            onTabClick = onTabClick,
-                            onTabClose = onTabClose,
-                            onTabLongPress = onTabLongPress,
-                            modifier = Modifier
-                                .animateItem()
-                                .longPressDraggableHandle(
-                                    onDragStarted = {},
-                                    onDragStopped = {}
-                                )
-                        )
-                    }
-                    is GridItem.Tab -> {
-                        val group = groups.find { it.id == item.groupId }
-                        TabGridItem(
-                            tab = item.tab,
-                            isSelected = item.tab.id == selectedTabId,
-                            isInGroup = item.isInGroup,
-                            groupId = item.groupId,
-                            groupColor = group?.color,
-                            isDragging = isDragging,
-                            onTabClick = { onTabClick(item.tab.id) },
-                            onTabClose = { onTabClose(item.tab.id) },
-                            onTabLongPress = { 
-                                menuTab = item.tab
-                                menuIsInGroup = item.isInGroup
-                                showTabMenu = true
-                                onTabLongPress(item.tab, item.isInGroup)
-                            },
-                            modifier = Modifier
-                                .animateItem()
-                                .longPressDraggableHandle(
-                                    onDragStarted = {},
-                                    onDragStopped = {}
-                                )
-                        )
-                    }
+            when (item) {
+                is UnifiedItem.GroupHeader -> {
+                    GroupHeaderGridItem(
+                        groupId = item.groupId,
+                        title = item.title,
+                        color = item.color,
+                        tabCount = item.tabCount,
+                        isExpanded = item.isExpanded,
+                        onHeaderClick = { onGroupClick(item.groupId) },
+                        onOptionsClick = {
+                            menuGroupId = item.groupId
+                            menuGroupName = item.title
+                            showGroupMenu = true
+                            onGroupOptionsClick(item.groupId)
+                        },
+                        modifier = Modifier.animateItem()
+                    )
+                }
+
+                is UnifiedItem.GroupRow -> {
+                    val group = groups.find { it.id == item.groupId }
+                    GroupTabsRow(
+                        groupId = item.groupId,
+                        tabs = item.tabs,
+                        groupColor = group?.color ?: 0xFF2196F3.toInt(),
+                        selectedTabId = selectedTabId,
+                        onTabClick = onTabClick,
+                        onTabClose = onTabClose,
+                        onTabLongPress = { tab ->
+                            menuTab = tab
+                            menuIsInGroup = true
+                            showTabMenu = true
+                        },
+                        modifier = Modifier.animateItem()
+                    )
+                }
+
+                is UnifiedItem.GroupedTab -> {
+                    // GroupedTab items should not appear in grid view
+                    // They should be in GroupRow instead
+                    // But handle it just in case
+                    val group = groups.find { it.id == item.groupId }
+                    TabGridItem(
+                        tab = item.tab,
+                        isSelected = item.tab.id == selectedTabId,
+                        groupColor = group?.color,
+                        onTabClick = { onTabClick(item.tab.id) },
+                        onTabClose = { onTabClose(item.tab.id) },
+                        onTabLongPress = {
+                            menuTab = item.tab
+                            menuIsInGroup = true
+                            showTabMenu = true
+                        },
+                        modifier = Modifier.animateItem()
+                    )
+                }
+
+                is UnifiedItem.SingleTab -> {
+                    TabGridItem(
+                        tab = item.tab,
+                        isSelected = item.tab.id == selectedTabId,
+                        groupColor = null,
+                        onTabClick = { onTabClick(item.tab.id) },
+                        onTabClose = { onTabClose(item.tab.id) },
+                        onTabLongPress = {
+                            menuTab = item.tab
+                            menuIsInGroup = false
+                            showTabMenu = true
+                        },
+                        modifier = Modifier.animateItem()
+                    )
                 }
             }
         }
     }
-    
+
     // Show tab menu
     if (showTabMenu && menuTab != null) {
         TabContextMenu(
@@ -301,8 +189,8 @@ fun TabSheetGridView(
             scope = scope
         )
     }
-    
-    // Show group menu  
+
+    // Show group menu
     if (showGroupMenu && menuGroupId != null) {
         GroupContextMenu(
             groupId = menuGroupId!!,
@@ -314,6 +202,9 @@ fun TabSheetGridView(
     }
 }
 
+/**
+ * Group header item for grid view
+ */
 @Composable
 private fun GroupHeaderGridItem(
     groupId: String,
@@ -321,564 +212,376 @@ private fun GroupHeaderGridItem(
     color: Int,
     tabCount: Int,
     isExpanded: Boolean,
-    contextId: String?,
-    isDragging: Boolean,
     onHeaderClick: () -> Unit,
     onOptionsClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val scope = rememberCoroutineScope()
-    
-    // Swipe state for swipe-right-for-menu gesture
     val offsetX = remember { Animatable(0f) }
-    
-    Card(
+
+    Surface(
         modifier = modifier
             .fillMaxWidth()
-            .scale(if (isDragging) 1.05f else 1f),
+            .padding(horizontal = 4.dp, vertical = 2.dp),
         shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = Color(color).copy(alpha = 0.1f)
-        )
+        color = Color(color).copy(alpha = 0.1f),
+        tonalElevation = 2.dp,
+        border = BorderStroke(1.dp, Color(color).copy(alpha = 0.3f))
     ) {
-        // Header - single clickable Box
-        Box(
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .clickable(onClick = onHeaderClick)
-                .pointerInput(groupId) {
-                    detectHorizontalDragGestures(
-                        onDragEnd = {
-                            scope.launch {
-                                if (offsetX.value > 100f) {
-                                    onOptionsClick()
-                                }
-                                offsetX.animateTo(0f, animationSpec = tween(200))
-                            }
-                        },
-                        onDragCancel = {
-                            scope.launch {
-                                offsetX.animateTo(0f, animationSpec = tween(200))
-                            }
-                        },
-                        onHorizontalDrag = { change, dragAmount ->
-                            if (dragAmount > 0) {
-                                scope.launch {
-                                    val newValue = (offsetX.value + dragAmount).coerceAtMost(150f)
-                                    offsetX.snapTo(newValue)
-                                }
-                                change.consume()
-                            }
-                        }
-                    )
-                }
+                .clickable { onHeaderClick() }
+                .padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.weight(1f)
             ) {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                // Expand/Collapse icon
+                Icon(
+                    imageVector = if (isExpanded) Icons.Default.KeyboardArrowDown else Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                    contentDescription = if (isExpanded) "Collapse" else "Expand",
+                    tint = Color(color),
+                    modifier = Modifier.size(20.dp)
+                )
+
+                // Group name
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(color),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f)
+                )
+
+                // Tab count badge
+                Surface(
+                    shape = CircleShape,
+                    color = Color(color).copy(alpha = 0.2f),
+                    border = BorderStroke(2.dp, Color(color))
                 ) {
-                    Icon(
-                        imageVector = if (isExpanded) Icons.Default.KeyboardArrowDown else Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                        contentDescription = null,
-                        tint = Color(color),
-                        modifier = Modifier.size(24.dp)
-                    )
-                    
-                    Surface(
-                        shape = CircleShape,
-                        color = Color(color).copy(alpha = 0.2f),
-                        border = BorderStroke(2.dp, Color(color)),
-                        modifier = Modifier.size(28.dp)
+                    Box(
+                        modifier = Modifier
+                            .padding(horizontal = 10.dp, vertical = 4.dp)
+                            .defaultMinSize(minWidth = 20.dp),
+                        contentAlignment = Alignment.Center
                     ) {
-                        Box(
-                            contentAlignment = Alignment.Center,
-                            modifier = Modifier.fillMaxSize()
-                        ) {
-                            Text(
-                                text = "$tabCount",
-                                style = MaterialTheme.typography.labelMedium,
-                                color = Color(color),
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
+                        Text(
+                            text = tabCount.toString(),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = Color(color),
+                            fontWeight = FontWeight.Bold
+                        )
                     }
-                    
-                    Text(
-                        text = title.ifEmpty { "Unnamed Group" },
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color(color),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
                 }
-                
-                IconButton(
-                    onClick = { 
-                        onOptionsClick()
-                    }
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.MoreVert,
-                        contentDescription = "Group menu",
-                        tint = Color(color)
-                    )
-                }
+            }
+
+            // Options menu button
+            IconButton(
+                onClick = onOptionsClick,
+                modifier = Modifier.size(36.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.MoreVert,
+                    contentDescription = "Group options",
+                    tint = Color(color)
+                )
             }
         }
     }
 }
 
+/**
+ * Row of tabs within a group (full width in grid)
+ */
 @Composable
 private fun GroupTabsRow(
     groupId: String,
     tabs: List<TabSessionState>,
     groupColor: Int,
     selectedTabId: String?,
-    isDragging: Boolean,
     onTabClick: (String) -> Unit,
     onTabClose: (String) -> Unit,
-    onTabLongPress: (TabSessionState, Boolean) -> Unit,
+    onTabLongPress: (TabSessionState) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    // Show tabs in vertical column inside the group (same as list view)
-    Card(
+    Surface(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 4.dp),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = Color(groupColor).copy(alpha = 0.1f)
-        )
+            .padding(horizontal = 4.dp),
+        shape = RoundedCornerShape(bottomStart = 12.dp, bottomEnd = 12.dp),
+        color = Color(groupColor).copy(alpha = 0.05f),
+        border = BorderStroke(1.dp, Color(groupColor).copy(alpha = 0.2f))
     ) {
-        Column {
-            HorizontalDivider(color = Color(groupColor).copy(alpha = 0.3f))
-            
-            Column(modifier = Modifier.fillMaxWidth()) {
-                tabs.forEachIndexed { index, tab ->
-                    TabGridItemInGroup(
-                        tab = tab,
-                        isSelected = tab.id == selectedTabId,
-                        groupColor = Color(groupColor),
-                        isLastInGroup = index == tabs.size - 1,
-                        onTabClick = { onTabClick(tab.id) },
-                        onTabClose = { onTabClose(tab.id) },
-                        onTabLongPress = { onTabLongPress(tab, true) }
-                    )
-                    
-                    if (index < tabs.size - 1) {
-                        Spacer(modifier = Modifier.height(2.dp))
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun TabGridItemUnified(
-    tab: TabSessionState,
-    isSelected: Boolean,
-    isInGroup: Boolean,
-    groupId: String?,
-    groupColor: Int?,
-    isDragging: Boolean,
-    onTabClick: () -> Unit,
-    onTabClose: () -> Unit,
-    onTabLongPress: () -> Unit = {},
-    modifier: Modifier = Modifier,
-    thumbnailHeight: androidx.compose.ui.unit.Dp = 100.dp,
-    compactWidth: androidx.compose.ui.unit.Dp? = null
-) {
-    val scope = rememberCoroutineScope()
-    
-    // Determine container color - use group color background for tabs in groups
-    val containerColor = when {
-        isSelected -> MaterialTheme.colorScheme.primaryContainer
-        isInGroup && groupColor != null -> Color(groupColor).copy(alpha = 0.1f)
-        else -> MaterialTheme.colorScheme.surfaceVariant
-    }
-
-    val m = modifier
-        .then(if (compactWidth != null) Modifier.width(compactWidth) else Modifier.fillMaxWidth())
-        .height(if (compactWidth != null) 150.dp else 180.dp)
-        .scale(if (isDragging) 1.05f else 1f)
-
-    Card(
-        modifier = m,
-        shape = RoundedCornerShape(16.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
-        colors = CardDefaults.cardColors(containerColor = containerColor)
-    ) {
-        Box(modifier = Modifier.fillMaxSize()) {
-            Column(modifier = Modifier
-                .fillMaxSize()
-                .pointerInput(tab.id) {
-                    awaitEachGesture {
-                        val down = awaitFirstDown()
-                        val pressStartTime = System.currentTimeMillis()
-                        
-                        // Wait for up or cancellation with timeout
-                        val upOrCancel = withTimeoutOrNull(700) {
-                            waitForUpOrCancellation()
-                        }
-                        
-                        val pressDuration = System.currentTimeMillis() - pressStartTime
-                        
-                        // If released and duration is in the menu range (300-600ms), show menu
-                        // If duration > 700ms, it's a drag (handled by longPressDraggableHandle)
-                        if (upOrCancel != null && pressDuration in 300..650) {
-                            onTabLongPress()
-                        } else if (upOrCancel != null && pressDuration < 300) {
-                            // Quick tap - regular click
-                            onTabClick()
-                        }
-                    }
-                }
-            ) {
-                // Thumbnail at top - takes most of the space
-                Box(modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f)
-                    .zIndex(0f)) {
-                    ThumbnailImageView(tab = tab, modifier = Modifier.fillMaxSize())
-                }
-
-                // Divider between thumbnail and footer
-                HorizontalDivider(thickness = 1.dp, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.12f))
-
-                // Title at bottom
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(40.dp)
-                        .background(
-                            when {
-                                isSelected -> MaterialTheme.colorScheme.primaryContainer
-                                isInGroup && groupColor != null -> Color(groupColor).copy(alpha = 0.15f)
-                                else -> MaterialTheme.colorScheme.surface
-                            }
-                        )
-                        .padding(horizontal = 8.dp, vertical = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = tab.content.title.ifEmpty { "New Tab" },
-                        style = MaterialTheme.typography.bodyMedium.copy(fontSize = 12.sp),
-                        color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-            }
-            
-            // Close button in top-right corner
-            IconButton(
-                onClick = { onTabClose() },
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(4.dp)
-                    .size(28.dp)
-                    .zIndex(1f)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Close,
-                    contentDescription = "Close tab",
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier
-                        .size(20.dp)
-                        .background(
-                            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
-                            shape = CircleShape
-                        )
-                        .padding(2.dp)
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            tabs.forEach { tab ->
+                TabGridItemCompact(
+                    tab = tab,
+                    isSelected = tab.id == selectedTabId,
+                    groupColor = groupColor,
+                    onTabClick = { onTabClick(tab.id) },
+                    onTabClose = { onTabClose(tab.id) },
+                    onTabLongPress = { onTabLongPress(tab) },
+                    modifier = Modifier.weight(1f)
                 )
             }
         }
     }
 }
 
+/**
+ * Compact tab item for use in group rows
+ */
 @Composable
-private fun TabGridItemInGroup(
+private fun TabGridItemCompact(
     tab: TabSessionState,
     isSelected: Boolean,
-    groupColor: Color,
-    isLastInGroup: Boolean,
+    groupColor: Int,
     onTabClick: () -> Unit,
     onTabClose: () -> Unit,
     onTabLongPress: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Row(
+    val scope = rememberCoroutineScope()
+    val scale = remember { Animatable(1f) }
+
+    Surface(
         modifier = modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(8.dp))
-            .background(
-                when {
-                    isSelected -> MaterialTheme.colorScheme.primaryContainer
-                    else -> MaterialTheme.colorScheme.surface.copy(alpha = 0.5f)
-                }
-            )
-            .combinedClickable(
-                onClick = onTabClick,
-                onLongClick = onTabLongPress
-            )
-            .padding(horizontal = 8.dp, vertical = 4.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
+            .aspectRatio(0.75f)
+            .scale(scale.value),
+        shape = RoundedCornerShape(8.dp),
+        color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface,
+        tonalElevation = if (isSelected) 2.dp else 1.dp,
+        border = if (isSelected) {
+            BorderStroke(2.dp, MaterialTheme.colorScheme.primary)
+        } else {
+            BorderStroke(1.dp, Color(groupColor).copy(alpha = 0.3f))
+        }
     ) {
-        Row(
-            modifier = Modifier.weight(1f),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .clickable { onTabClick() }
+                .pointerInput(tab.id) {
+                    detectTapGestures(
+                        onLongPress = { onTabLongPress() }
+                    )
+                }
         ) {
-            // Favicon
-            TabFaviconImage(
-                tab = tab,
-                modifier = Modifier.size(20.dp)
-            )
-            
-            // Tab title and URL
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = tab.content.title.ifEmpty { "New Tab" },
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                    color = if (isSelected) 
-                        MaterialTheme.colorScheme.onPrimaryContainer 
-                    else 
-                        MaterialTheme.colorScheme.onSurface,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                
-                Text(
-                    text = tab.content.url,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = if (isSelected) 
-                        MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
-                    else 
-                        MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+            // Thumbnail
+            if (tab.content.url.isNotEmpty()) {
+                AsyncImage(
+                    model = tab.content.url,
+                    contentDescription = null,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop
                 )
             }
-        }
-        
-        // Close button
-        IconButton(
-            onClick = onTabClose,
-            modifier = Modifier.size(24.dp)
-        ) {
-            Icon(
-                Icons.Default.Close,
-                contentDescription = "Close",
-                modifier = Modifier.size(16.dp)
-            )
+
+            // Overlay with title
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .align(Alignment.BottomCenter)
+                    .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.9f))
+                    .padding(4.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        text = tab.content.title.ifEmpty { "New Tab" },
+                        style = MaterialTheme.typography.labelSmall,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f)
+                    )
+
+                    IconButton(
+                        onClick = {
+                            scope.launch {
+                                scale.animateTo(0.8f, animationSpec = tween(100))
+                                onTabClose()
+                            }
+                        },
+                        modifier = Modifier.size(20.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "Close tab",
+                            modifier = Modifier.size(14.dp)
+                        )
+                    }
+                }
+            }
         }
     }
 }
 
-@Composable
-private fun TabGridItemCompact(
-    tab: TabSessionState,
-    isSelected: Boolean,
-    groupId: String,
-    groupColor: Int?,
-    isDragging: Boolean,
-    onTabClick: () -> Unit,
-    onTabClose: () -> Unit,
-    onTabLongPress: () -> Unit = {},
-    modifier: Modifier = Modifier
-) {
-    TabGridItemUnified(
-        tab = tab,
-        isSelected = isSelected,
-        isInGroup = true,
-        groupId = groupId,
-        groupColor = groupColor,
-        isDragging = isDragging,
-        onTabClick = onTabClick,
-        onTabClose = onTabClose,
-        onTabLongPress = onTabLongPress,
-        modifier = modifier,
-        thumbnailHeight = 90.dp,
-        compactWidth = null // Let parent control width
-    )
-}
-
+/**
+ * Individual tab grid item (for ungrouped tabs)
+ */
 @Composable
 private fun TabGridItem(
     tab: TabSessionState,
     isSelected: Boolean,
-    isInGroup: Boolean,
-    groupId: String?,
     groupColor: Int?,
-    isDragging: Boolean,
     onTabClick: () -> Unit,
     onTabClose: () -> Unit,
-    onTabLongPress: () -> Unit = {},
+    onTabLongPress: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    // Use unified material3 expressive grid item for all tabs
-    TabGridItemUnified(
-        tab = tab,
-        isSelected = isSelected,
-        isInGroup = isInGroup,
-        groupId = groupId,
-        groupColor = groupColor,
-        isDragging = isDragging,
-        onTabClick = onTabClick,
-        onTabClose = onTabClose,
-        onTabLongPress = onTabLongPress,
-        modifier = modifier,
-        thumbnailHeight = 120.dp,
-        compactWidth = null
-    )
-}
+    val scope = rememberCoroutineScope()
+    val scale = remember { Animatable(1f) }
 
-private fun buildGridItems(
-    tabs: List<TabSessionState>,
-    groups: List<com.prirai.android.nira.browser.tabgroups.TabGroupData>,
-    expandedGroups: Set<String>,
-    order: UnifiedTabOrder?
-): List<GridItem> {
-    val items = mutableListOf<GridItem>()
-    val addedTabIds = mutableSetOf<String>()
-    
-    // If we have an order, use it to maintain consistency with tab bar
-    if (order != null) {
-        for (orderItem in order.primaryOrder) {
-            when (orderItem) {
-                is UnifiedTabOrder.OrderItem.SingleTab -> {
-                    val tab = tabs.find { it.id == orderItem.tabId }
-                    if (tab != null && tab.id !in addedTabIds) {
-                        items.add(
-                            GridItem.Tab(
-                                tab = tab,
-                                groupId = null,
-                                isInGroup = false
-                            )
-                        )
-                        addedTabIds.add(tab.id)
-                    }
-                }
-                is UnifiedTabOrder.OrderItem.TabGroup -> {
-                    val group = groups.find { it.id == orderItem.groupId }
-                    if (group != null) {
-                        // Add group header (spans full width)
-                        items.add(
-                            GridItem.GroupHeader(
-                                groupId = group.id,
-                                title = group.name,
-                                color = group.color,
-                                tabCount = group.tabCount,
-                                isExpanded = expandedGroups.contains(group.id),
-                                contextId = group.contextId
-                            )
-                        )
-                        
-                        if (expandedGroups.contains(group.id)) {
-                            // Add grouped tabs as regular grid items (3 per row)
-                            orderItem.tabIds.forEach { tabId ->
-                                val tab = tabs.find { it.id == tabId && it.id !in addedTabIds }
-                                if (tab != null) {
-                                    items.add(
-                                        GridItem.Tab(
-                                            tab = tab,
-                                            groupId = group.id,
-                                            isInGroup = true
-                                        )
-                                    )
-                                    addedTabIds.add(tab.id)
-                                }
-                            }
-                        } else {
-                            // Mark these tabs as added even when collapsed
-                            orderItem.tabIds.forEach { tabId ->
-                                addedTabIds.add(tabId)
-                            }
-                        }
-                    }
-                }
-            }
+    Surface(
+        modifier = modifier
+            .aspectRatio(0.75f)
+            .scale(scale.value),
+        shape = RoundedCornerShape(12.dp),
+        color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface,
+        tonalElevation = if (isSelected) 3.dp else 1.dp,
+        border = if (isSelected) {
+            BorderStroke(2.dp, MaterialTheme.colorScheme.primary)
+        } else if (groupColor != null) {
+            BorderStroke(1.dp, Color(groupColor).copy(alpha = 0.3f))
+        } else {
+            null
         }
-        
-        // Add any remaining tabs that aren't in the order
-        tabs.filter { tab -> tab.id !in addedTabIds }.forEach { tab ->
-            items.add(
-                GridItem.Tab(
-                    tab = tab,
-                    groupId = null,
-                    isInGroup = false
-                )
-            )
-            addedTabIds.add(tab.id)
-        }
-    } else {
-        // Fallback to old behavior if no order available
-        val groupedTabIds = mutableSetOf<String>()
-        groups.forEach { group ->
-            groupedTabIds.addAll(group.tabIds)
-        }
-        
-        for (group in groups) {
-            items.add(
-                GridItem.GroupHeader(
-                    groupId = group.id,
-                    title = group.name,
-                    color = group.color,
-                    tabCount = group.tabCount,
-                    isExpanded = expandedGroups.contains(group.id),
-                    contextId = group.contextId
-                )
-            )
-            
-            if (expandedGroups.contains(group.id)) {
-                val groupTabs = tabs.filter { tab -> 
-                    tab.id in group.tabIds && tab.id !in addedTabIds
-                }
-                
-                // Add grouped tabs as regular grid items
-                groupTabs.forEach { tab ->
-                    items.add(
-                        GridItem.Tab(
-                            tab = tab,
-                            groupId = group.id,
-                            isInGroup = true
-                        )
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .clickable { onTabClick() }
+                .pointerInput(tab.id) {
+                    detectTapGestures(
+                        onLongPress = { onTabLongPress() }
                     )
-                    addedTabIds.add(tab.id)
                 }
+        ) {
+            // Thumbnail or placeholder
+            if (tab.content.url.isNotEmpty()) {
+                AsyncImage(
+                    model = tab.content.url,
+                    contentDescription = null,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop
+                )
             } else {
-                tabs.filter { tab -> tab.id in group.tabIds }.forEach { tab ->
-                    addedTabIds.add(tab.id)
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(MaterialTheme.colorScheme.surfaceVariant),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Language,
+                        contentDescription = null,
+                        modifier = Modifier.size(48.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                    )
                 }
             }
-        }
-        
-        tabs.filter { tab -> 
-            tab.id !in groupedTabIds && tab.id !in addedTabIds
-        }.forEach { tab ->
-            items.add(
-                GridItem.Tab(
-                    tab = tab,
-                    groupId = null,
-                    isInGroup = false
-                )
-            )
-            addedTabIds.add(tab.id)
+
+            // Favicon overlay (top-left)
+            if (tab.content.icon != null) {
+                Surface(
+                    modifier = Modifier
+                        .padding(8.dp)
+                        .size(24.dp)
+                        .align(Alignment.TopStart),
+                    shape = CircleShape,
+                    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
+                    tonalElevation = 2.dp
+                ) {
+                    Box(
+                        contentAlignment = Alignment.Center,
+                        modifier = Modifier.padding(4.dp)
+                    ) {
+                        Image(
+                            bitmap = tab.content.icon!!.asImageBitmap(),
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                }
+            }
+
+            // Close button (top-right)
+            IconButton(
+                onClick = {
+                    scope.launch {
+                        scale.animateTo(0.8f, animationSpec = tween(150))
+                        onTabClose()
+                    }
+                },
+                modifier = Modifier
+                    .padding(4.dp)
+                    .size(32.dp)
+                    .align(Alignment.TopEnd)
+            ) {
+                Surface(
+                    shape = CircleShape,
+                    color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.9f)
+                ) {
+                    Box(
+                        contentAlignment = Alignment.Center,
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "Close tab",
+                            modifier = Modifier.size(16.dp),
+                            tint = MaterialTheme.colorScheme.onErrorContainer
+                        )
+                    }
+                }
+            }
+
+            // Title overlay (bottom)
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .align(Alignment.BottomCenter),
+                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f),
+                tonalElevation = 1.dp
+            ) {
+                Column(
+                    modifier = Modifier.padding(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(2.dp)
+                ) {
+                    Text(
+                        text = tab.content.title.ifEmpty { "New Tab" },
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+
+                    if (tab.content.url.isNotEmpty()) {
+                        Text(
+                            text = tab.content.url,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+            }
         }
     }
-    
-    return items
 }
-
