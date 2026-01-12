@@ -5,6 +5,7 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.lazy.LazyRow
@@ -14,19 +15,24 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import mozilla.components.browser.state.state.TabSessionState
+import kotlin.math.abs
 
 /**
  * Horizontal tab bar with Chromium-style drag & drop support
@@ -88,22 +94,12 @@ fun TabBarCompose(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 itemsIndexed(items, key = { _, item -> item.id }) { index, item ->
-                    // Add divider before each item (as drop target for reordering)
-                    TabDivider(
-                        id = "divider_$index",
-                        coordinator = coordinator,
-                        position = index,
-                        modifier = Modifier.animateItem()
-                    )
-
                     when (item) {
                         is BarItem.SingleTab -> {
-                            TabPill(
-                                tab = item.tab,
-                                isSelected = item.tab.id == selectedTabId,
-                                coordinator = coordinator,
-                                onTabClick = onTabClick,
-                                onTabClose = onTabClose,
+                            var offsetY by remember { mutableStateOf(0f) }
+                            var showMenu by remember { mutableStateOf(false) }
+
+                            Box(
                                 modifier = Modifier
                                     .animateItem()
                                     .draggableItem(
@@ -111,20 +107,77 @@ fun TabBarCompose(
                                         coordinator = coordinator
                                     )
                                     .dragVisualFeedback(item.tab.id, coordinator)
-                            )
+                                    .pointerInput(item.tab.id) {
+                                        detectVerticalDragGestures(
+                                            onDragEnd = {
+                                                if (abs(offsetY) > 50) {
+                                                    if (offsetY < 0) {
+                                                        // Swipe up - delete
+                                                        onTabClose(item.tab.id)
+                                                    } else {
+                                                        // Swipe down - menu
+                                                        showMenu = true
+                                                    }
+                                                }
+                                                offsetY = 0f
+                                            },
+                                            onDragCancel = { offsetY = 0f },
+                                            onVerticalDrag = { _, dragAmount ->
+                                                offsetY += dragAmount
+                                            }
+                                        )
+                                    }
+                            ) {
+                                TabPill(
+                                    tab = item.tab,
+                                    isSelected = item.tab.id == selectedTabId,
+                                    coordinator = coordinator,
+                                    onTabClick = onTabClick,
+                                    onTabClose = onTabClose,
+                                    isDragging = false
+                                )
+
+                                // Swipe feedback
+                                if (abs(offsetY) > 10) {
+                                    Box(
+                                        modifier = Modifier
+                                            .matchParentSize()
+                                            .background(
+                                                if (offsetY < 0)
+                                                    MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f)
+                                                else
+                                                    MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
+                                            ),
+                                        contentAlignment = if (offsetY < 0) Alignment.TopCenter else Alignment.BottomCenter
+                                    ) {
+                                        Icon(
+                                            imageVector = if (offsetY < 0) Icons.Default.Delete else Icons.Default.MoreVert,
+                                            contentDescription = null,
+                                            tint = if (offsetY < 0)
+                                                MaterialTheme.colorScheme.onErrorContainer
+                                            else
+                                                MaterialTheme.colorScheme.onPrimaryContainer
+                                        )
+                                    }
+                                }
+                            }
+
+                            if (showMenu) {
+                                ShowTabMenu(
+                                    tab = item.tab,
+                                    isInGroup = false,
+                                    onDismiss = { showMenu = false },
+                                    viewModel = viewModel,
+                                    scope = scope
+                                )
+                            }
                         }
 
                         is BarItem.Group -> {
-                            GroupPill(
-                                group = item,
-                                isSelected = selectedTabId in item.tabIds,
-                                coordinator = coordinator,
-                                onTabClick = onTabClick,
-                                onTabClose = onTabClose,
-                                onGroupClick = { groupId ->
-                                    viewModel.toggleGroupExpanded(groupId)
-                                },
-                                viewModel = viewModel,
+                            var offsetY by remember { mutableStateOf(0f) }
+                            var showMenu by remember { mutableStateOf(false) }
+
+                            Box(
                                 modifier = Modifier
                                     .animateItem()
                                     .draggableItem(
@@ -141,19 +194,86 @@ fun TabBarCompose(
                                         )
                                     )
                                     .dragVisualFeedback(item.groupId, coordinator)
-                            )
+                                    .pointerInput(item.groupId) {
+                                        detectVerticalDragGestures(
+                                            onDragEnd = {
+                                                if (abs(offsetY) > 50) {
+                                                    if (offsetY < 0) {
+                                                        // Swipe up - ungroup all
+                                                        viewModel.ungroupAll(item.groupId)
+                                                    } else {
+                                                        // Swipe down - menu
+                                                        showMenu = true
+                                                    }
+                                                }
+                                                offsetY = 0f
+                                            },
+                                            onDragCancel = { offsetY = 0f },
+                                            onVerticalDrag = { _, dragAmount ->
+                                                offsetY += dragAmount
+                                            }
+                                        )
+                                    }
+                            ) {
+                                GroupPill(
+                                    group = item,
+                                    isSelected = selectedTabId in item.tabIds,
+                                    coordinator = coordinator,
+                                    onTabClick = onTabClick,
+                                    onTabClose = onTabClose,
+                                    onGroupClick = { groupId ->
+                                        viewModel.toggleGroupExpanded(groupId)
+                                    },
+                                    viewModel = viewModel,
+                                    isDragging = false
+                                )
+
+                                // Swipe feedback
+                                if (abs(offsetY) > 10) {
+                                    Box(
+                                        modifier = Modifier
+                                            .matchParentSize()
+                                            .background(
+                                                if (offsetY < 0)
+                                                    MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f)
+                                                else
+                                                    MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
+                                            ),
+                                        contentAlignment = if (offsetY < 0) Alignment.TopCenter else Alignment.BottomCenter
+                                    ) {
+                                        Icon(
+                                            imageVector = if (offsetY < 0) Icons.Default.Close else Icons.Default.MoreVert,
+                                            contentDescription = null,
+                                            tint = if (offsetY < 0)
+                                                MaterialTheme.colorScheme.onErrorContainer
+                                            else
+                                                MaterialTheme.colorScheme.onPrimaryContainer
+                                        )
+                                    }
+                                }
+                            }
+
+                            if (showMenu) {
+                                ShowGroupMenu(
+                                    groupId = item.groupId,
+                                    groupName = item.groupName,
+                                    onDismiss = { showMenu = false },
+                                    viewModel = viewModel,
+                                    scope = scope
+                                )
+                            }
                         }
                     }
-                }
 
-                // Add final divider (for appending at end)
-                item(key = "divider_end") {
-                    TabDivider(
-                        id = "divider_end",
-                        coordinator = coordinator,
-                        position = items.size,
-                        modifier = Modifier.animateItem()
-                    )
+                    // Add divider after each item (except the last one)
+                    if (index < items.size - 1) {
+                        TabDivider(
+                            id = "divider_${index + 1}",
+                            coordinator = coordinator,
+                            position = index + 1,
+                            modifier = Modifier.animateItem()
+                        )
+                    }
                 }
             }
         }
@@ -164,14 +284,25 @@ fun TabBarCompose(
                 is DraggableItemType.Tab -> {
                     val tab = tabs.find { it.id == draggedItem.tabId }
                     if (tab != null) {
-                        TabPill(
-                            tab = tab,
-                            isSelected = false,
-                            coordinator = coordinator,
-                            onTabClick = {},
-                            onTabClose = {},
+                        // Glass-morphic dragged tab with pill shape
+                        Surface(
                             modifier = Modifier
-                        )
+                                .height(40.dp)
+                                .width(120.dp),
+                            shape = RoundedCornerShape(20.dp),
+                            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f),
+                            tonalElevation = 8.dp,
+                            shadowElevation = 8.dp
+                        ) {
+                            TabPill(
+                                tab = tab,
+                                isSelected = false,
+                                coordinator = coordinator,
+                                onTabClick = {},
+                                onTabClose = {},
+                                isDragging = true
+                            )
+                        }
                     }
                 }
 
@@ -188,7 +319,7 @@ fun TabBarCompose(
                             onTabClose = {},
                             onGroupClick = null,
                             viewModel = viewModel,
-                            modifier = Modifier
+                            isDragging = true
                         )
                     }
                 }
@@ -262,6 +393,7 @@ private fun TabPill(
     coordinator: DragCoordinator,
     onTabClick: (String) -> Unit,
     onTabClose: (String) -> Unit,
+    isDragging: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     Row(
@@ -282,11 +414,12 @@ private fun TabPill(
             )
         }
 
-        // Title
+        // Title - use onSurface color when dragging for better contrast
         Text(
             text = tab.content.title.ifEmpty { "New Tab" },
             style = MaterialTheme.typography.bodyMedium,
             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+            color = if (isDragging) MaterialTheme.colorScheme.onSurface else Color.Unspecified,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f)
@@ -306,24 +439,70 @@ private fun TabDivider(
 ) {
     Box(
         modifier = modifier
-            .width(2.dp)
+            .width(8.dp)
             .height(40.dp)
             .dropTarget(
                 id = id,
                 type = DropTargetType.ROOT_POSITION,
                 coordinator = coordinator,
                 metadata = mapOf("position" to position)
-            )
+            ),
+        contentAlignment = Alignment.Center
     ) {
         // Visual divider
         Box(
             modifier = Modifier
-                .width(1.dp)
-                .height(24.dp)
-                .align(Alignment.Center)
-                .background(MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
+                .width(2.dp)
+                .height(30.dp)
+                .background(MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
         )
     }
+}
+
+/**
+ * Reusable tab context menu wrapper - used by tab bar
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ShowTabMenu(
+    tab: TabSessionState,
+    isInGroup: Boolean,
+    onDismiss: () -> Unit,
+    viewModel: TabViewModel,
+    scope: kotlinx.coroutines.CoroutineScope,
+    modifier: Modifier = Modifier
+) {
+    com.prirai.android.nira.browser.tabs.compose.TabContextMenu(
+        tab = tab,
+        isInGroup = isInGroup,
+        onDismiss = onDismiss,
+        viewModel = viewModel,
+        scope = scope,
+        modifier = modifier
+    )
+}
+
+/**
+ * Reusable group context menu wrapper - used by tab bar
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ShowGroupMenu(
+    groupId: String,
+    groupName: String,
+    onDismiss: () -> Unit,
+    viewModel: TabViewModel,
+    scope: kotlinx.coroutines.CoroutineScope,
+    modifier: Modifier = Modifier
+) {
+    com.prirai.android.nira.browser.tabs.compose.GroupContextMenu(
+        groupId = groupId,
+        groupName = groupName,
+        onDismiss = onDismiss,
+        viewModel = viewModel,
+        scope = scope,
+        modifier = modifier
+    )
 }
 
 /**
@@ -338,6 +517,7 @@ private fun GroupPill(
     onTabClose: (String) -> Unit,
     onGroupClick: ((String) -> Unit)? = null,
     viewModel: TabViewModel,
+    isDragging: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     var expanded by remember { mutableStateOf(group.isExpanded) }
@@ -345,7 +525,10 @@ private fun GroupPill(
     Surface(
         modifier = modifier
             .height(40.dp)
-            .widthIn(min = 150.dp, max = if (expanded) 600.dp else 150.dp),
+            .widthIn(min = 150.dp, max = if (expanded) 600.dp else 150.dp)
+            .then(
+                if (isDragging) Modifier else Modifier
+            ),
         shape = RoundedCornerShape(20.dp),
         color = Color(group.color).copy(alpha = 0.15f),
         border = BorderStroke(2.dp, Color(group.color))
@@ -372,13 +555,13 @@ private fun GroupPill(
                 modifier = Modifier.size(20.dp)
             )
 
-            // Group name
+            // Group name - use onSurface color when dragging
             Text(
                 text = group.groupName,
                 style = MaterialTheme.typography.bodyMedium,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                color = Color(group.color),
+                color = if (isDragging) MaterialTheme.colorScheme.onSurface else Color(group.color),
                 modifier = Modifier.weight(1f, fill = false)
             )
 
@@ -442,7 +625,7 @@ private fun GroupPill(
                                 style = MaterialTheme.typography.labelSmall,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
-                                color = Color(group.color),
+                                color = if (isDragging) MaterialTheme.colorScheme.onSurface else Color(group.color),
                                 modifier = Modifier.weight(1f)
                             )
                         }

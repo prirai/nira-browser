@@ -461,13 +461,14 @@ class DragCoordinator(
             target.id != excludeId && target.bounds.contains(position)
         }
 
-        // Priority: TAB > GROUP_BODY > GROUP_HEADER > ROOT_POSITION > EMPTY_SPACE
+        // Priority: ROOT_POSITION > TAB > GROUP_BODY > GROUP_HEADER > EMPTY_SPACE
+        // ROOT_POSITION (dividers) get highest priority for precise reordering
         val bestTarget = candidateTargets.maxByOrNull { target ->
             when (target.type) {
+                DropTargetType.ROOT_POSITION -> 6
                 DropTargetType.TAB -> 5
                 DropTargetType.GROUP_BODY -> 4
                 DropTargetType.GROUP_HEADER -> 3
-                DropTargetType.ROOT_POSITION -> 2
                 DropTargetType.EMPTY_SPACE -> 1
             }
         } ?: return null

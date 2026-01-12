@@ -17,6 +17,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -97,6 +98,9 @@ fun TabSheetListView(
         UnifiedItemBuilder.deduplicateItems(items)
     }
 
+    val dragState by coordinator.dragState
+    val isDragging = dragState.isDragging
+
     Box(
         modifier = modifier
             .fillMaxSize()
@@ -112,10 +116,27 @@ fun TabSheetListView(
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(vertical = 8.dp)
         ) {
-            items(
+            itemsIndexed(
                 items = uniqueItems,
-                key = { it.id }
-            ) { item ->
+                key = { _, item -> item.id }
+            ) { index, item ->
+                // Show divider during drag
+                if (isDragging && index == 0) {
+                    HorizontalDivider(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(4.dp)
+                            .dropTarget(
+                                id = "divider_0",
+                                type = DropTargetType.ROOT_POSITION,
+                                coordinator = coordinator,
+                                metadata = mapOf("position" to 0)
+                            ),
+                        thickness = 2.dp,
+                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
+                    )
+                }
+
                 when (item) {
                     is UnifiedItem.GroupHeader -> {
                         GroupHeaderItem(
@@ -340,6 +361,23 @@ fun TabSheetListView(
                     is UnifiedItem.GroupRow -> {
                         // GroupRow is not used in list view
                     }
+                }
+
+                // Show divider after each item during drag
+                if (isDragging) {
+                    HorizontalDivider(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(4.dp)
+                            .dropTarget(
+                                id = "divider_${index + 1}",
+                                type = DropTargetType.ROOT_POSITION,
+                                coordinator = coordinator,
+                                metadata = mapOf("position" to index + 1)
+                            ),
+                        thickness = 2.dp,
+                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
+                    )
                 }
             }
         }

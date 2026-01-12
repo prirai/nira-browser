@@ -101,6 +101,9 @@ fun TabSheetGridView(
         UnifiedItemBuilder.deduplicateItems(items)
     }
 
+    val dragState by coordinator.dragState
+    val isDragging = dragState.isDragging
+
     Box(
         modifier = modifier
             .fillMaxSize()
