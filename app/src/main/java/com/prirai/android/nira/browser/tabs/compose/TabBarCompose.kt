@@ -3,20 +3,26 @@ package com.prirai.android.nira.browser.tabs.compose
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
@@ -79,10 +85,17 @@ fun TabBarCompose(
             LazyRow(
                 state = listState,
                 contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
-                items(items, key = { it.id }) { item ->
+                itemsIndexed(items, key = { _, item -> item.id }) { index, item ->
+                    // Add divider before each item (as drop target for reordering)
+                    TabDivider(
+                        id = "divider_$index",
+                        coordinator = coordinator,
+                        position = index,
+                        modifier = Modifier.animateItem()
+                    )
+
                     when (item) {
                         is BarItem.SingleTab -> {
                             TabPill(
@@ -97,12 +110,6 @@ fun TabBarCompose(
                                         itemType = DraggableItemType.Tab(item.tab.id),
                                         coordinator = coordinator
                                     )
-                                    .dropTarget(
-                                        id = item.tab.id,
-                                        type = DropTargetType.TAB,
-                                        coordinator = coordinator,
-                                        metadata = mapOf("tabId" to item.tab.id)
-                                    )
                                     .dragVisualFeedback(item.tab.id, coordinator)
                             )
                         }
@@ -114,6 +121,10 @@ fun TabBarCompose(
                                 coordinator = coordinator,
                                 onTabClick = onTabClick,
                                 onTabClose = onTabClose,
+                                onGroupClick = { groupId ->
+                                    viewModel.toggleGroupExpanded(groupId)
+                                },
+                                viewModel = viewModel,
                                 modifier = Modifier
                                     .animateItem()
                                     .draggableItem(
@@ -133,6 +144,16 @@ fun TabBarCompose(
                             )
                         }
                     }
+                }
+
+                // Add final divider (for appending at end)
+                item(key = "divider_end") {
+                    TabDivider(
+                        id = "divider_end",
+                        coordinator = coordinator,
+                        position = items.size,
+                        modifier = Modifier.animateItem()
+                    )
                 }
             }
         }
@@ -165,6 +186,8 @@ fun TabBarCompose(
                             coordinator = coordinator,
                             onTabClick = {},
                             onTabClose = {},
+                            onGroupClick = null,
+                            viewModel = viewModel,
                             modifier = Modifier
                         )
                     }
@@ -230,7 +253,7 @@ sealed class BarItem {
 }
 
 /**
- * Tab pill composable
+ * Tab pill composable - transparent background, uses container backdrop
  */
 @Composable
 private fun TabPill(
@@ -241,60 +264,70 @@ private fun TabPill(
     onTabClose: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Surface(
+    Row(
         modifier = modifier
             .height(40.dp)
-            .widthIn(min = 120.dp, max = 200.dp)
-            .clickable { onTabClick(tab.id) },
-        shape = RoundedCornerShape(20.dp),
-        color = if (isSelected)
-            MaterialTheme.colorScheme.primaryContainer
-        else
-            MaterialTheme.colorScheme.surfaceVariant,
-        tonalElevation = if (isSelected) 2.dp else 0.dp
+            .width(120.dp)
+            .clickable { onTabClick(tab.id) }
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 12.dp, vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            // Favicon
-            tab.content.icon?.let { icon ->
-                Image(
-                    bitmap = icon.asImageBitmap(),
-                    contentDescription = null,
-                    modifier = Modifier.size(16.dp)
-                )
-            }
-
-            // Title
-            Text(
-                text = tab.content.title.ifEmpty { "New Tab" },
-                style = MaterialTheme.typography.bodyMedium,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f)
+        // Favicon
+        tab.content.icon?.let { icon ->
+            Image(
+                bitmap = icon.asImageBitmap(),
+                contentDescription = null,
+                modifier = Modifier.size(16.dp)
             )
-
-            // Close button
-            IconButton(
-                onClick = { onTabClose(tab.id) },
-                modifier = Modifier.size(20.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Close,
-                    contentDescription = "Close",
-                    modifier = Modifier.size(16.dp)
-                )
-            }
         }
+
+        // Title
+        Text(
+            text = tab.content.title.ifEmpty { "New Tab" },
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f)
+        )
     }
 }
 
 /**
- * Group pill composable
+ * Divider that acts as a drop target for reordering
+ */
+@Composable
+private fun TabDivider(
+    id: String,
+    coordinator: DragCoordinator,
+    position: Int,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier
+            .width(2.dp)
+            .height(40.dp)
+            .dropTarget(
+                id = id,
+                type = DropTargetType.ROOT_POSITION,
+                coordinator = coordinator,
+                metadata = mapOf("position" to position)
+            )
+    ) {
+        // Visual divider
+        Box(
+            modifier = Modifier
+                .width(1.dp)
+                .height(24.dp)
+                .align(Alignment.Center)
+                .background(MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
+        )
+    }
+}
+
+/**
+ * Group pill composable - transparent background with dividers between tabs
  */
 @Composable
 private fun GroupPill(
@@ -303,25 +336,42 @@ private fun GroupPill(
     coordinator: DragCoordinator,
     onTabClick: (String) -> Unit,
     onTabClose: (String) -> Unit,
+    onGroupClick: ((String) -> Unit)? = null,
+    viewModel: TabViewModel,
     modifier: Modifier = Modifier
 ) {
-    val expanded = group.isExpanded
+    var expanded by remember { mutableStateOf(group.isExpanded) }
 
     Surface(
         modifier = modifier
             .height(40.dp)
-            .widthIn(min = if (expanded) 240.dp else 120.dp, max = 400.dp),
+            .widthIn(min = 150.dp, max = if (expanded) 600.dp else 150.dp),
         shape = RoundedCornerShape(20.dp),
-        color = Color(group.color).copy(alpha = 0.2f),
+        color = Color(group.color).copy(alpha = 0.15f),
         border = BorderStroke(2.dp, Color(group.color))
     ) {
         Row(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 12.dp, vertical = 8.dp),
+                .clickable(
+                    enabled = true,
+                    onClick = {
+                        expanded = !expanded
+                        onGroupClick?.invoke(group.groupId)
+                    }
+                )
+                .padding(horizontal = 8.dp, vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
         ) {
+            // Collapse/Expand icon
+            Icon(
+                imageVector = if (expanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                contentDescription = if (expanded) "Collapse" else "Expand",
+                tint = Color(group.color),
+                modifier = Modifier.size(20.dp)
+            )
+
             // Group name
             Text(
                 text = group.groupName,
@@ -332,37 +382,94 @@ private fun GroupPill(
                 modifier = Modifier.weight(1f, fill = false)
             )
 
-            // Tab count
-            Text(
-                text = "${group.tabs.size}",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            // Tab count badge
+            Surface(
+                shape = CircleShape,
+                color = Color(group.color).copy(alpha = 0.3f)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .padding(horizontal = 8.dp, vertical = 2.dp)
+                        .defaultMinSize(minWidth = 20.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "${group.tabs.size}",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Color(group.color),
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
 
             if (expanded) {
-                Spacer(Modifier.width(4.dp))
-
-                // Show tab favicons in group
+                // Show tab pills in group with dividers
                 Row(
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-                    modifier = Modifier.weight(1f, fill = false)
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    group.tabs.take(3).forEach { tab ->
-                        tab.content.icon?.let { icon ->
-                            Image(
-                                bitmap = icon.asImageBitmap(),
-                                contentDescription = null,
+                    group.tabs.forEachIndexed { index, tab ->
+                        if (index > 0) {
+                            // Divider between tabs
+                            Box(
                                 modifier = Modifier
-                                    .size(16.dp)
-                                    .clickable { onTabClick(tab.id) }
+                                    .width(1.dp)
+                                    .height(24.dp)
+                                    .background(Color(group.color).copy(alpha = 0.3f))
+                            )
+                        }
+
+                        // Tab pill without background
+                        Row(
+                            modifier = Modifier
+                                .height(32.dp)
+                                .width(100.dp)
+                                .clickable(
+                                    onClick = { onTabClick(tab.id) }
+                                )
+                                .padding(horizontal = 8.dp, vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            tab.content.icon?.let { icon ->
+                                Image(
+                                    bitmap = icon.asImageBitmap(),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                            }
+                            Text(
+                                text = tab.content.title.ifEmpty { "New Tab" },
+                                style = MaterialTheme.typography.labelSmall,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                color = Color(group.color),
+                                modifier = Modifier.weight(1f)
                             )
                         }
                     }
-                    if (group.tabs.size > 3) {
-                        Text(
-                            text = "+${group.tabs.size - 3}",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = Color(group.color)
+
+                    // Divider before add button
+                    Box(
+                        modifier = Modifier
+                            .width(1.dp)
+                            .height(24.dp)
+                            .background(Color(group.color).copy(alpha = 0.3f))
+                    )
+
+                    // Add tab button
+                    IconButton(
+                        onClick = {
+                            // Create new tab and add to this group
+                            val contextId = group.contextId ?: "profile_default"
+                            viewModel.createNewTabInGroup(group.groupId, contextId)
+                        },
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Add,
+                            contentDescription = "Add tab to group",
+                            tint = Color(group.color),
+                            modifier = Modifier.size(18.dp)
                         )
                     }
                 }
