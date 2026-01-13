@@ -1,6 +1,7 @@
 package com.prirai.android.nira.browser.tabs.compose
 
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -98,8 +99,41 @@ fun TabSheetListView(
         UnifiedItemBuilder.deduplicateItems(items)
     }
 
+    // Calculate position mapping for dividers
+    // Maps UI item index to actual primary order position
+    val positionMapping = remember(uniqueItems, currentOrder) {
+        val mapping = mutableMapOf<Int, Int>()
+        var orderPosition = 0
+
+        uniqueItems.forEachIndexed { index, item ->
+            when (item) {
+                is UnifiedItem.GroupHeader -> {
+                    mapping[index] = orderPosition
+                    orderPosition++
+                }
+
+                is UnifiedItem.GroupedTab -> {
+                    // Grouped tabs don't occupy a position in primary order
+                    mapping[index] = orderPosition - 1 // Use parent group's position
+                }
+
+                is UnifiedItem.SingleTab -> {
+                    mapping[index] = orderPosition
+                    orderPosition++
+                }
+
+                else -> {}
+            }
+        }
+        mapping
+    }
+
     val dragState by coordinator.dragState
     val isDragging = dragState.isDragging
+    val autoScrollVelocity by coordinator.autoScrollVelocity
+
+    // Auto-scroll disabled - needs proper implementation to avoid conflicts
+    // The drag system works fine without it for now
 
     Box(
         modifier = modifier
@@ -120,85 +154,168 @@ fun TabSheetListView(
                 items = uniqueItems,
                 key = { _, item -> item.id }
             ) { index, item ->
+                val nextOrderPosition = positionMapping[index]?.plus(1) ?: (index + 1)
+                val isLastItemInGroup = item is UnifiedItem.GroupedTab && item.isLastInGroup
+                val isGroupHeader = item is UnifiedItem.GroupHeader
+
                 // Show divider during drag
                 if (isDragging && index == 0) {
                     val isHovering = coordinator.isHoveringOver("divider_0")
-                    HorizontalDivider(
+                    Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(4.dp)
+                            .height(24.dp)
                             .dropTarget(
                                 id = "divider_0",
                                 type = DropTargetType.ROOT_POSITION,
                                 coordinator = coordinator,
                                 metadata = mapOf("position" to 0)
                             ),
-                        thickness = 2.dp,
-                        color = if (isHovering)
-                            MaterialTheme.colorScheme.primary
-                        else
-                            MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
-                    )
+                        contentAlignment = Alignment.Center
+                    ) {
+                        HorizontalDivider(
+                            thickness = if (isHovering) 3.dp else 2.dp,
+                            color = if (isHovering)
+                                MaterialTheme.colorScheme.primary
+                            else
+                                MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
+                        )
+                    }
                 }
 
                 when (item) {
                     is UnifiedItem.GroupHeader -> {
-                        GroupHeaderItem(
-                            groupId = item.groupId,
-                            title = item.title,
-                            color = item.color,
-                            tabCount = item.tabCount,
-                            isExpanded = item.isExpanded,
-                            onHeaderClick = { onGroupClick(item.groupId) },
-                            onOptionsClick = {
-                                menuGroupId = item.groupId
-                                menuGroupName = item.title
-                                showGroupMenu = true
-                                onGroupOptionsClick(item.groupId)
-                            },
-                            modifier = Modifier
-                                .animateItem()
-                                .draggableItem(
-                                    itemType = DraggableItemType.Group(item.groupId),
-                                    coordinator = coordinator
-                                )
-                                .dropTarget(
-                                    id = item.groupId,
-                                    type = DropTargetType.GROUP_HEADER,
-                                    coordinator = coordinator,
-                                    metadata = mapOf<String, Any>(
-                                        "groupId" to item.groupId,
-                                        "contextId" to (item.contextId ?: "")
-                                    )
-                                )
-                                .dragVisualFeedback(item.groupId, coordinator)
-                        )
-                    }
-
-                    is UnifiedItem.GroupedTab -> {
-                        val group = groups.find { it.id == item.groupId }
                         val dismissState = rememberSwipeToDismissBoxState(
                             confirmValueChange = { dismissValue ->
-                                when (dismissValue) {
-                                    SwipeToDismissBoxValue.EndToStart -> {
-                                        onTabClose(item.tab.id)
-                                        true
-                                    }
+                                // Disable swipe during drag to prevent conflicts
+                                if (isDragging) {
+                                    false
+                                } else {
+                                    when (dismissValue) {
+                                        SwipeToDismissBoxValue.EndToStart -> {
+                                            // Swipe left - ungroup all tabs
+                                            viewModel.ungroupAll(item.groupId)
+                                            true
+                                        }
 
-                                    SwipeToDismissBoxValue.StartToEnd -> {
-                                        menuTab = item.tab
-                                        menuIsInGroup = true
-                                        showTabMenu = true
-                                        false
-                                    }
+                                        SwipeToDismissBoxValue.StartToEnd -> {
+                                            // Swipe right - show menu
+                                            menuGroupId = item.groupId
+                                            menuGroupName = item.title
+                                            showGroupMenu = true
+                                            false
+                                        }
 
-                                    else -> false
+                                        else -> false
+                                    }
                                 }
                             }
                         )
 
                         SwipeToDismissBox(
                             state = dismissState,
+                            enableDismissFromStartToEnd = !isDragging,
+                            enableDismissFromEndToStart = !isDragging,
+                            backgroundContent = {
+                                val color = when (dismissState.targetValue) {
+                                    SwipeToDismissBoxValue.EndToStart -> MaterialTheme.colorScheme.errorContainer
+                                    SwipeToDismissBoxValue.StartToEnd -> MaterialTheme.colorScheme.primaryContainer
+                                    else -> Color.Transparent
+                                }
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .background(color)
+                                        .padding(horizontal = 20.dp),
+                                    contentAlignment = if (dismissState.targetValue == SwipeToDismissBoxValue.EndToStart)
+                                        Alignment.CenterEnd else Alignment.CenterStart
+                                ) {
+                                    when (dismissState.targetValue) {
+                                        SwipeToDismissBoxValue.EndToStart -> {
+                                            Icon(
+                                                imageVector = Icons.Default.Delete,
+                                                contentDescription = "Ungroup",
+                                                tint = MaterialTheme.colorScheme.onErrorContainer
+                                            )
+                                        }
+
+                                        SwipeToDismissBoxValue.StartToEnd -> {
+                                            Icon(
+                                                imageVector = Icons.Default.MoreVert,
+                                                contentDescription = "Menu",
+                                                tint = MaterialTheme.colorScheme.onPrimaryContainer
+                                            )
+                                        }
+
+                                        else -> {}
+                                    }
+                                }
+                            }
+                        ) {
+                            GroupHeaderItem(
+                                groupId = item.groupId,
+                                title = item.title,
+                                color = item.color,
+                                tabCount = item.tabCount,
+                                isExpanded = item.isExpanded,
+                                onHeaderClick = { onGroupClick(item.groupId) },
+                                onOptionsClick = {
+                                    menuGroupId = item.groupId
+                                    menuGroupName = item.title
+                                    showGroupMenu = true
+                                    onGroupOptionsClick(item.groupId)
+                                },
+                                modifier = Modifier
+                                    .animateItem()
+                                    .draggableItem(
+                                        itemType = DraggableItemType.Group(item.groupId),
+                                        coordinator = coordinator
+                                    )
+                                    .dropTarget(
+                                        id = item.groupId,
+                                        type = DropTargetType.GROUP_HEADER,
+                                        coordinator = coordinator,
+                                        metadata = mapOf<String, Any>(
+                                            "groupId" to item.groupId,
+                                            "contextId" to (item.contextId ?: "")
+                                        )
+                                    )
+                                    .dragVisualFeedback(item.groupId, coordinator)
+                            )
+                        }
+                    }
+
+                    is UnifiedItem.GroupedTab -> {
+                        val group = groups.find { it.id == item.groupId }
+                        val dismissState = rememberSwipeToDismissBoxState(
+                            confirmValueChange = { dismissValue ->
+                                // Disable swipe during drag to prevent conflicts
+                                if (isDragging) {
+                                    false
+                                } else {
+                                    when (dismissValue) {
+                                        SwipeToDismissBoxValue.EndToStart -> {
+                                            onTabClose(item.tab.id)
+                                            true
+                                        }
+
+                                        SwipeToDismissBoxValue.StartToEnd -> {
+                                            menuTab = item.tab
+                                            menuIsInGroup = true
+                                            showTabMenu = true
+                                            false
+                                        }
+
+                                        else -> false
+                                    }
+                                }
+                            }
+                        )
+
+                        SwipeToDismissBox(
+                            state = dismissState,
+                            enableDismissFromStartToEnd = !isDragging,
+                            enableDismissFromEndToStart = !isDragging,
                             backgroundContent = {
                                 val color = when (dismissState.targetValue) {
                                     SwipeToDismissBoxValue.EndToStart -> MaterialTheme.colorScheme.errorContainer
@@ -233,9 +350,7 @@ fun TabSheetListView(
                                         else -> {}
                                     }
                                 }
-                            },
-                            enableDismissFromStartToEnd = true,
-                            enableDismissFromEndToStart = true
+                            }
                         ) {
                             TabListItem(
                                 tab = item.tab,
@@ -275,26 +390,33 @@ fun TabSheetListView(
                     is UnifiedItem.SingleTab -> {
                         val dismissState = rememberSwipeToDismissBoxState(
                             confirmValueChange = { dismissValue ->
-                                when (dismissValue) {
-                                    SwipeToDismissBoxValue.EndToStart -> {
-                                        onTabClose(item.tab.id)
-                                        true
-                                    }
+                                // Disable swipe during drag to prevent conflicts
+                                if (isDragging) {
+                                    false
+                                } else {
+                                    when (dismissValue) {
+                                        SwipeToDismissBoxValue.EndToStart -> {
+                                            onTabClose(item.tab.id)
+                                            true
+                                        }
 
-                                    SwipeToDismissBoxValue.StartToEnd -> {
-                                        menuTab = item.tab
-                                        menuIsInGroup = false
-                                        showTabMenu = true
-                                        false
-                                    }
+                                        SwipeToDismissBoxValue.StartToEnd -> {
+                                            menuTab = item.tab
+                                            menuIsInGroup = false
+                                            showTabMenu = true
+                                            false
+                                        }
 
-                                    else -> false
+                                        else -> false
+                                    }
                                 }
                             }
                         )
 
                         SwipeToDismissBox(
                             state = dismissState,
+                            enableDismissFromStartToEnd = !isDragging,
+                            enableDismissFromEndToStart = !isDragging,
                             backgroundContent = {
                                 val color = when (dismissState.targetValue) {
                                     SwipeToDismissBoxValue.EndToStart -> MaterialTheme.colorScheme.errorContainer
@@ -329,9 +451,7 @@ fun TabSheetListView(
                                         else -> {}
                                     }
                                 }
-                            },
-                            enableDismissFromStartToEnd = true,
-                            enableDismissFromEndToStart = true
+                            }
                         ) {
                             TabListItem(
                                 tab = item.tab,
@@ -367,25 +487,29 @@ fun TabSheetListView(
                     }
                 }
 
-                // Show divider after each item during drag
-                if (isDragging) {
-                    val isHovering = coordinator.isHoveringOver("divider_${index + 1}")
-                    HorizontalDivider(
+                // Show divider after each item during drag (only after root-level items or last item in group, but NOT after group headers)
+                if (isDragging && !isGroupHeader && (item !is UnifiedItem.GroupedTab || isLastItemInGroup)) {
+                    val isHovering = coordinator.isHoveringOver("divider_$nextOrderPosition")
+                    Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(4.dp)
+                            .height(24.dp)
                             .dropTarget(
-                                id = "divider_${index + 1}",
+                                id = "divider_$nextOrderPosition",
                                 type = DropTargetType.ROOT_POSITION,
                                 coordinator = coordinator,
-                                metadata = mapOf("position" to index + 1)
+                                metadata = mapOf("position" to nextOrderPosition)
                             ),
-                        thickness = 2.dp,
-                        color = if (isHovering)
-                            MaterialTheme.colorScheme.primary
-                        else
-                            MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
-                    )
+                        contentAlignment = Alignment.Center
+                    ) {
+                        HorizontalDivider(
+                            thickness = if (isHovering) 3.dp else 2.dp,
+                            color = if (isHovering)
+                                MaterialTheme.colorScheme.primary
+                            else
+                                MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
+                        )
+                    }
                 }
             }
         }

@@ -38,6 +38,7 @@ class TabViewModel(
 
     private val orderManager by lazy { TabOrderManager.getInstance(context, groupManager) }
     private var loadJob: kotlinx.coroutines.Job? = null
+    private var rebuildJob: kotlinx.coroutines.Job? = null
 
     // Expose order for UI to use
     val currentOrder: StateFlow<UnifiedTabOrder?> = orderManager.currentOrder
@@ -46,11 +47,16 @@ class TabViewModel(
         // Observe group events and refresh when groups change
         viewModelScope.launch {
             groupManager.groupEvents.collect { event ->
-                // Refresh groups when any group event occurs
-                _currentProfileId.value?.let { profileId ->
-                    refreshGroupsForProfile(profileId)
-                    // Also reload the order to reflect group changes
-                    orderManager.rebuildOrderForProfile(profileId, _tabs.value)
+                // Debounce rapid group events to prevent flickering
+                rebuildJob?.cancel()
+                rebuildJob = launch {
+                    delay(150) // Debounce for 150ms
+                    // Refresh groups when any group event occurs
+                    _currentProfileId.value?.let { profileId ->
+                        refreshGroupsForProfile(profileId)
+                        // Also reload the order to reflect group changes
+                        orderManager.rebuildOrderForProfile(profileId, _tabs.value)
+                    }
                 }
             }
         }
@@ -705,15 +711,38 @@ class TabViewModel(
                 orderManager.loadOrder(profileId)
                 val current = orderManager.currentOrder.value ?: return@launch
 
-                // Find the tab in the order
-                val tabIndex = current.primaryOrder.indexOfFirst {
-                    it is UnifiedTabOrder.OrderItem.SingleTab && it.tabId == tabId
+                // Find the tab - could be a SingleTab or inside a TabGroup
+                var tabIndex = -1
+                var isInGroup = false
+
+                current.primaryOrder.forEachIndexed { index, item ->
+                    when (item) {
+                        is UnifiedTabOrder.OrderItem.SingleTab -> {
+                            if (item.tabId == tabId) {
+                                tabIndex = index
+                            }
+                        }
+
+                        is UnifiedTabOrder.OrderItem.TabGroup -> {
+                            if (tabId in item.tabIds) {
+                                tabIndex = index
+                                isInGroup = true
+                            }
+                        }
+                    }
                 }
 
-                if (tabIndex != -1 && tabIndex != targetIndex) {
+                if (tabIndex != -1) {
                     val size = current.primaryOrder.size
-                    val validTargetIndex = targetIndex.coerceIn(0, size - 1)
-                    if (tabIndex != validTargetIndex) {
+                    val validTargetIndex = targetIndex.coerceIn(0, size)
+
+                    // If tab is in a group at the found position, we need to extract it first
+                    if (isInGroup && tabIndex != validTargetIndex) {
+                        // Remove from group and add as single tab at target position
+                        orderManager.removeTabFromGroup(tabId, validTargetIndex)
+                        saveCurrentOrder(profileId)
+                    } else if (!isInGroup && tabIndex != validTargetIndex) {
+                        // Tab is already single, just reorder
                         orderManager.reorderItem(tabIndex, validTargetIndex)
                         saveCurrentOrder(profileId)
                     }

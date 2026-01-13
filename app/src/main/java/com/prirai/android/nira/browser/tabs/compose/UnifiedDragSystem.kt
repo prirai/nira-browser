@@ -159,8 +159,12 @@ class DragCoordinator(
     // Scroll container bounds (for auto-scroll detection)
     private var scrollContainerBounds: Rect? = null
 
-    // Auto-scroll edge threshold (50dp in pixels)
-    private val autoScrollThreshold = 50f * (context?.resources?.displayMetrics?.density ?: 1f)
+    // Auto-scroll edge threshold (10% of container height, dynamically calculated)
+    private fun getAutoScrollThreshold(): Float {
+        val bounds = scrollContainerBounds ?: return 0f
+        val containerHeight = bounds.bottom - bounds.top
+        return containerHeight * 0.1f // 10% of container height
+    }
 
     /**
      * Register a drop target zone
@@ -276,19 +280,22 @@ class DragCoordinator(
     private fun checkAutoScroll(pointerPosition: Offset) {
         val bounds = scrollContainerBounds ?: return
 
+        val threshold = getAutoScrollThreshold()
+        if (threshold == 0f) return // No scroll container set yet
+
         val distanceFromTop = pointerPosition.y - bounds.top
         val distanceFromBottom = bounds.bottom - pointerPosition.y
 
         val velocity = when {
-            distanceFromTop < autoScrollThreshold && distanceFromTop > 0 -> {
+            distanceFromTop < threshold && distanceFromTop > 0 -> {
                 // Near top - scroll up (negative velocity)
-                val intensity = (autoScrollThreshold - distanceFromTop) / autoScrollThreshold
+                val intensity = (threshold - distanceFromTop) / threshold
                 -intensity * 10f
             }
 
-            distanceFromBottom < autoScrollThreshold && distanceFromBottom > 0 -> {
+            distanceFromBottom < threshold && distanceFromBottom > 0 -> {
                 // Near bottom - scroll down (positive velocity)
-                val intensity = (autoScrollThreshold - distanceFromBottom) / autoScrollThreshold
+                val intensity = (threshold - distanceFromBottom) / threshold
                 intensity * 10f
             }
 
@@ -459,6 +466,14 @@ class DragCoordinator(
         // Find all targets that contain the position
         val candidateTargets = dropTargets.values.filter { target ->
             target.id != excludeId && target.bounds.contains(position)
+        }
+
+        // Check if any ROOT_POSITION (divider) target contains the position
+        // If so, use it exclusively to prevent GROUP_HEADER/TAB from capturing the drop
+        val dividerTarget = candidateTargets.firstOrNull { it.type == DropTargetType.ROOT_POSITION }
+        if (dividerTarget != null) {
+            android.util.Log.d("DragCoordinator", "Divider target found: ${dividerTarget.id}, excluding other targets")
+            return dividerTarget
         }
 
         // Priority: ROOT_POSITION > TAB > GROUP_BODY > GROUP_HEADER > EMPTY_SPACE
@@ -721,11 +736,16 @@ class DragCoordinator(
 
                 // If tab is in a group, ungroup it first
                 if (tab.groupId != null) {
+                    android.util.Log.d(
+                        "DragCoordinator",
+                        "Removing tab ${tab.tabId} from group ${tab.groupId} before moving to position $position"
+                    )
                     viewModel.removeTabFromGroup(tab.tabId)
-                    delay(50)
+                    delay(100)
                 }
 
                 // Move to target position
+                android.util.Log.d("DragCoordinator", "Moving tab ${tab.tabId} to root position $position")
                 viewModel.moveTabToPosition(tab.tabId, position)
             }
 

@@ -9,10 +9,12 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -31,7 +33,6 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import coil.compose.AsyncImage
 import mozilla.components.browser.state.state.TabSessionState
 import kotlinx.coroutines.launch
 import com.prirai.android.nira.browser.tabs.compose.DragLayer
@@ -136,36 +137,99 @@ fun TabSheetGridView(
             ) { item ->
                 when (item) {
                     is UnifiedItem.GroupHeader -> {
-                        GroupHeaderGridItem(
-                            groupId = item.groupId,
-                            title = item.title,
-                            color = item.color,
-                            tabCount = item.tabCount,
-                            isExpanded = item.isExpanded,
-                            onHeaderClick = { onGroupClick(item.groupId) },
-                            onOptionsClick = {
-                                menuGroupId = item.groupId
-                                menuGroupName = item.title
-                                showGroupMenu = true
-                                onGroupOptionsClick(item.groupId)
-                            },
-                            modifier = Modifier
-                                .animateItem()
-                                .draggableItem(
-                                    itemType = DraggableItemType.Group(item.groupId),
-                                    coordinator = coordinator
-                                )
-                                .dropTarget(
-                                    id = item.groupId,
-                                    type = DropTargetType.GROUP_HEADER,
-                                    coordinator = coordinator,
-                                    metadata = mapOf<String, Any>(
-                                        "groupId" to item.groupId,
-                                        "contextId" to (item.contextId ?: "")
-                                    )
-                                )
-                                .dragVisualFeedback(item.groupId, coordinator)
+                        val dismissState = rememberSwipeToDismissBoxState(
+                            confirmValueChange = { dismissValue ->
+                                when (dismissValue) {
+                                    SwipeToDismissBoxValue.EndToStart -> {
+                                        // Swipe left - ungroup all tabs
+                                        viewModel.ungroupAll(item.groupId)
+                                        true
+                                    }
+
+                                    SwipeToDismissBoxValue.StartToEnd -> {
+                                        // Swipe right - show menu
+                                        menuGroupId = item.groupId
+                                        menuGroupName = item.title
+                                        showGroupMenu = true
+                                        false
+                                    }
+
+                                    else -> false
+                                }
+                            }
                         )
+
+                        SwipeToDismissBox(
+                            state = dismissState,
+                            backgroundContent = {
+                                val color = when (dismissState.targetValue) {
+                                    SwipeToDismissBoxValue.EndToStart -> MaterialTheme.colorScheme.errorContainer
+                                    SwipeToDismissBoxValue.StartToEnd -> MaterialTheme.colorScheme.primaryContainer
+                                    else -> Color.Transparent
+                                }
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .background(color)
+                                        .padding(horizontal = 20.dp),
+                                    contentAlignment = if (dismissState.targetValue == SwipeToDismissBoxValue.EndToStart)
+                                        Alignment.CenterEnd else Alignment.CenterStart
+                                ) {
+                                    when (dismissState.targetValue) {
+                                        SwipeToDismissBoxValue.EndToStart -> {
+                                            Icon(
+                                                imageVector = Icons.Default.Delete,
+                                                contentDescription = "Ungroup",
+                                                tint = MaterialTheme.colorScheme.onErrorContainer
+                                            )
+                                        }
+
+                                        SwipeToDismissBoxValue.StartToEnd -> {
+                                            Icon(
+                                                imageVector = Icons.Default.MoreVert,
+                                                contentDescription = "Menu",
+                                                tint = MaterialTheme.colorScheme.onPrimaryContainer
+                                            )
+                                        }
+
+                                        else -> {}
+                                    }
+                                }
+                            },
+                            enableDismissFromStartToEnd = true,
+                            enableDismissFromEndToStart = true
+                        ) {
+                            GroupHeaderGridItem(
+                                groupId = item.groupId,
+                                title = item.title,
+                                color = item.color,
+                                tabCount = item.tabCount,
+                                isExpanded = item.isExpanded,
+                                onHeaderClick = { onGroupClick(item.groupId) },
+                                onOptionsClick = {
+                                    menuGroupId = item.groupId
+                                    menuGroupName = item.title
+                                    showGroupMenu = true
+                                    onGroupOptionsClick(item.groupId)
+                                },
+                                modifier = Modifier
+                                    .animateItem()
+                                    .draggableItem(
+                                        itemType = DraggableItemType.Group(item.groupId),
+                                        coordinator = coordinator
+                                    )
+                                    .dropTarget(
+                                        id = item.groupId,
+                                        type = DropTargetType.GROUP_HEADER,
+                                        coordinator = coordinator,
+                                        metadata = mapOf<String, Any>(
+                                            "groupId" to item.groupId,
+                                            "contextId" to (item.contextId ?: "")
+                                        )
+                                    )
+                                    .dragVisualFeedback(item.groupId, coordinator)
+                            )
+                        }
                     }
 
                     is UnifiedItem.GroupRow -> {
@@ -423,24 +487,25 @@ fun GroupTabsRow(
     coordinator: DragCoordinator? = null
 ) {
     Surface(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 4.dp),
+        modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(bottomStart = 12.dp, bottomEnd = 12.dp),
         color = Color(groupColor).copy(alpha = 0.05f),
         border = BorderStroke(1.dp, Color(groupColor).copy(alpha = 0.2f))
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(8.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        // Scrollable horizontal row with fixed-size tabs at 80% scale
+        LazyRow(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.Start,
+            contentPadding = PaddingValues(0.dp)
         ) {
-            tabs.forEach { tab ->
-                // Use the same TabGridItem but scaled to 80%
+            items(
+                items = tabs,
+                key = { it.id }
+            ) { tab ->
+                // Fixed width box at 80% scale for consistent sizing
                 Box(
                     modifier = Modifier
-                        .weight(1f)
+                        .width(140.dp) // Fixed width for each tab
                         .scale(0.8f)
                         .then(
                             if (coordinator != null) {
@@ -497,7 +562,11 @@ private fun TabGridItem(
             .aspectRatio(0.75f)
             .scale(scale.value),
         shape = RoundedCornerShape(12.dp),
-        color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface,
+        color = when {
+            isSelected -> MaterialTheme.colorScheme.primaryContainer
+            groupColor != null -> Color(groupColor).copy(alpha = 0.05f)
+            else -> MaterialTheme.colorScheme.surface
+        },
         tonalElevation = if (isSelected) 3.dp else 1.dp,
         border = if (isSelected) {
             BorderStroke(2.dp, MaterialTheme.colorScheme.primary)
@@ -516,64 +585,11 @@ private fun TabGridItem(
                     .fillMaxSize()
                     .clickable { onTabClick() }
             ) {
-                // Thumbnail or placeholder
-                if (tab.content.url.isNotEmpty()) {
-                    AsyncImage(
-                        model = tab.content.url,
-                        contentDescription = null,
-                        modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Crop
-                    )
-                } else {
-                    // Placeholder for when URL is empty
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .background(MaterialTheme.colorScheme.surfaceVariant),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Language,
-                            contentDescription = null,
-                            modifier = Modifier.size(48.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
-                        )
-                    }
-                }
-
-                // Thumbnail preview
-                if (tab.content.url.isNotEmpty() && tab.content.url != "about:blank") {
-                    AsyncImage(
-                        model = tab.content.url,
-                        contentDescription = null,
-                        modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Crop
-                    )
-                }
-
-                // Favicon overlay (top-left)
-                if (tab.content.icon != null) {
-                    Surface(
-                        modifier = Modifier
-                            .padding(8.dp)
-                            .size(24.dp)
-                            .align(Alignment.TopStart),
-                        shape = CircleShape,
-                        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
-                        tonalElevation = 2.dp
-                    ) {
-                        Box(
-                            contentAlignment = Alignment.Center,
-                            modifier = Modifier.padding(4.dp)
-                        ) {
-                            Image(
-                                bitmap = tab.content.icon!!.asImageBitmap(),
-                                contentDescription = null,
-                                modifier = Modifier.size(16.dp)
-                            )
-                        }
-                    }
-                }
+                // Use ThumbnailImageView to load actual thumbnails
+                ThumbnailImageView(
+                    tab = tab,
+                    modifier = Modifier.fillMaxSize()
+                )
 
                 // Close button (top-right corner)
                 Surface(
