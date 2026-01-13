@@ -437,15 +437,11 @@ fun GroupTabsRow(
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             tabs.forEach { tab ->
-                TabGridItemCompact(
-                    tab = tab,
-                    isSelected = tab.id == selectedTabId,
-                    groupColor = Color(groupColor),
-                    onTabClick = { onTabClick(tab.id) },
-                    onTabClose = { onTabClose(tab.id) },
-                    onTabLongPress = { onTabLongPress(tab) },
+                // Use the same TabGridItem but scaled to 80%
+                Box(
                     modifier = Modifier
                         .weight(1f)
+                        .scale(0.8f)
                         .then(
                             if (coordinator != null) {
                                 Modifier
@@ -464,102 +460,21 @@ fun GroupTabsRow(
                                 Modifier
                             }
                         )
-                )
-            }
-        }
-    }
-}
-
-/**
- * Compact tab item for use in group rows
- */
-@Composable
-private fun TabGridItemCompact(
-    tab: TabSessionState,
-    isSelected: Boolean,
-    groupColor: Color,
-    onTabClick: () -> Unit,
-    onTabClose: () -> Unit,
-    onTabLongPress: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val scope = rememberCoroutineScope()
-    val scale = remember { Animatable(1f) }
-
-    Surface(
-        modifier = modifier
-            .aspectRatio(0.75f)
-            .scale(scale.value),
-        shape = RoundedCornerShape(8.dp),
-        color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface,
-        tonalElevation = if (isSelected) 2.dp else 1.dp,
-        border = if (isSelected) {
-            BorderStroke(2.dp, MaterialTheme.colorScheme.primary)
-        } else {
-            BorderStroke(1.dp, groupColor.copy(alpha = 0.3f))
-        }
-    ) {
-        Box(
-            modifier = Modifier.fillMaxSize()
-        ) {
-            // Make content area clickable
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .clickable { onTabClick() }
-            ) {
-                // Thumbnail
-                if (tab.content.url.isNotEmpty()) {
-                    AsyncImage(
-                        model = tab.content.url,
-                        contentDescription = null,
-                        modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Crop
+                ) {
+                    TabGridItem(
+                        tab = tab,
+                        isSelected = tab.id == selectedTabId,
+                        groupColor = groupColor,
+                        onTabClick = { onTabClick(tab.id) },
+                        onTabClose = { onTabClose(tab.id) },
+                        onTabLongPress = { onTabLongPress(tab) }
                     )
                 }
-
-                // Overlay with title
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .align(Alignment.BottomCenter)
-                        .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.9f))
-                        .padding(4.dp)
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text(
-                            text = tab.content.title.ifEmpty { "New Tab" },
-                            style = MaterialTheme.typography.labelSmall,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.weight(1f)
-                        )
-
-                        IconButton(
-                            onClick = {
-                                scope.launch {
-                                    scale.animateTo(0.8f, animationSpec = tween(100))
-                                    onTabClose()
-                                }
-                            },
-                            modifier = Modifier.size(20.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Close,
-                                contentDescription = "Close tab",
-                                modifier = Modifier.size(14.dp)
-                            )
-                        }
-                    }
-                }
             }
         }
     }
 }
+
 
 /**
  * Full-size tab grid item
@@ -610,6 +525,7 @@ private fun TabGridItem(
                         contentScale = ContentScale.Crop
                     )
                 } else {
+                    // Placeholder for when URL is empty
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
@@ -623,6 +539,16 @@ private fun TabGridItem(
                             tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
                         )
                     }
+                }
+
+                // Thumbnail preview
+                if (tab.content.url.isNotEmpty() && tab.content.url != "about:blank") {
+                    AsyncImage(
+                        model = tab.content.url,
+                        contentDescription = null,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
                 }
 
                 // Favicon overlay (top-left)
@@ -649,34 +575,31 @@ private fun TabGridItem(
                     }
                 }
 
-                // Close button (top-right)
-                IconButton(
-                    onClick = {
-                        scope.launch {
-                            scale.animateTo(0.8f, animationSpec = tween(150))
-                            onTabClose()
-                        }
-                    },
+                // Close button (top-right corner)
+                Surface(
                     modifier = Modifier
                         .padding(4.dp)
-                        .size(32.dp)
+                        .size(28.dp)
                         .align(Alignment.TopEnd)
+                        .clickable {
+                            scope.launch {
+                                scale.animateTo(0.8f, animationSpec = tween(150))
+                                onTabClose()
+                            }
+                        },
+                    shape = CircleShape,
+                    color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.9f)
                 ) {
-                    Surface(
-                        shape = CircleShape,
-                        color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.9f)
+                    Box(
+                        contentAlignment = Alignment.Center,
+                        modifier = Modifier.fillMaxSize()
                     ) {
-                        Box(
-                            contentAlignment = Alignment.Center,
-                            modifier = Modifier.size(32.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Close,
-                                contentDescription = "Close tab",
-                                modifier = Modifier.size(16.dp),
-                                tint = MaterialTheme.colorScheme.onErrorContainer
-                            )
-                        }
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "Close tab",
+                            modifier = Modifier.size(16.dp),
+                            tint = MaterialTheme.colorScheme.onErrorContainer
+                        )
                     }
                 }
 
