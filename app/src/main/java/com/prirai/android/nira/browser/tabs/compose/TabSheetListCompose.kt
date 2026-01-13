@@ -8,11 +8,13 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.itemsIndexed
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -66,7 +68,7 @@ fun TabSheetListView(
     val currentOrder by viewModel.currentOrder.collectAsState()
 
     val scope = rememberCoroutineScope()
-    val listState = rememberLazyListState()
+    val listState = rememberLazyGridState()
 
     // Create drag coordinator
     val coordinator = rememberDragCoordinator(
@@ -83,7 +85,7 @@ fun TabSheetListView(
     var menuGroupId by remember { mutableStateOf<String?>(null) }
     var menuGroupName by remember { mutableStateOf<String?>(null) }
 
-    // Build unified items
+    // Build unified items - only when NOT dragging to prevent scroll jumps
     val items = remember(tabs, groups, expandedGroups, currentOrder) {
         UnifiedItemBuilder.buildItems(
             order = currentOrder,
@@ -128,12 +130,22 @@ fun TabSheetListView(
         mapping
     }
 
-    val dragState by coordinator.dragState
-    val isDragging = dragState.isDragging
-    val autoScrollVelocity by coordinator.autoScrollVelocity
+    // Use derivedStateOf to avoid unnecessary recomposition
+    val isDragging by remember {
+        derivedStateOf { coordinator.dragState.value.isDragging }
+    }
+
+    // Track if LazyColumn is currently scrolling to prevent position updates during scroll
+    val isScrolling = listState.isScrollInProgress
 
     // Auto-scroll disabled - needs proper implementation to avoid conflicts
     // The drag system works fine without it for now
+
+
+    // Pass scroll state to coordinator to prevent updates during scroll
+    LaunchedEffect(isScrolling) {
+        coordinator.setIsScrolling(isScrolling)
+    }
 
     Box(
         modifier = modifier
@@ -144,15 +156,18 @@ fun TabSheetListView(
                 coordinator.setScrollContainerBounds(bounds)
             }
     ) {
-        // Static layer
-        LazyColumn(
+        // Static layer - using LazyVerticalGrid with 1 column (works better than LazyColumn for drag)
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(1),
             state = listState,
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(vertical = 8.dp)
+            contentPadding = PaddingValues(top = 8.dp, bottom = 120.dp),
+            userScrollEnabled = !isDragging  // Only disable scroll during active drag, not during touch
         ) {
             itemsIndexed(
                 items = uniqueItems,
-                key = { _, item -> item.id }
+                key = { _, item -> item.id },
+                span = { _, _ -> androidx.compose.foundation.lazy.grid.GridItemSpan(1) }
             ) { index, item ->
                 val nextOrderPosition = positionMapping[index]?.plus(1) ?: (index + 1)
                 val isLastItemInGroup = item is UnifiedItem.GroupedTab && item.isLastInGroup
@@ -266,7 +281,6 @@ fun TabSheetListView(
                                     onGroupOptionsClick(item.groupId)
                                 },
                                 modifier = Modifier
-                                    .animateItem()
                                     .draggableItem(
                                         itemType = DraggableItemType.Group(item.groupId),
                                         coordinator = coordinator
@@ -365,7 +379,6 @@ fun TabSheetListView(
                                     // Long press now only used for drag - menu via swipe right
                                 },
                                 modifier = Modifier
-                                    .animateItem()
                                     .draggableItem(
                                         itemType = DraggableItemType.Tab(
                                             item.tab.id,
@@ -466,7 +479,6 @@ fun TabSheetListView(
                                     // Long press now only used for drag - menu via swipe right
                                 },
                                 modifier = Modifier
-                                    .animateItem()
                                     .draggableItem(
                                         itemType = DraggableItemType.Tab(item.tab.id),
                                         coordinator = coordinator
@@ -642,7 +654,10 @@ private fun GroupHeaderItem(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .clickable { onHeaderClick() }
+                .clickable(
+                    indication = null,
+                    interactionSource = remember { MutableInteractionSource() }
+                ) { onHeaderClick() }
                 .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
@@ -729,8 +744,9 @@ private fun TabListItem(
     val effectiveIsInGroup = isInGroup && groupId != null
     val effectiveIsLastInGroup = effectiveIsInGroup && isLastInGroup
 
-    // Background color
+    // Background color - use group color for selected tabs in groups
     val backgroundColor = when {
+        isSelected && effectiveIsInGroup && groupColor != null -> Color(groupColor).copy(alpha = 0.2f)
         isSelected -> MaterialTheme.colorScheme.primaryContainer
         effectiveIsInGroup && groupColor != null -> Color(groupColor).copy(alpha = 0.05f)
         else -> MaterialTheme.colorScheme.surface
@@ -754,11 +770,12 @@ private fun TabListItem(
         shape = shape,
         color = backgroundColor,
         tonalElevation = if (isSelected) 2.dp else 0.dp,
-        border = if (isSelected) {
-            BorderStroke(2.dp, MaterialTheme.colorScheme.primary)
-        } else if (effectiveIsInGroup && groupColor != null) {
-            BorderStroke(1.dp, Color(groupColor).copy(alpha = 0.2f))
-        } else null
+        border = when {
+            isSelected && effectiveIsInGroup && groupColor != null -> BorderStroke(2.dp, Color(groupColor))
+            isSelected -> BorderStroke(2.dp, MaterialTheme.colorScheme.primary)
+            effectiveIsInGroup && groupColor != null -> BorderStroke(1.dp, Color(groupColor).copy(alpha = 0.2f))
+            else -> null
+        }
     ) {
         Row(
             modifier = Modifier
@@ -772,7 +789,10 @@ private fun TabListItem(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 modifier = Modifier
                     .weight(1f)
-                    .clickable { onTabClick() }
+                    .clickable(
+                        indication = null,
+                        interactionSource = remember { MutableInteractionSource() }
+                    ) { onTabClick() }
             ) {
                 // Favicon
                 if (tab.content.icon != null) {

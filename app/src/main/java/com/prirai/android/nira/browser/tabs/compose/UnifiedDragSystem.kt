@@ -6,6 +6,9 @@ import androidx.compose.animation.core.spring
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.forEachGesture
+import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
@@ -35,6 +38,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.math.roundToInt
 import android.os.Build
 import android.os.VibrationEffect
@@ -135,12 +140,12 @@ class DragCoordinator(
     private val _draggedItemBounds = mutableStateOf<Rect?>(null)
     val draggedItemBounds: State<Rect?> = _draggedItemBounds
 
-    // Drop target registry
-    private val dropTargets = mutableStateMapOf<String, DropTarget>()
+    // Drop target registry (synchronized to prevent concurrent modification)
+    private val dropTargets = java.util.concurrent.ConcurrentHashMap<String, DropTarget>()
 
-    // Item positions for hover detection
-    private val itemPositions = mutableStateMapOf<String, Offset>()
-    private val itemSizes = mutableStateMapOf<String, IntSize>()
+    // Item positions for hover detection (synchronized to prevent race conditions)
+    private val itemPositions = java.util.concurrent.ConcurrentHashMap<String, Offset>()
+    private val itemSizes = java.util.concurrent.ConcurrentHashMap<String, IntSize>()
 
     // Auto-scroll state
     private var autoScrollJob: Job? = null
@@ -166,6 +171,18 @@ class DragCoordinator(
         return containerHeight * 0.1f // 10% of container height
     }
 
+    // Track if container is scrolling
+    private var isScrolling = false
+
+    /**
+     * Set scroll state to prevent position updates during scroll
+     */
+    fun setIsScrolling(scrolling: Boolean) {
+        isScrolling = scrolling
+    }
+
+
+
     /**
      * Register a drop target zone
      */
@@ -181,11 +198,14 @@ class DragCoordinator(
     }
 
     /**
-     * Update item position tracking
+     * Update item position tracking (skip during drag and scroll to prevent interference)
      */
     fun updateItemPosition(itemId: String, position: Offset, size: IntSize) {
-        itemPositions[itemId] = position
-        itemSizes[itemId] = size
+        // Skip updates during drag or scroll to prevent layout interference
+        if (!_dragState.value.isDragging && !isScrolling) {
+            itemPositions[itemId] = position
+            itemSizes[itemId] = size
+        }
     }
 
     /**
@@ -901,17 +921,16 @@ fun Modifier.draggableItem(
                 }
 
                 Modifier.pointerInput(id) {
+                    // Standard long-press drag detection
                     detectDragGesturesAfterLongPress(
                         onDragStart = { offset ->
                             itemBounds?.let { bounds ->
-                                // Calculate absolute pointer position
                                 val absolutePosition = bounds.topLeft + offset
                                 coordinator.startDrag(itemType, absolutePosition, bounds, itemSize)
                             }
                         },
                         onDrag = { change, dragAmount ->
                             change.consume()
-                            // Calculate absolute pointer position
                             itemBounds?.let { bounds ->
                                 val absolutePointer = bounds.topLeft + change.position
                                 coordinator.updateDrag(dragAmount, absolutePointer)
@@ -961,8 +980,17 @@ fun Modifier.dragVisualFeedback(
     itemId: String,
     coordinator: DragCoordinator,
     isDragging: Boolean = coordinator.isDragging(itemId),
-    isDropTarget: Boolean = coordinator.isHoveringOver(itemId)
+    isDropTarget: Boolean = coordinator.isHoveringOver(itemId),
+    draggedScale: Float = 0.95f
 ): Modifier = composed {
+    // Only apply visual feedback if this item is actually involved in dragging
+    val isInvolved = isDragging || isDropTarget
+
+    if (!isInvolved) {
+        // Skip all animations and graphics layers if not involved - improves scroll performance
+        return@composed this
+    }
+
     val scale = remember { Animatable(1f) }
     val alpha = remember { Animatable(1f) }
 
@@ -971,7 +999,7 @@ fun Modifier.dragVisualFeedback(
             // When dragging, hide original (it will be shown in drag layer)
             launch {
                 scale.animateTo(
-                    0.95f,
+                    draggedScale,
                     animationSpec = spring(stiffness = Spring.StiffnessMedium)
                 )
             }
