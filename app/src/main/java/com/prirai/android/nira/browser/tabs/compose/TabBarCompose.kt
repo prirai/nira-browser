@@ -218,6 +218,7 @@ fun TabBarCompose(
                                 GroupPill(
                                     group = item,
                                     isSelected = selectedTabId in item.tabIds,
+                                    selectedTabId = selectedTabId,
                                     coordinator = coordinator,
                                     onTabClick = onTabClick,
                                     onTabClose = onTabClose,
@@ -314,6 +315,7 @@ fun TabBarCompose(
                         GroupPill(
                             group = item,
                             isSelected = false,
+                            selectedTabId = null,
                             coordinator = coordinator,
                             onTabClick = {},
                             onTabClose = {},
@@ -396,34 +398,42 @@ private fun TabPill(
     isDragging: Boolean = false,
     modifier: Modifier = Modifier
 ) {
-    Row(
+    Surface(
         modifier = modifier
             .height(40.dp)
-            .width(120.dp)
-            .clickable { onTabClick(tab.id) }
-            .padding(horizontal = 12.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+            .width(120.dp),
+        shape = RoundedCornerShape(20.dp),
+        color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
+        border = if (isSelected) BorderStroke(2.dp, MaterialTheme.colorScheme.primary) else null
     ) {
-        // Favicon
-        tab.content.icon?.let { icon ->
-            Image(
-                bitmap = icon.asImageBitmap(),
-                contentDescription = null,
-                modifier = Modifier.size(16.dp)
+        Row(
+            modifier = Modifier
+                .fillMaxSize()
+                .clickable { onTabClick(tab.id) }
+                .padding(horizontal = 12.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            // Favicon
+            tab.content.icon?.let { icon ->
+                Image(
+                    bitmap = icon.asImageBitmap(),
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp)
+                )
+            }
+
+            // Title - use onSurface color when dragging for better contrast
+            Text(
+                text = tab.content.title.ifEmpty { "New Tab" },
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                color = if (isDragging) MaterialTheme.colorScheme.onSurface else Color.Unspecified,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f)
             )
         }
-
-        // Title - use onSurface color when dragging for better contrast
-        Text(
-            text = tab.content.title.ifEmpty { "New Tab" },
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-            color = if (isDragging) MaterialTheme.colorScheme.onSurface else Color.Unspecified,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.weight(1f)
-        )
     }
 }
 
@@ -512,6 +522,7 @@ private fun ShowGroupMenu(
 private fun GroupPill(
     group: BarItem.Group,
     isSelected: Boolean,
+    selectedTabId: String?,
     coordinator: DragCoordinator,
     onTabClick: (String) -> Unit,
     onTabClose: (String) -> Unit,
@@ -525,7 +536,7 @@ private fun GroupPill(
     Surface(
         modifier = modifier
             .height(40.dp)
-            .widthIn(min = 150.dp, max = if (expanded) 600.dp else 150.dp)
+            .wrapContentWidth()
             .then(
                 if (isDragging) Modifier else Modifier
             ),
@@ -535,7 +546,8 @@ private fun GroupPill(
     ) {
         Row(
             modifier = Modifier
-                .fillMaxSize()
+                .wrapContentWidth()
+                .fillMaxHeight()
                 .clickable(
                     enabled = true,
                     onClick = {
@@ -555,14 +567,12 @@ private fun GroupPill(
                 modifier = Modifier.size(20.dp)
             )
 
-            // Group name - use onSurface color when dragging
+            // Group name - use onSurface color when dragging, no ellipsis
             Text(
                 text = group.groupName,
                 style = MaterialTheme.typography.bodyMedium,
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                color = if (isDragging) MaterialTheme.colorScheme.onSurface else Color(group.color),
-                modifier = Modifier.weight(1f, fill = false)
+                color = if (isDragging) MaterialTheme.colorScheme.onSurface else Color(group.color)
             )
 
             // Tab count badge
@@ -601,33 +611,46 @@ private fun GroupPill(
                             )
                         }
 
-                        // Tab pill without background
-                        Row(
+                        // Tab pill with background when selected - use group color
+                        val isTabSelected = selectedTabId == tab.id
+                        Surface(
                             modifier = Modifier
                                 .height(32.dp)
-                                .width(100.dp)
-                                .clickable(
-                                    onClick = { onTabClick(tab.id) }
-                                )
-                                .padding(horizontal = 8.dp, vertical = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                .width(100.dp),
+                            shape = RoundedCornerShape(16.dp),
+                            color = if (isTabSelected) Color(group.color).copy(alpha = 0.2f) else Color.Transparent,
+                            border = if (isTabSelected) BorderStroke(
+                                1.5.dp,
+                                Color(group.color)
+                            ) else null
                         ) {
-                            tab.content.icon?.let { icon ->
-                                Image(
-                                    bitmap = icon.asImageBitmap(),
-                                    contentDescription = null,
-                                    modifier = Modifier.size(14.dp)
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .clickable(
+                                        onClick = { onTabClick(tab.id) }
+                                    )
+                                    .padding(horizontal = 8.dp, vertical = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                tab.content.icon?.let { icon ->
+                                    Image(
+                                        bitmap = icon.asImageBitmap(),
+                                        contentDescription = null,
+                                        modifier = Modifier.size(14.dp)
+                                    )
+                                }
+                                Text(
+                                    text = tab.content.title.ifEmpty { "New Tab" },
+                                    style = MaterialTheme.typography.labelSmall,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    fontWeight = if (isTabSelected) FontWeight.Bold else FontWeight.Normal,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    modifier = Modifier.weight(1f)
                                 )
                             }
-                            Text(
-                                text = tab.content.title.ifEmpty { "New Tab" },
-                                style = MaterialTheme.typography.labelSmall,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                color = if (isDragging) MaterialTheme.colorScheme.onSurface else Color(group.color),
-                                modifier = Modifier.weight(1f)
-                            )
                         }
                     }
 
