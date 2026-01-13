@@ -122,6 +122,7 @@ fun TabSheetListView(
             ) { index, item ->
                 // Show divider during drag
                 if (isDragging && index == 0) {
+                    val isHovering = coordinator.isHoveringOver("divider_0")
                     HorizontalDivider(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -133,7 +134,10 @@ fun TabSheetListView(
                                 metadata = mapOf("position" to 0)
                             ),
                         thickness = 2.dp,
-                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
+                        color = if (isHovering)
+                            MaterialTheme.colorScheme.primary
+                        else
+                            MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
                     )
                 }
 
@@ -365,6 +369,7 @@ fun TabSheetListView(
 
                 // Show divider after each item during drag
                 if (isDragging) {
+                    val isHovering = coordinator.isHoveringOver("divider_${index + 1}")
                     HorizontalDivider(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -376,7 +381,10 @@ fun TabSheetListView(
                                 metadata = mapOf("position" to index + 1)
                             ),
                         thickness = 2.dp,
-                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
+                        color = if (isHovering)
+                            MaterialTheme.colorScheme.primary
+                        else
+                            MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
                     )
                 }
             }
@@ -677,6 +685,7 @@ private fun TabListItem(
                         text = tab.content.title.ifEmpty { "New Tab" },
                         style = MaterialTheme.typography.bodyLarge,
                         fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                        color = MaterialTheme.colorScheme.onSurface,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
