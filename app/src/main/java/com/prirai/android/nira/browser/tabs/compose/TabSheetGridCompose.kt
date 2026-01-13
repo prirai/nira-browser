@@ -119,7 +119,7 @@ fun TabSheetGridView(
             columns = GridCells.Fixed(3),
             state = gridState,
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(8.dp),
+            contentPadding = PaddingValues(start = 8.dp, end = 8.dp, top = 8.dp, bottom = 120.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
@@ -227,7 +227,7 @@ fun TabSheetGridView(
                                             "contextId" to (item.contextId ?: "")
                                         )
                                     )
-                                    .dragVisualFeedback(item.groupId, coordinator)
+                                    .dragVisualFeedback(item.groupId, coordinator, draggedScale = 0.85f)
                             )
                         }
                     }
@@ -278,7 +278,7 @@ fun TabSheetGridView(
                                     coordinator = coordinator,
                                     metadata = mapOf("tabId" to item.tab.id)
                                 )
-                                .dragVisualFeedback(item.tab.id, coordinator)
+                                .dragVisualFeedback(item.tab.id, coordinator, draggedScale = 0.85f)
                         )
                     }
 
@@ -304,7 +304,7 @@ fun TabSheetGridView(
                                     coordinator = coordinator,
                                     metadata = mapOf("tabId" to item.tab.id)
                                 )
-                                .dragVisualFeedback(item.tab.id, coordinator)
+                                .dragVisualFeedback(item.tab.id, coordinator, draggedScale = 0.85f)
                         )
                     }
                 }
@@ -563,17 +563,17 @@ private fun TabGridItem(
             .scale(scale.value),
         shape = RoundedCornerShape(12.dp),
         color = when {
+            isSelected && groupColor != null -> Color(groupColor).copy(alpha = 0.2f)
             isSelected -> MaterialTheme.colorScheme.primaryContainer
             groupColor != null -> Color(groupColor).copy(alpha = 0.05f)
             else -> MaterialTheme.colorScheme.surface
         },
         tonalElevation = if (isSelected) 3.dp else 1.dp,
-        border = if (isSelected) {
-            BorderStroke(2.dp, MaterialTheme.colorScheme.primary)
-        } else if (groupColor != null) {
-            BorderStroke(1.dp, Color(groupColor).copy(alpha = 0.3f))
-        } else {
-            null
+        border = when {
+            isSelected && groupColor != null -> BorderStroke(2.dp, Color(groupColor))
+            isSelected -> BorderStroke(2.dp, MaterialTheme.colorScheme.primary)
+            groupColor != null -> BorderStroke(1.dp, Color(groupColor).copy(alpha = 0.3f))
+            else -> null
         }
     ) {
         Box(
