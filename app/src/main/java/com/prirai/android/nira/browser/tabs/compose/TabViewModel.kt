@@ -13,6 +13,16 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 
 /**
+ * Data class for pending tab deletion (for undo)
+ */
+data class PendingTabDeletion(
+    val tabId: String,
+    val tab: TabSessionState,
+    val groupId: String?,
+    val position: Int
+)
+
+/**
  * ViewModel for managing tabs, groups, and their order in Compose UI.
  * Serves as single source of truth, bridging UnifiedTabGroupManager and Compose UI.
  */
@@ -42,6 +52,13 @@ class TabViewModel(
 
     // Expose order for UI to use
     val currentOrder: StateFlow<UnifiedTabOrder?> = orderManager.currentOrder
+
+    // Undo state
+    private val _showUndoSnackbar = MutableStateFlow<UndoSnackbarState?>(null)
+    val showUndoSnackbar: StateFlow<UndoSnackbarState?> = _showUndoSnackbar.asStateFlow()
+
+    private var pendingTabDeletion: PendingTabDeletion? = null
+    private var undoJob: Job? = null
 
     init {
         // Observe group events and refresh when groups change
@@ -826,14 +843,77 @@ class TabViewModel(
     }
 
     /**
-     * Close a specific tab
+     * Close a specific tab with undo functionality
      */
-    fun closeTab(tabId: String) {
+    fun closeTab(tabId: String, showUndo: Boolean = true) {
         viewModelScope.launch {
-            // This will be handled by the caller
-            // through components.tabsUseCases.removeTab(tabId)
+            val tab = _tabs.value.find { it.id == tabId } ?: return@launch
+            val groupId = _groups.value.find { it.tabIds.contains(tabId) }?.id
+            val currentOrder = orderManager.currentOrder.value
+            val position = currentOrder?.primaryOrder?.indexOfFirst { item ->
+                when (item) {
+                    is UnifiedTabOrder.OrderItem.SingleTab -> item.tabId == tabId
+                    is UnifiedTabOrder.OrderItem.TabGroup -> item.tabIds.contains(tabId)
+                    else -> false
+                }
+            } ?: -1
+
+            if (showUndo) {
+                // Store deletion info for undo
+                pendingTabDeletion = PendingTabDeletion(tabId, tab, groupId, position)
+
+                // Show snackbar
+                _showUndoSnackbar.value = UndoSnackbarState(
+                    message = "Tab closed",
+                    onUndo = { undoTabDeletion() },
+                    onDismiss = {
+                        _showUndoSnackbar.value = null
+                        confirmTabDeletion()
+                    }
+                )
+
+                // Auto-dismiss after 5 seconds
+                undoJob?.cancel()
+                undoJob = viewModelScope.launch {
+                    delay(5000)
+                    confirmTabDeletion()
+                    _showUndoSnackbar.value = null
+                }
+            } else {
+                // Close immediately without undo
+                // This will be handled by the caller
+                // through components.tabsUseCases.removeTab(tabId)
+            }
         }
     }
+
+    /**
+     * Undo tab deletion
+     */
+    fun undoTabDeletion() {
+        undoJob?.cancel()
+        pendingTabDeletion = null
+        _showUndoSnackbar.value = null
+        // Tab is still in the store, just dismiss the snackbar
+    }
+
+    /**
+     * Confirm tab deletion (after undo timeout)
+     */
+    private fun confirmTabDeletion() {
+        pendingTabDeletion?.let { deletion ->
+            viewModelScope.launch {
+                // Actually remove the tab through the caller
+                // The UI should observe this and call removeTab
+            }
+        }
+        pendingTabDeletion = null
+    }
+
+    /**
+     * Get pending deletion info for UI to actually delete
+     */
+    fun getPendingDeletion(): PendingTabDeletion? = pendingTabDeletion
 
     /**
      * Close all other tabs except the specified one

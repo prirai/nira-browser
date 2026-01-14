@@ -4,6 +4,8 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -58,6 +60,15 @@ fun GroupContainerListItem(
 ) {
     val scale = remember { Animatable(1f) }
 
+    // Apply zoom effect when dragging ungrouped tab over this container
+    LaunchedEffect(hoveredGroupId) {
+        if (hoveredGroupId == groupId) {
+            scale.animateTo(1.05f, spring(stiffness = Spring.StiffnessMediumLow))
+        } else {
+            scale.animateTo(1f, spring(stiffness = Spring.StiffnessMediumLow))
+        }
+    }
+
     // Single container with group styling
     Surface(
         modifier = modifier
@@ -83,8 +94,7 @@ fun GroupContainerListItem(
                     "groupId" to groupId,
                     "contextId" to (children.firstOrNull()?.contextId ?: "")
                 )
-            )
-            .groupHeaderFeedback(groupId, coordinator, hoverState),
+            ),
         shape = RoundedCornerShape(12.dp),
         color = Color(color).copy(alpha = 0.1f),
         tonalElevation = 2.dp,
@@ -175,20 +185,48 @@ fun GroupContainerListItem(
                     children.forEachIndexed { index, tab ->
                         val isLastInGroup = index == children.size - 1
 
-                        GroupedTabListItem(
-                            tab = tab,
-                            groupId = groupId,
-                            groupColor = color,
-                            isSelected = tab.id == selectedTabId,
-                            isLastInGroup = isLastInGroup,
-                            onTabClick = { onTabClick(tab.id) },
-                            onTabClose = { onTabClose(tab.id) },
-                            onShowTabMenu = { onShowTabMenu(tab, true) },  // Use unified menu system
-                            isDragging = isDragging,
-                            coordinator = coordinator,
-                            hoverState = hoverState,
-                            hoveredGroupId = hoveredGroupId
-                        )
+                        // Show divider before tab when dragging grouped tab for reordering
+                        if (isDragging && hoverState.isDraggingGroupedTab() && coordinator.isHoveringOver("divider_${tab.id}")) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(4.dp)
+                                    .padding(horizontal = 16.dp)
+                                    .background(
+                                        Color(color),
+                                        RoundedCornerShape(2.dp)
+                                    )
+                            )
+                        }
+
+                        Box(
+                            modifier = Modifier.dropTarget(
+                                id = "divider_${tab.id}",
+                                type = DropTargetType.TAB,
+                                coordinator = coordinator,
+                                metadata = mapOf(
+                                    "tabId" to tab.id,
+                                    "groupId" to groupId,
+                                    "isInGroup" to true,
+                                    "insertBefore" to true
+                                )
+                            )
+                        ) {
+                            GroupedTabListItem(
+                                tab = tab,
+                                groupId = groupId,
+                                groupColor = color,
+                                isSelected = tab.id == selectedTabId,
+                                isLastInGroup = isLastInGroup,
+                                onTabClick = { onTabClick(tab.id) },
+                                onTabClose = { onTabClose(tab.id) },
+                                onShowTabMenu = { onShowTabMenu(tab, true) },  // Use unified menu system
+                                isDragging = isDragging,
+                                coordinator = coordinator,
+                                hoverState = hoverState,
+                                hoveredGroupId = hoveredGroupId
+                            )
+                        }
                     }
                 }
             }
@@ -294,28 +332,15 @@ private fun GroupedTabListItem(
                     itemType = DraggableItemType.Tab(tab.id, groupId),
                     coordinator = coordinator
                 )
-                .then(
-                    // Only register as drop target when dragging grouped tabs, not ungrouped
-                    if (hoverState.isDraggingGroupedTab()) {
-                        Modifier.dropTarget(
-                            id = tab.id,
-                            type = DropTargetType.TAB,
-                            coordinator = coordinator,
-                            metadata = mapOf(
-                                "tabId" to tab.id,
-                                "groupId" to groupId
-                            )
-                        )
-                    } else {
-                        Modifier
-                    }
-                )
-                .groupedTabFeedback(
-                    tabId = tab.id,
-                    groupId = groupId,
+                .dropTarget(
+                    id = tab.id,
+                    type = DropTargetType.TAB,
                     coordinator = coordinator,
-                    hoverState = hoverState,
-                    hoveredGroupId = hoveredGroupId
+                    metadata = mapOf(
+                        "tabId" to tab.id,
+                        "groupId" to groupId,
+                        "isInGroup" to true
+                    )
                 )
         )
     }

@@ -532,6 +532,8 @@ private fun GroupPill(
     modifier: Modifier = Modifier
 ) {
     var expanded by remember { mutableStateOf(group.isExpanded) }
+    var menuTab by remember { mutableStateOf<TabSessionState?>(null) }
+    var showTabMenu by remember { mutableStateOf(false) }
 
     Surface(
         modifier = modifier
@@ -610,46 +612,38 @@ private fun GroupPill(
                             )
                         }
 
-                        // Tab pill with background when selected - use group color
+                        // Wrap SwipeableTabPill with draggable and drop target for individual tab reordering
                         val isTabSelected = selectedTabId == tab.id
-                        Surface(
+                        Box(
                             modifier = Modifier
-                                .height(32.dp)
-                                .width(100.dp),
-                            shape = RoundedCornerShape(16.dp),
-                            color = if (isTabSelected) Color(group.color).copy(alpha = 0.2f) else Color.Transparent,
-                            border = if (isTabSelected) BorderStroke(
-                                1.5.dp,
-                                Color(group.color)
-                            ) else null
-                        ) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .clickable(
-                                        onClick = { onTabClick(tab.id) }
-                                    )
-                                    .padding(horizontal = 8.dp, vertical = 4.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(4.dp)
-                            ) {
-                                tab.content.icon?.let { icon ->
-                                    Image(
-                                        bitmap = icon.asImageBitmap(),
-                                        contentDescription = null,
-                                        modifier = Modifier.size(14.dp)
-                                    )
-                                }
-                                Text(
-                                    text = tab.content.title.ifEmpty { "New Tab" },
-                                    style = MaterialTheme.typography.labelSmall,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                    fontWeight = if (isTabSelected) FontWeight.Bold else FontWeight.Normal,
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                    modifier = Modifier.weight(1f)
+                                .draggableItem(
+                                    itemType = DraggableItemType.Tab(tab.id),
+                                    coordinator = coordinator
                                 )
-                            }
+                                .dropTarget(
+                                    id = tab.id,
+                                    type = DropTargetType.TAB,
+                                    coordinator = coordinator,
+                                    metadata = mapOf(
+                                        "tabId" to tab.id,
+                                        "groupId" to group.groupId,
+                                        "isInGroup" to true
+                                    )
+                                )
+                        ) {
+                            SwipeableTabPill(
+                                tab = tab,
+                                isSelected = isTabSelected,
+                                groupColor = group.color,
+                                onTabClick = { onTabClick(tab.id) },
+                                onTabClose = { onTabClose(tab.id) },
+                                onShowMenu = {
+                                    menuTab = tab
+                                    showTabMenu = true
+                                },
+                                modifier = Modifier,
+                                swipeThreshold = 40f
+                            )
                         }
                     }
 
@@ -680,5 +674,19 @@ private fun GroupPill(
                 }
             }
         }
+    }
+
+    // Show tab menu when triggered
+    if (showTabMenu && menuTab != null) {
+        ShowTabMenu(
+            tab = menuTab!!,
+            isInGroup = true,
+            onDismiss = {
+                showTabMenu = false
+                menuTab = null
+            },
+            viewModel = viewModel,
+            scope = rememberCoroutineScope()
+        )
     }
 }
