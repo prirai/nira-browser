@@ -11,11 +11,14 @@ import androidx.compose.foundation.gestures.forEachGesture
 import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.ui.Alignment
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -101,7 +104,8 @@ data class UnifiedDragState(
     val currentDropTarget: DropTarget? = null,
     val dragStartPosition: Offset = Offset.Zero,
     val insertionIndicatorPosition: Offset? = null,
-    val insertionIndicatorType: InsertionIndicatorType? = null
+    val insertionIndicatorType: InsertionIndicatorType? = null,
+    val currentDropZone: DropZone? = null  // Track current drop zone for visual feedback
 )
 
 /**
@@ -180,7 +184,6 @@ class DragCoordinator(
     fun setIsScrolling(scrolling: Boolean) {
         isScrolling = scrolling
     }
-
 
 
     /**
@@ -290,7 +293,8 @@ class DragCoordinator(
             dragOffset = newOffset,
             currentDropTarget = target,
             insertionIndicatorPosition = indicatorPos,
-            insertionIndicatorType = indicatorType
+            insertionIndicatorType = indicatorType,
+            currentDropZone = target?.dropZone
         )
     }
 
@@ -488,20 +492,12 @@ class DragCoordinator(
             target.id != excludeId && target.bounds.contains(position)
         }
 
-        // Check if any ROOT_POSITION (divider) target contains the position
-        // If so, use it exclusively to prevent GROUP_HEADER/TAB from capturing the drop
-        val dividerTarget = candidateTargets.firstOrNull { it.type == DropTargetType.ROOT_POSITION }
-        if (dividerTarget != null) {
-            android.util.Log.d("DragCoordinator", "Divider target found: ${dividerTarget.id}, excluding other targets")
-            return dividerTarget
-        }
-
-        // Priority: ROOT_POSITION > TAB > GROUP_BODY > GROUP_HEADER > EMPTY_SPACE
-        // ROOT_POSITION (dividers) get highest priority for precise reordering
+        // Priority: TAB (with zones) > ROOT_POSITION (dividers) > GROUP_BODY > GROUP_HEADER > EMPTY_SPACE
+        // TAB targets get highest priority so their drop zones (BEFORE/CENTER/AFTER) work properly
         val bestTarget = candidateTargets.maxByOrNull { target ->
             when (target.type) {
-                DropTargetType.ROOT_POSITION -> 6
-                DropTargetType.TAB -> 5
+                DropTargetType.TAB -> 6
+                DropTargetType.ROOT_POSITION -> 5
                 DropTargetType.GROUP_BODY -> 4
                 DropTargetType.GROUP_HEADER -> 3
                 DropTargetType.EMPTY_SPACE -> 1
@@ -511,15 +507,21 @@ class DragCoordinator(
         // For TAB targets, calculate drop zone based on position within bounds
         if (bestTarget.type == DropTargetType.TAB) {
             val zone = calculateDropZone(position, bestTarget.bounds)
+            android.util.Log.d("DragCoordinator", "TAB target: ${bestTarget.id}, zone: $zone")
             return bestTarget.copy(dropZone = zone)
+        }
+
+        // For ROOT_POSITION (dividers), log and return directly
+        if (bestTarget.type == DropTargetType.ROOT_POSITION) {
+            android.util.Log.d("DragCoordinator", "Divider target found: ${bestTarget.id}")
         }
 
         return bestTarget
     }
 
     /**
-     * Calculate drop zone within bounds using 15-15-70 threshold
-     * BEFORE: 0-15%, CENTER: 15-85%, AFTER: 85-100%
+     * Calculate drop zone within bounds using 25-25-50 threshold for better UX
+     * BEFORE: 0-25%, CENTER: 25-75%, AFTER: 75-100%
      */
     private fun calculateDropZone(position: Offset, bounds: Rect): DropZone {
         // Determine if horizontal or vertical layout based on aspect ratio
@@ -532,8 +534,8 @@ class DragCoordinator(
             val threshold = relativeX / width
 
             return when {
-                threshold < 0.15f -> DropZone.BEFORE
-                threshold > 0.85f -> DropZone.AFTER
+                threshold < 0.25f -> DropZone.BEFORE
+                threshold > 0.75f -> DropZone.AFTER
                 else -> DropZone.CENTER
             }
         } else {
@@ -543,8 +545,8 @@ class DragCoordinator(
             val threshold = relativeY / height
 
             return when {
-                threshold < 0.15f -> DropZone.BEFORE
-                threshold > 0.85f -> DropZone.AFTER
+                threshold < 0.25f -> DropZone.BEFORE
+                threshold > 0.75f -> DropZone.AFTER
                 else -> DropZone.CENTER
             }
         }
@@ -1166,8 +1168,75 @@ fun InsertionIndicator(
 }
 
 /**
+ * Drop zone indicator - shows visual feedback on TAB targets during drag
+ * Highlights the BEFORE/CENTER/AFTER zones
+ */
+@Composable
+fun DropZoneIndicator(
+    itemId: String,
+    coordinator: DragCoordinator,
+    modifier: Modifier = Modifier
+) {
+    val dragState by coordinator.dragState
+
+    // Only show if this item is the current drop target and we're dragging
+    if (!dragState.isDragging || dragState.currentDropTarget?.id != itemId) {
+        return
+    }
+
+    val dropZone = dragState.currentDropZone
+    val dropTarget = dragState.currentDropTarget
+
+    if (dropZone != null && dropTarget?.type == DropTargetType.TAB) {
+        Box(modifier = modifier.fillMaxSize()) {
+            when (dropZone) {
+                DropZone.BEFORE -> {
+                    // Show indicator at top
+                    HorizontalDivider(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .align(Alignment.TopCenter)
+                            .padding(horizontal = 8.dp),
+                        thickness = 3.dp,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+
+                DropZone.AFTER -> {
+                    // Show indicator at bottom
+                    HorizontalDivider(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .align(Alignment.BottomCenter)
+                            .padding(horizontal = 8.dp),
+                        thickness = 3.dp,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+
+                DropZone.CENTER -> {
+                    // Show a highlight overlay for grouping
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(
+                                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
+                                shape = RoundedCornerShape(12.dp)
+                            )
+                            .border(
+                                width = 2.dp,
+                                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
+                                shape = RoundedCornerShape(12.dp)
+                            )
+                    )
+                }
+            }
+        }
+    }
+}
+
+/**
  * Reorderable list state for backwards compatibility
- * (Simplified version that works with our custom system)
  */
 @Composable
 fun rememberReorderableListState(
