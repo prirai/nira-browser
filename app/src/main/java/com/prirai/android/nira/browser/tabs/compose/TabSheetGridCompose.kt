@@ -11,6 +11,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -108,29 +109,9 @@ fun TabSheetGridView(
 
     val dragState by coordinator.dragState
     val isDragging = dragState.isDragging
-
-    // Track which group is being hovered (for enlarging entire group row)
-    val hoveredGroupId by remember {
-        derivedStateOf {
-            val dropTarget = coordinator.dragState.value.currentDropTarget
-            if (dropTarget != null && dropTarget.type == DropTargetType.TAB) {
-                // Check if the hovered tab is in a group
-                val hoveredItem = uniqueItems.find { it.id == dropTarget.id }
-                when (hoveredItem) {
-                    is UnifiedItem.GroupedTab -> hoveredItem.groupId
-                    else -> {
-                        // For grid view, also check tabs in GroupRow
-                        val groupRow = uniqueItems.filterIsInstance<UnifiedItem.GroupRow>()
-                            .find { row -> row.tabs.any { it.id == dropTarget.id } }
-                        groupRow?.groupId
-                    }
-                }
-            } else {
-                null
-            }
-        }
-    }
-
+    // Hover state manager for contextual drag feedback
+    val hoverState = rememberTabSheetHoverState(coordinator, uniqueItems)
+    val hoveredGroupId = hoverState.getHoveredGroupIdForUngroupedDragGrid()
     Box(
         modifier = modifier
             .fillMaxSize()
@@ -153,8 +134,9 @@ fun TabSheetGridView(
                 items = uniqueItems,
                 key = { it.id },
                 span = { item ->
-                    // Group headers and rows span all columns
+                    // Group containers, headers and rows span all columns
                     when (item) {
+                        is UnifiedItem.GroupContainer -> androidx.compose.foundation.lazy.grid.GridItemSpan(3)
                         is UnifiedItem.GroupHeader -> androidx.compose.foundation.lazy.grid.GridItemSpan(3)
                         is UnifiedItem.GroupRow -> androidx.compose.foundation.lazy.grid.GridItemSpan(3)
                         else -> androidx.compose.foundation.lazy.grid.GridItemSpan(1)
@@ -162,6 +144,32 @@ fun TabSheetGridView(
                 }
             ) { item ->
                 when (item) {
+                    is UnifiedItem.GroupContainer -> {
+                        // New unified group structure - header as parent with child tabs
+                        GroupContainerGridItem(
+                            groupId = item.groupId,
+                            title = item.title,
+                            color = item.color,
+                            isExpanded = item.isExpanded,
+                            children = item.children,
+                            selectedTabId = selectedTabId,
+                            onHeaderClick = { onGroupClick(item.groupId) },
+                            onOptionsClick = {
+                                menuGroupId = item.groupId
+                                menuGroupName = item.title
+                                showGroupMenu = true
+                                onGroupOptionsClick(item.groupId)
+                            },
+                            onTabClick = onTabClick,
+                            onTabClose = onTabClose,
+                            onTabLongPress = { tab -> onTabLongPress(tab, false) },
+                            coordinator = coordinator,
+                            hoverState = hoverState,
+                            hoveredGroupId = hoveredGroupId,
+                            modifier = Modifier.animateItem()
+                        )
+                    }
+
                     is UnifiedItem.GroupHeader -> {
                         val dismissState = rememberSwipeToDismissBoxState(
                             confirmValueChange = { dismissValue ->
@@ -253,7 +261,7 @@ fun TabSheetGridView(
                                             "contextId" to (item.contextId ?: "")
                                         )
                                     )
-                                    .dragVisualFeedback(item.groupId, coordinator, draggedScale = 0.85f)
+                                    .groupHeaderFeedback(item.groupId, coordinator, hoverState, draggedScale = 0.85f)
                             )
                         }
                     }
@@ -275,7 +283,8 @@ fun TabSheetGridView(
                             },
                             modifier = Modifier.animateItem(),
                             coordinator = coordinator,
-                            isGroupHovered = isGroupHovered
+                            isGroupHovered = isGroupHovered,
+                            hoverState = hoverState
                         )
                     }
 
@@ -308,7 +317,14 @@ fun TabSheetGridView(
                                     coordinator = coordinator,
                                     metadata = mapOf("tabId" to item.tab.id)
                                 )
-                                .dragVisualFeedback(item.tab.id, coordinator, draggedScale = 0.85f)
+                                .groupedTabFeedback(
+                                    tabId = item.tab.id,
+                                    groupId = item.groupId,
+                                    coordinator = coordinator,
+                                    hoverState = hoverState,
+                                    hoveredGroupId = hoveredGroupId,
+                                    draggedScale = 0.85f
+                                )
                         )
                     }
 
@@ -334,39 +350,44 @@ fun TabSheetGridView(
                                     coordinator = coordinator,
                                     metadata = mapOf("tabId" to item.tab.id)
                                 )
-                                .dragVisualFeedback(item.tab.id, coordinator, draggedScale = 0.85f)
+                                .ungroupedTabFeedback(item.tab.id, coordinator, draggedScale = 0.85f)
                         )
                     }
+
+                    else -> {}
                 }
             }
         }
+    }
 
-        // Insertion indicator layer
-        InsertionIndicator(coordinator = coordinator)
+    // Insertion indicator layer
+    InsertionIndicator(coordinator = coordinator)
 
-        // Drag layer
-        DragLayer(coordinator = coordinator) { draggedItem ->
-            when (draggedItem) {
-                is DraggableItemType.Tab -> {
-                    val tab = tabs.find { it.id == draggedItem.tabId }
-                    if (tab != null) {
-                        TabGridItem(
-                            tab = tab,
-                            isSelected = false,
-                            groupColor = null,
-                            onTabClick = {},
-                            onTabClose = {},
-                            onTabLongPress = {},
-                            modifier = Modifier.width(180.dp)
-                        )
-                    }
+    // Drag layer
+    DragLayer(coordinator = coordinator) { draggedItem ->
+        when (draggedItem) {
+            is DraggableItemType.Tab -> {
+                val tab = tabs.find { it.id == draggedItem.tabId }
+                if (tab != null) {
+                    TabGridItem(
+                        tab = tab,
+                        isSelected = false,
+                        groupColor = null,
+                        onTabClick = {},
+                        onTabClose = {},
+                        onTabLongPress = {},
+                        modifier = Modifier.width(180.dp)
+                    )
                 }
+            }
 
-                is DraggableItemType.Group -> {
-                    val item = uniqueItems.find {
-                        it is UnifiedItem.GroupHeader && it.groupId == draggedItem.groupId
-                    } as? UnifiedItem.GroupHeader
-                    if (item != null) {
+            is DraggableItemType.Group -> {
+                val item = uniqueItems.find {
+                    (it is UnifiedItem.GroupHeader && it.groupId == draggedItem.groupId) ||
+                            (it is UnifiedItem.GroupContainer && it.groupId == draggedItem.groupId)
+                }
+                when (item) {
+                    is UnifiedItem.GroupContainer -> {
                         GroupHeaderGridItem(
                             groupId = item.groupId,
                             title = item.title,
@@ -378,6 +399,21 @@ fun TabSheetGridView(
                             modifier = Modifier.fillMaxWidth(0.9f)
                         )
                     }
+
+                    is UnifiedItem.GroupHeader -> {
+                        GroupHeaderGridItem(
+                            groupId = item.groupId,
+                            title = item.title,
+                            color = item.color,
+                            tabCount = item.tabCount,
+                            isExpanded = false,
+                            onHeaderClick = {},
+                            onOptionsClick = {},
+                            modifier = Modifier.fillMaxWidth(0.9f)
+                        )
+                    }
+
+                    else -> {}
                 }
             }
         }
@@ -515,7 +551,8 @@ fun GroupTabsRow(
     onTabLongPress: (TabSessionState) -> Unit,
     modifier: Modifier = Modifier,
     coordinator: DragCoordinator? = null,
-    isGroupHovered: Boolean = false
+    isGroupHovered: Boolean = false,
+    hoverState: TabSheetHoverState? = null
 ) {
     // Animate scale for the entire group row when hovered
     val scale by animateFloatAsState(
@@ -566,11 +603,16 @@ fun GroupTabsRow(
                                         coordinator = coordinator,
                                         metadata = mapOf("tabId" to tab.id)
                                     )
-                                    // Don't apply individual tab feedback - group row handles it
-                                    .dragVisualFeedback(
-                                        itemId = tab.id,
-                                        coordinator = coordinator,
-                                        isDropTarget = false  // Group row handles hover feedback
+                                    .then(
+                                        if (hoverState != null && coordinator != null) {
+                                            Modifier.groupRowTabFeedback(
+                                                tabId = tab.id,
+                                                coordinator = coordinator,
+                                                hoverState = hoverState
+                                            )
+                                        } else {
+                                            Modifier
+                                        }
                                     )
                             } else {
                                 Modifier
@@ -605,103 +647,13 @@ private fun TabGridItem(
     onTabLongPress: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val scope = rememberCoroutineScope()
-    val scale = remember { Animatable(1f) }
-
-    Surface(
+    // Use the reusable TabGridCard component
+    TabGridCard(
+        tab = tab,
+        isSelected = isSelected,
+        groupColor = groupColor,
+        onTabClick = onTabClick,
+        onTabClose = onTabClose,
         modifier = modifier
-            .aspectRatio(0.75f)
-            .scale(scale.value),
-        shape = RoundedCornerShape(12.dp),
-        color = when {
-            isSelected && groupColor != null -> Color(groupColor).copy(alpha = 0.2f)
-            isSelected -> MaterialTheme.colorScheme.primaryContainer
-            groupColor != null -> Color(groupColor).copy(alpha = 0.05f)
-            else -> MaterialTheme.colorScheme.surface
-        },
-        tonalElevation = if (isSelected) 3.dp else 1.dp,
-        border = when {
-            isSelected && groupColor != null -> BorderStroke(2.dp, Color(groupColor))
-            isSelected -> BorderStroke(2.dp, MaterialTheme.colorScheme.primary)
-            groupColor != null -> BorderStroke(1.dp, Color(groupColor).copy(alpha = 0.3f))
-            else -> null
-        }
-    ) {
-        Box(
-            modifier = Modifier.fillMaxSize()
-        ) {
-            // Make content area clickable
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .clickable { onTabClick() }
-            ) {
-                // Use ThumbnailImageView to load actual thumbnails
-                ThumbnailImageView(
-                    tab = tab,
-                    modifier = Modifier.fillMaxSize()
-                )
-
-                // Close button (top-right corner)
-                Surface(
-                    modifier = Modifier
-                        .padding(4.dp)
-                        .size(28.dp)
-                        .align(Alignment.TopEnd)
-                        .clickable {
-                            scope.launch {
-                                scale.animateTo(0.8f, animationSpec = tween(150))
-                                onTabClose()
-                            }
-                        },
-                    shape = CircleShape,
-                    color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.9f)
-                ) {
-                    Box(
-                        contentAlignment = Alignment.Center,
-                        modifier = Modifier.fillMaxSize()
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Close,
-                            contentDescription = "Close tab",
-                            modifier = Modifier.size(16.dp),
-                            tint = MaterialTheme.colorScheme.onErrorContainer
-                        )
-                    }
-                }
-
-                // Title overlay (bottom)
-                Surface(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .align(Alignment.BottomCenter),
-                    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f),
-                    tonalElevation = 1.dp
-                ) {
-                    Column(
-                        modifier = Modifier.padding(8.dp),
-                        verticalArrangement = Arrangement.spacedBy(2.dp)
-                    ) {
-                        Text(
-                            text = tab.content.title.ifEmpty { "New Tab" },
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-
-                        if (tab.content.url.isNotEmpty()) {
-                            Text(
-                                text = tab.content.url,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                        }
-                    }
-                }
-            }
-        }
-    }
+    )
 }

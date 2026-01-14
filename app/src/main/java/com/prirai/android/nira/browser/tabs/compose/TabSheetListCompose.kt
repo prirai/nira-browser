@@ -110,6 +110,12 @@ fun TabSheetListView(
 
         uniqueItems.forEachIndexed { index, item ->
             when (item) {
+                is UnifiedItem.GroupContainer -> {
+                    // Group container counts as one position
+                    mapping[index] = orderPosition
+                    orderPosition++
+                }
+
                 is UnifiedItem.GroupHeader -> {
                     mapping[index] = orderPosition
                     orderPosition++
@@ -136,22 +142,9 @@ fun TabSheetListView(
         derivedStateOf { coordinator.dragState.value.isDragging }
     }
 
-    // Track which group is being hovered (for enlarging entire group)
-    val hoveredGroupId by remember {
-        derivedStateOf {
-            val dropTarget = coordinator.dragState.value.currentDropTarget
-            if (dropTarget != null && dropTarget.type == DropTargetType.TAB) {
-                // Check if the hovered tab is in a group
-                val hoveredItem = uniqueItems.find { it.id == dropTarget.id }
-                when (hoveredItem) {
-                    is UnifiedItem.GroupedTab -> hoveredItem.groupId
-                    else -> null
-                }
-            } else {
-                null
-            }
-        }
-    }
+    // Hover state manager for contextual drag feedback
+    val hoverState = rememberTabSheetHoverState(coordinator, uniqueItems)
+    val hoveredGroupId = hoverState.getHoveredGroupIdForUngroupedDrag()
 
     // Track if LazyColumn is currently scrolling to prevent position updates during scroll
     val isScrolling = listState.isScrollInProgress
@@ -190,20 +183,14 @@ fun TabSheetListView(
             ) { index, item ->
                 val currentOrderPosition = positionMapping[index] ?: index
                 val isLastItemInGroup = item is UnifiedItem.GroupedTab && item.isLastInGroup
-                val isGroupHeader = item is UnifiedItem.GroupHeader
+                val isGroupHeader = item is UnifiedItem.GroupHeader || item is UnifiedItem.GroupContainer
 
-                // Check if we should show divider before this item
-                // Only show dividers between top-level items (not between grouped tabs in same group)
+                // Check if we should show divider before this item using hover state logic
                 val previousItem = if (index > 0) uniqueItems.getOrNull(index - 1) else null
-                val showDivider = when {
-                    index == 0 -> false  // Never show before first item
-                    item is UnifiedItem.GroupedTab && previousItem is UnifiedItem.GroupedTab &&
-                            item.groupId == previousItem.groupId -> false  // Don't show between grouped tabs in same group
-                    else -> true  // Show for all other cases (between top-level items)
-                }
+                val showDivider = hoverState.shouldShowDivider(index, item, previousItem)
 
                 // Divider zone BEFORE item - always present, visible only during drag
-                if (showDivider) {  // Only show divider between top-level items
+                if (showDivider) {
                     val isHovering = isDragging && coordinator.isHoveringOver("divider_$currentOrderPosition")
 
                     Box(
@@ -246,6 +233,36 @@ fun TabSheetListView(
                 }
 
                 when (item) {
+                    is UnifiedItem.GroupContainer -> {
+                        // New unified group structure - header as parent with child tabs
+                        GroupContainerListItem(
+                            groupId = item.groupId,
+                            title = item.title,
+                            color = item.color,
+                            isExpanded = item.isExpanded,
+                            children = item.children,
+                            selectedTabId = selectedTabId,
+                            onHeaderClick = { onGroupClick(item.groupId) },
+                            onOptionsClick = {
+                                menuGroupId = item.groupId
+                                menuGroupName = item.title
+                                showGroupMenu = true
+                                onGroupOptionsClick(item.groupId)
+                            },
+                            onTabClick = onTabClick,
+                            onTabClose = onTabClose,
+                            onShowTabMenu = { tab, isInGroup ->
+                                menuTab = tab
+                                menuIsInGroup = isInGroup
+                                showTabMenu = true
+                            },
+                            isDragging = isDragging,
+                            coordinator = coordinator,
+                            hoverState = hoverState,
+                            hoveredGroupId = hoveredGroupId
+                        )
+                    }
+
                     is UnifiedItem.GroupHeader -> {
                         val dismissState = rememberSwipeToDismissBoxState(
                             confirmValueChange = { dismissValue ->
@@ -341,15 +358,13 @@ fun TabSheetListView(
                                             "contextId" to (item.contextId ?: "")
                                         )
                                     )
-                                    .dragVisualFeedback(item.groupId, coordinator)
+                                    .groupHeaderFeedback(item.groupId, coordinator, hoverState)
                             )
                         }
                     }
 
                     is UnifiedItem.GroupedTab -> {
                         val group = groups.find { it.id == item.groupId }
-                        // Check if this tab's group is being hovered (for group container enlargement)
-                        val isGroupHovered = hoveredGroupId == item.groupId
 
                         val dismissState = rememberSwipeToDismissBoxState(
                             confirmValueChange = { dismissValue ->
@@ -446,11 +461,12 @@ fun TabSheetListView(
                                             "groupId" to item.groupId
                                         )
                                     )
-                                    .dragVisualFeedback(
-                                        itemId = item.tab.id,
+                                    .groupedTabFeedback(
+                                        tabId = item.tab.id,
+                                        groupId = item.groupId,
                                         coordinator = coordinator,
-                                        // Use group hover state instead of individual tab hover for grouped tabs
-                                        isDropTarget = isGroupHovered
+                                        hoverState = hoverState,
+                                        hoveredGroupId = hoveredGroupId
                                     )
                             )
                         }
@@ -546,7 +562,7 @@ fun TabSheetListView(
                                         coordinator = coordinator,
                                         metadata = mapOf("tabId" to item.tab.id)
                                     )
-                                    .dragVisualFeedback(item.tab.id, coordinator)
+                                    .ungroupedTabFeedback(item.tab.id, coordinator)
                             )
                         }
                     }
@@ -598,7 +614,7 @@ fun TabSheetListView(
         // Insertion indicator layer
         InsertionIndicator(coordinator = coordinator)
 
-        // Drag layer
+        // Drag layer - show full item pills with proper width
         DragLayer(coordinator = coordinator) { draggedItem ->
             when (draggedItem) {
                 is DraggableItemType.Tab -> {
@@ -607,11 +623,28 @@ fun TabSheetListView(
                         when (it) {
                             is UnifiedItem.SingleTab -> it.tab.id == draggedItem.tabId
                             is UnifiedItem.GroupedTab -> it.tab.id == draggedItem.tabId
+                            is UnifiedItem.GroupContainer -> it.children.any { tab -> tab.id == draggedItem.tabId }
                             else -> false
                         }
                     }
                     if (tab != null) {
                         when (item) {
+                            is UnifiedItem.GroupContainer -> {
+                                // Find the tab within the container
+                                TabListItem(
+                                    tab = tab,
+                                    isSelected = false,
+                                    isInGroup = true,
+                                    isLastInGroup = false,
+                                    groupId = item.groupId,
+                                    groupColor = item.color,
+                                    onTabClick = {},
+                                    onTabClose = {},
+                                    onTabLongPress = {},
+                                    modifier = Modifier.width(350.dp)
+                                )
+                            }
+
                             is UnifiedItem.GroupedTab -> {
                                 val group = groups.find { it.id == item.groupId }
                                 TabListItem(
@@ -624,7 +657,7 @@ fun TabSheetListView(
                                     onTabClick = {},
                                     onTabClose = {},
                                     onTabLongPress = {},
-                                    modifier = Modifier
+                                    modifier = Modifier.width(350.dp)
                                 )
                             }
 
@@ -639,7 +672,7 @@ fun TabSheetListView(
                                     onTabClick = {},
                                     onTabClose = {},
                                     onTabLongPress = {},
-                                    modifier = Modifier
+                                    modifier = Modifier.width(350.dp)
                                 )
                             }
                         }
@@ -648,19 +681,37 @@ fun TabSheetListView(
 
                 is DraggableItemType.Group -> {
                     val item = uniqueItems.find {
-                        it is UnifiedItem.GroupHeader && it.groupId == draggedItem.groupId
-                    } as? UnifiedItem.GroupHeader
-                    if (item != null) {
-                        GroupHeaderItem(
-                            groupId = item.groupId,
-                            title = item.title,
-                            color = item.color,
-                            tabCount = item.tabCount,
-                            isExpanded = false,
-                            onHeaderClick = {},
-                            onOptionsClick = {},
-                            modifier = Modifier
-                        )
+                        (it is UnifiedItem.GroupHeader && it.groupId == draggedItem.groupId) ||
+                                (it is UnifiedItem.GroupContainer && it.groupId == draggedItem.groupId)
+                    }
+                    when (item) {
+                        is UnifiedItem.GroupContainer -> {
+                            GroupHeaderItem(
+                                groupId = item.groupId,
+                                title = item.title,
+                                color = item.color,
+                                tabCount = item.tabCount,
+                                isExpanded = false,
+                                onHeaderClick = {},
+                                onOptionsClick = {},
+                                modifier = Modifier.width(350.dp)
+                            )
+                        }
+
+                        is UnifiedItem.GroupHeader -> {
+                            GroupHeaderItem(
+                                groupId = item.groupId,
+                                title = item.title,
+                                color = item.color,
+                                tabCount = item.tabCount,
+                                isExpanded = false,
+                                onHeaderClick = {},
+                                onOptionsClick = {},
+                                modifier = Modifier.width(350.dp)
+                            )
+                        }
+
+                        else -> {}
                     }
                 }
             }

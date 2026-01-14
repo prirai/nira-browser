@@ -35,8 +35,9 @@ sealed class UnifiedItem {
     ) : UnifiedItem()
 
     /**
-     * Group header (collapsed or expanded)
+     * Group header (collapsed or expanded) - DEPRECATED, use GroupContainer
      */
+    @Deprecated("Use GroupContainer instead")
     data class GroupHeader(
         override val id: String,
         override val sortKey: String,
@@ -49,8 +50,9 @@ sealed class UnifiedItem {
     ) : UnifiedItem()
 
     /**
-     * Tab within a group (for list/grid views when expanded)
+     * Tab within a group (for list/grid views when expanded) - DEPRECATED, use GroupContainer
      */
+    @Deprecated("Use GroupContainer with children instead")
     data class GroupedTab(
         override val id: String,
         override val sortKey: String,
@@ -61,8 +63,9 @@ sealed class UnifiedItem {
     ) : UnifiedItem()
 
     /**
-     * Group row (for grid view - shows multiple tabs in a row)
+     * Group row (for grid view - shows multiple tabs in a row) - DEPRECATED, use GroupContainer
      */
+    @Deprecated("Use GroupContainer instead")
     data class GroupRow(
         override val id: String,
         override val sortKey: String,
@@ -70,6 +73,23 @@ sealed class UnifiedItem {
         val tabs: List<TabSessionState>,
         val contextId: String?
     ) : UnifiedItem()
+
+    /**
+     * Group container - header is a parent with child tabs
+     * This is the new unified approach where header acts as a container
+     */
+    data class GroupContainer(
+        override val id: String,
+        override val sortKey: String,
+        val groupId: String,
+        val title: String,
+        val color: Int,
+        val contextId: String?,
+        val isExpanded: Boolean,
+        val children: List<TabSessionState>
+    ) : UnifiedItem() {
+        val tabCount: Int get() = children.size
+    }
 }
 
 /**
@@ -135,62 +155,21 @@ object UnifiedItemBuilder {
                         }
 
                         if (validTabIds.isNotEmpty()) {
-                            // Add group header
+                            // Add group as a container with children
+                            val groupTabs = validTabIds.mapNotNull { tabsById[it] }
                             items.add(
-                                UnifiedItem.GroupHeader(
+                                UnifiedItem.GroupContainer(
                                     id = "group_${group.id}",
                                     sortKey = "root_$index",
                                     groupId = group.id,
                                     title = group.name,
                                     color = group.color,
                                     contextId = group.contextId,
-                                    tabCount = validTabIds.size,
-                                    isExpanded = isExpanded
+                                    isExpanded = isExpanded,
+                                    children = groupTabs
                                 )
                             )
-
-                            // Add group contents if expanded
-                            if (isExpanded) {
-                                when (viewMode) {
-                                    ViewMode.BAR, ViewMode.LIST -> {
-                                        // Add tabs individually
-                                        validTabIds.forEachIndexed { tabIndex, tabId ->
-                                            val tab = tabsById[tabId]
-                                            if (tab != null) {
-                                                items.add(
-                                                    UnifiedItem.GroupedTab(
-                                                        id = "group_${group.id}_tab_${tab.id}",
-                                                        sortKey = "root_${index}_tab_$tabIndex",
-                                                        tab = tab,
-                                                        groupId = group.id,
-                                                        contextId = group.contextId,
-                                                        isLastInGroup = tabIndex == validTabIds.size - 1
-                                                    )
-                                                )
-                                                addedTabIds.add(tab.id)
-                                            }
-                                        }
-                                    }
-
-                                    ViewMode.GRID -> {
-                                        // Add tabs as rows (for grid layout)
-                                        val groupTabs = validTabIds.mapNotNull { tabsById[it] }
-                                        items.add(
-                                            UnifiedItem.GroupRow(
-                                                id = "grouprow_${group.id}",
-                                                sortKey = "root_${index}_row",
-                                                groupId = group.id,
-                                                tabs = groupTabs,
-                                                contextId = group.contextId
-                                            )
-                                        )
-                                        addedTabIds.addAll(validTabIds)
-                                    }
-                                }
-                            } else {
-                                // Mark tabs as added even if collapsed
-                                addedTabIds.addAll(validTabIds)
-                            }
+                            addedTabIds.addAll(validTabIds)
                         }
                     }
                 }
@@ -236,56 +215,20 @@ object UnifiedItemBuilder {
             val validTabIds = group.tabIds.filter { tabsById.containsKey(it) }
 
             if (validTabIds.isNotEmpty()) {
-                // Add group header
+                // Add group as a container with children
+                val groupTabs = validTabIds.mapNotNull { tabsById[it] }
                 items.add(
-                    UnifiedItem.GroupHeader(
+                    UnifiedItem.GroupContainer(
                         id = "group_${group.id}",
                         sortKey = "group_$groupIndex",
                         groupId = group.id,
                         title = group.name,
                         color = group.color,
                         contextId = group.contextId,
-                        tabCount = validTabIds.size,
-                        isExpanded = isExpanded
+                        isExpanded = isExpanded,
+                        children = groupTabs
                     )
                 )
-
-                // Add group contents if expanded
-                if (isExpanded) {
-                    when (viewMode) {
-                        ViewMode.BAR, ViewMode.LIST -> {
-                            validTabIds.forEachIndexed { tabIndex, tabId ->
-                                val tab = tabsById[tabId]
-                                if (tab != null) {
-                                    items.add(
-                                        UnifiedItem.GroupedTab(
-                                            id = "group_${group.id}_tab_${tab.id}",
-                                            sortKey = "group_${groupIndex}_tab_$tabIndex",
-                                            tab = tab,
-                                            groupId = group.id,
-                                            contextId = group.contextId,
-                                            isLastInGroup = tabIndex == validTabIds.size - 1
-                                        )
-                                    )
-                                }
-                            }
-                        }
-
-                        ViewMode.GRID -> {
-                            val groupTabs = validTabIds.mapNotNull { tabsById[it] }
-                            items.add(
-                                UnifiedItem.GroupRow(
-                                    id = "grouprow_${group.id}",
-                                    sortKey = "group_${groupIndex}_row",
-                                    groupId = group.id,
-                                    tabs = groupTabs,
-                                    contextId = group.contextId
-                                )
-                            )
-                        }
-                    }
-                }
-
                 addedTabIds.addAll(validTabIds)
             }
         }
@@ -320,6 +263,4 @@ object UnifiedItemBuilder {
             }
         }
     }
-
-
 }

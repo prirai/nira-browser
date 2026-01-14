@@ -259,12 +259,14 @@ class DragCoordinator(
 
         val newOffset = current.dragOffset + dragAmount
 
-        // Update drag layer position to follow pointer (centered on pointer)
+        // Update drag layer position to follow pointer
+        // Position the drag visual directly under the finger (not centered, but slightly offset)
         val itemBounds = _draggedItemBounds.value
         if (itemBounds != null) {
+            // Keep drag visual under finger with a small vertical offset so user can see it
             _dragLayerOffset.value = pointerPosition - Offset(
                 itemBounds.width / 2f,
-                itemBounds.height / 2f
+                itemBounds.height * 0.3f  // 30% from top - keeps item visible under finger
             )
         }
 
@@ -492,22 +494,22 @@ class DragCoordinator(
             target.id != excludeId && target.bounds.contains(position)
         }
 
-        // Priority: TAB (with zones) > ROOT_POSITION (dividers) > GROUP_BODY > GROUP_HEADER > EMPTY_SPACE
-        // TAB targets get highest priority so their drop zones (BEFORE/CENTER/AFTER) work properly
+        // Priority: TAB (with zones) > GROUP_HEADER (with zones) > ROOT_POSITION (dividers) > GROUP_BODY > EMPTY_SPACE
+        // Both TAB and GROUP_HEADER targets support drop zones (BEFORE/CENTER/AFTER) for reordering
         val bestTarget = candidateTargets.maxByOrNull { target ->
             when (target.type) {
                 DropTargetType.TAB -> 6
+                DropTargetType.GROUP_HEADER -> 5  // Same priority as ROOT_POSITION, support zones for reordering
                 DropTargetType.ROOT_POSITION -> 5
                 DropTargetType.GROUP_BODY -> 4
-                DropTargetType.GROUP_HEADER -> 3
                 DropTargetType.EMPTY_SPACE -> 1
             }
         } ?: return null
 
-        // For TAB targets, calculate drop zone based on position within bounds
-        if (bestTarget.type == DropTargetType.TAB) {
+        // For TAB and GROUP_HEADER targets, calculate drop zone based on position within bounds
+        if (bestTarget.type == DropTargetType.TAB || bestTarget.type == DropTargetType.GROUP_HEADER) {
             val zone = calculateDropZone(position, bestTarget.bounds)
-            android.util.Log.d("DragCoordinator", "TAB target: ${bestTarget.id}, zone: $zone")
+            android.util.Log.d("DragCoordinator", "${bestTarget.type} target: ${bestTarget.id}, zone: $zone")
             return bestTarget.copy(dropZone = zone)
         }
 
@@ -602,10 +604,10 @@ class DragCoordinator(
 
                             when (target.dropZone) {
                                 DropZone.CENTER -> {
-                                    // Middle 70% - Create new group (both tabs are ungrouped)
+                                    // Middle 50% - Create new group (both tabs are ungrouped)
                                     android.util.Log.d(
                                         "DragCoordinator",
-                                        "CENTER zone: Creating new group: [${tab.tabId}, $targetTabId]"
+                                        "CENTER zone: Creating new group at target position: [${tab.tabId}, $targetTabId]"
                                     )
 
                                     // If tab is in a group, remove it first
@@ -614,11 +616,42 @@ class DragCoordinator(
                                         delay(50)
                                     }
 
+                                    // Get target tab's position BEFORE creating the group
+                                    val currentOrder = viewModel.currentOrder.value
+                                    val targetPosition = currentOrder?.primaryOrder?.indexOfFirst { item ->
+                                        when (item) {
+                                            is UnifiedTabOrder.OrderItem.SingleTab -> item.tabId == targetTabId
+                                            is UnifiedTabOrder.OrderItem.TabGroup -> item.tabIds.contains(targetTabId)
+                                        }
+                                    } ?: -1
+
                                     // Create new group with both tabs
                                     viewModel.createGroup(
                                         listOf(tab.tabId, targetTabId),
                                         contextId = draggedTab.contextId ?: targetTab.contextId
                                     )
+
+                                    // Wait for group creation to complete
+                                    delay(100)
+
+                                    // Reorder the newly created group to the target position
+                                    if (targetPosition >= 0) {
+                                        val newOrder = viewModel.currentOrder.value
+                                        val newGroupId = viewModel.groups.value.find { group ->
+                                            group.tabIds.containsAll(listOf(tab.tabId, targetTabId))
+                                        }?.id
+
+                                        if (newGroupId != null) {
+                                            val currentGroupPosition = newOrder?.getItemPosition(newGroupId)
+                                            if (currentGroupPosition != null && currentGroupPosition != targetPosition) {
+                                                android.util.Log.d(
+                                                    "DragCoordinator",
+                                                    "Moving new group from $currentGroupPosition to $targetPosition"
+                                                )
+                                                orderManager.reorderItem(currentGroupPosition, targetPosition)
+                                            }
+                                        }
+                                    }
                                 }
 
                                 DropZone.BEFORE -> {
@@ -686,7 +719,7 @@ class DragCoordinator(
             }
 
             DropTargetType.GROUP_HEADER -> {
-                // Tab → Group: Add to group
+                // Tab → Group: Handle based on drop zone
                 val groupId = target.metadata["groupId"] as? String ?: return
                 val groupContextId = target.metadata["contextId"] as? String
 
@@ -696,16 +729,81 @@ class DragCoordinator(
                 if (draggedTab != null) {
                     // Check context compatibility
                     if (draggedTab.contextId == groupContextId) {
-                        android.util.Log.d("DragCoordinator", "Adding tab ${tab.tabId} to group $groupId")
+                        when (target.dropZone) {
+                            DropZone.CENTER -> {
+                                // CENTER zone - Add tab to group
+                                android.util.Log.d(
+                                    "DragCoordinator",
+                                    "CENTER: Adding tab ${tab.tabId} to group $groupId"
+                                )
 
-                        // Remove from old group if needed
-                        if (tab.groupId != null && tab.groupId != groupId) {
-                            viewModel.removeTabFromGroup(tab.tabId)
-                            delay(50)
+                                // Remove from old group if needed
+                                if (tab.groupId != null && tab.groupId != groupId) {
+                                    viewModel.removeTabFromGroup(tab.tabId)
+                                    delay(50)
+                                }
+
+                                viewModel.addTabToGroup(tab.tabId, groupId)
+                            }
+
+                            DropZone.BEFORE -> {
+                                // BEFORE zone - Reorder tab before the group
+                                android.util.Log.d(
+                                    "DragCoordinator",
+                                    "BEFORE: Reordering tab ${tab.tabId} before group $groupId"
+                                )
+
+                                // Remove from old group if in one
+                                if (tab.groupId != null) {
+                                    viewModel.removeTabFromGroup(tab.tabId)
+                                    delay(50)
+                                }
+
+                                // Get group position and insert before
+                                val currentOrder = viewModel.currentOrder.value
+                                val groupPosition = currentOrder?.getItemPosition(groupId)
+
+                                if (groupPosition != null && groupPosition >= 0) {
+                                    viewModel.moveTabToPosition(tab.tabId, groupPosition)
+                                }
+                            }
+
+                            DropZone.AFTER -> {
+                                // AFTER zone - Reorder tab after the group
+                                android.util.Log.d(
+                                    "DragCoordinator",
+                                    "AFTER: Reordering tab ${tab.tabId} after group $groupId"
+                                )
+
+                                // Remove from old group if in one
+                                if (tab.groupId != null) {
+                                    viewModel.removeTabFromGroup(tab.tabId)
+                                    delay(50)
+                                }
+
+                                // Get group position and insert after
+                                val currentOrder = viewModel.currentOrder.value
+                                val groupPosition = currentOrder?.getItemPosition(groupId)
+
+                                if (groupPosition != null && groupPosition >= 0) {
+                                    viewModel.moveTabToPosition(tab.tabId, groupPosition + 1)
+                                }
+                            }
+
+                            null -> {
+                                // Fallback - add to group
+                                android.util.Log.d("DragCoordinator", "Adding tab ${tab.tabId} to group $groupId")
+
+                                // Remove from old group if needed
+                                if (tab.groupId != null && tab.groupId != groupId) {
+                                    viewModel.removeTabFromGroup(tab.tabId)
+                                    delay(50)
+                                }
+
+                                // Add to target group
+                                viewModel.addTabToGroup(tab.tabId, groupId)
+                            }
                         }
-
-                        // Add to target group
-                        viewModel.addTabToGroup(tab.tabId, groupId)
                     } else {
                         android.util.Log.w(
                             "DragCoordinator",
@@ -787,7 +885,7 @@ class DragCoordinator(
     private suspend fun handleGroupDrop(group: DraggableItemType.Group, target: DropTarget) {
         when (target.type) {
             DropTargetType.TAB -> {
-                // Group → Tab: Add tab to group
+                // Group → Tab: Handle based on drop zone
                 val targetTabId = target.metadata["tabId"] as? String ?: return
                 val tabs = viewModel.tabs.value
                 val targetTab = tabs.find { it.id == targetTabId }
@@ -797,8 +895,50 @@ class DragCoordinator(
                     val draggedGroup = groups.find { it.id == group.groupId }
 
                     if (draggedGroup != null && draggedGroup.contextId == targetTab.contextId) {
-                        android.util.Log.d("DragCoordinator", "Adding tab $targetTabId to group ${group.groupId}")
-                        viewModel.addTabToGroup(targetTabId, group.groupId)
+                        when (target.dropZone) {
+                            DropZone.CENTER -> {
+                                // CENTER - Add tab to group
+                                android.util.Log.d(
+                                    "DragCoordinator",
+                                    "CENTER: Adding tab $targetTabId to group ${group.groupId}"
+                                )
+                                viewModel.addTabToGroup(targetTabId, group.groupId)
+                            }
+
+                            DropZone.BEFORE, DropZone.AFTER -> {
+                                // BEFORE/AFTER - Reorder group near the tab
+                                val zone = if (target.dropZone == DropZone.BEFORE) "BEFORE" else "AFTER"
+                                android.util.Log.d(
+                                    "DragCoordinator",
+                                    "$zone: Reordering group ${group.groupId} near tab $targetTabId"
+                                )
+
+                                val currentOrder = viewModel.currentOrder.value
+                                val targetPosition = currentOrder?.primaryOrder?.indexOfFirst { item ->
+                                    when (item) {
+                                        is UnifiedTabOrder.OrderItem.SingleTab -> item.tabId == targetTabId
+                                        is UnifiedTabOrder.OrderItem.TabGroup -> item.tabIds.contains(targetTabId)
+                                    }
+                                } ?: -1
+
+                                val currentPosition = currentOrder?.getItemPosition(group.groupId)
+
+                                if (targetPosition >= 0 && currentPosition != null) {
+                                    val finalPosition =
+                                        if (target.dropZone == DropZone.AFTER) targetPosition + 1 else targetPosition
+                                    orderManager.reorderItem(currentPosition, finalPosition)
+                                }
+                            }
+
+                            null -> {
+                                // Fallback - add to group
+                                android.util.Log.d(
+                                    "DragCoordinator",
+                                    "Adding tab $targetTabId to group ${group.groupId}"
+                                )
+                                viewModel.addTabToGroup(targetTabId, group.groupId)
+                            }
+                        }
                     } else {
                         android.util.Log.w(
                             "DragCoordinator",
@@ -809,7 +949,7 @@ class DragCoordinator(
             }
 
             DropTargetType.GROUP_HEADER -> {
-                // Group → Group: Merge groups
+                // Group → Group: Handle based on drop zone
                 val targetGroupId = target.metadata["groupId"] as? String ?: return
                 val targetContextId = target.metadata["contextId"] as? String
 
@@ -819,8 +959,44 @@ class DragCoordinator(
                 if (draggedGroup != null && targetGroupId != group.groupId) {
                     // Check context compatibility
                     if (draggedGroup.contextId == targetContextId) {
-                        android.util.Log.d("DragCoordinator", "Merging group ${group.groupId} into $targetGroupId")
-                        viewModel.mergeGroups(group.groupId, targetGroupId)
+                        when (target.dropZone) {
+                            DropZone.CENTER -> {
+                                // CENTER - Merge groups
+                                android.util.Log.d(
+                                    "DragCoordinator",
+                                    "CENTER: Merging group ${group.groupId} into $targetGroupId"
+                                )
+                                viewModel.mergeGroups(group.groupId, targetGroupId)
+                            }
+
+                            DropZone.BEFORE, DropZone.AFTER -> {
+                                // BEFORE/AFTER - Reorder groups
+                                val zone = if (target.dropZone == DropZone.BEFORE) "BEFORE" else "AFTER"
+                                android.util.Log.d(
+                                    "DragCoordinator",
+                                    "$zone: Reordering group ${group.groupId} near group $targetGroupId"
+                                )
+
+                                val currentOrder = viewModel.currentOrder.value
+                                val targetPosition = currentOrder?.getItemPosition(targetGroupId)
+                                val currentPosition = currentOrder?.getItemPosition(group.groupId)
+
+                                if (targetPosition != null && currentPosition != null) {
+                                    val finalPosition =
+                                        if (target.dropZone == DropZone.AFTER) targetPosition + 1 else targetPosition
+                                    orderManager.reorderItem(currentPosition, finalPosition)
+                                }
+                            }
+
+                            null -> {
+                                // Fallback - merge groups
+                                android.util.Log.d(
+                                    "DragCoordinator",
+                                    "Merging group ${group.groupId} into $targetGroupId"
+                                )
+                                viewModel.mergeGroups(group.groupId, targetGroupId)
+                            }
+                        }
                     } else {
                         android.util.Log.w(
                             "DragCoordinator",
