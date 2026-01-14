@@ -7,6 +7,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
@@ -162,6 +163,7 @@ fun TabSheetListView(
             state = listState,
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(top = 8.dp, bottom = 120.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),  // Always 8dp spacing to avoid layout shift
             userScrollEnabled = !isDragging  // Only disable scroll during active drag, not during touch
         ) {
             itemsIndexed(
@@ -173,28 +175,46 @@ fun TabSheetListView(
                 val isLastItemInGroup = item is UnifiedItem.GroupedTab && item.isLastInGroup
                 val isGroupHeader = item is UnifiedItem.GroupHeader
 
-                // Show divider BEFORE item during drag
-                if (isDragging) {
-                    val isHovering = coordinator.isHoveringOver("divider_$currentOrderPosition")
+                // Divider zone BEFORE item - always present, visible only during drag
+                if (index > 0) {  // Don't show divider before first item
+                    val isHovering = isDragging && coordinator.isHoveringOver("divider_$currentOrderPosition")
+
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 16.dp)
-                            .dropTarget(
-                                id = "divider_$currentOrderPosition",
-                                type = DropTargetType.ROOT_POSITION,
-                                coordinator = coordinator,
-                                metadata = mapOf("position" to currentOrderPosition)
+                            .offset(y = (-8).dp)  // Move up into the spacedBy gap
+                            .height(8.dp)  // Match the spacedBy gap height
+                            .then(
+                                if (isDragging) {
+                                    Modifier.dropTarget(
+                                        id = "divider_$currentOrderPosition",
+                                        type = DropTargetType.ROOT_POSITION,
+                                        coordinator = coordinator,
+                                        metadata = mapOf("position" to currentOrderPosition)
+                                    )
+                                } else {
+                                    Modifier
+                                }
                             ),
                         contentAlignment = Alignment.Center
                     ) {
-                        HorizontalDivider(
-                            thickness = if (isHovering) 3.dp else 2.dp,
-                            color = if (isHovering)
-                                MaterialTheme.colorScheme.primary
-                            else
-                                MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
-                        )
+                        if (isHovering) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(8.dp)
+                                    .padding(horizontal = 8.dp)
+                                    .background(
+                                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
+                                        shape = RoundedCornerShape(2.dp)
+                                    )
+                                    .border(
+                                        width = 2.dp,
+                                        color = MaterialTheme.colorScheme.primary,
+                                        shape = RoundedCornerShape(2.dp)
+                                    )
+                            )
+                        }
                     }
                 }
 
@@ -378,6 +398,7 @@ fun TabSheetListView(
                                 onTabLongPress = {
                                     // Long press now only used for drag - menu via swipe right
                                 },
+                                isDragging = isDragging,
                                 modifier = Modifier
                                     .draggableItem(
                                         itemType = DraggableItemType.Tab(
@@ -478,6 +499,7 @@ fun TabSheetListView(
                                 onTabLongPress = {
                                     // Long press now only used for drag - menu via swipe right
                                 },
+                                isDragging = isDragging,
                                 modifier = Modifier
                                     .draggableItem(
                                         itemType = DraggableItemType.Tab(item.tab.id),
@@ -499,14 +521,15 @@ fun TabSheetListView(
                     }
                 }
 
-                // Show divider AFTER last item during drag (for dropping at the end)
+                // Divider zone AFTER last item during drag
                 if (isDragging && index == uniqueItems.lastIndex) {
                     val afterLastPosition = currentOrderPosition + 1
                     val isHovering = coordinator.isHoveringOver("divider_$afterLastPosition")
+
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 16.dp)
+                            .height(8.dp)  // 8dp zone for drop at end
                             .dropTarget(
                                 id = "divider_$afterLastPosition",
                                 type = DropTargetType.ROOT_POSITION,
@@ -515,13 +538,23 @@ fun TabSheetListView(
                             ),
                         contentAlignment = Alignment.Center
                     ) {
-                        HorizontalDivider(
-                            thickness = if (isHovering) 3.dp else 2.dp,
-                            color = if (isHovering)
-                                MaterialTheme.colorScheme.primary
-                            else
-                                MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
-                        )
+                        if (isHovering) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(8.dp)
+                                    .padding(horizontal = 8.dp)
+                                    .background(
+                                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
+                                        shape = RoundedCornerShape(2.dp)
+                                    )
+                                    .border(
+                                        width = 2.dp,
+                                        color = MaterialTheme.colorScheme.primary,
+                                        shape = RoundedCornerShape(2.dp)
+                                    )
+                            )
+                        }
                     }
                 }
             }
@@ -734,6 +767,7 @@ private fun TabListItem(
     onTabClick: () -> Unit,
     onTabClose: () -> Unit,
     onTabLongPress: () -> Unit,
+    isDragging: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     val scope = rememberCoroutineScope()
@@ -835,6 +869,7 @@ private fun TabListItem(
                         overflow = TextOverflow.Ellipsis
                     )
 
+                    // Always show URL (spacing is always present, not just during drag)
                     if (tab.content.url.isNotEmpty()) {
                         Text(
                             text = tab.content.url,
