@@ -169,22 +169,22 @@ fun TabSheetListView(
                 key = { _, item -> item.id },
                 span = { _, _ -> androidx.compose.foundation.lazy.grid.GridItemSpan(1) }
             ) { index, item ->
-                val nextOrderPosition = positionMapping[index]?.plus(1) ?: (index + 1)
+                val currentOrderPosition = positionMapping[index] ?: index
                 val isLastItemInGroup = item is UnifiedItem.GroupedTab && item.isLastInGroup
                 val isGroupHeader = item is UnifiedItem.GroupHeader
 
-                // Show divider during drag
-                if (isDragging && index == 0) {
-                    val isHovering = coordinator.isHoveringOver("divider_0")
+                // Show divider BEFORE item during drag
+                if (isDragging) {
+                    val isHovering = coordinator.isHoveringOver("divider_$currentOrderPosition")
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(24.dp)
+                            .padding(horizontal = 16.dp)
                             .dropTarget(
-                                id = "divider_0",
+                                id = "divider_$currentOrderPosition",
                                 type = DropTargetType.ROOT_POSITION,
                                 coordinator = coordinator,
-                                metadata = mapOf("position" to 0)
+                                metadata = mapOf("position" to currentOrderPosition)
                             ),
                         contentAlignment = Alignment.Center
                     ) {
@@ -499,18 +499,19 @@ fun TabSheetListView(
                     }
                 }
 
-                // Show divider after each item during drag (only after root-level items or last item in group, but NOT after group headers)
-                if (isDragging && !isGroupHeader && (item !is UnifiedItem.GroupedTab || isLastItemInGroup)) {
-                    val isHovering = coordinator.isHoveringOver("divider_$nextOrderPosition")
+                // Show divider AFTER last item during drag (for dropping at the end)
+                if (isDragging && index == uniqueItems.lastIndex) {
+                    val afterLastPosition = currentOrderPosition + 1
+                    val isHovering = coordinator.isHoveringOver("divider_$afterLastPosition")
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(24.dp)
+                            .padding(horizontal = 16.dp)
                             .dropTarget(
-                                id = "divider_$nextOrderPosition",
+                                id = "divider_$afterLastPosition",
                                 type = DropTargetType.ROOT_POSITION,
                                 coordinator = coordinator,
-                                metadata = mapOf("position" to nextOrderPosition)
+                                metadata = mapOf("position" to afterLastPosition)
                             ),
                         contentAlignment = Alignment.Center
                     ) {
