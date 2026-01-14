@@ -244,7 +244,8 @@ private fun GroupedTabListItem(
         enableDismissFromStartToEnd = !isDragging,
         enableDismissFromEndToStart = !isDragging,
         backgroundContent = {
-            val bgColor = when (dismissState.targetValue) {
+            val dismissDirection = dismissState.dismissDirection
+            val bgColor = when (dismissDirection) {
                 SwipeToDismissBoxValue.EndToStart -> MaterialTheme.colorScheme.errorContainer
                 SwipeToDismissBoxValue.StartToEnd -> MaterialTheme.colorScheme.primaryContainer
                 else -> Color.Transparent
@@ -254,10 +255,10 @@ private fun GroupedTabListItem(
                     .fillMaxSize()
                     .background(bgColor)
                     .padding(horizontal = 20.dp),
-                contentAlignment = if (dismissState.targetValue == SwipeToDismissBoxValue.EndToStart)
+                contentAlignment = if (dismissDirection == SwipeToDismissBoxValue.EndToStart)
                     Alignment.CenterEnd else Alignment.CenterStart
             ) {
-                when (dismissState.targetValue) {
+                when (dismissDirection) {
                     SwipeToDismissBoxValue.EndToStart -> {
                         Icon(
                             imageVector = Icons.Default.Delete,

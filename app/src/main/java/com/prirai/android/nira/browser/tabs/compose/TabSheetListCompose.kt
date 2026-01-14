@@ -296,7 +296,8 @@ fun TabSheetListView(
                             enableDismissFromStartToEnd = !isDragging,
                             enableDismissFromEndToStart = !isDragging,
                             backgroundContent = {
-                                val color = when (dismissState.targetValue) {
+                                val dismissDirection = dismissState.dismissDirection
+                                val color = when (dismissDirection) {
                                     SwipeToDismissBoxValue.EndToStart -> MaterialTheme.colorScheme.errorContainer
                                     SwipeToDismissBoxValue.StartToEnd -> MaterialTheme.colorScheme.primaryContainer
                                     else -> Color.Transparent
@@ -306,10 +307,10 @@ fun TabSheetListView(
                                         .fillMaxSize()
                                         .background(color)
                                         .padding(horizontal = 20.dp),
-                                    contentAlignment = if (dismissState.targetValue == SwipeToDismissBoxValue.EndToStart)
+                                    contentAlignment = if (dismissDirection == SwipeToDismissBoxValue.EndToStart)
                                         Alignment.CenterEnd else Alignment.CenterStart
                                 ) {
-                                    when (dismissState.targetValue) {
+                                    when (dismissDirection) {
                                         SwipeToDismissBoxValue.EndToStart -> {
                                             Icon(
                                                 imageVector = Icons.Default.Delete,
@@ -396,7 +397,8 @@ fun TabSheetListView(
                             enableDismissFromStartToEnd = !isDragging,
                             enableDismissFromEndToStart = !isDragging,
                             backgroundContent = {
-                                val color = when (dismissState.targetValue) {
+                                val dismissDirection = dismissState.dismissDirection
+                                val color = when (dismissDirection) {
                                     SwipeToDismissBoxValue.EndToStart -> MaterialTheme.colorScheme.errorContainer
                                     SwipeToDismissBoxValue.StartToEnd -> MaterialTheme.colorScheme.primaryContainer
                                     else -> Color.Transparent
@@ -406,10 +408,10 @@ fun TabSheetListView(
                                         .fillMaxSize()
                                         .background(color)
                                         .padding(horizontal = 20.dp),
-                                    contentAlignment = if (dismissState.targetValue == SwipeToDismissBoxValue.EndToStart)
+                                    contentAlignment = if (dismissDirection == SwipeToDismissBoxValue.EndToStart)
                                         Alignment.CenterEnd else Alignment.CenterStart
                                 ) {
-                                    when (dismissState.targetValue) {
+                                    when (dismissDirection) {
                                         SwipeToDismissBoxValue.EndToStart -> {
                                             Icon(
                                                 imageVector = Icons.Default.Delete,
@@ -503,7 +505,8 @@ fun TabSheetListView(
                             enableDismissFromStartToEnd = !isDragging,
                             enableDismissFromEndToStart = !isDragging,
                             backgroundContent = {
-                                val color = when (dismissState.targetValue) {
+                                val dismissDirection = dismissState.dismissDirection
+                                val color = when (dismissDirection) {
                                     SwipeToDismissBoxValue.EndToStart -> MaterialTheme.colorScheme.errorContainer
                                     SwipeToDismissBoxValue.StartToEnd -> MaterialTheme.colorScheme.primaryContainer
                                     else -> Color.Transparent
@@ -513,10 +516,10 @@ fun TabSheetListView(
                                         .fillMaxSize()
                                         .background(color)
                                         .padding(horizontal = 20.dp),
-                                    contentAlignment = if (dismissState.targetValue == SwipeToDismissBoxValue.EndToStart)
+                                    contentAlignment = if (dismissDirection == SwipeToDismissBoxValue.EndToStart)
                                         Alignment.CenterEnd else Alignment.CenterStart
                                 ) {
-                                    when (dismissState.targetValue) {
+                                    when (dismissDirection) {
                                         SwipeToDismissBoxValue.EndToStart -> {
                                             Icon(
                                                 imageVector = Icons.Default.Delete,

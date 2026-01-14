@@ -541,8 +541,7 @@ private fun GroupPill(
                 if (isDragging) Modifier else Modifier
             ),
         shape = RoundedCornerShape(20.dp),
-        color = Color(group.color).copy(alpha = 0.15f),
-        border = BorderStroke(2.dp, Color(group.color))
+        color = Color(group.color).copy(alpha = 0.15f)
     ) {
         Row(
             modifier = Modifier

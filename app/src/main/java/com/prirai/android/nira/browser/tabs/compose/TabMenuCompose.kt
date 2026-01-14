@@ -9,6 +9,9 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -22,6 +25,116 @@ import com.prirai.android.nira.R
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import mozilla.components.browser.state.state.TabSessionState
+
+/**
+ * Unified Tab Menu System
+ *
+ * This file provides a comprehensive, reusable menu system for tabs and groups.
+ * It includes:
+ * - TabContextMenu: Menu for individual tabs (grouped or ungrouped)
+ * - GroupContextMenu: Menu for group containers
+ * - UnifiedTabMenu: Smart entry point that shows appropriate menu based on context
+ * - Reusable dialogs: RenameGroupDialog, ColorPickerDialog, ProfilePickerDialog
+ * - Helper components: TabMenuHeader, TabMenuItem
+ *
+ * Usage:
+ * - For tabs: Call TabContextMenu with isInGroup parameter
+ * - For groups: Call GroupContextMenu
+ * - For automatic detection: Call UnifiedTabMenu (recommended)
+ */
+
+// ============================================================================
+// UNIFIED MENU ENTRY POINT
+// ============================================================================
+
+/**
+ * Unified menu that automatically determines context and shows appropriate menu.
+ * This is the recommended entry point for showing menus.
+ *
+ * @param menuType The type of menu to show (Tab or Group)
+ * @param onDismiss Callback when menu is dismissed
+ * @param viewModel The TabViewModel for actions
+ * @param scope CoroutineScope for launching actions
+ */
+@Composable
+fun UnifiedTabMenu(
+    menuType: TabMenuType,
+    onDismiss: () -> Unit,
+    viewModel: TabViewModel,
+    scope: CoroutineScope,
+    modifier: Modifier = Modifier
+) {
+    when (menuType) {
+        is TabMenuType.Tab -> {
+            TabContextMenu(
+                tab = menuType.tab,
+                isInGroup = menuType.isInGroup,
+                onDismiss = onDismiss,
+                viewModel = viewModel,
+                scope = scope,
+                modifier = modifier
+            )
+        }
+
+        is TabMenuType.Group -> {
+            GroupContextMenu(
+                groupId = menuType.groupId,
+                groupName = menuType.groupName,
+                onDismiss = onDismiss,
+                viewModel = viewModel,
+                scope = scope,
+                modifier = modifier
+            )
+        }
+    }
+}
+
+/**
+ * Sealed class representing the type of menu to show.
+ * Provides type-safe menu context.
+ */
+sealed class TabMenuType {
+    /**
+     * Menu for an individual tab
+     * @param tab The tab session state
+     * @param isInGroup Whether the tab is currently in a group
+     */
+    data class Tab(
+        val tab: TabSessionState,
+        val isInGroup: Boolean
+    ) : TabMenuType()
+
+    /**
+     * Menu for a group container
+     * @param groupId The ID of the group
+     * @param groupName The display name of the group
+     */
+    data class Group(
+        val groupId: String,
+        val groupName: String
+    ) : TabMenuType()
+}
+
+// ============================================================================
+// TAB CONTEXT MENU
+// ============================================================================
+
+/**
+ * Context menu for individual tabs.
+ * Shows different options based on whether the tab is in a group.
+ *
+ * Options for ungrouped tabs:
+ * - New Tab, Duplicate, Add to Island, Pin, Share, Select, Close, Close Others
+ *
+ * Options for grouped tabs:
+ * - New Tab, Duplicate, Remove from Island, Pin, Share, Select, Close, Close Others
+ *
+ * @param tab The tab to show menu for
+ * @param isInGroup Whether this tab is currently in a group
+ * @param onDismiss Callback when menu is dismissed
+ * @param viewModel The TabViewModel for performing actions
+ * @param scope CoroutineScope for launching coroutines
+ */
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -80,17 +193,6 @@ fun TabContextMenu(
                         }
                     }
                 )
-            } else {
-                TabMenuItem(
-                    icon = { Icon(painterResource(R.drawable.ic_tab_group), "Add to Island") },
-                    text = "Add to Island",
-                    onClick = {
-                        scope.launch {
-                            viewModel.showAddToGroupDialog(tab.id)
-                            onDismiss()
-                        }
-                    }
-                )
             }
 
             TabMenuItem(
@@ -107,7 +209,7 @@ fun TabContextMenu(
             HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
 
             TabMenuItem(
-                icon = { Icon(painterResource(R.drawable.ic_share), "Share") },
+                icon = { Icon(painterResource(R.drawable.ios_share_24), "Share") },
                 text = "Share Tab",
                 onClick = {
                     onDismiss()
@@ -129,7 +231,13 @@ fun TabContextMenu(
             HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
 
             TabMenuItem(
-                icon = { Icon(painterResource(R.drawable.ic_close_small), "Close Tab") },
+                icon = {
+                    Icon(
+                        painterResource(R.drawable.ic_close_small),
+                        "Close Tab",
+                        modifier = Modifier.size(32.dp)
+                    )
+                },
                 text = "Close Tab",
                 onClick = {
                     scope.launch {
@@ -138,21 +246,34 @@ fun TabContextMenu(
                     }
                 }
             )
-
-            TabMenuItem(
-                icon = { Icon(painterResource(R.drawable.ic_round_close), "Close Other Tabs") },
-                text = "Close Other Tabs",
-                onClick = {
-                    scope.launch {
-                        viewModel.closeOtherTabs(tab.id)
-                        onDismiss()
-                    }
-                }
-            )
         }
     }
 }
 
+// ============================================================================
+// GROUP CONTEXT MENU
+// ============================================================================
+
+/**
+ * Context menu for group containers.
+ * Provides group-specific operations like rename, color change, ungroup, etc.
+ *
+ * Available options:
+ * - New Tab in Island: Creates a new tab in this group
+ * - Rename Island: Shows dialog to rename the group
+ * - Change Color: Shows color picker to change group color
+ * - Collapse/Expand: Toggles group expansion state
+ * - Pin Island: Pins/unpins the group
+ * - Ungroup All Tabs: Removes all tabs from the group
+ * - Close All Tabs: Closes all tabs in the group
+ * - Move to Profile: Shows profile picker to move group
+ *
+ * @param groupId The ID of the group
+ * @param groupName The display name of the group
+ * @param onDismiss Callback when menu is dismissed
+ * @param viewModel The TabViewModel for performing actions
+ * @param scope CoroutineScope for launching coroutines
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GroupContextMenu(
@@ -179,35 +300,76 @@ fun GroupContextMenu(
                 .fillMaxWidth()
                 .padding(bottom = 16.dp)
         ) {
-            Text(
-                text = groupName,
-                style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.padding(16.dp)
-            )
+            // Inline rename field at the top
+            var editedName by remember { mutableStateOf(groupName) }
 
-            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                TextField(
+                    value = editedName,
+                    onValueChange = { editedName = it },
+                    modifier = Modifier.weight(1f),
+                    singleLine = true,
+                    textStyle = MaterialTheme.typography.titleMedium,
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                        disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                    ),
+                    shape = RoundedCornerShape(
+                        topStart = 12.dp,
+                        bottomStart = 12.dp,
+                        topEnd = 0.dp,
+                        bottomEnd = 0.dp
+                    )
+                )
 
-            TabMenuItem(
-                icon = { Icon(painterResource(R.drawable.mozac_ic_tab_new_24), "New Tab in Group") },
-                text = "New Tab in Island",
-                onClick = {
-                    scope.launch {
-                        val contextId = currentGroup?.contextId ?: "profile_default"
-                        viewModel.createNewTabInGroup(groupId, contextId)
-                        onDismiss()
+                // Accept button (rounded right end)
+                Surface(
+                    modifier = Modifier.size(56.dp),
+                    shape = RoundedCornerShape(
+                        topStart = 0.dp,
+                        bottomStart = 0.dp,
+                        topEnd = 12.dp,
+                        bottomEnd = 12.dp
+                    ),
+                    color = if (editedName.isNotBlank() && editedName != groupName) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        MaterialTheme.colorScheme.surfaceVariant
+                    },
+                    onClick = {
+                        if (editedName.isNotBlank() && editedName != groupName) {
+                            scope.launch {
+                                viewModel.renameGroup(groupId, editedName)
+                                onDismiss()
+                            }
+                        }
+                    }
+                ) {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Check,
+                            contentDescription = "Confirm rename",
+                            tint = if (editedName.isNotBlank() && editedName != groupName) {
+                                MaterialTheme.colorScheme.onPrimary
+                            } else {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            }
+                        )
                     }
                 }
-            )
+            }
 
-            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-
-            TabMenuItem(
-                icon = { Icon(painterResource(R.drawable.ic_edit), "Rename") },
-                text = "Rename Island",
-                onClick = {
-                    showRenameDialog = true
-                }
-            )
+            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
             TabMenuItem(
                 icon = { Icon(painterResource(R.drawable.ic_palette), "Change Color") },
@@ -325,6 +487,13 @@ fun GroupContextMenu(
     }
 }
 
+// ============================================================================
+// REUSABLE MENU COMPONENTS
+// ============================================================================
+
+/**
+ * Header component for tab menus showing favicon, title, and URL.
+ */
 @Composable
 private fun TabMenuHeader(tab: TabSessionState) {
     Row(
@@ -358,6 +527,10 @@ private fun TabMenuHeader(tab: TabSessionState) {
     }
 }
 
+/**
+ * Reusable menu item component with icon and text.
+ * Provides consistent styling across all menu items.
+ */
 @Composable
 private fun TabMenuItem(
     icon: @Composable () -> Unit,
@@ -381,146 +554,16 @@ private fun TabMenuItem(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun RenameGroupDialog(
-    currentName: String,
-    onConfirm: (String) -> Unit,
-    onDismiss: () -> Unit
-) {
-    var name by remember { mutableStateOf(currentName) }
+// ============================================================================
+// NOTE: Dialog components have been moved to TabMenuDialogs.kt
+// ============================================================================
 
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Rename Island") },
-        text = {
-            TextField(
-                value = name,
-                onValueChange = { name = it },
-                label = { Text("Island Name") },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth()
-            )
-        },
-        confirmButton = {
-            TextButton(
-                onClick = { onConfirm(name) },
-                enabled = name.isNotBlank()
-            ) {
-                Text("Rename")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancel")
-            }
-        }
-    )
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun ColorPickerDialog(
-    currentColor: Int,
-    onConfirm: (Int) -> Unit,
-    onDismiss: () -> Unit
-) {
-    val colors = listOf(
-        0xFFE57373.toInt(), // Red
-        0xFFF06292.toInt(), // Pink
-        0xFFBA68C8.toInt(), // Purple
-        0xFF9575CD.toInt(), // Deep Purple
-        0xFF7986CB.toInt(), // Indigo
-        0xFF64B5F6.toInt(), // Blue
-        0xFF4FC3F7.toInt(), // Light Blue
-        0xFF4DD0E1.toInt(), // Cyan
-        0xFF4DB6AC.toInt(), // Teal
-        0xFF81C784.toInt(), // Green
-        0xFFAED581.toInt(), // Light Green
-        0xFFDCE775.toInt(), // Lime
-        0xFFFFF176.toInt(), // Yellow
-        0xFFFFD54F.toInt(), // Amber
-        0xFFFFB74D.toInt(), // Orange
-        0xFFFF8A65.toInt()  // Deep Orange
-    )
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Choose Color") },
-        text = {
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(4),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-                modifier = Modifier.height(300.dp)
-            ) {
-                items(colors) { color ->
-                    Box(
-                        modifier = Modifier
-                            .size(56.dp)
-                            .clip(CircleShape)
-                            .background(Color(color))
-                            .clickable { onConfirm(color) }
-                            .border(
-                                width = if (color == currentColor) 3.dp else 0.dp,
-                                color = Color.White,
-                                shape = CircleShape
-                            )
-                    )
-                }
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancel")
-            }
-        }
-    )
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun ProfilePickerDialog(
-    onConfirm: (String) -> Unit,
-    onDismiss: () -> Unit
-) {
-    // TODO: Get actual profiles from ProfileManager
-    val profiles = remember {
-        listOf(
-            "default" to "Default Profile",
-            "work" to "Work Profile",
-            "personal" to "Personal Profile"
-        )
-    }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Move to Profile") },
-        text = {
-            Column(
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                profiles.forEach { (profileId, profileName) ->
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { onConfirm(profileId) }
-                            .padding(vertical = 12.dp),
-                        horizontalArrangement = Arrangement.Start,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = profileName,
-                            style = MaterialTheme.typography.bodyLarge
-                        )
-                    }
-                }
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancel")
-            }
-        }
-    )
-}
+/**
+ * The following dialog components are now in TabMenuDialogs.kt:
+ * - RenameGroupDialog
+ * - ColorPickerDialog
+ * - ProfilePickerDialog
+ *
+ * They are still imported and available for use in this file.
+ * This separation improves code organization and reusability.
+ */
