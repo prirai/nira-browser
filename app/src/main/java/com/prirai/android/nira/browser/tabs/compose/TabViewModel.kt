@@ -53,12 +53,11 @@ class TabViewModel(
     // Expose order for UI to use
     val currentOrder: StateFlow<UnifiedTabOrder?> = orderManager.currentOrder
 
-    // Undo state
-    private val _showUndoSnackbar = MutableStateFlow<UndoSnackbarState?>(null)
-    val showUndoSnackbar: StateFlow<UndoSnackbarState?> = _showUndoSnackbar.asStateFlow()
-
+    // Undo state (using GlobalSnackbarManager)
     private var pendingTabDeletion: PendingTabDeletion? = null
-    private var undoJob: Job? = null
+
+    // Callback for actual tab deletion (to be set by UI/Fragment)
+    var onTabDeleteConfirmed: ((String) -> Unit)? = null
 
     init {
         // Observe group events and refresh when groups change
@@ -862,27 +861,15 @@ class TabViewModel(
                 // Store deletion info for undo
                 pendingTabDeletion = PendingTabDeletion(tabId, tab, groupId, position)
 
-                // Show snackbar
-                _showUndoSnackbar.value = UndoSnackbarState(
+                // Show global snackbar with undo action
+                GlobalSnackbarManager.getInstance().showUndoSnackbar(
                     message = "Tab closed",
                     onUndo = { undoTabDeletion() },
-                    onDismiss = {
-                        _showUndoSnackbar.value = null
-                        confirmTabDeletion()
-                    }
+                    onConfirm = { confirmTabDeletion() }
                 )
-
-                // Auto-dismiss after 5 seconds
-                undoJob?.cancel()
-                undoJob = viewModelScope.launch {
-                    delay(5000)
-                    confirmTabDeletion()
-                    _showUndoSnackbar.value = null
-                }
             } else {
                 // Close immediately without undo
-                // This will be handled by the caller
-                // through components.tabsUseCases.removeTab(tabId)
+                onTabDeleteConfirmed?.invoke(tabId)
             }
         }
     }
@@ -891,10 +878,8 @@ class TabViewModel(
      * Undo tab deletion
      */
     fun undoTabDeletion() {
-        undoJob?.cancel()
         pendingTabDeletion = null
-        _showUndoSnackbar.value = null
-        // Tab is still in the store, just dismiss the snackbar
+        // Tab is still in the store, just clear the pending deletion
     }
 
     /**
@@ -902,10 +887,8 @@ class TabViewModel(
      */
     private fun confirmTabDeletion() {
         pendingTabDeletion?.let { deletion ->
-            viewModelScope.launch {
-                // Actually remove the tab through the caller
-                // The UI should observe this and call removeTab
-            }
+            // Notify UI to actually remove the tab
+            onTabDeleteConfirmed?.invoke(deletion.tabId)
         }
         pendingTabDeletion = null
     }

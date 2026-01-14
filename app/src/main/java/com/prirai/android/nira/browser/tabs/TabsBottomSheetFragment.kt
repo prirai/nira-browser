@@ -11,6 +11,7 @@ import androidx.compose.runtime.produceState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.collectAsState
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -18,6 +19,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.animation.*
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -1324,8 +1326,24 @@ class TabsBottomSheetFragment : DialogFragment() {
         val viewModel = remember {
             TabViewModel(requireContext(), unifiedGroupManager).also {
                 tabViewModel = it
+                // Set up callback for confirmed tab deletions
+                it.onTabDeleteConfirmed = { tabId ->
+                    lifecycleScope.launch {
+                        requireContext().components.tabsUseCases.removeTab(tabId)
+                    }
+                }
             }
         }
+
+        // Set up global snackbar manager scope
+        val scope = rememberCoroutineScope()
+        LaunchedEffect(Unit) {
+            com.prirai.android.nira.browser.tabs.compose.GlobalSnackbarManager.getInstance().coroutineScope = scope
+        }
+
+        // Get snackbar host state from global manager
+        val snackbarHostState =
+            com.prirai.android.nira.browser.tabs.compose.GlobalSnackbarManager.getInstance().snackbarHostState
 
         // Produce state that updates when store changes OR groups change
         val tabsState by produceState(
@@ -1413,79 +1431,91 @@ class TabsBottomSheetFragment : DialogFragment() {
             }
         }
 
-        // Wrapper Box to hold tabs and menu overlay
-        androidx.compose.foundation.layout.Box(
-            modifier = androidx.compose.ui.Modifier.fillMaxSize()
-        ) {
-            // Choose view based on grid mode
-            if (isGridView) {
-                TabSheetGridView(
-                    viewModel = viewModel,
-                    orderManager = composeOrderManager!!,
-                    onTabClick = ::handleTabClickCompose,
-                    onTabClose = ::handleTabCloseCompose,
-                    onTabLongPress = ::handleTabLongPressCompose,
-                    onGroupClick = { groupId ->
-                        viewModel.toggleGroupExpanded(groupId)
-                    },
-                    onGroupOptionsClick = { groupId ->
-                        // Show group options menu - could be enhanced
-                    }
-                )
-            } else {
-                TabSheetListView(
-                    viewModel = viewModel,
-                    orderManager = composeOrderManager!!,
-                    onTabClick = ::handleTabClickCompose,
-                    onTabClose = ::handleTabCloseCompose,
-                    onTabLongPress = ::handleTabLongPressCompose,
-                    onGroupClick = { groupId ->
-                        viewModel.toggleGroupExpanded(groupId)
-                    },
-                    onGroupOptionsClick = { groupId ->
-                        // Show group options menu - could be enhanced
-                    }
+        // Use Scaffold for proper snackbar positioning
+        Scaffold(
+            snackbarHost = {
+                SnackbarHost(
+                    hostState = snackbarHostState,
+                    modifier = Modifier.padding(bottom = 80.dp) // Above bottom buttons
                 )
             }
+        ) { paddingValues ->
+            // Wrapper Box to hold tabs and menu overlay
+            androidx.compose.foundation.layout.Box(
+                modifier = androidx.compose.ui.Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+            ) {
+                // Choose view based on grid mode
+                if (isGridView) {
+                    TabSheetGridView(
+                        viewModel = viewModel,
+                        orderManager = composeOrderManager!!,
+                        onTabClick = ::handleTabClickCompose,
+                        onTabClose = ::handleTabCloseCompose,
+                        onTabLongPress = ::handleTabLongPressCompose,
+                        onGroupClick = { groupId ->
+                            viewModel.toggleGroupExpanded(groupId)
+                        },
+                        onGroupOptionsClick = { groupId ->
+                            // Show group options menu - could be enhanced
+                        }
+                    )
+                } else {
+                    TabSheetListView(
+                        viewModel = viewModel,
+                        orderManager = composeOrderManager!!,
+                        onTabClick = ::handleTabClickCompose,
+                        onTabClose = ::handleTabCloseCompose,
+                        onTabLongPress = ::handleTabLongPressCompose,
+                        onGroupClick = { groupId ->
+                            viewModel.toggleGroupExpanded(groupId)
+                        },
+                        onGroupOptionsClick = { groupId ->
+                            // Show group options menu - could be enhanced
+                        }
+                    )
+                }
 
-            // Menu overlay - shows at bottom when tab is long-pressed
-            if (showMenu && menuTab != null) {
-                // Clickable background to dismiss menu when clicking outside
-                androidx.compose.foundation.layout.Box(
-                    modifier = androidx.compose.ui.Modifier
-                        .fillMaxSize()
-                        .clickable(
-                            indication = null,
-                            interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
-                        ) {
+                // Menu overlay - shows at bottom when tab is long-pressed
+                if (showMenu && menuTab != null) {
+                    // Clickable background to dismiss menu when clicking outside
+                    androidx.compose.foundation.layout.Box(
+                        modifier = androidx.compose.ui.Modifier
+                            .fillMaxSize()
+                            .clickable(
+                                indication = null,
+                                interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+                            ) {
+                                showMenuState.value = false
+                                menuTabState.value = null
+                            }
+                    )
+
+                    TabContextMenu(
+                        tab = menuTab!!,
+                        isInGroup = menuIsInGroup,
+                        onDismiss = {
                             showMenuState.value = false
                             menuTabState.value = null
-                        }
-                )
-
-                TabContextMenu(
-                    tab = menuTab!!,
-                    isInGroup = menuIsInGroup,
-                    onDismiss = {
-                        showMenuState.value = false
-                        menuTabState.value = null
-                    },
-                    onMoveToProfile = {
-                        showMoveToProfileDialog(listOf(menuTab!!.id))
-                        showMenuState.value = false
-                        menuTabState.value = null
-                    },
-                    onRemoveFromGroup = {
-                        lifecycleScope.launch {
-                            tabViewModel?.removeTabFromGroup(menuTab!!.id)
-                        }
-                        showMenuState.value = false
-                        menuTabState.value = null
-                    },
-                    modifier = androidx.compose.ui.Modifier
-                        .align(androidx.compose.ui.Alignment.BottomCenter)
-                        .fillMaxWidth()
-                )
+                        },
+                        onMoveToProfile = {
+                            showMoveToProfileDialog(listOf(menuTab!!.id))
+                            showMenuState.value = false
+                            menuTabState.value = null
+                        },
+                        onRemoveFromGroup = {
+                            lifecycleScope.launch {
+                                tabViewModel?.removeTabFromGroup(menuTab!!.id)
+                            }
+                            showMenuState.value = false
+                            menuTabState.value = null
+                        },
+                        modifier = androidx.compose.ui.Modifier
+                            .align(androidx.compose.ui.Alignment.BottomCenter)
+                            .fillMaxWidth()
+                    )
+                }
             }
         }
     }
@@ -1544,9 +1574,9 @@ class TabsBottomSheetFragment : DialogFragment() {
     }
 
     private fun handleTabCloseCompose(tabId: String) {
-        lifecycleScope.launch {
-            requireContext().components.tabsUseCases.removeTab(tabId)
-        }
+        // Use ViewModel's closeTab with undo support
+        // The actual deletion will be handled by the onTabDeleteConfirmed callback
+        tabViewModel?.closeTab(tabId, showUndo = true)
     }
 
     private fun handleTabLongPressCompose(tab: TabSessionState, isInGroup: Boolean) {

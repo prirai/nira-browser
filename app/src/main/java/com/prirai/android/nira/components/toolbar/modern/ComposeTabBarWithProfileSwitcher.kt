@@ -153,6 +153,33 @@ class ComposeTabBarWithProfileSwitcher @JvmOverloads constructor(
             viewModel.loadTabsForProfile(profileId, tabs, selectedTabId)
         }
 
+        // Observe duplicate tab events
+        LaunchedEffect(viewModel) {
+            viewModel.duplicateTabEvent.collect { request ->
+                android.util.Log.d(
+                    "TabBar",
+                    "Received duplicate tab request: ${request.url}, group: ${request.groupId}"
+                )
+                // Create the new tab
+                val components = context.components
+                val newTabId = components.tabsUseCases.addTab(
+                    url = request.url,
+                    private = isPrivateMode,
+                    contextId = if (isPrivateMode) "private" else "profile_${currentProfile.id}"
+                )
+                android.util.Log.d("TabBar", "Created new tab: $newTabId")
+
+                // If original tab was in a group, add the new tab to the same group
+                if (request.groupId != null) {
+                    kotlinx.coroutines.delay(100) // Small delay to ensure tab is in store
+                    val groupManager =
+                        com.prirai.android.nira.browser.tabgroups.UnifiedTabGroupManager.getInstance(context)
+                    groupManager.addTabToGroup(request.groupId, newTabId)
+                    android.util.Log.d("TabBar", "Added tab to group: ${request.groupId}")
+                }
+            }
+        }
+
         // Tab bar only - profile switching available via menu
         TabBarCompose(
             tabs = tabs,
@@ -163,6 +190,9 @@ class ComposeTabBarWithProfileSwitcher @JvmOverloads constructor(
                 onTabSelected?.invoke(tabId)
             },
             onTabClose = { tabId: String ->
+                // Use ViewModel's closeTab with undo support
+                viewModel.closeTab(tabId, showUndo = true)
+                // Still invoke callback for legacy support
                 onTabClosed?.invoke(tabId)
             }
         )
