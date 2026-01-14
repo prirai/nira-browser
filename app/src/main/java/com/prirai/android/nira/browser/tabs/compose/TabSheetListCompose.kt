@@ -136,6 +136,23 @@ fun TabSheetListView(
         derivedStateOf { coordinator.dragState.value.isDragging }
     }
 
+    // Track which group is being hovered (for enlarging entire group)
+    val hoveredGroupId by remember {
+        derivedStateOf {
+            val dropTarget = coordinator.dragState.value.currentDropTarget
+            if (dropTarget != null && dropTarget.type == DropTargetType.TAB) {
+                // Check if the hovered tab is in a group
+                val hoveredItem = uniqueItems.find { it.id == dropTarget.id }
+                when (hoveredItem) {
+                    is UnifiedItem.GroupedTab -> hoveredItem.groupId
+                    else -> null
+                }
+            } else {
+                null
+            }
+        }
+    }
+
     // Track if LazyColumn is currently scrolling to prevent position updates during scroll
     val isScrolling = listState.isScrollInProgress
 
@@ -175,8 +192,18 @@ fun TabSheetListView(
                 val isLastItemInGroup = item is UnifiedItem.GroupedTab && item.isLastInGroup
                 val isGroupHeader = item is UnifiedItem.GroupHeader
 
+                // Check if we should show divider before this item
+                // Only show dividers between top-level items (not between grouped tabs in same group)
+                val previousItem = if (index > 0) uniqueItems.getOrNull(index - 1) else null
+                val showDivider = when {
+                    index == 0 -> false  // Never show before first item
+                    item is UnifiedItem.GroupedTab && previousItem is UnifiedItem.GroupedTab &&
+                            item.groupId == previousItem.groupId -> false  // Don't show between grouped tabs in same group
+                    else -> true  // Show for all other cases (between top-level items)
+                }
+
                 // Divider zone BEFORE item - always present, visible only during drag
-                if (index > 0) {  // Don't show divider before first item
+                if (showDivider) {  // Only show divider between top-level items
                     val isHovering = isDragging && coordinator.isHoveringOver("divider_$currentOrderPosition")
 
                     Box(
@@ -321,6 +348,9 @@ fun TabSheetListView(
 
                     is UnifiedItem.GroupedTab -> {
                         val group = groups.find { it.id == item.groupId }
+                        // Check if this tab's group is being hovered (for group container enlargement)
+                        val isGroupHovered = hoveredGroupId == item.groupId
+
                         val dismissState = rememberSwipeToDismissBoxState(
                             confirmValueChange = { dismissValue ->
                                 // Disable swipe during drag to prevent conflicts
@@ -416,7 +446,12 @@ fun TabSheetListView(
                                             "groupId" to item.groupId
                                         )
                                     )
-                                    .dragVisualFeedback(item.tab.id, coordinator)
+                                    .dragVisualFeedback(
+                                        itemId = item.tab.id,
+                                        coordinator = coordinator,
+                                        // Use group hover state instead of individual tab hover for grouped tabs
+                                        isDropTarget = isGroupHovered
+                                    )
                             )
                         }
                     }

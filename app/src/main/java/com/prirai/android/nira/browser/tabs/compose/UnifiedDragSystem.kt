@@ -977,13 +977,15 @@ fun Modifier.dropTarget(
 
 /**
  * Modifier for visual drag feedback with proper alpha and scale
+ * Uses enlargement instead of stroke to signify grouping/drop target
  */
 fun Modifier.dragVisualFeedback(
     itemId: String,
     coordinator: DragCoordinator,
     isDragging: Boolean = coordinator.isDragging(itemId),
     isDropTarget: Boolean = coordinator.isHoveringOver(itemId),
-    draggedScale: Float = 0.95f
+    draggedScale: Float = 0.95f,
+    hoverScale: Float = 1.08f  // Scale up when hovering to signify grouping
 ): Modifier = composed {
     // Only apply visual feedback if this item is actually involved in dragging
     val isInvolved = isDragging || isDropTarget
@@ -996,63 +998,67 @@ fun Modifier.dragVisualFeedback(
     val scale = remember { Animatable(1f) }
     val alpha = remember { Animatable(1f) }
 
-    LaunchedEffect(isDragging) {
-        if (isDragging) {
-            // When dragging, hide original (it will be shown in drag layer)
-            launch {
-                scale.animateTo(
-                    draggedScale,
-                    animationSpec = spring(stiffness = Spring.StiffnessMedium)
-                )
+    LaunchedEffect(isDragging, isDropTarget) {
+        when {
+            isDragging -> {
+                // When dragging, hide original (it will be shown in drag layer)
+                launch {
+                    scale.animateTo(
+                        draggedScale,
+                        animationSpec = spring(stiffness = Spring.StiffnessMedium)
+                    )
+                }
+                launch {
+                    alpha.animateTo(
+                        0.3f,
+                        animationSpec = spring(stiffness = Spring.StiffnessMedium)
+                    )
+                }
             }
-            launch {
-                alpha.animateTo(
-                    0.3f,
-                    animationSpec = spring(stiffness = Spring.StiffnessMedium)
-                )
+
+            isDropTarget -> {
+                // When hovered as drop target, enlarge to signify grouping
+                launch {
+                    scale.animateTo(
+                        hoverScale,
+                        animationSpec = spring(
+                            stiffness = Spring.StiffnessHigh,
+                            dampingRatio = Spring.DampingRatioMediumBouncy
+                        )
+                    )
+                }
+                // Keep full alpha when hovering
+                launch {
+                    alpha.animateTo(
+                        1f,
+                        animationSpec = spring(stiffness = Spring.StiffnessMedium)
+                    )
+                }
             }
-        } else {
-            launch {
-                scale.animateTo(
-                    1f,
-                    animationSpec = spring(stiffness = Spring.StiffnessMedium)
-                )
-            }
-            launch {
-                alpha.animateTo(
-                    1f,
-                    animationSpec = spring(stiffness = Spring.StiffnessMedium)
-                )
+
+            else -> {
+                // Return to normal state
+                launch {
+                    scale.animateTo(
+                        1f,
+                        animationSpec = spring(stiffness = Spring.StiffnessMedium)
+                    )
+                }
+                launch {
+                    alpha.animateTo(
+                        1f,
+                        animationSpec = spring(stiffness = Spring.StiffnessMedium)
+                    )
+                }
             }
         }
     }
 
-    val targetBorderAlpha = remember { Animatable(0f) }
-
-    LaunchedEffect(isDropTarget) {
-        targetBorderAlpha.animateTo(
-            if (isDropTarget) 1f else 0f,
-            animationSpec = spring(stiffness = Spring.StiffnessHigh)
-        )
+    this.graphicsLayer {
+        scaleX = scale.value
+        scaleY = scale.value
+        this.alpha = alpha.value
     }
-
-    this
-        .graphicsLayer {
-            scaleX = scale.value
-            scaleY = scale.value
-            this.alpha = alpha.value
-        }
-        .then(
-            if (targetBorderAlpha.value > 0f) {
-                Modifier.border(
-                    width = 2.dp,
-                    color = MaterialTheme.colorScheme.primary.copy(alpha = targetBorderAlpha.value),
-                    shape = RoundedCornerShape(16.dp)
-                )
-            } else {
-                Modifier
-            }
-        )
 }
 
 /**

@@ -1,6 +1,9 @@
 package com.prirai.android.nira.browser.tabs.compose
 
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -27,6 +30,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
@@ -104,6 +108,28 @@ fun TabSheetGridView(
 
     val dragState by coordinator.dragState
     val isDragging = dragState.isDragging
+
+    // Track which group is being hovered (for enlarging entire group row)
+    val hoveredGroupId by remember {
+        derivedStateOf {
+            val dropTarget = coordinator.dragState.value.currentDropTarget
+            if (dropTarget != null && dropTarget.type == DropTargetType.TAB) {
+                // Check if the hovered tab is in a group
+                val hoveredItem = uniqueItems.find { it.id == dropTarget.id }
+                when (hoveredItem) {
+                    is UnifiedItem.GroupedTab -> hoveredItem.groupId
+                    else -> {
+                        // For grid view, also check tabs in GroupRow
+                        val groupRow = uniqueItems.filterIsInstance<UnifiedItem.GroupRow>()
+                            .find { row -> row.tabs.any { it.id == dropTarget.id } }
+                        groupRow?.groupId
+                    }
+                }
+            } else {
+                null
+            }
+        }
+    }
 
     Box(
         modifier = modifier
@@ -234,6 +260,9 @@ fun TabSheetGridView(
 
                     is UnifiedItem.GroupRow -> {
                         val group = groups.find { it.id == item.groupId }
+                        // Check if this group row is being hovered (for group container enlargement)
+                        val isGroupHovered = hoveredGroupId == item.groupId
+
                         GroupTabsRow(
                             groupId = item.groupId,
                             tabs = item.tabs,
@@ -245,7 +274,8 @@ fun TabSheetGridView(
                                 // Long press now only used for drag - use tap/click for menu
                             },
                             modifier = Modifier.animateItem(),
-                            coordinator = coordinator
+                            coordinator = coordinator,
+                            isGroupHovered = isGroupHovered
                         )
                     }
 
@@ -484,10 +514,26 @@ fun GroupTabsRow(
     onTabClose: (String) -> Unit,
     onTabLongPress: (TabSessionState) -> Unit,
     modifier: Modifier = Modifier,
-    coordinator: DragCoordinator? = null
+    coordinator: DragCoordinator? = null,
+    isGroupHovered: Boolean = false
 ) {
+    // Animate scale for the entire group row when hovered
+    val scale by animateFloatAsState(
+        targetValue = if (isGroupHovered) 1.05f else 1f,
+        animationSpec = spring(
+            stiffness = Spring.StiffnessHigh,
+            dampingRatio = Spring.DampingRatioMediumBouncy
+        ),
+        label = "groupRowScale"
+    )
+
     Surface(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier
+            .fillMaxWidth()
+            .graphicsLayer {
+                scaleX = scale
+                scaleY = scale
+            },
         shape = RoundedCornerShape(bottomStart = 12.dp, bottomEnd = 12.dp),
         color = Color(groupColor).copy(alpha = 0.05f),
         border = BorderStroke(1.dp, Color(groupColor).copy(alpha = 0.2f))
@@ -520,7 +566,12 @@ fun GroupTabsRow(
                                         coordinator = coordinator,
                                         metadata = mapOf("tabId" to tab.id)
                                     )
-                                    .dragVisualFeedback(tab.id, coordinator)
+                                    // Don't apply individual tab feedback - group row handles it
+                                    .dragVisualFeedback(
+                                        itemId = tab.id,
+                                        coordinator = coordinator,
+                                        isDropTarget = false  // Group row handles hover feedback
+                                    )
                             } else {
                                 Modifier
                             }
