@@ -67,6 +67,7 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.prirai.android.nira.R
+import com.prirai.android.nira.browser.tabs.compose.FaviconImageFromUrl
 
 data class ProfileInfo(
     val id: String,
@@ -96,15 +97,15 @@ fun HomeScreen(
 ) {
     isSystemInDarkTheme()
     val backgroundColor = MaterialTheme.colorScheme.background
-    
+
     // Get window insets for edge-to-edge support
     val windowInsets = WindowInsets.systemBars
     val topPadding = with(LocalDensity.current) { windowInsets.getTop(this).toDp() }
     val bottomPadding = with(LocalDensity.current) { windowInsets.getBottom(this).toDp() }
-    
+
     // Add toolbar height when toolbar is at top (approximately 56dp for toolbar)
     val toolbarHeight = if (isToolbarAtTop) 56.dp else 0.dp
-    
+
     Box(modifier = modifier.fillMaxSize()) {
         // Background image layer
         if (backgroundImageUrl != null && backgroundImageUrl.isNotEmpty()) {
@@ -124,7 +125,7 @@ fun HomeScreen(
                     .background(backgroundColor.copy(alpha = 0.85f))
             )
         }
-        
+
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
@@ -151,12 +152,12 @@ fun HomeScreen(
                     onProfileClick = onProfileClick
                 )
             }
-            
+
             // Centered search bar
             item {
                 SearchBar(onSearchClick = onSearchClick)
             }
-            
+
             // Only show shortcuts and bookmarks in normal mode
             if (!isPrivateMode) {
                 // Shortcuts section
@@ -168,7 +169,7 @@ fun HomeScreen(
                         onAddClick = onShortcutAdd
                     )
                 }
-                
+
                 // Bookmarks section
                 item {
                     BookmarksSection(
@@ -211,7 +212,7 @@ fun LogoSection(
                 modifier = Modifier.size(80.dp),
                 tint = Color.Unspecified
             )
-            
+
             // App name
             Text(
                 text = "Nira",
@@ -219,7 +220,7 @@ fun LogoSection(
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onBackground
             )
-            
+
             // Profile emoji selector (clickable)
             Surface(
                 shape = CircleShape,
@@ -241,7 +242,7 @@ fun LogoSection(
                 }
             }
         }
-        
+
         // Private badge
         if (isPrivateMode) {
             Surface(
@@ -326,7 +327,7 @@ fun ShortcutsSection(
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onBackground
             )
-            
+
             IconButton(onClick = onAddClick) {
                 Icon(
                     imageVector = Icons.Default.Add,
@@ -335,9 +336,9 @@ fun ShortcutsSection(
                 )
             }
         }
-        
+
         Spacer(modifier = Modifier.height(12.dp))
-        
+
         // Grid
         if (shortcuts.isEmpty()) {
             Box(
@@ -411,34 +412,17 @@ fun ShortcutItem(
                         modifier = Modifier.fillMaxSize()
                     )
                 } else {
-                    // Show first letter or favicon from domain
-                    val domain = try {
-                        java.net.URL(shortcut.url).host
-                    } catch (e: Exception) {
-                        null
-                    }
-                    
-                    if (domain != null) {
-                        AsyncImage(
-                            model = ImageRequest.Builder(LocalContext.current)
-                                .data(com.prirai.android.nira.utils.FaviconLoader.getGoogleFaviconUrl(domain, 128))
-                                .crossfade(true)
-                                .build(),
-                            contentDescription = null,
-                            error = painterResource(id = R.drawable.ic_language),
-                            modifier = Modifier.size(32.dp)
-                        )
-                    } else {
-                        Text(
-                            text = shortcut.title.firstOrNull()?.uppercase() ?: "?",
-                            style = MaterialTheme.typography.headlineMedium,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer
-                        )
-                    }
+                    // Use FaviconImageFromUrl for loading favicons
+                    FaviconImageFromUrl(
+                        url = shortcut.url,
+                        title = shortcut.title,
+                        size = 32.dp,
+                        modifier = Modifier.size(32.dp)
+                    )
                 }
             }
         }
-        
+
         Text(
             text = shortcut.title,
             style = MaterialTheme.typography.bodySmall,
@@ -474,18 +458,18 @@ fun BookmarksSection(
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onBackground
             )
-            
+
             Icon(
                 imageVector = if (isExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
                 contentDescription = if (isExpanded) "Collapse" else "Expand",
                 tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
             )
         }
-        
+
         // Grid - only show when expanded
         if (isExpanded) {
             Spacer(modifier = Modifier.height(12.dp))
-            
+
             if (bookmarks.isEmpty()) {
                 Box(
                     modifier = Modifier
@@ -548,9 +532,9 @@ fun BookmarkItem(
         // Icon for folder or site
         Surface(
             shape = if (bookmark.isFolder) RoundedCornerShape(12.dp) else CircleShape,
-            color = if (bookmark.isFolder) 
-                MaterialTheme.colorScheme.tertiaryContainer 
-            else 
+            color = if (bookmark.isFolder)
+                MaterialTheme.colorScheme.tertiaryContainer
+            else
                 MaterialTheme.colorScheme.primaryContainer,
             modifier = Modifier.size(56.dp)
         ) {
@@ -566,34 +550,17 @@ fun BookmarkItem(
                         modifier = Modifier.size(32.dp)
                     )
                 } else {
-                    // Show favicon
-                    val domain = try {
-                        java.net.URL(bookmark.url).host
-                    } catch (e: Exception) {
-                        null
-                    }
-                    
-                    if (domain != null) {
-                        AsyncImage(
-                            model = ImageRequest.Builder(LocalContext.current)
-                                .data(com.prirai.android.nira.utils.FaviconLoader.getGoogleFaviconUrl(domain, 128))
-                                .crossfade(true)
-                                .build(),
-                            contentDescription = null,
-                            error = painterResource(id = R.drawable.ic_language),
-                            modifier = Modifier.size(32.dp)
-                        )
-                    } else {
-                        Text(
-                            text = bookmark.title.firstOrNull()?.uppercase() ?: "?",
-                            style = MaterialTheme.typography.headlineMedium,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer
-                        )
-                    }
+                    // Use FaviconImageFromUrl for loading favicons
+                    FaviconImageFromUrl(
+                        url = bookmark.url,
+                        title = bookmark.title,
+                        size = 32.dp,
+                        modifier = Modifier.size(32.dp)
+                    )
                 }
             }
         }
-        
+
         Text(
             text = bookmark.title,
             style = MaterialTheme.typography.bodySmall,
@@ -624,22 +591,22 @@ fun PrivateBrowsingInfo(modifier: Modifier = Modifier) {
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary
             )
-            
+
             PrivateInfoSection(
                 title = "What Private Browsing Does",
                 description = "Your browsing history, cookies, and site data won't be saved after you close all private tabs."
             )
-            
+
             PrivateInfoSection(
                 title = "Downloads and Bookmarks",
                 description = "Files you download and bookmarks you create will be kept even after closing private tabs."
             )
-            
+
             PrivateInfoSection(
                 title = "Your Activity is Still Visible To",
                 description = "Websites you visit, your internet service provider, and your network administrator can still see your browsing activity."
             )
-            
+
             Surface(
                 shape = RoundedCornerShape(8.dp),
                 color = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
@@ -703,7 +670,7 @@ fun AddShortcutDialog(
     var url by remember { mutableStateOf(initialUrl) }
     var title by remember { mutableStateOf(initialTitle) }
     var urlError by remember { mutableStateOf(false) }
-    
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
@@ -732,7 +699,7 @@ fun AddShortcutDialog(
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
-                
+
                 OutlinedTextField(
                     value = title,
                     onValueChange = { title = it },
@@ -752,7 +719,7 @@ fun AddShortcutDialog(
                     if (url.isBlank()) {
                         return@TextButton
                     }
-                    
+
                     // Validate URL
                     val validUrl = try {
                         val finalUrl = if (url.startsWith("http")) url else "https://$url"
@@ -761,7 +728,7 @@ fun AddShortcutDialog(
                     } catch (e: Exception) {
                         return@TextButton
                     }
-                    
+
                     val finalTitle = title.ifBlank {
                         try {
                             java.net.URL(validUrl).host.replace("www.", "")
@@ -769,7 +736,7 @@ fun AddShortcutDialog(
                             "Untitled"
                         }
                     }
-                    
+
                     onSave(validUrl, finalTitle)
                 }
             ) {
@@ -783,4 +750,3 @@ fun AddShortcutDialog(
         }
     )
 }
-

@@ -228,9 +228,6 @@ dependencies {
     implementation "androidx.lifecycle:lifecycle-viewmodel-compose:2.10.0"
     implementation "io.coil-kt:coil-compose:2.7.0"
 
-    // Reorderable library for drag and drop (v3.0.0)
-    implementation "sh.calvin.reorderable:reorderable:3.0.0"
-
     // DataStore for preferences
     implementation "androidx.datastore:datastore-preferences:1.2.0"
 

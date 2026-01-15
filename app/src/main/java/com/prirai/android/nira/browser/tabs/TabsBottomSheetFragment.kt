@@ -11,6 +11,7 @@ import androidx.compose.runtime.produceState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.collectAsState
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -18,6 +19,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.animation.*
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -53,7 +55,7 @@ import mozilla.components.browser.state.state.TabSessionState
 
 /**
  * Modern Compose-based tab switcher displayed as a fullscreen bottom sheet.
- * 
+ *
  * Features:
  * - List and grid view modes
  * - Tab groups with drag-and-drop
@@ -61,13 +63,13 @@ import mozilla.components.browser.state.state.TabSessionState
  * - Private browsing mode
  * - Tab search
  * - Context menus for tab operations
- * 
+ *
  * Architecture:
  * - UI: Jetpack Compose (TabSheetListView / TabSheetGridView)
  * - State: TabViewModel with StateFlow
  * - Groups: UnifiedTabGroupManager
  * - Tabs: Mozilla Components Store
- * 
+ *
  * @see docs/TAB_ARCHITECTURE.md for detailed architecture documentation
  */
 class TabsBottomSheetFragment : DialogFragment() {
@@ -78,7 +80,7 @@ class TabsBottomSheetFragment : DialogFragment() {
     private lateinit var browsingModeManager: BrowsingModeManager
     private lateinit var tabGroupManager: TabGroupManager
     private lateinit var unifiedGroupManager: UnifiedTabGroupManager
-    
+
     // ========== LEGACY CODE (DEPRECATED) ==========
     // These RecyclerView adapters are kept for backwards compatibility
     // but are NOT used when useComposeTabSystem = true (default)
@@ -93,28 +95,28 @@ class TabsBottomSheetFragment : DialogFragment() {
     private val collapsedGroupIds = mutableSetOf<String>()
     private var useNewDragSystem = true
     // ========== END LEGACY CODE ==========
-    
+
     // Modern Compose tab system (ACTIVE)
     private var useComposeTabSystem = true // Set to false to use legacy RecyclerView (not recommended)
     private var composeOrderManager: com.prirai.android.nira.browser.tabs.compose.TabOrderManager? = null
     private var tabViewModel: com.prirai.android.nira.browser.tabs.compose.TabViewModel? = null
-    
+
     // Compose state management
     private val profileStateTrigger = mutableStateOf(0) // Triggers recomposition on profile/mode changes
     private val showMenuState = mutableStateOf(false) // Controls context menu visibility
     private val menuTabState = mutableStateOf<TabSessionState?>(null) // Currently selected tab for menu
     private val menuIsInGroupState = mutableStateOf(false) // Whether selected tab is in a group
-    
+
     private var isInitializing = true
     private var isGridView = false
-    private val viewPrefs by lazy { 
-        requireContext().getSharedPreferences("tabs_view_prefs", android.content.Context.MODE_PRIVATE) 
+    private val viewPrefs by lazy {
+        requireContext().getSharedPreferences("tabs_view_prefs", android.content.Context.MODE_PRIVATE)
     }
 
     companion object {
         const val TAG = "TabsBottomSheet"
         fun newInstance() = TabsBottomSheetFragment()
-        
+
         private val COLORS = arrayOf("blue", "red", "green", "orange", "purple", "pink", "teal", "yellow")
     }
 
@@ -142,17 +144,18 @@ class TabsBottomSheetFragment : DialogFragment() {
         if (selectedTab != null) {
             val isPrivate = selectedTab.content.private
             val tabContextId = selectedTab.contextId
-            
+
             // Switch to correct browsing mode
             if (isPrivate && browsingModeManager.mode != BrowsingMode.Private) {
                 browsingModeManager.mode = BrowsingMode.Private
             } else if (!isPrivate && browsingModeManager.mode != BrowsingMode.Normal) {
                 browsingModeManager.mode = BrowsingMode.Normal
             }
-            
+
             // Switch to correct profile for normal mode
             if (!isPrivate) {
-                val profileManager = com.prirai.android.nira.browser.profile.ProfileManager.getInstance(requireContext())
+                val profileManager =
+                    com.prirai.android.nira.browser.profile.ProfileManager.getInstance(requireContext())
                 when {
                     tabContextId == null || tabContextId == "profile_default" -> {
                         val defaultProfile = profileManager.getAllProfiles().find { it.id == "default" }
@@ -161,6 +164,7 @@ class TabsBottomSheetFragment : DialogFragment() {
                             browsingModeManager.currentProfile = defaultProfile
                         }
                     }
+
                     tabContextId.startsWith("profile_") -> {
                         val profileId = tabContextId.removePrefix("profile_")
                         val targetProfile = profileManager.getAllProfiles().find { it.id == profileId }
@@ -174,10 +178,13 @@ class TabsBottomSheetFragment : DialogFragment() {
         }
 
         setupUI()
-        
+
         if (useComposeTabSystem) {
             // Initialize Compose tab system
-            composeOrderManager = com.prirai.android.nira.browser.tabs.compose.TabOrderManager.getInstance(requireContext(), unifiedGroupManager)
+            composeOrderManager = com.prirai.android.nira.browser.tabs.compose.TabOrderManager.getInstance(
+                requireContext(),
+                unifiedGroupManager
+            )
             setupComposeTabViews()
         } else if (useNewDragSystem) {
             setupFlatTabsAdapter()
@@ -190,11 +197,11 @@ class TabsBottomSheetFragment : DialogFragment() {
             // Grid view is needed for both systems
             setupGridView()
         }
-        
+
         setupMergedProfileButtons()
         setupStoreObserver()
         setupUnifiedGroupObserver()
-        
+
         isInitializing = false
     }
 
@@ -206,24 +213,24 @@ class TabsBottomSheetFragment : DialogFragment() {
 
     override fun onStart() {
         super.onStart()
-        
+
         // Make dialog fullscreen
         dialog?.window?.let { window ->
             window.setLayout(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.MATCH_PARENT
             )
-            
+
             // Preserve status bar appearance (don't change icons to black)
             val isDark = com.prirai.android.nira.theme.ThemeManager.isDarkMode(requireContext())
             androidx.core.view.WindowInsetsControllerCompat(window, window.decorView).apply {
                 isAppearanceLightStatusBars = !isDark
             }
-            
+
             // Apply window insets for edge-to-edge
             androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(window.decorView) { v, insets ->
                 val systemBars = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars())
-                
+
                 // Apply padding to profile button container to avoid navigation bar overlap
                 binding.profileButtonContainer.setPadding(
                     binding.profileButtonContainer.paddingLeft,
@@ -231,7 +238,7 @@ class TabsBottomSheetFragment : DialogFragment() {
                     binding.profileButtonContainer.paddingRight,
                     systemBars.bottom + 16 // Add extra padding for navigation bar
                 )
-                
+
                 insets
             }
         }
@@ -241,38 +248,38 @@ class TabsBottomSheetFragment : DialogFragment() {
         // Apply Material 3 theming
         com.prirai.android.nira.theme.ThemeManager.isDarkMode(requireContext())
         val isAmoled = com.prirai.android.nira.theme.ThemeManager.isAmoledActive(requireContext())
-        
+
         if (isAmoled) {
             dialog?.window?.decorView?.setBackgroundColor(Color.BLACK)
         }
-        
+
         binding.newTabFab.setOnClickListener {
             addNewTab()
             // Post dismiss to avoid touch event recycling crash
             view?.post { dismiss() }
         }
-        
+
         binding.searchTabFab.setOnClickListener {
             showTabSearch()
         }
-        
+
         // Setup view mode switcher
         setupViewModeSwitcher()
     }
-    
+
     private fun setupViewModeSwitcher() {
         // Restore saved view preference
         isGridView = viewPrefs.getBoolean("is_grid_view", false)
-        
+
         if (isGridView) {
             binding.viewModeSwitcher.check(binding.gridViewButton.id)
         } else {
             binding.viewModeSwitcher.check(binding.listViewButton.id)
         }
-        
+
         binding.viewModeSwitcher.addOnButtonCheckedListener { _, checkedId, isChecked ->
             if (!isChecked) return@addOnButtonCheckedListener
-            
+
             when (checkedId) {
                 binding.listViewButton.id -> {
                     if (isGridView) {
@@ -281,6 +288,7 @@ class TabsBottomSheetFragment : DialogFragment() {
                         handleSwitchToListView()
                     }
                 }
+
                 binding.gridViewButton.id -> {
                     if (!isGridView) {
                         isGridView = true
@@ -291,7 +299,7 @@ class TabsBottomSheetFragment : DialogFragment() {
             }
         }
     }
-    
+
     private fun handleSwitchToListView() {
         if (useComposeTabSystem) {
             // Recreate compose view with list view
@@ -301,7 +309,7 @@ class TabsBottomSheetFragment : DialogFragment() {
             binding.tabsGridRecyclerView.visibility = View.GONE
         }
     }
-    
+
     private fun handleSwitchToGridView() {
         if (useComposeTabSystem) {
             // Recreate compose view with grid view
@@ -311,7 +319,7 @@ class TabsBottomSheetFragment : DialogFragment() {
             binding.tabsGridRecyclerView.visibility = View.VISIBLE
         }
     }
-    
+
     private fun showTabSearch() {
         val searchFragment = TabSearchFragment.newInstance()
         searchFragment.show(parentFragmentManager, TabSearchFragment.TAG)
@@ -322,7 +330,7 @@ class TabsBottomSheetFragment : DialogFragment() {
             context = requireContext(),
             onTabClick = { tabId ->
                 requireContext().components.tabsUseCases.selectTab(tabId)
-                
+
                 // Navigate to browser if we're currently on home
                 try {
                     val navController = NavHostFragment.findNavController(this)
@@ -336,7 +344,7 @@ class TabsBottomSheetFragment : DialogFragment() {
                 } catch (e: Exception) {
                     // Ignore navigation errors
                 }
-                
+
                 // Post dismiss to avoid touch event recycling crash
                 view?.post { dismiss() }
             },
@@ -366,6 +374,8 @@ class TabsBottomSheetFragment : DialogFragment() {
     }
 
     private fun setupDragAndDrop() {
+        // DEPRECATED - old RecyclerView drag system
+        /*
         // List view drag helper
         dragHelper = TabGroupDragHelper(
             adapter = tabsAdapter!!,
@@ -374,7 +384,7 @@ class TabsBottomSheetFragment : DialogFragment() {
             onUpdate = { updateTabsDisplay() }
         )
         dragHelper!!.attachToRecyclerView(binding.tabsRecyclerView)
-        
+
         // Grid view drag helper
         gridDragHelper = TabGridDragHelper(
             adapter = tabsGridAdapter!!,
@@ -383,8 +393,9 @@ class TabsBottomSheetFragment : DialogFragment() {
             onUpdate = { updateGridDisplay() }
         )
         gridDragHelper!!.attachToRecyclerView(binding.tabsGridRecyclerView)
+        */
     }
-    
+
     private fun setupMergedProfileButtons() {
         val profileManager = com.prirai.android.nira.browser.profile.ProfileManager.getInstance(requireContext())
         val profiles = profileManager.getAllProfiles()
@@ -394,7 +405,7 @@ class TabsBottomSheetFragment : DialogFragment() {
         binding.profileButtonGroup.removeAllViews()
 
         val buttons = mutableListOf<MergedProfileButton>()
-        
+
         // Add profile buttons
         profiles.forEachIndexed { index, profile ->
             val button = MergedProfileButton(requireContext()).apply {
@@ -402,7 +413,7 @@ class TabsBottomSheetFragment : DialogFragment() {
                 tag = profile.id
                 setText(profile.emoji, profile.name)
                 setActive(!isPrivateMode && profile.id == currentProfile.id, animated = false)
-                
+
                 val position = when {
                     profiles.size == 1 -> MergedProfileButton.Position.ONLY
                     index == 0 -> MergedProfileButton.Position.FIRST
@@ -410,7 +421,7 @@ class TabsBottomSheetFragment : DialogFragment() {
                     else -> MergedProfileButton.Position.MIDDLE
                 }
                 setPosition(position)
-                
+
                 val heightPx = (48 * resources.displayMetrics.density).toInt()
                 layoutParams = LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.WRAP_CONTENT,
@@ -418,11 +429,11 @@ class TabsBottomSheetFragment : DialogFragment() {
                 ).apply {
                     marginEnd = 1 // 1dp for merged appearance
                 }
-                
+
                 setOnClickListener {
                     switchToProfile(profile.id, false)
                 }
-                
+
                 setOnLongClickListener {
                     showProfileEditDialog(profile)
                     true
@@ -431,7 +442,7 @@ class TabsBottomSheetFragment : DialogFragment() {
             buttons.add(button)
             binding.profileButtonGroup.addView(button)
         }
-        
+
         // Add private button
         val privateButton = MergedProfileButton(requireContext()).apply {
             id = View.generateViewId()
@@ -439,7 +450,7 @@ class TabsBottomSheetFragment : DialogFragment() {
             setText("🕵️", "Private")
             setActive(isPrivateMode, animated = false)
             setPosition(MergedProfileButton.Position.MIDDLE)
-            
+
             val heightPx = (48 * resources.displayMetrics.density).toInt()
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT,
@@ -447,26 +458,26 @@ class TabsBottomSheetFragment : DialogFragment() {
             ).apply {
                 marginEnd = 1
             }
-            
+
             setOnClickListener {
                 switchToProfile("private", true)
             }
         }
         binding.profileButtonGroup.addView(privateButton)
-        
+
         // Add plus button
         val plusButton = MergedProfileButton(requireContext()).apply {
             id = View.generateViewId()
             setText("+", "")
             setActive(false, animated = false)
             setPosition(MergedProfileButton.Position.LAST)
-            
+
             val heightPx = (48 * resources.displayMetrics.density).toInt()
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT,
                 heightPx
             )
-            
+
             setOnClickListener {
                 showProfileCreateDialog()
             }
@@ -476,14 +487,14 @@ class TabsBottomSheetFragment : DialogFragment() {
 
     private fun switchToProfile(profileId: String, isPrivate: Boolean) {
         if (isInitializing) return
-        
+
         // Animate all buttons
         val transition = ChangeBounds().apply {
             duration = 300
             interpolator = PathInterpolator(0.4f, 0.0f, 0.2f, 1.0f)
         }
         TransitionManager.beginDelayedTransition(binding.profileButtonGroup, transition)
-        
+
         for (i in 0 until binding.profileButtonGroup.childCount) {
             val child = binding.profileButtonGroup.getChildAt(i) as? MergedProfileButton
             child?.let {
@@ -496,7 +507,7 @@ class TabsBottomSheetFragment : DialogFragment() {
                 it.setActive(shouldBeActive, animated = true)
             }
         }
-        
+
         // Update browsing mode and tabs
         val profileManager = com.prirai.android.nira.browser.profile.ProfileManager.getInstance(requireContext())
         if (isPrivate) {
@@ -521,11 +532,11 @@ class TabsBottomSheetFragment : DialogFragment() {
             }
         }
     }
-    
+
     private fun setupGridView() {
         // Load saved view mode
         isGridView = viewPrefs.getBoolean("is_grid_view", false)
-        
+
         // Setup grid adapter with ThumbnailLoader
         val thumbnailLoader = mozilla.components.browser.thumbnails.loader.ThumbnailLoader(
             requireContext().components.thumbnailStorage
@@ -534,7 +545,7 @@ class TabsBottomSheetFragment : DialogFragment() {
             thumbnailLoader = thumbnailLoader,
             onTabClick = { tabId ->
                 requireContext().components.tabsUseCases.selectTab(tabId)
-                
+
                 // Navigate to browser if we're currently on home
                 try {
                     val navController = NavHostFragment.findNavController(this)
@@ -547,7 +558,7 @@ class TabsBottomSheetFragment : DialogFragment() {
                 } catch (e: Exception) {
                     // Ignore navigation errors
                 }
-                
+
                 view?.post { dismiss() }
             },
             onTabClose = { tabId ->
@@ -561,7 +572,7 @@ class TabsBottomSheetFragment : DialogFragment() {
                 true
             }
         )
-        
+
         binding.tabsGridRecyclerView.apply {
             layoutManager = GridLayoutManager(requireContext(), 3).apply {
                 spanSizeLookup = object : GridLayoutManager.SpanSizeLookup() {
@@ -575,17 +586,17 @@ class TabsBottomSheetFragment : DialogFragment() {
             }
             adapter = tabsGridAdapter
         }
-        
+
         // Setup view mode switcher
         binding.viewModeSwitcher.addOnButtonCheckedListener { _, checkedId, isChecked ->
             if (!isChecked) return@addOnButtonCheckedListener
-            
+
             when (checkedId) {
                 R.id.listViewButton -> handleSwitchToListView()
                 R.id.gridViewButton -> handleSwitchToGridView()
             }
         }
-        
+
         // Apply initial view mode
         if (isGridView) {
             binding.gridViewButton.isChecked = true
@@ -596,7 +607,7 @@ class TabsBottomSheetFragment : DialogFragment() {
 
     private fun updateGridDisplay() {
         if (!isAdded || context == null) return
-        
+
         lifecycleScope.launch {
             val store = requireContext().components.store.state
             val isPrivateMode = browsingModeManager.mode.isPrivate
@@ -616,36 +627,38 @@ class TabsBottomSheetFragment : DialogFragment() {
 
             val allGroups = unifiedGroupManager.getAllGroups()
             val gridItems = mutableListOf<TabGridItem>()
-            
+
             val tabToGroupMap = mutableMapOf<String, com.prirai.android.nira.browser.tabgroups.TabGroupData>()
             allGroups.forEach { group ->
                 group.tabIds.forEach { tabId ->
                     tabToGroupMap[tabId] = group
                 }
             }
-            
+
             val processedGroups = mutableSetOf<String>()
             val processedTabs = mutableSetOf<String>()
-            
+
             filteredTabs.forEach { tab ->
                 if (processedTabs.contains(tab.id)) return@forEach
-                
+
                 val group = tabToGroupMap[tab.id]
-                
+
                 if (group != null && !processedGroups.contains(group.id)) {
                     processedGroups.add(group.id)
-                    
+
                     val groupTabs = filteredTabs.filter { it.id in group.tabIds }
-                    
+
                     if (groupTabs.isNotEmpty()) {
-                        gridItems.add(TabGridItem.GroupHeader(
-                            groupId = group.id,
-                            name = group.name.ifBlank { "" },
-                            color = group.color,
-                            tabs = groupTabs
-                        ))
+                        gridItems.add(
+                            TabGridItem.GroupHeader(
+                                groupId = group.id,
+                                name = group.name.ifBlank { "" },
+                                color = group.color,
+                                tabs = groupTabs
+                            )
+                        )
                     }
-                    
+
                     group.tabIds.forEach { processedTabs.add(it) }
                 } else if (group == null) {
                     gridItems.add(TabGridItem.Tab(tab, null))
@@ -654,7 +667,7 @@ class TabsBottomSheetFragment : DialogFragment() {
             }
 
             tabsGridAdapter?.updateItems(gridItems, store.selectedTabId)
-            
+
             if (filteredTabs.isEmpty()) {
                 binding.tabsGridRecyclerView.visibility = View.GONE
                 binding.emptyStateLayout.visibility = View.VISIBLE
@@ -698,7 +711,7 @@ class TabsBottomSheetFragment : DialogFragment() {
                 }
             }
         }
-        
+
         // Also listen to group events for fine-grained updates
         lifecycleScope.launch {
             unifiedGroupManager.groupEvents.collect { event ->
@@ -720,15 +733,15 @@ class TabsBottomSheetFragment : DialogFragment() {
             updateGridDisplay()
             return
         }
-        
+
         // If using new drag system, delegate to new method
         if (useNewDragSystem) {
             updateFlatTabsDisplay()
             return
         }
-        
+
         if (!isAdded || context == null) return
-        
+
         lifecycleScope.launch {
             val store = requireContext().components.store.state
             val isPrivateMode = browsingModeManager.mode.isPrivate
@@ -750,15 +763,15 @@ class TabsBottomSheetFragment : DialogFragment() {
 
             // Use UnifiedTabGroupManager instead of old managers
             val allGroups = unifiedGroupManager.getAllGroups()
-            
+
             val tabItems = mutableListOf<TabItem>()
-            
+
             // Find group containing selected tab to auto-expand it
             val selectedTabId = store.selectedTabId
             val groupWithSelectedTab = allGroups.find { group ->
                 group.tabIds.contains(selectedTabId)
             }
-            
+
             // Create a map of tab ID to group for quick lookup
             val tabToGroupMap = mutableMapOf<String, com.prirai.android.nira.browser.tabgroups.TabGroupData>()
             allGroups.forEach { group ->
@@ -766,10 +779,10 @@ class TabsBottomSheetFragment : DialogFragment() {
                     tabToGroupMap[tabId] = group
                 }
             }
-            
+
             val processedGroups = mutableSetOf<String>()
             val processedTabs = mutableSetOf<String>()
-            
+
             // Process tabs in their original order (like tab bar)
             // Groups appear where their first tab is located
             filteredTabs.forEach { tab ->
@@ -777,29 +790,31 @@ class TabsBottomSheetFragment : DialogFragment() {
                 if (processedTabs.contains(tab.id)) {
                     return@forEach
                 }
-                
+
                 val group = tabToGroupMap[tab.id]
-                
+
                 if (group != null && !processedGroups.contains(group.id)) {
                     // First tab of a group - add the entire group here
                     processedGroups.add(group.id)
-                    
+
                     val groupTabs = filteredTabs.filter { it.id in group.tabIds }
-                    
+
                     if (groupTabs.isNotEmpty()) {
-                        tabItems.add(TabItem.Group(
-                            groupId = group.id,
-                            name = group.name.ifBlank { "" },
-                            color = group.color,
-                            tabs = groupTabs
-                        ))
-                        
+                        tabItems.add(
+                            TabItem.Group(
+                                groupId = group.id,
+                                name = group.name.ifBlank { "" },
+                                color = group.color,
+                                tabs = groupTabs
+                            )
+                        )
+
                         // Auto-expand group containing selected tab
                         if (group.id == groupWithSelectedTab?.id) {
                             tabsAdapter!!.expandGroup(group.id)
                         }
                     }
-                    
+
                     // Mark all group tabs as processed
                     group.tabIds.forEach { processedTabs.add(it) }
                 } else if (group == null) {
@@ -828,17 +843,18 @@ class TabsBottomSheetFragment : DialogFragment() {
     private fun showUngroupedTabOptionsMenu(tabId: String, view: View) {
         val popup = androidx.appcompat.widget.PopupMenu(requireContext(), view)
         popup.menu.add(0, 1, 0, "Move to Profile")
-        
+
         popup.setOnMenuItemClickListener { item ->
             when (item.itemId) {
                 1 -> {
                     showMoveToProfileDialog(listOf(tabId))
                     true
                 }
+
                 else -> false
             }
         }
-        
+
         popup.show()
     }
 
@@ -846,7 +862,7 @@ class TabsBottomSheetFragment : DialogFragment() {
         val popup = androidx.appcompat.widget.PopupMenu(requireContext(), view)
         popup.menu.add(0, 1, 0, "Remove from group")
         popup.menu.add(0, 2, 1, "Move to Profile")
-        
+
         popup.setOnMenuItemClickListener { item ->
             when (item.itemId) {
                 1 -> {
@@ -855,37 +871,41 @@ class TabsBottomSheetFragment : DialogFragment() {
                     }
                     true
                 }
+
                 2 -> {
                     showMoveToProfileDialog(listOf(tabId))
                     true
                 }
+
                 else -> false
             }
         }
-        
+
         popup.show()
     }
 
     private fun showGroupOptionsMenu(groupId: String, view: View) {
         val popup = androidx.appcompat.widget.PopupMenu(requireContext(), view)
-        
+
         // Add menu items to match tab bar options
         popup.menu.add(0, 1, 0, "Rename Island")
         popup.menu.add(0, 2, 1, "Change Color")
         popup.menu.add(0, 3, 2, "Move Group to Profile")
         popup.menu.add(0, 4, 3, "Ungroup All Tabs")
         popup.menu.add(0, 5, 4, "Close All Tabs")
-        
+
         popup.setOnMenuItemClickListener { item ->
             when (item.itemId) {
                 1 -> { // Rename Island
                     showRenameGroupDialog(groupId)
                     true
                 }
+
                 2 -> { // Change Color
                     showChangeGroupColorDialog(groupId)
                     true
                 }
+
                 3 -> { // Move Group to Profile
                     lifecycleScope.launch {
                         val group = unifiedGroupManager.getGroup(groupId)
@@ -895,6 +915,7 @@ class TabsBottomSheetFragment : DialogFragment() {
                     }
                     true
                 }
+
                 4 -> { // Ungroup All Tabs
                     lifecycleScope.launch {
                         unifiedGroupManager.deleteGroup(groupId)
@@ -902,6 +923,7 @@ class TabsBottomSheetFragment : DialogFragment() {
                     }
                     true
                 }
+
                 5 -> { // Close All Tabs
                     lifecycleScope.launch {
                         val group = unifiedGroupManager.getGroup(groupId)
@@ -913,22 +935,23 @@ class TabsBottomSheetFragment : DialogFragment() {
                     }
                     true
                 }
+
                 else -> false
             }
         }
-        
+
         popup.show()
     }
-    
+
     private fun showMoveToProfileDialog(tabIds: List<String>, isGroup: Boolean = false) {
         val profileManager = com.prirai.android.nira.browser.profile.ProfileManager.getInstance(requireContext())
         val profiles = profileManager.getAllProfiles()
-        
+
         val items = profiles.map { "${it.emoji} ${it.name}" }.toMutableList()
         items.add("🕵️ Private")
-        
+
         val tabWord = if (isGroup) "group" else if (tabIds.size > 1) "tabs" else "tab"
-        
+
         MaterialAlertDialogBuilder(requireContext())
             .setTitle("Move $tabWord to Profile")
             .setItems(items.toTypedArray()) { _, which ->
@@ -937,17 +960,17 @@ class TabsBottomSheetFragment : DialogFragment() {
                 } else {
                     profiles[which].id
                 }
-                
+
                 // Migrate tabs
                 val migratedCount = profileManager.migrateTabsToProfile(tabIds, targetProfileId)
-                
+
                 // Show confirmation
                 android.widget.Toast.makeText(
                     requireContext(),
                     "Moved $migratedCount $tabWord to ${items[which]}",
                     android.widget.Toast.LENGTH_SHORT
                 ).show()
-                
+
                 updateTabsDisplay()
             }
             .setNegativeButton("Cancel", null)
@@ -957,14 +980,15 @@ class TabsBottomSheetFragment : DialogFragment() {
     private fun showRenameGroupDialog(groupId: String) {
         lifecycleScope.launch {
             val group = unifiedGroupManager.getGroup(groupId) ?: return@launch
-            
+
             val dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_edittext, null)
-            val inputLayout = dialogView.findViewById<com.google.android.material.textfield.TextInputLayout>(R.id.text_input_layout)
+            val inputLayout =
+                dialogView.findViewById<com.google.android.material.textfield.TextInputLayout>(R.id.text_input_layout)
             val input = dialogView.findViewById<com.google.android.material.textfield.TextInputEditText>(R.id.edit_text)
-            
+
             inputLayout.hint = "Group name"
             input.setText(group.name)
-            
+
             MaterialAlertDialogBuilder(requireContext())
                 .setTitle("Rename Group")
                 .setView(dialogView)
@@ -983,26 +1007,27 @@ class TabsBottomSheetFragment : DialogFragment() {
         lifecycleScope.launch {
             val group = unifiedGroupManager.getGroup(groupId) ?: return@launch
             val currentColor = group.color
-            
+
             val dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_color_picker, null)
             val recyclerView = dialogView.findViewById<RecyclerView>(R.id.colorRecyclerView)
-            
+
             var selectedColorIndex = COLORS.indexOfFirst { getColorInt(it) == currentColor }.takeIf { it >= 0 } ?: 0
-            
+
             val colorAdapter = object : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
                 override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
                     val view = LayoutInflater.from(parent.context).inflate(R.layout.item_color_chip, parent, false)
                     return object : RecyclerView.ViewHolder(view) {}
                 }
-                
+
                 override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
-                    val card = holder.itemView.findViewById<com.google.android.material.card.MaterialCardView>(R.id.colorCard)
+                    val card =
+                        holder.itemView.findViewById<com.google.android.material.card.MaterialCardView>(R.id.colorCard)
                     val colorView = holder.itemView.findViewById<View>(R.id.colorView)
-                    
+
                     val colorInt = getColorInt(COLORS[position])
                     colorView.setBackgroundColor(colorInt)
                     card.isChecked = position == selectedColorIndex
-                    
+
                     card.setOnClickListener {
                         val oldSelection = selectedColorIndex
                         selectedColorIndex = position
@@ -1010,12 +1035,12 @@ class TabsBottomSheetFragment : DialogFragment() {
                         notifyItemChanged(selectedColorIndex)
                     }
                 }
-                
+
                 override fun getItemCount() = COLORS.size
             }
-            
+
             recyclerView.adapter = colorAdapter
-            
+
             MaterialAlertDialogBuilder(requireContext())
                 .setTitle("Choose Color")
                 .setView(dialogView)
@@ -1030,7 +1055,7 @@ class TabsBottomSheetFragment : DialogFragment() {
                 .show()
         }
     }
-    
+
     private fun getColorInt(colorName: String): Int {
         return when (colorName) {
             "blue" -> 0xFF2196F3.toInt()
@@ -1050,14 +1075,14 @@ class TabsBottomSheetFragment : DialogFragment() {
             val isPrivate = browsingModeManager.mode.isPrivate
             val currentProfile = browsingModeManager.currentProfile
             val contextId = if (isPrivate) "private" else "profile_${currentProfile.id}"
-            
+
             requireContext().components.tabsUseCases.addTab(
                 url = "about:homepage",
                 private = isPrivate,
                 contextId = contextId,
                 selectTab = true
             )
-            
+
             try {
                 NavHostFragment.findNavController(this@TabsBottomSheetFragment)
                     .navigate(R.id.homeFragment)
@@ -1077,12 +1102,12 @@ class TabsBottomSheetFragment : DialogFragment() {
         val isDark = when (themeChoice) {
             com.prirai.android.nira.settings.ThemeChoice.DARK -> true
             com.prirai.android.nira.settings.ThemeChoice.LIGHT -> false
-            com.prirai.android.nira.settings.ThemeChoice.SYSTEM -> 
-                requireContext().resources.configuration.uiMode and 
-                android.content.res.Configuration.UI_MODE_NIGHT_MASK == 
-                android.content.res.Configuration.UI_MODE_NIGHT_YES
+            com.prirai.android.nira.settings.ThemeChoice.SYSTEM ->
+                requireContext().resources.configuration.uiMode and
+                        android.content.res.Configuration.UI_MODE_NIGHT_MASK ==
+                        android.content.res.Configuration.UI_MODE_NIGHT_YES
         }
-        
+
         composeView.setContent {
             com.prirai.android.nira.ui.theme.NiraTheme(
                 darkTheme = isDark,
@@ -1095,7 +1120,8 @@ class TabsBottomSheetFragment : DialogFragment() {
                         (composeView.parent as? ViewGroup)?.removeView(composeView)
                     },
                     onConfirm = { name, color, emoji ->
-                        val profileManager = com.prirai.android.nira.browser.profile.ProfileManager.getInstance(requireContext())
+                        val profileManager =
+                            com.prirai.android.nira.browser.profile.ProfileManager.getInstance(requireContext())
                         val newProfile = profileManager.createProfile(name, color, emoji)
 
                         setupMergedProfileButtons()
@@ -1121,12 +1147,12 @@ class TabsBottomSheetFragment : DialogFragment() {
         val isDark = when (themeChoice) {
             com.prirai.android.nira.settings.ThemeChoice.DARK -> true
             com.prirai.android.nira.settings.ThemeChoice.LIGHT -> false
-            com.prirai.android.nira.settings.ThemeChoice.SYSTEM -> 
-                requireContext().resources.configuration.uiMode and 
-                android.content.res.Configuration.UI_MODE_NIGHT_MASK == 
-                android.content.res.Configuration.UI_MODE_NIGHT_YES
+            com.prirai.android.nira.settings.ThemeChoice.SYSTEM ->
+                requireContext().resources.configuration.uiMode and
+                        android.content.res.Configuration.UI_MODE_NIGHT_MASK ==
+                        android.content.res.Configuration.UI_MODE_NIGHT_YES
         }
-        
+
         composeView.setContent {
             com.prirai.android.nira.ui.theme.NiraTheme(
                 darkTheme = isDark,
@@ -1140,7 +1166,8 @@ class TabsBottomSheetFragment : DialogFragment() {
                         (composeView.parent as? ViewGroup)?.removeView(composeView)
                     },
                     onConfirm = { name, color, emoji ->
-                        val profileManager = com.prirai.android.nira.browser.profile.ProfileManager.getInstance(requireContext())
+                        val profileManager =
+                            com.prirai.android.nira.browser.profile.ProfileManager.getInstance(requireContext())
                         val updatedProfile = profile.copy(name = name, color = color, emoji = emoji)
                         profileManager.updateProfile(updatedProfile)
 
@@ -1153,10 +1180,12 @@ class TabsBottomSheetFragment : DialogFragment() {
                         (composeView.parent as? ViewGroup)?.removeView(composeView)
                     },
                     onDelete = {
-                        val profileManager = com.prirai.android.nira.browser.profile.ProfileManager.getInstance(requireContext())
+                        val profileManager =
+                            com.prirai.android.nira.browser.profile.ProfileManager.getInstance(requireContext())
 
                         if (profile.id == browsingModeManager.currentProfile.id) {
-                            browsingModeManager.currentProfile = com.prirai.android.nira.browser.profile.BrowserProfile.getDefaultProfile()
+                            browsingModeManager.currentProfile =
+                                com.prirai.android.nira.browser.profile.BrowserProfile.getDefaultProfile()
                         }
 
                         profileManager.deleteProfile(profile.id)
@@ -1177,14 +1206,16 @@ class TabsBottomSheetFragment : DialogFragment() {
         super.onDestroyView()
         _binding = null
     }
-    
+
     // ============ NEW FLAT ADAPTER SYSTEM ============
-    
+
     private fun setupFlatTabsAdapter() {
+        // DEPRECATED - using Compose tab views now
+        /*
         flatTabsAdapter = com.prirai.android.nira.browser.tabs.dragdrop.FlatTabsAdapter(
             onTabClick = { tabId ->
                 requireContext().components.tabsUseCases.selectTab(tabId)
-                
+
                 try {
                     val navController = NavHostFragment.findNavController(this)
                     if (navController.currentDestination?.id == R.id.homeFragment) {
@@ -1196,7 +1227,7 @@ class TabsBottomSheetFragment : DialogFragment() {
                 } catch (e: Exception) {
                     // Ignore
                 }
-                
+
                 view?.post { dismiss() }
             },
             onTabClose = { tabId ->
@@ -1217,14 +1248,17 @@ class TabsBottomSheetFragment : DialogFragment() {
                 showGroupOptionsMenu(groupId, view)
             }
         )
-        
+
         binding.tabsRecyclerView.apply {
             layoutManager = LinearLayoutManager(requireContext())
             adapter = flatTabsAdapter
         }
+        */
     }
-    
+
     private fun setupNewDragAndDrop() {
+        // DEPRECATED - using Compose tab views now
+        /*
         unifiedDragHelper = com.prirai.android.nira.browser.tabs.dragdrop.UnifiedDragHelper(
             adapter = flatTabsAdapter!!,
             groupManager = unifiedGroupManager,
@@ -1236,64 +1270,94 @@ class TabsBottomSheetFragment : DialogFragment() {
             spanCount = 1
         )
         unifiedDragHelper!!.attachToRecyclerView(binding.tabsRecyclerView)
+        */
     }
-    
+
     private fun setupComposeTabViews() {
         // Hide RecyclerView
         binding.tabsRecyclerView.visibility = View.GONE
         binding.tabsGridRecyclerView.visibility = View.GONE
-        
+
         // Find parent container
         val container = binding.tabsRecyclerView.parent as? ViewGroup ?: return
-        
+
         // Remove existing compose view if any
         container.findViewWithTag<androidx.compose.ui.platform.ComposeView>("tabs_compose")?.let {
             container.removeView(it)
         }
-        
+
         // Add ComposeView
         val composeView = androidx.compose.ui.platform.ComposeView(requireContext()).apply {
             tag = "tabs_compose"
             setContent {
-                com.prirai.android.nira.ui.theme.NiraTheme {
+                // Read AMOLED preference
+                val prefs = com.prirai.android.nira.preferences.UserPreferences(requireContext())
+                val isAmoledActive = prefs.amoledMode
+                
+                com.prirai.android.nira.ui.theme.NiraTheme(amoledMode = isAmoledActive) {
                     ComposeTabContent()
                 }
             }
         }
-        
+
         // Add to container with same layout params as RecyclerView
         val layoutParams = binding.tabsRecyclerView.layoutParams
         composeView.layoutParams = layoutParams
         container.addView(composeView)
     }
-    
+
     @Composable
     private fun ComposeTabContent() {
         // Trigger recomposition when profile/mode changes
         val trigger by profileStateTrigger
-        
+
         // Menu state
         val showMenu by showMenuState
         val menuTab by menuTabState
         val menuIsInGroup by menuIsInGroupState
-        
+
         // Update profile button visibility based on menu state - use SideEffect for immediate execution
         androidx.compose.runtime.SideEffect {
             binding.profileButtonContainer.visibility = if (showMenu) View.GONE else View.VISIBLE
         }
-        
+
         // Capture current browsing mode and profile based on trigger
         // This ensures we get fresh values on each profile switch
         val browsingMode = remember(trigger) { browsingModeManager.mode }
         val currentProfile = remember(trigger) { browsingModeManager.currentProfile }
-        
+
         // Create ViewModel once and store it
         val viewModel = remember {
             TabViewModel(requireContext(), unifiedGroupManager).also {
                 tabViewModel = it
+                // Set up callbacks for tab operations
+                it.onTabRemove = { tabId ->
+                    // Immediately remove tab from store
+                    requireContext().components.tabsUseCases.removeTab(tabId)
+                }
+                it.onTabRestore = { tab, position ->
+                    // Restore tab at original position
+                    val components = requireContext().components
+                    components.tabsUseCases.addTab(
+                        url = tab.content.url,
+                        private = tab.content.private,
+                        contextId = tab.contextId,
+                        selectTab = false
+                    )
+                }
             }
         }
-        
+
+        // Set up global snackbar manager scope
+        val scope = rememberCoroutineScope()
+        LaunchedEffect(Unit) {
+            com.prirai.android.nira.browser.tabs.compose.GlobalSnackbarManager.getInstance().coroutineScope = scope
+        }
+
+        // Get snackbar host state from global manager
+        val snackbarHostState =
+            com.prirai.android.nira.browser.tabs.compose.GlobalSnackbarManager.getInstance().snackbarHostState
+
         // Produce state that updates when store changes OR groups change
         val tabsState by produceState(
             initialValue = emptyList<mozilla.components.browser.state.state.TabSessionState>(),
@@ -1303,7 +1367,7 @@ class TabsBottomSheetFragment : DialogFragment() {
             val isPrivateMode = browsingMode.isPrivate
             val activeProfile = currentProfile
             val profileId = if (isPrivateMode) "private" else activeProfile.id
-            
+
             // Helper to filter tabs
             fun filterTabs(tabs: List<mozilla.components.browser.state.state.TabSessionState>) = tabs.filter { tab ->
                 val tabIsPrivate = tab.content.private
@@ -1321,7 +1385,7 @@ class TabsBottomSheetFragment : DialogFragment() {
                     }
                 }
             }
-            
+
             // Collect both store updates AND group events
             launch {
                 store.flowScoped(viewLifecycleOwner) { flow ->
@@ -1332,7 +1396,7 @@ class TabsBottomSheetFragment : DialogFragment() {
                     }
                 }
             }
-            
+
             // Listen to group events and trigger refresh
             launch {
                 unifiedGroupManager.groupEvents.collect { event ->
@@ -1343,94 +1407,143 @@ class TabsBottomSheetFragment : DialogFragment() {
                     viewModel.forceRefresh(filteredTabs, state.selectedTabId)
                 }
             }
+
+            // Listen to duplicate tab events
+            launch {
+                viewModel.duplicateTabEvent.collect { request ->
+                    android.util.Log.d(
+                        "TabSheet",
+                        "Received duplicate tab request: ${request.url}, group: ${request.groupId}"
+                    )
+
+                    // Create new tab using components
+                    val newTabId = requireContext().components.tabsUseCases.addTab(
+                        url = request.url,
+                        selectTab = true,
+                        startLoading = true,
+                        private = browsingMode.isPrivate,
+                        contextId = if (browsingMode.isPrivate) "private" else "profile_${currentProfile.id}"
+                    )
+
+                    android.util.Log.d("TabSheet", "Created new tab: $newTabId")
+
+                    // Add to group if needed
+                    if (request.groupId != null) {
+                        kotlinx.coroutines.delay(100) // Small delay to ensure tab is in store
+                        unifiedGroupManager.addTabToGroup(request.groupId, newTabId)
+                        android.util.Log.d("TabSheet", "Added tab to group: ${request.groupId}")
+
+                        // Force UI refresh
+                        kotlinx.coroutines.delay(100)
+                        val state = store.state
+                        val filteredTabs = filterTabs(state.tabs)
+                        value = filteredTabs
+                        viewModel.forceRefresh(filteredTabs, state.selectedTabId)
+                    }
+                }
+            }
         }
-        
-        // Wrapper Box to hold tabs and menu overlay
-        androidx.compose.foundation.layout.Box(
-            modifier = androidx.compose.ui.Modifier.fillMaxSize()
-        ) {
-            // Choose view based on grid mode
-            if (isGridView) {
-                TabSheetGridView(
-                    viewModel = viewModel,
-                    onTabClick = ::handleTabClickCompose,
-                    onTabClose = ::handleTabCloseCompose,
-                    onTabLongPress = ::handleTabLongPressCompose,
-                    onGroupClick = { groupId ->
-                        viewModel.toggleGroupExpanded(groupId)
-                    },
-                    onGroupOptionsClick = { groupId ->
-                        showGroupOptionsDialog(groupId, viewModel)
-                    }
-                )
-            } else {
-                TabSheetListView(
-                    viewModel = viewModel,
-                    onTabClick = ::handleTabClickCompose,
-                    onTabClose = ::handleTabCloseCompose,
-                    onTabLongPress = ::handleTabLongPressCompose,
-                    onGroupClick = { groupId ->
-                        viewModel.toggleGroupExpanded(groupId)
-                    },
-                    onGroupOptionsClick = { groupId ->
-                        showGroupOptionsDialog(groupId, viewModel)
-                    }
+
+        // Use Scaffold for proper snackbar positioning
+        Scaffold(
+            snackbarHost = {
+                SnackbarHost(
+                    hostState = snackbarHostState,
+                    modifier = Modifier.padding(bottom = 80.dp) // Above bottom buttons
                 )
             }
-            
-            // Menu overlay - shows at bottom when tab is long-pressed
-            if (showMenu && menuTab != null) {
-                // Clickable background to dismiss menu when clicking outside
-                androidx.compose.foundation.layout.Box(
-                    modifier = androidx.compose.ui.Modifier
-                        .fillMaxSize()
-                        .clickable(
-                            indication = null,
-                            interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
-                        ) {
+        ) { paddingValues ->
+            // Wrapper Box to hold tabs and menu overlay
+            androidx.compose.foundation.layout.Box(
+                modifier = androidx.compose.ui.Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+            ) {
+                // Choose view based on grid mode
+                if (isGridView) {
+                    TabSheetGridView(
+                        viewModel = viewModel,
+                        orderManager = composeOrderManager!!,
+                        onTabClick = ::handleTabClickCompose,
+                        onTabClose = ::handleTabCloseCompose,
+                        onTabLongPress = ::handleTabLongPressCompose,
+                        onGroupClick = { groupId ->
+                            viewModel.toggleGroupExpanded(groupId)
+                        },
+                        onGroupOptionsClick = { groupId ->
+                            // Show group options menu - could be enhanced
+                        }
+                    )
+                } else {
+                    TabSheetListView(
+                        viewModel = viewModel,
+                        orderManager = composeOrderManager!!,
+                        onTabClick = ::handleTabClickCompose,
+                        onTabClose = ::handleTabCloseCompose,
+                        onTabLongPress = ::handleTabLongPressCompose,
+                        onGroupClick = { groupId ->
+                            viewModel.toggleGroupExpanded(groupId)
+                        },
+                        onGroupOptionsClick = { groupId ->
+                            // Show group options menu - could be enhanced
+                        }
+                    )
+                }
+
+                // Menu overlay - shows at bottom when tab is long-pressed
+                if (showMenu && menuTab != null) {
+                    // Clickable background to dismiss menu when clicking outside
+                    androidx.compose.foundation.layout.Box(
+                        modifier = androidx.compose.ui.Modifier
+                            .fillMaxSize()
+                            .clickable(
+                                indication = null,
+                                interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+                            ) {
+                                showMenuState.value = false
+                                menuTabState.value = null
+                            }
+                    )
+
+                    TabContextMenu(
+                        tab = menuTab!!,
+                        isInGroup = menuIsInGroup,
+                        onDismiss = {
                             showMenuState.value = false
                             menuTabState.value = null
-                        }
-                )
-                
-                TabContextMenu(
-                    tab = menuTab!!,
-                    isInGroup = menuIsInGroup,
-                    onDismiss = {
-                        showMenuState.value = false
-                        menuTabState.value = null
-                    },
-                    onMoveToProfile = {
-                        showMoveToProfileDialog(listOf(menuTab!!.id))
-                        showMenuState.value = false
-                        menuTabState.value = null
-                    },
-                    onRemoveFromGroup = {
-                        lifecycleScope.launch {
-                            tabViewModel?.removeTabFromGroup(menuTab!!.id)
-                        }
-                        showMenuState.value = false
-                        menuTabState.value = null
-                    },
-                    modifier = androidx.compose.ui.Modifier
-                        .align(androidx.compose.ui.Alignment.BottomCenter)
-                        .fillMaxWidth()
-                )
+                        },
+                        onMoveToProfile = {
+                            showMoveToProfileDialog(listOf(menuTab!!.id))
+                            showMenuState.value = false
+                            menuTabState.value = null
+                        },
+                        onRemoveFromGroup = {
+                            lifecycleScope.launch {
+                                tabViewModel?.removeTabFromGroup(menuTab!!.id)
+                            }
+                            showMenuState.value = false
+                            menuTabState.value = null
+                        },
+                        modifier = androidx.compose.ui.Modifier
+                            .align(androidx.compose.ui.Alignment.BottomCenter)
+                            .fillMaxWidth()
+                    )
+                }
             }
         }
     }
-    
+
     private fun handleTabClickCompose(tabId: String) {
         lifecycleScope.launch {
             // Get the tab to check its context
             val store = requireContext().components.store
             val tab = store.state.tabs.find { it.id == tabId }
-            
+
             if (tab != null) {
                 // Switch profile/mode if needed based on tab's context
                 val isPrivate = tab.content.private
                 val tabContextId = tab.contextId
-                
+
                 if (isPrivate) {
                     // Switch to private mode
                     if (browsingModeManager.mode != BrowsingMode.Private) {
@@ -1441,9 +1554,10 @@ class TabsBottomSheetFragment : DialogFragment() {
                     if (browsingModeManager.mode != BrowsingMode.Normal) {
                         browsingModeManager.mode = BrowsingMode.Normal
                     }
-                    
+
                     // Switch profile if needed
-                    val profileManager = com.prirai.android.nira.browser.profile.ProfileManager.getInstance(requireContext())
+                    val profileManager =
+                        com.prirai.android.nira.browser.profile.ProfileManager.getInstance(requireContext())
                     when {
                         tabContextId == null || tabContextId == "profile_default" -> {
                             // Default profile
@@ -1453,6 +1567,7 @@ class TabsBottomSheetFragment : DialogFragment() {
                                 browsingModeManager.currentProfile = defaultProfile
                             }
                         }
+
                         tabContextId.startsWith("profile_") -> {
                             // Other profile
                             val profileId = tabContextId.removePrefix("profile_")
@@ -1465,47 +1580,56 @@ class TabsBottomSheetFragment : DialogFragment() {
                     }
                 }
             }
-            
+
             requireContext().components.tabsUseCases.selectTab(tabId)
             dismiss()
         }
     }
-    
+
     private fun handleTabCloseCompose(tabId: String) {
-        lifecycleScope.launch {
-            requireContext().components.tabsUseCases.removeTab(tabId)
-        }
+        // Use ViewModel's closeTab with undo support
+        // The actual deletion will be handled by the onTabDeleteConfirmed callback
+        tabViewModel?.closeTab(tabId, showUndo = true)
     }
-    
+
     private fun handleTabLongPressCompose(tab: TabSessionState, isInGroup: Boolean) {
         // Show menu in place of profile switcher
         menuTabState.value = tab
         menuIsInGroupState.value = isInGroup
         showMenuState.value = true
     }
-    
+
     private fun showUngroupedTabMenuDialog(tabId: String, tabTitle: String) {
         val options = arrayOf("Move to Profile", "Duplicate Tab", "Pin Tab")
-        
+
         MaterialAlertDialogBuilder(requireContext())
             .setTitle(tabTitle.ifEmpty { "Tab" })
             .setItems(options) { _, which ->
                 when (which) {
                     0 -> showMoveToProfileDialog(listOf(tabId))
                     1 -> {
-                        android.widget.Toast.makeText(requireContext(), "Duplicate tab coming soon", android.widget.Toast.LENGTH_SHORT).show()
+                        android.widget.Toast.makeText(
+                            requireContext(),
+                            "Duplicate tab coming soon",
+                            android.widget.Toast.LENGTH_SHORT
+                        ).show()
                     }
+
                     2 -> {
-                        android.widget.Toast.makeText(requireContext(), "Pin tab coming soon", android.widget.Toast.LENGTH_SHORT).show()
+                        android.widget.Toast.makeText(
+                            requireContext(),
+                            "Pin tab coming soon",
+                            android.widget.Toast.LENGTH_SHORT
+                        ).show()
                     }
                 }
             }
             .show()
     }
-    
+
     private fun showGroupedTabMenuDialog(tabId: String, groupId: String, tabTitle: String) {
         val options = arrayOf("Remove from Island", "Move to Profile", "Duplicate Tab", "Pin Tab")
-        
+
         MaterialAlertDialogBuilder(requireContext())
             .setTitle(tabTitle.ifEmpty { "Tab" })
             .setItems(options) { _, which ->
@@ -1515,24 +1639,34 @@ class TabsBottomSheetFragment : DialogFragment() {
                             tabViewModel?.removeTabFromGroup(tabId)
                         }
                     }
+
                     1 -> showMoveToProfileDialog(listOf(tabId))
                     2 -> {
-                        android.widget.Toast.makeText(requireContext(), "Duplicate tab coming soon", android.widget.Toast.LENGTH_SHORT).show()
+                        android.widget.Toast.makeText(
+                            requireContext(),
+                            "Duplicate tab coming soon",
+                            android.widget.Toast.LENGTH_SHORT
+                        ).show()
                     }
+
                     3 -> {
-                        android.widget.Toast.makeText(requireContext(), "Pin tab coming soon", android.widget.Toast.LENGTH_SHORT).show()
+                        android.widget.Toast.makeText(
+                            requireContext(),
+                            "Pin tab coming soon",
+                            android.widget.Toast.LENGTH_SHORT
+                        ).show()
                     }
                 }
             }
             .show()
     }
-    
+
     private fun showGroupOptionsDialog(groupId: String, viewModel: TabViewModel) {
         lifecycleScope.launch {
             val group = unifiedGroupManager.getGroup(groupId) ?: return@launch
-            
+
             val options = arrayOf("Rename Group", "Change Color", "Ungroup All")
-            
+
             MaterialAlertDialogBuilder(requireContext())
                 .setTitle(group.name)
                 .setItems(options) { _, which ->
@@ -1547,11 +1681,11 @@ class TabsBottomSheetFragment : DialogFragment() {
                 .show()
         }
     }
-    
+
     private fun showRenameGroupDialog(groupId: String, currentName: String, viewModel: TabViewModel) {
         val input = android.widget.EditText(requireContext())
         input.setText(currentName)
-        
+
         MaterialAlertDialogBuilder(requireContext())
             .setTitle("Rename Group")
             .setView(input)
@@ -1564,31 +1698,32 @@ class TabsBottomSheetFragment : DialogFragment() {
             .setNegativeButton("Cancel", null)
             .show()
     }
-    
+
     private fun showChangeGroupColorDialogCompose(groupId: String, viewModel: TabViewModel) {
         lifecycleScope.launch {
             val group = unifiedGroupManager.getGroup(groupId) ?: return@launch
             val currentColor = group.color
-            
+
             val dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_color_picker, null)
             val recyclerView = dialogView.findViewById<RecyclerView>(R.id.colorRecyclerView)
-            
+
             var selectedColorIndex = COLORS.indexOfFirst { getColorInt(it) == currentColor }.takeIf { it >= 0 } ?: 0
-            
+
             val colorAdapter = object : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
                 override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
                     val view = LayoutInflater.from(parent.context).inflate(R.layout.item_color_chip, parent, false)
                     return object : RecyclerView.ViewHolder(view) {}
                 }
-                
+
                 override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
-                    val card = holder.itemView.findViewById<com.google.android.material.card.MaterialCardView>(R.id.colorCard)
+                    val card =
+                        holder.itemView.findViewById<com.google.android.material.card.MaterialCardView>(R.id.colorCard)
                     val colorView = holder.itemView.findViewById<View>(R.id.colorView)
-                    
+
                     val colorInt = getColorInt(COLORS[position])
                     colorView.setBackgroundColor(colorInt)
                     card.isChecked = position == selectedColorIndex
-                    
+
                     card.setOnClickListener {
                         val oldSelection = selectedColorIndex
                         selectedColorIndex = position
@@ -1596,12 +1731,12 @@ class TabsBottomSheetFragment : DialogFragment() {
                         notifyItemChanged(selectedColorIndex)
                     }
                 }
-                
+
                 override fun getItemCount() = COLORS.size
             }
-            
+
             recyclerView.adapter = colorAdapter
-            
+
             MaterialAlertDialogBuilder(requireContext())
                 .setTitle("Choose Color")
                 .setView(dialogView)
@@ -1613,7 +1748,7 @@ class TabsBottomSheetFragment : DialogFragment() {
                 .show()
         }
     }
-    
+
     private fun toggleGroupExpansion(groupId: String) {
         if (collapsedGroupIds.contains(groupId)) {
             collapsedGroupIds.remove(groupId)
@@ -1622,80 +1757,25 @@ class TabsBottomSheetFragment : DialogFragment() {
         }
         updateFlatTabsDisplay()
     }
-    
+
     private fun updateFlatTabsDisplay() {
-        if (!isAdded || context == null || flatTabsAdapter == null) return
-        
-        lifecycleScope.launch {
-            val store = requireContext().components.store.state
-            val isPrivateMode = browsingModeManager.mode.isPrivate
-            val currentProfile = browsingModeManager.currentProfile
-            
-            // Filter tabs
-            val filteredTabs = store.tabs.filter { tab ->
-                val tabIsPrivate = tab.content.private
-                if (tabIsPrivate != isPrivateMode) {
-                    false
-                } else if (isPrivateMode) {
-                    tab.contextId == "private"
-                } else {
-                    val expectedContextId = "profile_${currentProfile.id}"
-                    (tab.contextId == expectedContextId) || (tab.contextId == null)
-                }
-            }
-            
-            // Get groups
-            val allGroups = unifiedGroupManager.getAllGroups()
-            
-            // Load custom order
-            val profileKey = if (isPrivateMode) "private" else currentProfile.id
-            val customOrder = tabOrderPersistence.loadOrder(profileKey)
-            
-            // Build flat list with custom order
-            val builder = com.prirai.android.nira.browser.tabs.dragdrop.TabListBuilder(collapsedGroupIds)
-            val flatList = builder.buildList(filteredTabs, allGroups, customOrder)
-            
-            // Update adapter
-            flatTabsAdapter?.updateItems(flatList, store.selectedTabId)
-            
-            // Show/hide empty state
-            if (filteredTabs.isEmpty()) {
-                binding.tabsRecyclerView.visibility = View.GONE
-                binding.emptyStateLayout.visibility = View.VISIBLE
-            } else {
-                binding.tabsRecyclerView.visibility = View.VISIBLE
-                binding.emptyStateLayout.visibility = View.GONE
-            }
-        }
+        // DEPRECATED - using Compose tab system now
+        return
     }
-    
+
     /**
      * Save current tab order for persistence
      */
     private fun saveCurrentTabOrder() {
-        lifecycleScope.launch {
-            val currentList = flatTabsAdapter!!.currentList
-            val tabIds = currentList.mapNotNull { item ->
-                when (item) {
-                    is com.prirai.android.nira.browser.tabs.dragdrop.TabListItem.UngroupedTab -> item.tab.id
-                    is com.prirai.android.nira.browser.tabs.dragdrop.TabListItem.GroupedTab -> item.tab.id
-                    else -> null
-                }
-            }
-            
-            val isPrivateMode = browsingModeManager.mode.isPrivate
-            val currentProfile = browsingModeManager.currentProfile
-            val profileKey = if (isPrivateMode) "private" else currentProfile.id
-            
-            tabOrderPersistence.saveOrder(profileKey, tabIds)
-        }
+        // DEPRECATED - using Compose TabOrderManager now
+        return
     }
-    
+
     private fun showGroupedTabOptionsMenu(tabId: String, groupId: String, view: View) {
         // Alias for the existing method
         showGroupTabOptionsMenu(tabId, groupId, view)
     }
-    
+
     @androidx.compose.runtime.Composable
     private fun TabContextMenu(
         tab: TabSessionState,
@@ -1717,8 +1797,8 @@ class TabsBottomSheetFragment : DialogFragment() {
                     .padding(8.dp),
                 color = androidx.compose.material3.MaterialTheme.colorScheme.surfaceContainerHigh,
                 shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
-                tonalElevation = 4.dp,
-                shadowElevation = 8.dp
+                tonalElevation = 0.dp,
+                shadowElevation = 0.dp
             ) {
                 androidx.compose.foundation.layout.Column(
                     modifier = androidx.compose.ui.Modifier.padding(8.dp)
@@ -1738,7 +1818,7 @@ class TabsBottomSheetFragment : DialogFragment() {
                             overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
                             modifier = androidx.compose.ui.Modifier.weight(1f)
                         )
-                        
+
                         androidx.compose.material3.IconButton(onClick = onDismiss) {
                             androidx.compose.material3.Icon(
                                 imageVector = androidx.compose.material.icons.Icons.Default.Close,
@@ -1746,11 +1826,11 @@ class TabsBottomSheetFragment : DialogFragment() {
                             )
                         }
                     }
-                    
+
                     androidx.compose.material3.HorizontalDivider(
                         modifier = androidx.compose.ui.Modifier.padding(vertical = 4.dp)
                     )
-                    
+
                     // Menu options
                     if (isInGroup) {
                         MenuOption(
@@ -1759,13 +1839,13 @@ class TabsBottomSheetFragment : DialogFragment() {
                             onClick = onRemoveFromGroup
                         )
                     }
-                    
+
                     MenuOption(
                         icon = androidx.compose.material.icons.Icons.Default.AccountCircle,
                         text = "Move to Profile",
                         onClick = onMoveToProfile
                     )
-                    
+
                     MenuOption(
                         icon = androidx.compose.material.icons.Icons.Default.Close,
                         text = "Close Tab",
@@ -1778,7 +1858,7 @@ class TabsBottomSheetFragment : DialogFragment() {
             }
         }
     }
-    
+
     @androidx.compose.runtime.Composable
     private fun MenuOption(
         icon: androidx.compose.ui.graphics.vector.ImageVector,
@@ -1798,9 +1878,9 @@ class TabsBottomSheetFragment : DialogFragment() {
                 modifier = androidx.compose.ui.Modifier.size(24.dp),
                 tint = androidx.compose.material3.MaterialTheme.colorScheme.onSurface
             )
-            
+
             androidx.compose.foundation.layout.Spacer(modifier = androidx.compose.ui.Modifier.width(16.dp))
-            
+
             androidx.compose.material3.Text(
                 text = text,
                 style = androidx.compose.material3.MaterialTheme.typography.bodyLarge
