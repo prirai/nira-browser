@@ -188,13 +188,12 @@ fun SwipeableTabPill(
                 horizontalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 // Favicon
-                tab.content.icon?.let { icon ->
-                    Image(
-                        bitmap = icon.asImageBitmap(),
-                        contentDescription = null,
-                        modifier = Modifier.size(14.dp)
-                    )
-                }
+                FaviconImage(
+                    tab = tab,
+                    size = 14.dp
+                )
+
+                Spacer(modifier = Modifier.width(4.dp))
 
                 // Title
                 Text(

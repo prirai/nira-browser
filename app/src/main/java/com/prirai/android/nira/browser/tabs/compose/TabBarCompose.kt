@@ -415,13 +415,13 @@ private fun TabPill(
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             // Favicon
-            tab.content.icon?.let { icon ->
-                Image(
-                    bitmap = icon.asImageBitmap(),
-                    contentDescription = null,
-                    modifier = Modifier.size(16.dp)
-                )
-            }
+            FaviconImage(
+                tab = tab,
+                size = 16.dp,
+                modifier = Modifier
+            )
+
+            Spacer(modifier = Modifier.width(4.dp))
 
             // Title - use onSurface color when dragging for better contrast
             Text(

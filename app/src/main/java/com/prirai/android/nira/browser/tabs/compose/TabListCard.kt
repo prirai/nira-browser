@@ -82,30 +82,10 @@ fun TabListCard(
                 modifier = Modifier.weight(1f)
             ) {
                 // Favicon
-                if (tab.content.icon != null) {
-                    Image(
-                        bitmap = tab.content.icon!!.asImageBitmap(),
-                        contentDescription = null,
-                        modifier = Modifier
-                            .size(20.dp)
-                            .clip(RoundedCornerShape(4.dp))
-                    )
-                } else {
-                    Box(
-                        modifier = Modifier
-                            .size(20.dp)
-                            .clip(RoundedCornerShape(4.dp))
-                            .background(MaterialTheme.colorScheme.surfaceVariant),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Language,
-                            contentDescription = null,
-                            modifier = Modifier.size(14.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
+                FaviconImage(
+                    tab = tab,
+                    size = 20.dp
+                )
 
                 // Title and URL
                 Column(
