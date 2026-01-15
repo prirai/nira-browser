@@ -22,6 +22,7 @@ import kotlinx.coroutines.withContext
 import mozilla.components.browser.state.state.TabSessionState
 import mozilla.components.browser.icons.IconRequest
 import com.prirai.android.nira.ext.components
+import androidx.compose.foundation.isSystemInDarkTheme
 
 /**
  * FaviconImage Composable
@@ -105,6 +106,7 @@ private suspend fun loadFavicon(tab: TabSessionState, context: android.content.C
             // Priority 2: BrowserIcons component (Mozilla's loader)
             // This is the standard way to load icons in Android Components
             val icons = context.components.icons
+
 
             val iconRequest = IconRequest(
                 url = tab.content.url,

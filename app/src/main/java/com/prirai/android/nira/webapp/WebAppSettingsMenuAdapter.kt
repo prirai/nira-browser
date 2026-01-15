@@ -29,7 +29,6 @@ class WebAppSettingsMenuAdapter(
     private val onAddShortcut: (WebAppEntity) -> Unit,
     private val onAssociateProfile: (WebAppEntity) -> Unit,
     private val onClone: (WebAppEntity) -> Unit,
-    private val onUpdateCache: (WebAppEntity) -> Unit,
     private val onClearData: (WebAppEntity) -> Unit,
     private val onUninstall: (WebAppEntity) -> Unit
 ) : ListAdapter<WebAppEntity, WebAppSettingsMenuAdapter.WebAppViewHolder>(WebAppDiffCallback()) {
@@ -119,11 +118,6 @@ class WebAppSettingsMenuAdapter(
 
                             R.id.clone_webapp -> {
                                 onClone(webApp)
-                                true
-                            }
-
-                            R.id.update_cache -> {
-                                onUpdateCache(webApp)
                                 true
                             }
 
