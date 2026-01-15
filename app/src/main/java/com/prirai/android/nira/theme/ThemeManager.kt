@@ -83,7 +83,12 @@ object ThemeManager {
                 typedValue,
                 true
             )
-            typedValue.data
+            // Properly resolve color
+            if (typedValue.resourceId != 0) {
+                androidx.core.content.ContextCompat.getColor(context, typedValue.resourceId)
+            } else {
+                typedValue.data
+            }
         }
     }
     
@@ -101,7 +106,12 @@ object ThemeManager {
                 typedValue,
                 true
             )
-            typedValue.data
+            // Properly resolve color
+            if (typedValue.resourceId != 0) {
+                androidx.core.content.ContextCompat.getColor(context, typedValue.resourceId)
+            } else {
+                typedValue.data
+            }
         }
     }
     
@@ -119,8 +129,74 @@ object ThemeManager {
                 typedValue,
                 true
             )
-            typedValue.data
+            // Properly resolve color
+            if (typedValue.resourceId != 0) {
+                androidx.core.content.ContextCompat.getColor(context, typedValue.resourceId)
+            } else {
+                typedValue.data
+            }
         }
+    }
+    
+    /**
+     * Get toolbar/URL bar background color with proper AMOLED support.
+     * This should be used for all toolbar-like components (URL bar, tab bar, contextual toolbar).
+     */
+    fun getToolbarBackgroundColor(context: Context): Int {
+        return if (isAmoledActive(context)) {
+            android.graphics.Color.BLACK
+        } else {
+            // Properly resolve Material 3 color attributes
+            val typedValue = android.util.TypedValue()
+            val theme = context.theme
+            
+            // First resolve the attribute to get the actual color resource
+            val resolved = theme.resolveAttribute(
+                com.google.android.material.R.attr.colorSurfaceContainer,
+                typedValue,
+                true
+            )
+            
+            if (!resolved) {
+                theme.resolveAttribute(
+                    com.google.android.material.R.attr.colorSurface,
+                    typedValue,
+                    true
+                )
+            }
+            
+            // Get the actual color value - handle both resource references and direct colors
+            if (typedValue.resourceId != 0) {
+                // It's a resource reference, resolve it
+                androidx.core.content.ContextCompat.getColor(context, typedValue.resourceId)
+            } else {
+                // It's a direct color value
+                typedValue.data
+            }
+        }
+    }
+    
+    /**
+     * Get elevated surface color (for menus, bottom sheets with elevation).
+     * Uses ElevationOverlayProvider for Material 3 tonal elevation in dark mode.
+     * For AMOLED mode, returns near-black instead of pure black for visual separation.
+     */
+    fun getElevatedSurfaceColor(context: Context, elevationDp: Float = 3f): Int {
+        return if (isAmoledActive(context)) {
+            0xFF0A0A0A.toInt() // Slightly elevated from pure black for AMOLED
+        } else {
+            val elevationPx = elevationDp * context.resources.displayMetrics.density
+            val elevationProvider = com.google.android.material.elevation.ElevationOverlayProvider(context)
+            elevationProvider.compositeOverlayWithThemeSurfaceColorIfNeeded(elevationPx)
+        }
+    }
+    
+    /**
+     * Get menu background color (for browser menu, context menus).
+     * Uses higher elevation (6dp) than toolbar for better visual separation.
+     */
+    fun getMenuBackgroundColor(context: Context): Int {
+        return getElevatedSurfaceColor(context, elevationDp = 6f)
     }
     
     /**

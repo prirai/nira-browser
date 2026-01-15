@@ -101,7 +101,21 @@ class Material3BrowserMenu(
             true
         ).apply {
             elevation = 0f
-            setBackgroundDrawable(ContextCompat.getDrawable(context, R.drawable.menu_background))
+            // Apply menu background color programmatically (supports AMOLED)
+            val menuBgColor = com.prirai.android.nira.theme.ThemeManager.getMenuBackgroundColor(context)
+            setBackgroundDrawable(android.graphics.drawable.ColorDrawable(menuBgColor).apply {
+                // Add rounded corners
+                val cornerRadius = (12 * displayMetrics.density)
+                val shape = android.graphics.drawable.GradientDrawable()
+                shape.cornerRadius = cornerRadius
+                shape.setColor(menuBgColor)
+                this@apply.setBounds(0, 0, intrinsicWidth, intrinsicHeight)
+            })
+            // Alternative: use a shape drawable with rounded corners
+            val shape = android.graphics.drawable.GradientDrawable()
+            shape.cornerRadius = (12 * displayMetrics.density)
+            shape.setColor(menuBgColor)
+            setBackgroundDrawable(shape)
             
             // Get anchor screen position
             val location = IntArray(2)

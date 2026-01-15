@@ -112,7 +112,11 @@ class ComposeTabBarWithProfileSwitcher @JvmOverloads constructor(
 
     private fun setupComposeContent() {
         composeView.setContent {
-            NiraTheme {
+            // Read AMOLED preference
+            val prefs = com.prirai.android.nira.preferences.UserPreferences(context)
+            val isAmoledActive = prefs.amoledMode
+            
+            NiraTheme(amoledMode = isAmoledActive) {
                 TabBarWithProfileSwitcherContent()
             }
         }

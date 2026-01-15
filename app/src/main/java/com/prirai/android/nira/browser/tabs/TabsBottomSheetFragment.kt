@@ -1290,7 +1290,11 @@ class TabsBottomSheetFragment : DialogFragment() {
         val composeView = androidx.compose.ui.platform.ComposeView(requireContext()).apply {
             tag = "tabs_compose"
             setContent {
-                com.prirai.android.nira.ui.theme.NiraTheme {
+                // Read AMOLED preference
+                val prefs = com.prirai.android.nira.preferences.UserPreferences(requireContext())
+                val isAmoledActive = prefs.amoledMode
+                
+                com.prirai.android.nira.ui.theme.NiraTheme(amoledMode = isAmoledActive) {
                     ComposeTabContent()
                 }
             }

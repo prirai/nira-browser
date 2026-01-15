@@ -66,7 +66,7 @@ open class BrowserActivity : LocaleAwareAppCompatActivity(), ComponentCallbacks2
 
     lateinit var browsingModeManager: BrowsingModeManager
     private lateinit var currentTheme: BrowsingMode
-    
+
     lateinit var tabGroupManager: com.prirai.android.nira.browser.tabgroups.TabGroupManager
 
     private var isToolbarInflated = false
@@ -101,10 +101,10 @@ open class BrowserActivity : LocaleAwareAppCompatActivity(), ComponentCallbacks2
     override fun onCreate(savedInstanceState: Bundle?) {
         // Switch from splash theme to regular theme immediately
         setTheme(R.style.AppThemeNotActionBar)
-        
+
         // Apply user theme preferences
         com.prirai.android.nira.theme.ThemeManager.applyTheme(this)
-        
+
         // Apply Material 3 dynamic colors (Material You) on Android 12+ if enabled
         val prefs = UserPreferences(this)
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S && prefs.dynamicColors) {
@@ -128,16 +128,16 @@ open class BrowserActivity : LocaleAwareAppCompatActivity(), ComponentCallbacks2
         val profileManager = com.prirai.android.nira.browser.profile.ProfileManager.getInstance(this)
         val initialProfile = profileManager.getActiveProfile()
         val isPrivate = UserPreferences(this).lastKnownPrivate
-        
+
         // Sync ProfileManager's private mode state with BrowsingModeManager
         profileManager.setPrivateMode(isPrivate)
-        
+
         browsingModeManager = createBrowsingModeManager(
             if (isPrivate) BrowsingMode.Private else BrowsingMode.Normal,
             initialProfile
         )
         currentTheme = browsingModeManager.mode
-        
+
         // Initialize TabGroupManager - shared across all components
         tabGroupManager = com.prirai.android.nira.browser.tabgroups.TabGroupManager(this)
 
@@ -163,38 +163,38 @@ open class BrowserActivity : LocaleAwareAppCompatActivity(), ComponentCallbacks2
         }
 
         applyAppTheme(this)
-        
+
         // Apply Material You dynamic colors if enabled
         if (com.prirai.android.nira.theme.ThemeManager.shouldUseDynamicColors(this)) {
             com.google.android.material.color.DynamicColors.applyToActivityIfAvailable(this)
         }
-        
+
         // Register lifecycle observer to capture state on background
         lifecycle.addObserver(object : DefaultLifecycleObserver {
             override fun onPause(owner: LifecycleOwner) {
                 // App going to background - trigger state capture
                 components.store.dispatch(AppLifecycleAction.PauseAction)
             }
-            
+
             override fun onResume(owner: LifecycleOwner) {
                 // App coming to foreground
                 components.store.dispatch(AppLifecycleAction.ResumeAction)
             }
         })
-        
+
         // Setup auto-tagging of new tabs with current profile
         setupTabProfileTagging()
-        
+
         // Enable edge-to-edge display with standardized approach
         enableEdgeToEdgeMode()
-        
+
         // Root view handles insets without padding - fragments manage their own insets
         ViewCompat.setOnApplyWindowInsetsListener(view) { _, insets -> insets }
 
         // OPTIMIZATION: Components that need lifecycle registration must be initialized in onCreate
         // These still trigger lazy component init but are required for proper lifecycle
         components.notificationsDelegate.bindToActivity(this)
-        
+
         // OPTIMIZATION: Defer non-critical component initialization to after first frame
         view.post {
             components.appRequestInterceptor.setNavController(navHost.navController)
@@ -210,13 +210,13 @@ open class BrowserActivity : LocaleAwareAppCompatActivity(), ComponentCallbacks2
 
     override fun onResume() {
         super.onResume()
-        
+
         val currentPosition = UserPreferences(this).toolbarPosition
         if (currentPosition != lastToolbarPosition) {
             lastToolbarPosition = currentPosition
             recreate()
         }
-        
+
         // Update toolbar and status bar theme immediately
         updateToolbarAndStatusBarTheme()
     }
@@ -234,7 +234,7 @@ open class BrowserActivity : LocaleAwareAppCompatActivity(), ComponentCallbacks2
         val intentProcessors = externalSourceIntentProcessors
         val intentHandled =
             intentProcessors.any { it.process(intent, navHost.navController, this.intent) }
-        
+
         // Default mode already set in onCreate
         if (intentHandled) {
             supportFragmentManager
@@ -250,7 +250,7 @@ open class BrowserActivity : LocaleAwareAppCompatActivity(), ComponentCallbacks2
             openToBrowser(BrowserDirection.FromGlobal, null)
         }
     }
-    
+
     private fun setupTabProfileTagging() {
         // Tab profile tagging is now handled by ProfileMiddleware
         // which sets contextId on tab creation for proper Gecko-level cookie isolation
@@ -262,7 +262,7 @@ open class BrowserActivity : LocaleAwareAppCompatActivity(), ComponentCallbacks2
         initialProfile: com.prirai.android.nira.browser.profile.BrowserProfile
     ): BrowsingModeManager {
         return DefaultBrowsingModeManager(
-            initialMode, 
+            initialMode,
             initialProfile,
             UserPreferences(this),
             { newMode ->
@@ -270,7 +270,8 @@ open class BrowserActivity : LocaleAwareAppCompatActivity(), ComponentCallbacks2
                 currentTheme = newMode
                 // Save the private mode state to both preferences for consistency
                 UserPreferences(this).lastKnownPrivate = newMode.isPrivate
-                com.prirai.android.nira.browser.profile.ProfileManager.getInstance(this).setPrivateMode(newMode.isPrivate)
+                com.prirai.android.nira.browser.profile.ProfileManager.getInstance(this)
+                    .setPrivateMode(newMode.isPrivate)
             },
             { newProfile ->
                 // Profile changed - save to ProfileManager
@@ -475,7 +476,7 @@ open class BrowserActivity : LocaleAwareAppCompatActivity(), ComponentCallbacks2
             components.store.state.tabs.find { it.id == id }
         }
         val isPrivateMode = selectedTab?.content?.private ?: browsingModeManager.mode.isPrivate
-        
+
         if ((!forceSearch && searchTermOrURL.isUrl()) || engine == null) {
             if (newTab) {
                 // Determine contextId for proper tab grouping and visibility
@@ -505,7 +506,7 @@ open class BrowserActivity : LocaleAwareAppCompatActivity(), ComponentCallbacks2
             }
         }
     }
-    
+
     /**
      * Get the appropriate contextId for new tabs based on browsing mode and current profile.
      * This ensures tabs are properly grouped and visible in tab bar/sheet.
@@ -611,7 +612,7 @@ open class BrowserActivity : LocaleAwareAppCompatActivity(), ComponentCallbacks2
         } else {
             userPrefs.statusBarBlurEnabled // Default is false on Android 11 and below
         }
-        
+
         // Apply blur effect if enabled
         if (shouldBlur) {
             // Use system blur effect on Android 12+ (API 31+)
@@ -645,23 +646,23 @@ open class BrowserActivity : LocaleAwareAppCompatActivity(), ComponentCallbacks2
             // Ensure system bars are always visible
             show(WindowInsetsCompat.Type.systemBars())
         }
-        
-        // Make navigation bar transparent and content flows behind it
-        window.navigationBarColor = android.graphics.Color.TRANSPARENT
-        
+
+        // Set navigation bar to match toolbar background
+        window.navigationBarColor = com.prirai.android.nira.theme.ThemeManager.getToolbarBackgroundColor(this)
+
         // Remove navigation bar contrast enforcement (removes the white pill/scrim on Android 10+)
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
             window.isNavigationBarContrastEnforced = false
         }
     }
-    
+
     private fun updateToolbarAndStatusBarTheme() {
         val selectedTab = components.store.state.tabs.find { it.id == components.store.state.selectedTabId }
         val isPrivate = selectedTab?.content?.private == true
-        
+
         // Update status bar
         com.prirai.android.nira.theme.ThemeManager.applySystemBarsTheme(this, isPrivate)
-        
+
         // Update toolbar background - use safe cast as it could be UnifiedToolbar or BrowserToolbar
         val toolbar = findViewById<View>(R.id.toolbar)
         val unifiedToolbar = toolbar as? com.prirai.android.nira.components.toolbar.unified.UnifiedToolbar
@@ -669,20 +670,17 @@ open class BrowserActivity : LocaleAwareAppCompatActivity(), ComponentCallbacks2
             val purpleColor = com.prirai.android.nira.theme.ColorConstants.PrivateMode.PURPLE
             unifiedToolbar?.setBackgroundColor(purpleColor) ?: toolbar?.setBackgroundColor(purpleColor)
         } else {
-            // Use Material 3 surface color
-            val typedValue = android.util.TypedValue()
-            theme.resolveAttribute(com.google.android.material.R.attr.colorSurface, typedValue, true)
-            unifiedToolbar?.setBackgroundColor(typedValue.data) ?: toolbar?.setBackgroundColor(typedValue.data)
+
         }
     }
-    
+
     private fun updateToolbarStyling() {
         val selectedTab = components.store.state.tabs.find { it.id == components.store.state.selectedTabId }
         val isPrivate = selectedTab?.content?.private == true
-        
+
         // Find the toolbar view
         val toolbar = findViewById<View>(R.id.toolbar)
-        
+
         if (isPrivate) {
             // Purple background for private mode
             val purpleColor = com.prirai.android.nira.theme.ColorConstants.PrivateMode.PURPLE
@@ -690,17 +688,14 @@ open class BrowserActivity : LocaleAwareAppCompatActivity(), ComponentCallbacks2
             window.statusBarColor = purpleColor
             window.navigationBarColor = android.graphics.Color.TRANSPARENT
         } else {
-            // Default theme color
-            val typedValue = android.util.TypedValue()
-            theme.resolveAttribute(com.google.android.material.R.attr.colorSurface, typedValue, true)
-            toolbar?.setBackgroundColor(typedValue.data)
-            
-            theme.resolveAttribute(com.google.android.material.R.attr.colorPrimaryVariant, typedValue, true)
-            window.statusBarColor = typedValue.data
-            window.navigationBarColor = android.graphics.Color.TRANSPARENT
+
+
+            // Use ThemeManager for status bar and navigation bar too
+            window.statusBarColor = com.prirai.android.nira.theme.ThemeManager.getToolbarBackgroundColor(this)
+            window.navigationBarColor = com.prirai.android.nira.theme.ThemeManager.getToolbarBackgroundColor(this)
         }
     }
-    
+
     /**
      * Enable true edge-to-edge display following Mozilla's approach.
      * Makes the app draw behind system bars (status bar and navigation bar).

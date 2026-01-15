@@ -976,8 +976,18 @@ class TabViewModel(
             try {
                 // Create a new tab with the group's context
                 val store = context.components.store
+                val prefs = com.prirai.android.nira.preferences.UserPreferences(context)
+                val homepageUrl = when (prefs.homepageType) {
+                    com.prirai.android.nira.settings.HomepageChoice.VIEW.ordinal -> "about:homepage"
+                    com.prirai.android.nira.settings.HomepageChoice.CUSTOM_PAGE.ordinal -> {
+                        val customUrl = prefs.customHomepageUrl
+                        if (customUrl.isNotEmpty()) customUrl else "about:homepage"
+                    }
+                    else -> "about:homepage"
+                }
+                
                 val newTabId = context.components.tabsUseCases.addTab(
-                    url = "about:blank",
+                    url = homepageUrl,
                     contextId = contextId,
                     selectTab = false
                 )
