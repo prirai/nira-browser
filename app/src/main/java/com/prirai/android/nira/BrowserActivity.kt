@@ -31,6 +31,7 @@ import com.prirai.android.nira.browser.SearchEngineList
 import com.prirai.android.nira.databinding.ActivityMainBinding
 import com.prirai.android.nira.ext.alreadyOnDestination
 import com.prirai.android.nira.ext.components
+import com.prirai.android.nira.ext.enableEdgeToEdgeMode
 import com.prirai.android.nira.ext.isAppInDarkTheme
 import com.prirai.android.nira.ext.nav
 import com.prirai.android.nira.preferences.UserPreferences
@@ -184,11 +185,11 @@ open class BrowserActivity : LocaleAwareAppCompatActivity(), ComponentCallbacks2
         // Setup auto-tagging of new tabs with current profile
         setupTabProfileTagging()
         
-        // Enable edge-to-edge display
-        enableEdgeToEdge()
+        // Enable edge-to-edge display with standardized approach
+        enableEdgeToEdgeMode()
         
-        // Setup window insets handling for edge-to-edge
-        setupEdgeToEdgeInsets(view)
+        // Root view handles insets without padding - fragments manage their own insets
+        ViewCompat.setOnApplyWindowInsetsListener(view) { _, insets -> insets }
 
         // OPTIMIZATION: Components that need lifecycle registration must be initialized in onCreate
         // These still trigger lazy component init but are required for proper lifecycle
@@ -704,47 +705,7 @@ open class BrowserActivity : LocaleAwareAppCompatActivity(), ComponentCallbacks2
      * Enable true edge-to-edge display following Mozilla's approach.
      * Makes the app draw behind system bars (status bar and navigation bar).
      */
-    private fun enableEdgeToEdge() {
-        // Enable edge-to-edge mode
-        WindowCompat.setDecorFitsSystemWindows(window, false)
 
-        val isDark = isAppInDarkTheme()
-
-        // Use semi-transparent scrim for status bar to ensure visibility on all devices
-        // This works better than opaque colors on devices like Xiaomi HyperOS
-        window.statusBarColor = if (isDark) {
-            android.graphics.Color.argb(230, 28, 27, 31) // 90% opaque Material 3 dark surface
-        } else {
-            android.graphics.Color.argb(230, 255, 251, 254) // 90% opaque Material 3 light surface
-        }
-
-        // Navigation bar remains transparent - content flows behind it
-        window.navigationBarColor = android.graphics.Color.TRANSPARENT
-
-        // Remove navigation bar contrast enforcement (removes the white scrim on Android 10+)
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
-            window.isNavigationBarContrastEnforced = false
-        }
-
-        // Setup system bar appearance
-        val insetsController = WindowCompat.getInsetsController(window, window.decorView)
-        insetsController.isAppearanceLightStatusBars = !isDark
-        insetsController.isAppearanceLightNavigationBars = !isDark
-    }
-    
-    /**
-     * Setup window insets for edge-to-edge without applying padding to root view.
-     * Individual components (toolbars) will handle their own insets.
-     */
-    private fun setupEdgeToEdgeInsets(view: View) {
-        ViewCompat.setOnApplyWindowInsetsListener(view) { v, insets ->
-            // Don't apply any padding to root view - let it truly be edge-to-edge
-            // Fragments and their toolbars will handle insets individually
-            
-            // Just return insets for children to consume
-            insets
-        }
-    }
 
     /**
      * Get current active profile ID

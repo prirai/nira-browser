@@ -1,10 +1,14 @@
 package com.prirai.android.nira.addons
 
 import android.os.Bundle
+import android.view.View
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.fragment.app.FragmentManager
 import com.prirai.android.nira.R
+import com.prirai.android.nira.ext.enableEdgeToEdgeMode
+import com.prirai.android.nira.ext.applyPersistentInsets
 import com.prirai.android.nira.theme.ThemeManager
 import com.prirai.android.nira.theme.applyCompleteTheme
 
@@ -20,8 +24,8 @@ class AddonsActivity : AppCompatActivity() {
         // Apply Material 3 theme after setContentView
         applyCompleteTheme(this)
         
-        // Enable edge-to-edge
-        WindowCompat.setDecorFitsSystemWindows(window, false)
+        // Enable edge-to-edge with standardized approach
+        enableEdgeToEdgeMode()
 
         val addonId = intent.getStringExtra("ADDON_ID")
         val addonUrl = intent.getStringExtra("ADDON_URL")
@@ -41,6 +45,9 @@ class AddonsActivity : AppCompatActivity() {
 
             fm.beginTransaction().replace(R.id.container, addonFragment).commit()
         }
+        
+        // Apply insets to container
+        findViewById<View>(R.id.container)?.applyPersistentInsets()
     }
 
     override fun onResume() {

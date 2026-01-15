@@ -25,6 +25,8 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updatePadding
 import com.prirai.android.nira.ext.isAppInDarkTheme
+import com.prirai.android.nira.ext.enableEdgeToEdgeMode
+import com.prirai.android.nira.ext.applyPersistentInsets
 import androidx.lifecycle.lifecycleScope
 
 
@@ -37,21 +39,11 @@ class HistoryActivity : AppCompatActivity(), SearchView.OnQueryTextListener {
         setContentView(R.layout.activity_history)
         if (supportActionBar != null) supportActionBar!!.setDisplayHomeAsUpEnabled(true); supportActionBar!!.elevation = 0f
 
-        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.history)) { v, insets ->
-            val bars = insets.getInsets(
-                WindowInsetsCompat.Type.systemBars()
-                        or WindowInsetsCompat.Type.displayCutout()
-            )
-            v.updatePadding(
-                left = bars.left,
-                top = bars.top,
-                right = bars.right,
-                bottom = bars.bottom
-            )
-            val insetsController = WindowCompat.getInsetsController(window, v)
-            insetsController.isAppearanceLightStatusBars = !isAppInDarkTheme()
-            WindowInsetsCompat.CONSUMED
-        }
+        // Enable edge-to-edge with standardized approach
+        enableEdgeToEdgeMode()
+        
+        // Apply insets to root view
+        findViewById<View>(R.id.history)?.applyPersistentInsets()
 
         val recyclerView = findViewById<RecyclerView>(R.id.list)
         val emptyView = findViewById<TextView>(R.id.emptyView)

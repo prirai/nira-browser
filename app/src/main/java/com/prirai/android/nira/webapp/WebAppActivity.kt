@@ -4,9 +4,11 @@ import android.Manifest
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
+import android.view.View
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.lifecycleScope
@@ -15,6 +17,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import mozilla.components.feature.pwa.ext.getWebAppManifest
+import com.prirai.android.nira.ext.enableEdgeToEdgeMode
+import com.prirai.android.nira.ext.applyPersistentInsets
 
 /**
  * Activity for Progressive Web Apps (PWAs) - Fullscreen, no browser chrome
@@ -150,29 +154,11 @@ class WebAppActivity : AppCompatActivity() {
     }
 
     private fun setupSystemBars() {
-        // Show system bars normally
-        WindowCompat.setDecorFitsSystemWindows(window, true)
-
-        // Set status bar color based on theme
-        val bgColor = com.prirai.android.nira.theme.ThemeManager.getBackgroundColor(this)
-        window.statusBarColor = bgColor
-
-        // Ensure system bars are visible and configure appearance
-        val windowInsetsController = WindowCompat.getInsetsController(window, window.decorView)
-        windowInsetsController?.apply {
-            show(WindowInsetsCompat.Type.systemBars())
-            // Set status bar icons to dark in light theme, light in dark theme
-            isAppearanceLightStatusBars = resources.configuration.uiMode and
-                    android.content.res.Configuration.UI_MODE_NIGHT_MASK !=
-                    android.content.res.Configuration.UI_MODE_NIGHT_YES
-            // Set navigation bar icons
-            isAppearanceLightNavigationBars = resources.configuration.uiMode and
-                    android.content.res.Configuration.UI_MODE_NIGHT_MASK !=
-                    android.content.res.Configuration.UI_MODE_NIGHT_YES
-        }
-
-        // Make navigation bar match status bar
-        window.navigationBarColor = window.statusBarColor
+        // Enable edge-to-edge with standardized approach
+        enableEdgeToEdgeMode()
+        
+        // Apply insets to webapp container
+        findViewById<View>(R.id.webapp_container)?.applyPersistentInsets()
     }
 
     /**
