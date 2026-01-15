@@ -92,8 +92,7 @@ class UnifiedWebAppFragment : Fragment() {
         suggestionsAdapter = PwaSuggestionsAdapter(
             lifecycleOwner = viewLifecycleOwner,
             context = requireContext(),
-            onInstallClick = { pwa -> installSuggestedPwa(pwa) },
-            onLearnMoreClick = { pwa -> showPwaDetails(pwa) }
+            onInstallClick = { pwa -> installSuggestedPwa(pwa) }
         )
 
         // Set initial layout manager for installed apps
@@ -242,8 +241,12 @@ class UnifiedWebAppFragment : Fragment() {
     private fun addShortcut(webApp: WebAppEntity) {
         viewLifecycleOwner.lifecycleScope.launch {
             try {
-                // Load icon if available
-                val icon = Components(requireContext()).webAppManager.loadIconFromFile(webApp.iconUrl)
+                // Load icon with comprehensive fallback strategy
+                val icon = withContext(Dispatchers.IO) {
+                    Components(requireContext()).webAppManager.loadIconFromFile(webApp.iconUrl)
+                        ?:
+                        com.prirai.android.nira.utils.FaviconLoader.loadFavicon(requireContext(), webApp.url)
+                }
 
                 // Create shortcut using WebAppInstaller
                 val context = requireContext()
@@ -321,34 +324,17 @@ class UnifiedWebAppFragment : Fragment() {
                     return@launch
                 }
 
-                // Load icon for installation using Mozilla Components BrowserIcons
+                // Load icon for installation using PWA-optimized loader
                 val icon: Bitmap? = withContext(Dispatchers.IO) {
                     try {
-                        // Try BrowserIcons first
-                        val iconRequest = mozilla.components.browser.icons.IconRequest(
-                            url = pwa.url,
-                            size = mozilla.components.browser.icons.IconRequest.Size.DEFAULT,
-                            resources = listOf(
-                                mozilla.components.browser.icons.IconRequest.Resource(
-                                    url = pwa.url,
-                                    type = mozilla.components.browser.icons.IconRequest.Resource.Type.FAVICON
-                                )
-                            )
+                        // Use PWA-optimized loader (Google service + fallbacks)
+                        com.prirai.android.nira.utils.FaviconLoader.loadFaviconForPwa(
+                            requireContext(),
+                            pwa.url,
+                            size = 128 // Higher res for installation
                         )
-                        val iconResult = Components(requireContext()).icons.loadIcon(iconRequest).await()
-                        if (iconResult.bitmap != null) {
-                            // Save to cache for future use
-                            com.prirai.android.nira.utils.FaviconCache.getInstance(requireContext())
-                                .saveFavicon(pwa.url, iconResult.bitmap)
-                            iconResult.bitmap
-                        } else {
-                            // Fallback to cache
-                            com.prirai.android.nira.utils.FaviconCache.getInstance(requireContext())
-                                .loadFavicon(pwa.url)
-                        }
                     } catch (e: Exception) {
-                        // Fallback to cache on error
-                        com.prirai.android.nira.utils.FaviconCache.getInstance(requireContext()).loadFavicon(pwa.url)
+                        null
                     }
                 }
 
@@ -422,16 +408,6 @@ class UnifiedWebAppFragment : Fragment() {
         startActivity(intent)
     }
 
-    private fun showPwaDetails(pwa: PwaSuggestionManager.PwaSuggestion) {
-        androidx.appcompat.app.AlertDialog.Builder(requireContext())
-            .setTitle(pwa.name)
-            .setMessage(pwa.description)
-            .setPositiveButton(R.string.install) { _, _ ->
-                installSuggestedPwa(pwa)
-            }
-            .setNegativeButton(android.R.string.ok, null)
-            .show()
-    }
 
     // New methods for profile association and cloning
     private fun showAssociateProfileDialog(webApp: WebAppEntity) {

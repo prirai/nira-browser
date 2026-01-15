@@ -918,31 +918,12 @@ private fun TabListItem(
                         interactionSource = remember { MutableInteractionSource() }
                     ) { onTabClick() }
             ) {
-                // Favicon
-                if (tab.content.icon != null) {
-                    Image(
-                        bitmap = tab.content.icon!!.asImageBitmap(),
-                        contentDescription = null,
-                        modifier = Modifier
-                            .size(24.dp)
-                            .clip(RoundedCornerShape(4.dp))
-                    )
-                } else {
-                    Box(
-                        modifier = Modifier
-                            .size(24.dp)
-                            .clip(RoundedCornerShape(4.dp))
-                            .background(MaterialTheme.colorScheme.surfaceVariant),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Language,
-                            contentDescription = null,
-                            modifier = Modifier.size(16.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
+                // Favicon - use centralized FaviconImage for consistent globe icon fallback
+                FaviconImage(
+                    tab = tab,
+                    size = 24.dp,
+                    modifier = Modifier.clip(RoundedCornerShape(4.dp))
+                )
 
                 // Title and URL
                 Column(

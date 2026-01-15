@@ -412,7 +412,7 @@ private fun TabPill(
                 .clickable { onTabClick(tab.id) }
                 .padding(horizontal = 12.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
         ) {
             // Favicon
             FaviconImage(
@@ -420,8 +420,6 @@ private fun TabPill(
                 size = 16.dp,
                 modifier = Modifier
             )
-
-            Spacer(modifier = Modifier.width(4.dp))
 
             // Title - use onSurface color when dragging for better contrast
             Text(

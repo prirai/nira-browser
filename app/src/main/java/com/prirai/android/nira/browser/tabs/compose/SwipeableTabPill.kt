@@ -193,8 +193,6 @@ fun SwipeableTabPill(
                     size = 14.dp
                 )
 
-                Spacer(modifier = Modifier.width(4.dp))
-
                 // Title
                 Text(
                     text = tab.content.title.ifEmpty { "New Tab" },

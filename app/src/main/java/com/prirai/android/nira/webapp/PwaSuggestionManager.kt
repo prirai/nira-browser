@@ -1,6 +1,7 @@
 package com.prirai.android.nira.webapp
 
 import android.content.Context
+import android.content.SharedPreferences
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 
@@ -12,6 +13,7 @@ import kotlinx.coroutines.withContext
 /**
  * Manager for PWA suggestions
  * Detects high-quality PWAs and recommends them to users
+ * Implements one-time favicon preloading with persistent flag
  */
 class PwaSuggestionManager(private val context: Context) {
     private val _suggestedPwas = MutableLiveData<List<PwaSuggestion>>()
@@ -19,6 +21,15 @@ class PwaSuggestionManager(private val context: Context) {
 
     private val _detectionState = MutableLiveData<DetectionState>()
     val detectionState: LiveData<DetectionState> = _detectionState
+
+    private val prefs: SharedPreferences = context.getSharedPreferences(
+        "pwa_suggestions_prefs",
+        Context.MODE_PRIVATE
+    )
+
+    companion object {
+        private const val PREF_ALL_ICONS_LOADED = "allIconsLoaded"
+    }
 
     sealed class DetectionState {
         object Idle : DetectionState()
@@ -258,6 +269,7 @@ class PwaSuggestionManager(private val context: Context) {
 
     /**
      * Get all suggested PWAs
+     * Triggers one-time favicon preloading on first launch
      */
     fun getAllSuggestedPwas() {
         _detectionState.value = DetectionState.Detecting
@@ -269,8 +281,11 @@ class PwaSuggestionManager(private val context: Context) {
                     _detectionState.value = DetectionState.SuggestionsReady(highQualityPwas.size)
                 }
 
-                // Preload favicons in background
-                preloadFavicons()
+                // Check if icons already loaded
+                if (!areAllIconsLoaded()) {
+                    // First launch - preload all favicons
+                    preloadAllFaviconsOnce()
+                }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
                     _detectionState.value = DetectionState.Error("Failed to load suggestions: ${e.message}")
@@ -280,7 +295,61 @@ class PwaSuggestionManager(private val context: Context) {
     }
 
     /**
-     * Preload favicons for all suggestions
+     * Check if all icons have been loaded (persistent flag)
+     */
+    private fun areAllIconsLoaded(): Boolean {
+        return prefs.getInt(PREF_ALL_ICONS_LOADED, 0) == 1
+    }
+
+    /**
+     * Mark all icons as loaded (persistent flag)
+     */
+    private fun markAllIconsLoaded() {
+        prefs.edit().putInt(PREF_ALL_ICONS_LOADED, 1).apply()
+    }
+
+    /**
+     * Reset the icons loaded flag (for testing or manual refresh)
+     */
+    fun resetIconsLoadedFlag() {
+        prefs.edit().putInt(PREF_ALL_ICONS_LOADED, 0).apply()
+    }
+
+    /**
+     * Preload all favicons once on first app launch
+     * This caches all icons to avoid network requests later
+     * Sets persistent flag when complete
+     * Uses Google favicon service for fast CDN loading
+     */
+    private suspend fun preloadAllFaviconsOnce() {
+        withContext(Dispatchers.IO) {
+            var successCount = 0
+            val total = highQualityPwas.size
+
+            highQualityPwas.forEach { pwa ->
+                try {
+                    // Use PWA-optimized loader with Google service for speed
+                    val icon = com.prirai.android.nira.utils.FaviconLoader.loadFaviconForPwa(
+                        context, 
+                        pwa.url,
+                        size = 64
+                    )
+                    if (icon != null) {
+                        successCount++
+                    }
+                } catch (e: Exception) {
+                    // Continue even if some icons fail to load
+                }
+            }
+
+            // Mark as complete even if some failed (prevents retry storms)
+            markAllIconsLoaded()
+        }
+    }
+
+    /**
+     * Preload favicons for all suggestions (old method - kept for manual refresh)
+     * Use preloadAllFaviconsOnce() for automatic one-time loading
      */
     private suspend fun preloadFavicons() {
         highQualityPwas.forEach { pwa ->
