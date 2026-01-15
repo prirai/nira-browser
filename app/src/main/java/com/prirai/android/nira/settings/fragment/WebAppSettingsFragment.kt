@@ -183,7 +183,7 @@ class WebAppSettingsFragment : Fragment() {
             try {
                 // Load icon if available
                 val icon = Components(requireContext()).webAppManager.loadIconFromFile(webApp.iconUrl)
-                
+
                 // Create shortcut
                 val context = requireContext()
                 val shortcut = androidx.core.content.pm.ShortcutInfoCompat.Builder(context, "webapp_${webApp.id}")
@@ -193,35 +193,27 @@ class WebAppSettingsFragment : Fragment() {
                         action = Intent.ACTION_VIEW
                         data = webApp.url.toUri()
                         putExtra(WebAppActivity.EXTRA_WEB_APP_URL, webApp.url)
-                        flags = Intent.FLAG_ACTIVITY_NEW_TASK or 
-                                Intent.FLAG_ACTIVITY_NEW_DOCUMENT or 
+                        flags = Intent.FLAG_ACTIVITY_NEW_TASK or
+                                Intent.FLAG_ACTIVITY_NEW_DOCUMENT or
                                 Intent.FLAG_ACTIVITY_MULTIPLE_TASK
                     })
                     .apply {
                         if (icon != null) {
                             setIcon(androidx.core.graphics.drawable.IconCompat.createWithBitmap(icon))
                         } else {
-                            setIcon(androidx.core.graphics.drawable.IconCompat.createWithResource(context, R.drawable.ic_language))
+                            setIcon(
+                                androidx.core.graphics.drawable.IconCompat.createWithResource(
+                                    context,
+                                    R.drawable.ic_language
+                                )
+                            )
                         }
                     }
                     .build()
 
                 // Request to pin the shortcut
-                val success = androidx.core.content.pm.ShortcutManagerCompat.requestPinShortcut(context, shortcut, null)
-                
-                if (success) {
-                    androidx.appcompat.app.AlertDialog.Builder(requireContext())
-                        .setTitle(R.string.shortcut_added)
-                        .setMessage(getString(R.string.shortcut_added_message, webApp.name))
-                        .setPositiveButton(android.R.string.ok, null)
-                        .show()
-                } else {
-                    androidx.appcompat.app.AlertDialog.Builder(requireContext())
-                        .setTitle(R.string.shortcut_failed)
-                        .setMessage(R.string.shortcut_failed_message)
-                        .setPositiveButton(android.R.string.ok, null)
-                        .show()
-                }
+                androidx.core.content.pm.ShortcutManagerCompat.requestPinShortcut(context, shortcut, null)
+                // Shortcut will be added by system - no need to show success dialog
             } catch (e: Exception) {
                 androidx.appcompat.app.AlertDialog.Builder(requireContext())
                     .setTitle(R.string.shortcut_failed)

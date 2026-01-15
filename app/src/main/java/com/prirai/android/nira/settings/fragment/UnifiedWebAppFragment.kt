@@ -273,21 +273,8 @@ class UnifiedWebAppFragment : Fragment() {
                     .build()
 
                 // Request to pin the shortcut
-                val success = androidx.core.content.pm.ShortcutManagerCompat.requestPinShortcut(context, shortcut, null)
-
-                if (success) {
-                    androidx.appcompat.app.AlertDialog.Builder(requireContext())
-                        .setTitle(R.string.shortcut_added)
-                        .setMessage(getString(R.string.shortcut_added_message, webApp.name))
-                        .setPositiveButton(android.R.string.ok, null)
-                        .show()
-                } else {
-                    androidx.appcompat.app.AlertDialog.Builder(requireContext())
-                        .setTitle(R.string.shortcut_failed)
-                        .setMessage(R.string.shortcut_failed_message)
-                        .setPositiveButton(android.R.string.ok, null)
-                        .show()
-                }
+                androidx.core.content.pm.ShortcutManagerCompat.requestPinShortcut(context, shortcut, null)
+                // Shortcut will be added by system - no need to show success dialog
             } catch (e: Exception) {
                 androidx.appcompat.app.AlertDialog.Builder(requireContext())
                     .setTitle(R.string.shortcut_failed)
