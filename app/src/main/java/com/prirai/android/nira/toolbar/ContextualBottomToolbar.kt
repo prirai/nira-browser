@@ -53,11 +53,14 @@ class ContextualBottomToolbar @JvmOverloads constructor(
         // Inflate the layout - this merges the XML's LinearLayout into this view
         LayoutInflater.from(context).inflate(R.layout.contextual_bottom_toolbar, this, true)
         
-        // Apply Material 3 surface color with tonal elevation overlay (3dp) after inflation
-        val elevationDp = 3f * resources.displayMetrics.density
-        val elevatedColor = com.google.android.material.elevation.ElevationOverlayProvider(context)
-            .compositeOverlayWithThemeSurfaceColorIfNeeded(elevationDp)
-        setBackgroundColor(elevatedColor)
+        // Use unified ThemeManager helper (supports AMOLED + Material 3)
+        setBackgroundColor(
+            com.prirai.android.nira.theme.ThemeManager.getToolbarBackgroundColor(
+                context, 
+                useElevation = true, 
+                elevationDp = 3f
+            )
+        )
         
         // Remove any elevation/shadow that creates gradient effect
         elevation = 0f

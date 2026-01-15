@@ -46,11 +46,14 @@ class ModernToolbarSystem @JvmOverloads constructor(
         clipToPadding = false
         clipChildren = false
         
-        // Use Material 3 surface color with tonal elevation overlay (3dp)
-        val elevationDp = 3f * resources.displayMetrics.density
-        val elevatedColor = com.google.android.material.elevation.ElevationOverlayProvider(context)
-            .compositeOverlayWithThemeSurfaceColorIfNeeded(elevationDp)
-        setBackgroundColor(elevatedColor)
+        // Use unified ThemeManager helper (supports AMOLED + Material 3)
+        setBackgroundColor(
+            com.prirai.android.nira.theme.ThemeManager.getToolbarBackgroundColor(
+                context, 
+                useElevation = true, 
+                elevationDp = 3f
+            )
+        )
     }
 
     fun addComponent(component: View, type: ComponentType) {
