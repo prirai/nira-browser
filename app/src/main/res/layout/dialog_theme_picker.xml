@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Material 3 Theme Picker Dialog Layout -->
+<!-- iOS-style Theme Picker Dialog Layout with Visual Previews -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
@@ -15,10 +15,10 @@
         android:checkable="true"
         android:clickable="true"
         android:focusable="true"
-        app:cardCornerRadius="16dp"
+        app:cardCornerRadius="12dp"
         app:cardElevation="0dp"
         app:strokeColor="?attr/colorOutline"
-        app:strokeWidth="2dp"
+        app:strokeWidth="1dp"
         app:checkedIconTint="?attr/colorPrimary"
         app:checkedIcon="@drawable/ic_check_circle"
         app:checkedIconSize="24dp"
@@ -31,12 +31,27 @@
             android:padding="16dp"
             android:gravity="center_vertical">
 
-            <ImageView
-                android:layout_width="48dp"
-                android:layout_height="48dp"
-                android:src="@drawable/ic_light_mode"
-                android:contentDescription="@string/light_mode"
-                app:tint="?attr/colorPrimary" />
+            <!-- Visual Preview -->
+            <FrameLayout
+                android:layout_width="56dp"
+                android:layout_height="56dp"
+                android:background="@android:color/white"
+                android:elevation="2dp">
+                
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="4dp"
+                    android:background="#E0E0E0"/>
+                
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center"
+                    android:text="Aa"
+                    android:textSize="20sp"
+                    android:textStyle="bold"
+                    android:textColor="#000000"/>
+            </FrameLayout>
 
             <LinearLayout
                 android:layout_width="0dp"
@@ -55,7 +70,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
+                    android:layout_marginTop="2dp"
                     android:text="@string/light_mode_description"
                     android:textAppearance="@style/TextAppearance.Material3.BodySmall"
                     android:textColor="?attr/colorOnSurfaceVariant" />
@@ -74,10 +89,10 @@
         android:checkable="true"
         android:clickable="true"
         android:focusable="true"
-        app:cardCornerRadius="16dp"
+        app:cardCornerRadius="12dp"
         app:cardElevation="0dp"
         app:strokeColor="?attr/colorOutline"
-        app:strokeWidth="2dp"
+        app:strokeWidth="1dp"
         app:checkedIconTint="?attr/colorPrimary"
         app:checkedIcon="@drawable/ic_check_circle"
         app:checkedIconSize="24dp"
@@ -90,12 +105,27 @@
             android:padding="16dp"
             android:gravity="center_vertical">
 
-            <ImageView
-                android:layout_width="48dp"
-                android:layout_height="48dp"
-                android:src="@drawable/ic_dark_mode"
-                android:contentDescription="@string/dark_mode"
-                app:tint="?attr/colorPrimary" />
+            <!-- Visual Preview -->
+            <FrameLayout
+                android:layout_width="56dp"
+                android:layout_height="56dp"
+                android:background="#1C1B1F"
+                android:elevation="2dp">
+                
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="4dp"
+                    android:background="#2B2930"/>
+                
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center"
+                    android:text="Aa"
+                    android:textSize="20sp"
+                    android:textStyle="bold"
+                    android:textColor="#E6E1E5"/>
+            </FrameLayout>
 
             <LinearLayout
                 android:layout_width="0dp"
@@ -114,7 +144,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
+                    android:layout_marginTop="2dp"
                     android:text="@string/dark_mode_description"
                     android:textAppearance="@style/TextAppearance.Material3.BodySmall"
                     android:textColor="?attr/colorOnSurfaceVariant" />
@@ -132,10 +162,10 @@
         android:checkable="true"
         android:clickable="true"
         android:focusable="true"
-        app:cardCornerRadius="16dp"
+        app:cardCornerRadius="12dp"
         app:cardElevation="0dp"
         app:strokeColor="?attr/colorOutline"
-        app:strokeWidth="2dp"
+        app:strokeWidth="1dp"
         app:checkedIconTint="?attr/colorPrimary"
         app:checkedIcon="@drawable/ic_check_circle"
         app:checkedIconSize="24dp"
@@ -148,12 +178,52 @@
             android:padding="16dp"
             android:gravity="center_vertical">
 
-            <ImageView
-                android:layout_width="48dp"
-                android:layout_height="48dp"
-                android:src="@drawable/ic_auto_mode"
-                android:contentDescription="@string/system_default"
-                app:tint="?attr/colorPrimary" />
+            <!-- Visual Preview - Split Light/Dark -->
+            <FrameLayout
+                android:layout_width="56dp"
+                android:layout_height="56dp"
+                android:elevation="2dp">
+                
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:orientation="horizontal">
+                    
+                    <!-- Light half -->
+                    <FrameLayout
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
+                        android:layout_weight="1"
+                        android:background="@android:color/white">
+                        
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_gravity="center"
+                            android:text="A"
+                            android:textSize="18sp"
+                            android:textStyle="bold"
+                            android:textColor="#000000"/>
+                    </FrameLayout>
+                    
+                    <!-- Dark half -->
+                    <FrameLayout
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
+                        android:layout_weight="1"
+                        android:background="#1C1B1F">
+                        
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_gravity="center"
+                            android:text="a"
+                            android:textSize="18sp"
+                            android:textStyle="bold"
+                            android:textColor="#E6E1E5"/>
+                    </FrameLayout>
+                </LinearLayout>
+            </FrameLayout>
 
             <LinearLayout
                 android:layout_width="0dp"
@@ -172,7 +242,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
+                    android:layout_marginTop="2dp"
                     android:text="@string/system_default_description"
                     android:textAppearance="@style/TextAppearance.Material3.BodySmall"
                     android:textColor="?attr/colorOnSurfaceVariant" />

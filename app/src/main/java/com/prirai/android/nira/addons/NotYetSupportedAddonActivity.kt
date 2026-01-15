@@ -17,6 +17,8 @@ import com.prirai.android.nira.ext.components
 import com.prirai.android.nira.ext.getParcelableArrayListExtraCompat
 import com.prirai.android.nira.ext.getParcelableArrayListCompat
 import com.prirai.android.nira.theme.applyCompleteTheme
+import com.prirai.android.nira.ext.enableEdgeToEdgeMode
+import com.prirai.android.nira.ext.applyPersistentInsets
 
 // Activity for managing unsupported add-ons, or add-ons that were installed but are no longer available.
 
@@ -27,9 +29,14 @@ class NotYetSupportedAddonActivity : AppCompatActivity() {
         setContentView(R.layout.activity_base)
         
         applyCompleteTheme(this)
-        androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window, false)
+        
+        // Enable edge-to-edge with standardized approach
+        enableEdgeToEdgeMode()
 
         val addons = requireNotNull(intent.getParcelableArrayListExtraCompat<Addon>("add_ons"))
+
+        // Apply insets to container
+        findViewById<View>(R.id.container)?.applyPersistentInsets()
 
         supportFragmentManager
             .beginTransaction()

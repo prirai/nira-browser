@@ -16,6 +16,8 @@ import com.prirai.android.nira.R
 import com.prirai.android.nira.ext.components
 import com.prirai.android.nira.ext.getParcelableExtraCompat
 import com.prirai.android.nira.theme.applyCompleteTheme
+import com.prirai.android.nira.ext.enableEdgeToEdgeMode
+import com.prirai.android.nira.ext.applyPersistentInsets
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -35,25 +37,14 @@ class InstalledAddonDetailsActivity : AppCompatActivity() {
         setContentView(R.layout.activity_installed_add_on_details)
         
         applyCompleteTheme(this)
-        WindowCompat.setDecorFitsSystemWindows(window, false)
+        
+        // Enable edge-to-edge with standardized approach
+        enableEdgeToEdgeMode()
+        
         val addon = requireNotNull(intent.getParcelableExtraCompat<Addon>("add_on"))
 
-        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.addon_details)) { v, insets ->
-            val bars = insets.getInsets(
-                WindowInsetsCompat.Type.systemBars()
-                        or WindowInsetsCompat.Type.displayCutout()
-            )
-            v.updatePadding(
-                left = bars.left,
-                top = bars.top,
-                right = bars.right,
-                bottom = bars.bottom,
-            )
-            val insetsController = WindowCompat.getInsetsController(window, v)
-            val isDark = com.prirai.android.nira.theme.ThemeManager.isDarkMode(this)
-            insetsController.isAppearanceLightStatusBars = !isDark
-            WindowInsetsCompat.CONSUMED
-        }
+        // Apply insets to root view
+        findViewById<View>(R.id.addon_details)?.applyPersistentInsets()
 
         supportActionBar?.elevation = 0f
 

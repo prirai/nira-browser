@@ -33,6 +33,8 @@ import mozilla.components.support.base.feature.ViewBoundFeatureWrapper
 import java.text.DateFormat
 import java.text.SimpleDateFormat
 import java.util.Locale
+import com.prirai.android.nira.ext.enableEdgeToEdgeMode
+import com.prirai.android.nira.ext.applyPersistentInsets
 
 // An activity to show the details of an add-on.
 class AddonDetailsActivity : AppCompatActivity() {
@@ -49,24 +51,12 @@ class AddonDetailsActivity : AppCompatActivity() {
         setContentView(R.layout.activity_add_on_details)
         
         applyCompleteTheme(this)
-        WindowCompat.setDecorFitsSystemWindows(window, false)
-
-        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.addon_details)) { v, insets ->
-            val bars = insets.getInsets(
-                WindowInsetsCompat.Type.systemBars()
-                        or WindowInsetsCompat.Type.displayCutout()
-            )
-            v.updatePadding(
-                left = bars.left,
-                top = bars.top,
-                right = bars.right,
-                bottom = bars.bottom
-            )
-            val insetsController = WindowCompat.getInsetsController(window, v)
-            val isDark = com.prirai.android.nira.theme.ThemeManager.isDarkMode(this)
-            insetsController.isAppearanceLightStatusBars = !isDark
-            WindowInsetsCompat.CONSUMED
-        }
+        
+        // Enable edge-to-edge with standardized approach
+        enableEdgeToEdgeMode()
+        
+        // Apply insets to root view
+        findViewById<View>(R.id.addon_details)?.applyPersistentInsets()
 
         supportActionBar?.elevation = 0f
 

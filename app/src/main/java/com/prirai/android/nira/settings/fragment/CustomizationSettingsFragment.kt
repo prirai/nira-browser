@@ -76,9 +76,12 @@ class CustomizationSettingsFragment : BaseSettingsFragment() {
             isChecked = UserPreferences(requireContext()).amoledMode,
             onCheckChange = {
                 UserPreferences(requireContext()).amoledMode = it
-                // Apply AMOLED mode immediately by updating system bars and recreating
-                com.prirai.android.nira.theme.ThemeManager.applySystemBarsTheme(requireActivity(), false)
-                requireActivity().recreate()
+                // Show toast to restart app
+                Toast.makeText(
+                    requireContext(),
+                    getString(R.string.app_restart),
+                    Toast.LENGTH_LONG
+                ).show()
             }
         )
 

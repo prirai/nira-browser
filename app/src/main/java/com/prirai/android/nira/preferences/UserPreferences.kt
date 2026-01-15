@@ -36,6 +36,20 @@ class UserPreferences(appContext: Context) : mozilla.components.support.ktx.andr
     var toolbarPosition by intPreference(TOOLBAR_POSITION, ToolbarPosition.BOTTOM.ordinal)
     var homepageType by intPreference(HOMEPAGE_TYPE, HomepageChoice.VIEW.ordinal)
     var customHomepageUrl by stringPreference(HOMEPAGE_URL, "")
+    
+    /**
+     * Get the resolved homepage URL based on user preferences.
+     * Returns the appropriate URL for creating new tabs.
+     */
+    fun getHomepageUrl(): String {
+        return when (homepageType) {
+            com.prirai.android.nira.settings.HomepageChoice.VIEW.ordinal -> "about:homepage"
+            com.prirai.android.nira.settings.HomepageChoice.CUSTOM_PAGE.ordinal -> {
+                if (customHomepageUrl.isNotEmpty()) customHomepageUrl else "about:homepage"
+            }
+            else -> "about:homepage"
+        }
+    }
     var appThemeChoice by intPreference(APP_THEME_CHOICE, ThemeChoice.SYSTEM.ordinal)
     var webThemeChoice by intPreference(WEB_THEME_CHOICE, ThemeChoice.SYSTEM.ordinal)
     var homepageBackgroundChoice by intPreference(HOMEPAGE_BACKGROUND_CHOICE, HomepageBackgroundChoice.NONE.ordinal)

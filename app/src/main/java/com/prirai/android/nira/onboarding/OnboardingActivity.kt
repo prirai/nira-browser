@@ -8,6 +8,7 @@ import com.google.android.material.button.MaterialButton
 import com.prirai.android.nira.BrowserActivity
 import com.prirai.android.nira.R
 import com.prirai.android.nira.preferences.UserPreferences
+import com.prirai.android.nira.ext.enableEdgeToEdgeMode
 
 class OnboardingActivity : AppCompatActivity() {
 
@@ -23,6 +24,9 @@ class OnboardingActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_onboarding)
+        
+        // Enable edge-to-edge with standardized approach
+        enableEdgeToEdgeMode()
         
         userPreferences = UserPreferences(this)
         

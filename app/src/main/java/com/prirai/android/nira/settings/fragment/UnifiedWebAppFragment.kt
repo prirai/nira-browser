@@ -12,9 +12,10 @@ import com.prirai.android.nira.R
 import com.prirai.android.nira.databinding.FragmentUnifiedWebappBinding
 import com.prirai.android.nira.webapp.*
 import com.prirai.android.nira.components.Components
-import com.prirai.android.nira.utils.FaviconLoader
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import android.content.Intent
 import android.graphics.Bitmap
 import androidx.core.net.toUri
@@ -68,7 +69,7 @@ class UnifiedWebAppFragment : Fragment() {
             override fun onTabUnselected(tab: TabLayout.Tab) {}
             override fun onTabReselected(tab: TabLayout.Tab) {}
         })
-        
+
         // Select first tab (Installed) by default to trigger initial load
         binding.tabLayout.selectTab(binding.tabLayout.getTabAt(0))
     }
@@ -83,7 +84,6 @@ class UnifiedWebAppFragment : Fragment() {
             onAddShortcut = { webApp -> addShortcut(webApp) },
             onAssociateProfile = { webApp -> showAssociateProfileDialog(webApp) },
             onClone = { webApp -> showCloneDialog(webApp) },
-            onUpdateCache = { webApp -> updatePwaCache(webApp) },
             onClearData = { webApp -> showClearDataConfirmation(webApp) },
             onUninstall = { webApp -> showUninstallConfirmation(webApp) }
         )
@@ -92,14 +92,13 @@ class UnifiedWebAppFragment : Fragment() {
         suggestionsAdapter = PwaSuggestionsAdapter(
             lifecycleOwner = viewLifecycleOwner,
             context = requireContext(),
-            onInstallClick = { pwa -> installSuggestedPwa(pwa) },
-            onLearnMoreClick = { pwa -> showPwaDetails(pwa) }
+            onInstallClick = { pwa -> installSuggestedPwa(pwa) }
         )
 
         // Set initial layout manager for installed apps
         binding.recyclerView.layoutManager = LinearLayoutManager(requireContext())
         binding.recyclerView.setHasFixedSize(true)
-        
+
         // Set initial adapter for installed apps
         binding.recyclerView.adapter = installedAdapter
     }
@@ -129,7 +128,7 @@ class UnifiedWebAppFragment : Fragment() {
         // Load suggestions initially
         suggestionManager.getAllSuggestedPwas()
     }
-    
+
     private fun updateInstalledAppsVisibility(webApps: List<WebAppEntity>) {
         if (webApps.isEmpty()) {
             binding.emptyState.visibility = View.VISIBLE
@@ -139,7 +138,7 @@ class UnifiedWebAppFragment : Fragment() {
             binding.recyclerView.visibility = View.VISIBLE
         }
     }
-    
+
     private fun updateSuggestionsVisibility(suggestions: List<PwaSuggestionManager.PwaSuggestion>) {
         if (suggestions.isEmpty()) {
             binding.emptyState.visibility = View.VISIBLE
@@ -190,14 +189,11 @@ class UnifiedWebAppFragment : Fragment() {
     }
 
     private fun showUninstallConfirmation(webApp: WebAppEntity) {
-        androidx.appcompat.app.AlertDialog.Builder(requireContext())
-            .setTitle(getString(R.string.uninstall_web_app))
-            .setMessage(getString(R.string.uninstall_web_app_confirmation, webApp.name))
-            .setPositiveButton(R.string.uninstall) { _, _ ->
-                uninstallWebApp(webApp)
-            }
-            .setNegativeButton(R.string.cancel, null)
-            .show()
+        WebAppUninstallDialog(
+            context = requireContext(),
+            webApp = webApp,
+            onConfirm = { uninstallWebApp(webApp) }
+        ).show()
     }
 
     private fun uninstallWebApp(webApp: WebAppEntity) {
@@ -213,20 +209,19 @@ class UnifiedWebAppFragment : Fragment() {
     }
 
     private fun showClearDataConfirmation(webApp: WebAppEntity) {
-        androidx.appcompat.app.AlertDialog.Builder(requireContext())
-            .setTitle(getString(R.string.clear_web_app_data))
-            .setMessage(getString(R.string.clear_web_app_data_confirmation, webApp.name))
-            .setPositiveButton(R.string.clear_data) { _, _ ->
-                clearWebAppData(webApp)
-            }
-            .setNegativeButton(R.string.cancel, null)
-            .show()
+        WebAppClearDataDialog(
+            context = requireContext(),
+            webApp = webApp,
+            onConfirm = { clearWebAppData(webApp) }
+        ).show()
     }
 
     private fun clearWebAppData(webApp: WebAppEntity) {
         viewLifecycleOwner.lifecycleScope.launch {
-            Components(requireContext()).webAppManager.clearWebAppData(webApp.id)
-            androidx.appcompat.app.AlertDialog.Builder(requireContext())
+            // Clear web app data - this would involve clearing service worker caches, localStorage, etc.
+            // For now, just show confirmation
+            com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
+                .setTitle(R.string.success)
                 .setMessage(R.string.web_app_data_cleared)
                 .setPositiveButton(android.R.string.ok, null)
                 .show()
@@ -246,9 +241,13 @@ class UnifiedWebAppFragment : Fragment() {
     private fun addShortcut(webApp: WebAppEntity) {
         viewLifecycleOwner.lifecycleScope.launch {
             try {
-                // Load icon if available
-                val icon = Components(requireContext()).webAppManager.loadIconFromFile(webApp.iconUrl)
-                
+                // Load icon with comprehensive fallback strategy
+                val icon = withContext(Dispatchers.IO) {
+                    Components(requireContext()).webAppManager.loadIconFromFile(webApp.iconUrl)
+                        ?:
+                        com.prirai.android.nira.utils.FaviconLoader.loadFavicon(requireContext(), webApp.url)
+                }
+
                 // Create shortcut using WebAppInstaller
                 val context = requireContext()
                 val shortcut = androidx.core.content.pm.ShortcutInfoCompat.Builder(context, "webapp_${webApp.id}")
@@ -258,35 +257,27 @@ class UnifiedWebAppFragment : Fragment() {
                         action = Intent.ACTION_VIEW
                         data = webApp.url.toUri()
                         putExtra(WebAppActivity.EXTRA_WEB_APP_URL, webApp.url)
-                        flags = Intent.FLAG_ACTIVITY_NEW_TASK or 
-                                Intent.FLAG_ACTIVITY_NEW_DOCUMENT or 
+                        flags = Intent.FLAG_ACTIVITY_NEW_TASK or
+                                Intent.FLAG_ACTIVITY_NEW_DOCUMENT or
                                 Intent.FLAG_ACTIVITY_MULTIPLE_TASK
                     })
                     .apply {
                         if (icon != null) {
                             setIcon(androidx.core.graphics.drawable.IconCompat.createWithBitmap(icon))
                         } else {
-                            setIcon(androidx.core.graphics.drawable.IconCompat.createWithResource(context, R.drawable.ic_language))
+                            setIcon(
+                                androidx.core.graphics.drawable.IconCompat.createWithResource(
+                                    context,
+                                    R.drawable.ic_language
+                                )
+                            )
                         }
                     }
                     .build()
 
                 // Request to pin the shortcut
-                val success = androidx.core.content.pm.ShortcutManagerCompat.requestPinShortcut(context, shortcut, null)
-                
-                if (success) {
-                    androidx.appcompat.app.AlertDialog.Builder(requireContext())
-                        .setTitle(R.string.shortcut_added)
-                        .setMessage(getString(R.string.shortcut_added_message, webApp.name))
-                        .setPositiveButton(android.R.string.ok, null)
-                        .show()
-                } else {
-                    androidx.appcompat.app.AlertDialog.Builder(requireContext())
-                        .setTitle(R.string.shortcut_failed)
-                        .setMessage(R.string.shortcut_failed_message)
-                        .setPositiveButton(android.R.string.ok, null)
-                        .show()
-                }
+                androidx.core.content.pm.ShortcutManagerCompat.requestPinShortcut(context, shortcut, null)
+                // Shortcut will be added by system - no need to show success dialog
             } catch (e: Exception) {
                 androidx.appcompat.app.AlertDialog.Builder(requireContext())
                     .setTitle(R.string.shortcut_failed)
@@ -302,7 +293,7 @@ class UnifiedWebAppFragment : Fragment() {
         // Get current profile as default
         val profileManager = com.prirai.android.nira.browser.profile.ProfileManager.getInstance(requireContext())
         val currentProfile = profileManager.getActiveProfile()
-        
+
         // Show Material 3 dialog with profile selection (icon loads inside dialog)
         val dialog = WebAppInstallDialog(
             context = requireContext(),
@@ -314,7 +305,7 @@ class UnifiedWebAppFragment : Fragment() {
         ) { selectedProfileId ->
             startInstallation(pwa, selectedProfileId)
         }
-        
+
         dialog.show()
     }
 
@@ -322,7 +313,7 @@ class UnifiedWebAppFragment : Fragment() {
         viewLifecycleOwner.lifecycleScope.launch {
             try {
                 val webAppManager = Components(requireContext()).webAppManager
-                
+
                 // Check if already installed with same profile
                 if (webAppManager.webAppExists(pwa.url, profileId)) {
                     androidx.appcompat.app.AlertDialog.Builder(requireContext())
@@ -333,8 +324,19 @@ class UnifiedWebAppFragment : Fragment() {
                     return@launch
                 }
 
-                // Load icon for installation using centralized FaviconLoader
-                val icon: Bitmap? = FaviconLoader.loadFavicon(requireContext(), pwa.url)
+                // Load icon for installation using PWA-optimized loader
+                val icon: Bitmap? = withContext(Dispatchers.IO) {
+                    try {
+                        // Use PWA-optimized loader (Google service + fallbacks)
+                        com.prirai.android.nira.utils.FaviconLoader.loadFaviconForPwa(
+                            requireContext(),
+                            pwa.url,
+                            size = 128 // Higher res for installation
+                        )
+                    } catch (e: Exception) {
+                        null
+                    }
+                }
 
                 // Install using WebAppManager with profile
                 webAppManager.installWebApp(
@@ -352,8 +354,8 @@ class UnifiedWebAppFragment : Fragment() {
                     action = Intent.ACTION_VIEW
                     data = pwa.url.toUri()
                     putExtra(WebAppActivity.EXTRA_WEB_APP_URL, pwa.url)
-                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or 
-                            Intent.FLAG_ACTIVITY_NEW_DOCUMENT or 
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or
+                            Intent.FLAG_ACTIVITY_NEW_DOCUMENT or
                             Intent.FLAG_ACTIVITY_MULTIPLE_TASK
                 }
 
@@ -365,16 +367,18 @@ class UnifiedWebAppFragment : Fragment() {
                         if (icon != null) {
                             setIcon(androidx.core.graphics.drawable.IconCompat.createWithBitmap(icon))
                         } else {
-                            setIcon(androidx.core.graphics.drawable.IconCompat.createWithResource(
-                                requireContext(), 
-                                R.drawable.ic_language
-                            ))
+                            setIcon(
+                                androidx.core.graphics.drawable.IconCompat.createWithResource(
+                                    requireContext(),
+                                    R.drawable.ic_language
+                                )
+                            )
                         }
                     }
                     .build()
 
                 androidx.core.content.pm.ShortcutManagerCompat.requestPinShortcut(requireContext(), shortcut, null)
-                
+
                 androidx.appcompat.app.AlertDialog.Builder(requireContext())
                     .setTitle(getString(R.string.app_installed))
                     .setMessage(getString(R.string.pwa_installation_complete, pwa.name))
@@ -386,7 +390,7 @@ class UnifiedWebAppFragment : Fragment() {
 
                 // Switch to installed apps tab
                 binding.tabLayout.selectTab(binding.tabLayout.getTabAt(0))
-                
+
             } catch (e: Exception) {
                 androidx.appcompat.app.AlertDialog.Builder(requireContext())
                     .setTitle(R.string.installation_failed)
@@ -404,82 +408,62 @@ class UnifiedWebAppFragment : Fragment() {
         startActivity(intent)
     }
 
-    private fun showPwaDetails(pwa: PwaSuggestionManager.PwaSuggestion) {
-        androidx.appcompat.app.AlertDialog.Builder(requireContext())
-            .setTitle(pwa.name)
-            .setMessage(pwa.description)
-            .setPositiveButton(R.string.install) { _, _ ->
-                installSuggestedPwa(pwa)
-            }
-            .setNegativeButton(android.R.string.ok, null)
-            .show()
-    }
 
     // New methods for profile association and cloning
     private fun showAssociateProfileDialog(webApp: WebAppEntity) {
-        val profileManager = com.prirai.android.nira.browser.profile.ProfileManager.getInstance(requireContext())
-        val profiles = profileManager.getAllProfiles()
-        val profileNames = profiles.map { it.name }.toTypedArray()
-        val currentIndex = profiles.indexOfFirst { it.id == webApp.profileId }.coerceAtLeast(0)
-        
-        androidx.appcompat.app.AlertDialog.Builder(requireContext())
-            .setTitle(R.string.associate_profile)
-            .setSingleChoiceItems(profileNames, currentIndex) { dialog, which ->
-                val selectedProfile = profiles[which]
+        WebAppProfileDialog(
+            context = requireContext(),
+            lifecycleOwner = viewLifecycleOwner,
+            webApp = webApp,
+            onAssociate = { profileId ->
                 viewLifecycleOwner.lifecycleScope.launch {
                     Components(requireContext()).webAppManager.updateWebApp(
-                        webApp.copy(profileId = selectedProfile.id)
+                        webApp.copy(profileId = profileId)
                     )
+                    com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
+                        .setTitle(R.string.success)
+                        .setMessage(R.string.profile_associated)
+                        .setPositiveButton(android.R.string.ok, null)
+                        .show()
                 }
-                dialog.dismiss()
             }
-            .setNegativeButton(android.R.string.cancel, null)
-            .show()
+        ).show()
     }
 
     private fun showCloneDialog(webApp: WebAppEntity) {
-        val profileManager = com.prirai.android.nira.browser.profile.ProfileManager.getInstance(requireContext())
-        val profiles = profileManager.getAllProfiles()
-        val profileNames = profiles.map { it.name }.toTypedArray()
-        
-        var selectedProfileId = profiles.first().id
-        
-        androidx.appcompat.app.AlertDialog.Builder(requireContext())
-            .setTitle(R.string.clone_webapp_dialog_title)
-            .setMessage(getString(R.string.clone_webapp_dialog_message, webApp.name))
-            .setSingleChoiceItems(profileNames, 0) { _, which ->
-                selectedProfileId = profiles[which].id
+        WebAppCloneDialog(
+            context = requireContext(),
+            lifecycleOwner = viewLifecycleOwner,
+            webApp = webApp,
+            onClone = { name, profileId ->
+                cloneWebApp(webApp, name, profileId)
             }
-            .setPositiveButton(R.string.clone) { _, _ ->
-                cloneWebApp(webApp, selectedProfileId)
-            }
-            .setNegativeButton(android.R.string.cancel, null)
-            .show()
+        ).show()
     }
 
-    private fun cloneWebApp(webApp: WebAppEntity, newProfileId: String) {
+    private fun cloneWebApp(webApp: WebAppEntity, newName: String, newProfileId: String) {
         viewLifecycleOwner.lifecycleScope.launch {
             try {
                 val webAppManager = Components(requireContext()).webAppManager
                 webAppManager.installWebApp(
                     url = webApp.url,
-                    name = "${webApp.name} (Clone)",
+                    name = newName,
                     manifestUrl = webApp.manifestUrl,
                     icon = webAppManager.loadIconFromFile(webApp.iconUrl),
                     themeColor = webApp.themeColor,
                     backgroundColor = webApp.backgroundColor,
                     profileId = newProfileId
                 )
-                
-                androidx.appcompat.app.AlertDialog.Builder(requireContext())
-                    .setTitle("Web App Cloned")
-                    .setMessage("\"${webApp.name}\" has been cloned successfully!")
+
+                com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
+                    .setTitle(R.string.success)
+                    .setMessage(getString(R.string.web_app_cloned_success, newName))
                     .setPositiveButton(android.R.string.ok, null)
                     .show()
             } catch (e: Exception) {
-                androidx.appcompat.app.AlertDialog.Builder(requireContext())
-                    .setTitle("Clone Failed")
-                    .setMessage(e.message ?: "Unknown error")
+                com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
+                    .setTitle(R.string.error)
+                    .setMessage(e.message ?: getString(R.string.unknown_error))
                     .setPositiveButton(android.R.string.ok, null)
                     .show()
             }

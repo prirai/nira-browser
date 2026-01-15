@@ -1,14 +1,16 @@
 package com.prirai.android.nira.settings.activity
 
 import android.os.Bundle
+import android.view.View
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updatePadding
 import androidx.preference.Preference
 import androidx.preference.PreferenceFragmentCompat
 import com.prirai.android.nira.R
+import com.prirai.android.nira.ext.enableEdgeToEdgeMode
+import com.prirai.android.nira.ext.applyPersistentInsets
 import com.prirai.android.nira.ext.isAppInDarkTheme
 import com.prirai.android.nira.settings.fragment.SettingsFragment
 import com.prirai.android.nira.theme.applyCompleteTheme
@@ -19,6 +21,9 @@ class SettingsActivity : AppCompatActivity(), PreferenceFragmentCompat.OnPrefere
         setContentView(R.layout.activity_settings)
 
         applyCompleteTheme(this)
+        
+        // Enable edge-to-edge with standardized approach
+        enableEdgeToEdgeMode()
         
         // Apply background color for AMOLED mode
         val bgColor = com.prirai.android.nira.theme.ThemeManager.getBackgroundColor(this)
@@ -38,21 +43,9 @@ class SettingsActivity : AppCompatActivity(), PreferenceFragmentCompat.OnPrefere
             supportActionBar!!.setDisplayShowHomeEnabled(true)
         }
 
-        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.container)) { v, insets ->
-            val bars = insets.getInsets(
-                WindowInsetsCompat.Type.systemBars()
-                        or WindowInsetsCompat.Type.displayCutout()
-            )
-            v.updatePadding(
-                left = bars.left,
-                top = bars.top,
-                right = bars.right,
-                bottom = bars.bottom
-            )
-            val insetsController = WindowCompat.getInsetsController(window, v)
-            insetsController.isAppearanceLightStatusBars = !isAppInDarkTheme()
-            WindowInsetsCompat.CONSUMED
-        }
+        // Apply insets to container
+        findViewById<View>(R.id.container)?.applyPersistentInsets()
+        
         supportActionBar?.elevation = 0f
 
         title = getString(R.string.settings)

@@ -109,6 +109,18 @@ class TabOrderManager private constructor(
         if (fromIndex == toIndex) return
         
         val newOrder = current.primaryOrder.toMutableList()
+        val size = newOrder.size
+        
+        // Bounds checking - critical to prevent IndexOutOfBoundsException
+        if (fromIndex < 0 || fromIndex >= size) {
+            android.util.Log.e("TabOrderManager", "Invalid fromIndex: $fromIndex, size: $size")
+            return
+        }
+        if (toIndex < 0 || toIndex >= size) {
+            android.util.Log.e("TabOrderManager", "Invalid toIndex: $toIndex, size: $size")
+            return
+        }
+        
         val item = newOrder.removeAt(fromIndex)
         newOrder.add(toIndex, item)
         saveOrder(current.copy(primaryOrder = newOrder))
@@ -342,16 +354,42 @@ class TabOrderManager private constructor(
      * Toggle group expansion state
      */
     suspend fun toggleGroupExpansion(groupId: String) {
+        android.util.Log.d("TabOrderManager", "toggleGroupExpansion called for: $groupId")
         // Just update local order for UI state
         val current = _currentOrder.value ?: return
         val newOrder = current.primaryOrder.map { item ->
             if (item is UnifiedTabOrder.OrderItem.TabGroup && item.groupId == groupId) {
+                android.util.Log.d("TabOrderManager", "Found group $groupId, current isExpanded=${item.isExpanded}, toggling to ${!item.isExpanded}")
                 item.copy(isExpanded = !item.isExpanded)
             } else {
                 item
             }
         }
         saveOrder(current.copy(primaryOrder = newOrder))
+        android.util.Log.d("TabOrderManager", "Group expansion toggled successfully")
+    }
+    
+    /**
+     * Auto-expand group containing the selected tab
+     */
+    suspend fun expandGroupContainingTab(tabId: String) {
+        val current = _currentOrder.value ?: return
+        var hasChanges = false
+        val newOrder = current.primaryOrder.map { item ->
+            if (item is UnifiedTabOrder.OrderItem.TabGroup && tabId in item.tabIds) {
+                if (!item.isExpanded) {
+                    hasChanges = true
+                    item.copy(isExpanded = true)
+                } else {
+                    item
+                }
+            } else {
+                item
+            }
+        }
+        if (hasChanges) {
+            saveOrder(current.copy(primaryOrder = newOrder))
+        }
     }
 
     /**

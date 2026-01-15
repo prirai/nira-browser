@@ -437,6 +437,10 @@ class ComposeHomeFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        
+        // Force hardware layer on view to prevent rendering artifacts
+        view.findViewById<CoordinatorLayout>(R.id.homeLayout)?.setLayerType(View.LAYER_TYPE_HARDWARE, null)
+        
         updateToolbarStyling()
         restoreLastMode()
 
