@@ -264,7 +264,9 @@
     <string name="delete_bookmark">Delete bookmark</string>
   <string name="delete_folder">Delete folder</string>
   <string name="flatten_folder">Flatten folder</string>
-  <string name="flatten_folder_confirm_formatted">Flatten \"%1$s\"? All items inside will be moved to the current folder and the folder will be deleted.</string>
+  <string
+        name="flatten_folder_confirm_formatted"
+    >Flatten \"%1$s\"? All items inside will be moved to the current folder and the folder will be deleted.</string>
   <string
         name="flatten_folder_confirm"
     >Flatten this folder? All items inside will be moved to the current folder and the folder will be deleted.</string>
@@ -733,6 +735,22 @@
         name="clone_webapp_dialog_message"
     >Create a copy of \"%1$s\" with a different profile?</string>
   <string name="clone">Clone</string>
+  <string
+        name="associate_profile_message"
+    >Choose a profile to associate \"%1$s\" with. Each profile has separate cookies and data.</string>
+  <string name="web_app_cloned_success">Successfully cloned \"%1$s\"</string>
+  <string name="name_required">Name is required</string>
+  <string name="web_app_name">Web App Name</string>
+  <string name="profile_associated">Profile association updated</string>
+  <string name="associate">Associate</string>
+  <string name="success">Success</string>
+  <string name="unknown_error">Unknown error occurred</string>
+  <string
+        name="uninstall_web_app_message"
+    >Are you sure you want to uninstall \"%1$s\"? This will remove the app and all its data from your device.</string>
+  <string
+        name="clear_data_message"
+    >Are you sure you want to clear all data for \"%1$s\"? This will remove cached files, databases, and stored data.</string>
 
   <!-- Web App Installation Profile Selection -->
   <string name="select_profile">Select Profile</string>

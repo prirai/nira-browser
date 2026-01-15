@@ -1,26 +1,16 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8" ?>
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
-    <item
-        android:id="@+id/add_shortcut"
-        android:title="@string/add_shortcut" />
-    
+    <item android:id="@+id/add_shortcut" android:title="@string/add_shortcut" />
+
     <item
         android:id="@+id/associate_profile"
-        android:title="@string/associate_profile" />
-    
-    <item
-        android:id="@+id/clone_webapp"
-        android:title="@string/clone_webapp" />
-    
-    <item
-        android:id="@+id/update_cache"
-        android:title="@string/update_cache" />
-    
-    <item
-        android:id="@+id/clear_data"
-        android:title="@string/clear_data" />
-    
-    <item
-        android:id="@+id/uninstall"
-        android:title="@string/uninstall" />
+        android:title="@string/associate_profile"
+    />
+
+    <item android:id="@+id/clone_webapp" android:title="@string/clone_webapp" />
+
+
+    <item android:id="@+id/clear_data" android:title="@string/clear_data" />
+
+    <item android:id="@+id/uninstall" android:title="@string/uninstall" />
 </menu>
