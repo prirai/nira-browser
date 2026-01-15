@@ -10,16 +10,14 @@ import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.prirai.android.nira.R
 import com.prirai.android.nira.databinding.ItemWebappSettingMenuBinding
-import com.prirai.android.nira.components.Components
-import com.prirai.android.nira.utils.FaviconCache
+import com.prirai.android.nira.ext.components
 import com.prirai.android.nira.browser.profile.ProfileManager
-import kotlinx.coroutines.Dispatchers
+import com.prirai.android.nira.utils.FaviconLoader
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import mozilla.components.browser.icons.IconRequest
 
 /**
  * Adapter for displaying PWA settings items with three-dot menu
+ * Uses centralized FaviconLoader for consistent fast icon loading
  */
 class WebAppSettingsMenuAdapter(
     private val lifecycleOwner: LifecycleOwner,
@@ -58,13 +56,21 @@ class WebAppSettingsMenuAdapter(
                 // Set PWA URL
                 webAppUrl.text = webApp.url
 
-                // Set icon - try multiple sources
-                lifecycleOwner.lifecycleScope.launch {
-                    val icon = loadWebAppIcon(webApp)
-                    if (icon != null) {
-                        webAppIcon.setImageBitmap(icon)
-                    } else {
-                        webAppIcon.setImageResource(R.drawable.ic_language)
+                // Try instant memory cache first
+                val cachedIcon = FaviconLoader.getFromMemorySync(context, webApp.url)
+                if (cachedIcon != null) {
+                    // Instant display from memory cache
+                    webAppIcon.setImageBitmap(cachedIcon)
+                } else {
+                    // Show default icon while loading
+                    webAppIcon.setImageResource(R.drawable.ic_language)
+                    
+                    // Load icon asynchronously
+                    lifecycleOwner.lifecycleScope.launch {
+                        val icon = loadWebAppIconFast(webApp)
+                        if (icon != null) {
+                            webAppIcon.setImageBitmap(icon)
+                        }
                     }
                 }
 
@@ -139,38 +145,17 @@ class WebAppSettingsMenuAdapter(
             }
         }
 
-        private suspend fun loadWebAppIcon(webApp: WebAppEntity): android.graphics.Bitmap? {
-            return withContext(Dispatchers.IO) {
-                try {
-                    // 1. Try webapp's stored icon
-                    Components(context).webAppManager.loadIconFromFile(webApp.iconUrl)?.let { return@withContext it }
-
-                    // 2. Try favicon cache
-                    FaviconCache.getInstance(context).loadFavicon(webApp.url)?.let { return@withContext it }
-
-                    // 3. Use Mozilla Components BrowserIcons (standard approach)
-                    val iconRequest = IconRequest(
-                        url = webApp.url,
-                        size = IconRequest.Size.DEFAULT,
-                        resources = listOf(
-                            IconRequest.Resource(
-                                url = webApp.url,
-                                type = IconRequest.Resource.Type.FAVICON
-                            )
-                        )
-                    )
-                    val icon = Components(context).icons.loadIcon(iconRequest).await()
-                    if (icon.bitmap != null) {
-                        // Save to cache for future use
-                        FaviconCache.getInstance(context).saveFavicon(webApp.url, icon.bitmap)
-                        return@withContext icon.bitmap
-                    }
-
-                    null
-                } catch (e: Exception) {
-                    null
-                }
+        /**
+         * Fast webapp icon loading: stored icon first, then centralized FaviconLoader
+         */
+        private suspend fun loadWebAppIconFast(webApp: WebAppEntity): android.graphics.Bitmap? {
+            // Try webapp's stored icon first
+            context.components.webAppManager.loadIconFromFile(webApp.iconUrl)?.let {
+                return it
             }
+
+            // Use centralized FaviconLoader for consistent caching
+            return FaviconLoader.loadFavicon(context, webApp.url)
         }
     }
 
