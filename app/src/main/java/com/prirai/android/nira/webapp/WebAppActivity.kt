@@ -4,9 +4,11 @@ import android.Manifest
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
+import android.view.View
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.lifecycleScope
@@ -15,6 +17,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import mozilla.components.feature.pwa.ext.getWebAppManifest
+import com.prirai.android.nira.ext.enableEdgeToEdgeMode
+import com.prirai.android.nira.ext.applyPersistentInsets
 
 /**
  * Activity for Progressive Web Apps (PWAs) - Fullscreen, no browser chrome
@@ -28,7 +32,7 @@ class WebAppActivity : AppCompatActivity() {
     }
 
     private var notificationPermissionCallback: ((Boolean) -> Unit)? = null
-    
+
     private val requestNotificationPermissionLauncher: ActivityResultLauncher<String> =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
             notificationPermissionCallback?.invoke(isGranted)
@@ -37,49 +41,51 @@ class WebAppActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        
+
         setContentView(R.layout.activity_webapp)
-        
+
         // Configure system bars
         setupSystemBars()
-        
+
         // Extract URL from intent
         val url = extractUrlFromIntent(intent)
-        
+
         if (url.isNullOrEmpty()) {
             finish()
             return
         }
-        
+
         // Load profile ID and setup the fragment
         lifecycleScope.launch {
             val profileId = getProfileIdForUrl(url)
-            
+
             // Load web app details to set task description with icon
             val webApp = com.prirai.android.nira.components.Components(this@WebAppActivity)
                 .webAppManager.getWebAppByUrl(url)
-            
+
             // Set task description with app name and icon for recents
             webApp?.let { app ->
-                // Try to load icon from saved file
-                val icon = com.prirai.android.nira.components.Components(this@WebAppActivity)
-                    .webAppManager.loadIconFromFile(app.iconUrl)
-                
-                if (icon != null) {
-                    val taskDescription = android.app.ActivityManager.TaskDescription(app.name, icon)
-                    setTaskDescription(taskDescription)
-                } else {
-                    // Try to load from favicon cache as fallback
-                    val cachedIcon = com.prirai.android.nira.utils.FaviconCache.getInstance(this@WebAppActivity)
-                        .loadFavicon(url)
-                    
-                    if (cachedIcon != null) {
-                        val taskDescription = android.app.ActivityManager.TaskDescription(app.name, cachedIcon)
-                        setTaskDescription(taskDescription)
+                withContext(Dispatchers.IO) {
+                    // Comprehensive icon loading with multiple fallbacks
+                    val icon =
+                        com.prirai.android.nira.components.Components(this@WebAppActivity)
+                            .webAppManager.loadIconFromFile(app.iconUrl)
+                            ?: com.prirai.android.nira.utils.FaviconLoader.loadFavicon(this@WebAppActivity, url)
+                            ?: com.prirai.android.nira.utils.FaviconLoader.loadFaviconForPwa(
+                                this@WebAppActivity,
+                                url,
+                                size = 128
+                            )
+
+                    if (icon != null) {
+                        withContext(Dispatchers.Main) {
+                            val taskDescription = android.app.ActivityManager.TaskDescription(app.name, icon)
+                            setTaskDescription(taskDescription)
+                        }
                     }
                 }
             }
-            
+
             // Load the web app fragment if not already added
             if (savedInstanceState == null) {
                 val fragment = WebAppFragment.newInstance(url, profileId)
@@ -88,7 +94,7 @@ class WebAppActivity : AppCompatActivity() {
                     .commit()
             }
         }
-        
+
         // Handle back button
         onBackPressedDispatcher.addCallback(this, object : androidx.activity.OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
@@ -99,7 +105,7 @@ class WebAppActivity : AppCompatActivity() {
             }
         })
     }
-    
+
     private suspend fun getProfileIdForUrl(url: String): String = withContext(Dispatchers.IO) {
         // Lookup webapp by URL to get its profile
         val webApp = com.prirai.android.nira.components.Components(this@WebAppActivity)
@@ -110,14 +116,14 @@ class WebAppActivity : AppCompatActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
-        
+
         // Handle new URL when activity is reused
         val url = extractUrlFromIntent(intent)
         if (!url.isNullOrEmpty()) {
             // Get the correct profile for this URL asynchronously
             lifecycleScope.launch {
                 val profileId = getProfileIdForUrl(url)
-                
+
                 val fragment = supportFragmentManager.findFragmentById(R.id.webapp_container) as? WebAppFragment
                 if (fragment != null) {
                     // Update existing fragment with new URL and profile
@@ -132,55 +138,32 @@ class WebAppActivity : AppCompatActivity() {
 
     private fun extractUrlFromIntent(intent: Intent?): String? {
         if (intent == null) return null
-        
-        // Try to get URL from various sources
-        
-        // 1. Check for explicit URL extra (our custom launches)
+
+
         intent.getStringExtra(EXTRA_WEB_APP_URL)?.let { return it }
-        
-        // 2. Check for Mozilla PWA manifest
+
         intent.getWebAppManifest()?.startUrl?.let { return it }
-        
-        // 3. Check for data URI (shortcut clicks)
+
         intent.data?.toString()?.let { return it }
-        
-        // 4. Check for ACTION_VIEW with data
+
         if (intent.action == Intent.ACTION_VIEW) {
             intent.dataString?.let { return it }
         }
-        
+
         return null
     }
-    
+
     private fun setupSystemBars() {
-        // Show system bars normally
-        WindowCompat.setDecorFitsSystemWindows(window, true)
+        // Enable edge-to-edge with standardized approach
+        enableEdgeToEdgeMode()
         
-        // Set status bar color based on theme
-        val bgColor = com.prirai.android.nira.theme.ThemeManager.getBackgroundColor(this)
-        window.statusBarColor = bgColor
-        
-        // Ensure system bars are visible and configure appearance
-        val windowInsetsController = WindowCompat.getInsetsController(window, window.decorView)
-        windowInsetsController?.apply {
-            show(WindowInsetsCompat.Type.systemBars())
-            // Set status bar icons to dark in light theme, light in dark theme
-            isAppearanceLightStatusBars = resources.configuration.uiMode and 
-                android.content.res.Configuration.UI_MODE_NIGHT_MASK != 
-                android.content.res.Configuration.UI_MODE_NIGHT_YES
-            // Set navigation bar icons
-            isAppearanceLightNavigationBars = resources.configuration.uiMode and 
-                android.content.res.Configuration.UI_MODE_NIGHT_MASK != 
-                android.content.res.Configuration.UI_MODE_NIGHT_YES
-        }
-        
-        // Make navigation bar match status bar
-        window.navigationBarColor = window.statusBarColor
+        // Apply insets to webapp container
+        findViewById<View>(R.id.webapp_container)?.applyPersistentInsets()
     }
 
     /**
      * Request notification permission for PWA notifications (Android 13+)
-     * 
+     *
      * @param callback Called with true if permission granted, false if denied
      */
     fun requestNotificationPermission(callback: (Boolean) -> Unit) {

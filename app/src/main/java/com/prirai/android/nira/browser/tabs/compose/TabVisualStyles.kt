@@ -5,9 +5,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
@@ -79,17 +79,20 @@ fun Modifier.dragFeedbackScale(
 ): Modifier {
     val scale by animateFloatAsState(
         targetValue = when {
-            isDragging -> 1.05f
-            isTarget -> 0.95f
+            isDragging -> 1.08f  // Increased from 1.05f - dragged item is bigger
+            isTarget -> 1.10f     // Changed from 0.95f - target zooms IN to show it's ready
             else -> 1f
         },
         animationSpec = spring(
             dampingRatio = Spring.DampingRatioMediumBouncy,
-            stiffness = Spring.StiffnessLow
+            stiffness = Spring.StiffnessMedium  // Faster response
         ),
         label = "dragScale"
     )
-    return this.scale(scale)
+    return this.graphicsLayer {
+        scaleX = scale
+        scaleY = scale
+    }
 }
 
 /**

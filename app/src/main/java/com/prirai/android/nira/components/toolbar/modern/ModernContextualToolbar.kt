@@ -73,9 +73,16 @@ class ModernContextualToolbar @JvmOverloads constructor(
         createModernLayout()
         setupModernClickListeners()
 
-        // Modern styling with proper dark mode support
-        setBackgroundColor(ContextCompat.getColor(context, R.color.contextual_toolbar_background))
-        elevation = 8f
+        // Use unified ThemeManager helper (supports AMOLED + Material 3)
+        setBackgroundColor(
+            com.prirai.android.nira.theme.ThemeManager.getToolbarBackgroundColor(
+                context, 
+                useElevation = true, 
+                elevationDp = 3f
+            )
+        )
+        elevation = 0f
+        outlineProvider = null
     }
 
     private fun createModernLayout() {

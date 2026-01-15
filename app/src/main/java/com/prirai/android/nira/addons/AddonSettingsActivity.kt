@@ -18,6 +18,8 @@ import mozilla.components.feature.addons.ui.translateName
 import com.prirai.android.nira.ext.components
 import com.prirai.android.nira.ext.getParcelableExtraCompat
 import com.prirai.android.nira.ext.getParcelableCompat
+import com.prirai.android.nira.ext.enableEdgeToEdgeMode
+import com.prirai.android.nira.ext.applyPersistentInsets
 import com.prirai.android.nira.theme.applyCompleteTheme
 
 // An activity to show the settings of an add-on.
@@ -35,7 +37,12 @@ class AddonSettingsActivity : AppCompatActivity() {
         setContentView(view)
         
         applyCompleteTheme(this)
-        androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window, false)
+        
+        // Enable edge-to-edge with standardized approach
+        enableEdgeToEdgeMode()
+        
+        // Apply insets to container
+        findViewById<View>(R.id.addonSettingsContainer)?.applyPersistentInsets()
 
         val addon = requireNotNull(intent.getParcelableExtraCompat<Addon>("add_on"))
         title = addon.translateName(this)

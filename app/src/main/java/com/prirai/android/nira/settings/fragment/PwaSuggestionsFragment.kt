@@ -44,9 +44,6 @@ class PwaSuggestionsFragment : Fragment() {
             context = requireContext(),
             onInstallClick = { pwa ->
                 installSuggestedPwa(pwa)
-            },
-            onLearnMoreClick = { pwa ->
-                showPwaDetails(pwa)
             }
         )
 
@@ -106,15 +103,18 @@ class PwaSuggestionsFragment : Fragment() {
                 binding.progressBar.visibility = View.GONE
                 binding.refreshButton.visibility = View.VISIBLE
             }
+
             PwaSuggestionManager.DetectionState.Detecting -> {
                 binding.progressBar.visibility = View.VISIBLE
                 binding.refreshButton.visibility = View.GONE
                 binding.emptyState.visibility = View.GONE
             }
+
             is PwaSuggestionManager.DetectionState.SuggestionsReady -> {
                 binding.progressBar.visibility = View.GONE
                 binding.refreshButton.visibility = View.VISIBLE
             }
+
             is PwaSuggestionManager.DetectionState.Error -> {
                 binding.progressBar.visibility = View.GONE
                 binding.refreshButton.visibility = View.VISIBLE
@@ -150,15 +150,6 @@ class PwaSuggestionsFragment : Fragment() {
                 // Navigate to PWA management
                 navigateToPwaManagement()
             }
-            .show()
-    }
-
-    private fun showPwaDetails(pwa: PwaSuggestionManager.PwaSuggestion) {
-        // Show detailed information about the PWA
-        androidx.appcompat.app.AlertDialog.Builder(requireContext())
-            .setTitle(pwa.name)
-            .setMessage(pwa.description)
-            .setPositiveButton(android.R.string.ok, null)
             .show()
     }
 
