@@ -77,7 +77,23 @@ class ComposeTabBarWithProfileSwitcher @JvmOverloads constructor(
         // Initialize managers
         groupManager = UnifiedTabGroupManager.getInstance(context)
         tabOrderManager = TabOrderManager.getInstance(context, groupManager!!)
-        tabViewModel = TabViewModel(context, groupManager!!)
+        tabViewModel = TabViewModel(context, groupManager!!).also { viewModel ->
+            // Set up callbacks for tab operations
+            viewModel.onTabRemove = { tabId ->
+                // Immediately remove tab from store
+                context.components.tabsUseCases.removeTab(tabId)
+            }
+            viewModel.onTabRestore = { tab, position ->
+                // Restore tab at original position
+                val components = context.components
+                components.tabsUseCases.addTab(
+                    url = tab.content.url,
+                    private = tab.content.private,
+                    contextId = tab.contextId,
+                    selectTab = false
+                )
+            }
+        }
     }
 
     fun setup(
@@ -151,6 +167,12 @@ class ComposeTabBarWithProfileSwitcher @JvmOverloads constructor(
             orderManager.rebuildOrderForProfile(profileId, tabs)
 
             viewModel.loadTabsForProfile(profileId, tabs, selectedTabId)
+        }
+
+        // Set up global snackbar manager scope
+        val scope = androidx.compose.runtime.rememberCoroutineScope()
+        androidx.compose.runtime.LaunchedEffect(Unit) {
+            com.prirai.android.nira.browser.tabs.compose.GlobalSnackbarManager.getInstance().coroutineScope = scope
         }
 
         // Observe duplicate tab events

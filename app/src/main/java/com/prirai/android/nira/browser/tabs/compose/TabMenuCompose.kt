@@ -503,13 +503,12 @@ private fun TabMenuHeader(tab: TabSessionState) {
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        tab.content.icon?.let { icon ->
-            Image(
-                bitmap = icon.asImageBitmap(),
-                contentDescription = null,
-                modifier = Modifier.size(24.dp)
-            )
-        }
+        FaviconImage(
+            tab = tab,
+            size = 24.dp
+        )
+
+        Spacer(modifier = Modifier.width(12.dp))
 
         Column(modifier = Modifier.weight(1f)) {
             Text(

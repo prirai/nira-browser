@@ -56,8 +56,9 @@ class TabViewModel(
     // Undo state (using GlobalSnackbarManager)
     private var pendingTabDeletion: PendingTabDeletion? = null
 
-    // Callback for actual tab deletion (to be set by UI/Fragment)
-    var onTabDeleteConfirmed: ((String) -> Unit)? = null
+    // Callbacks for tab operations (to be set by UI/Fragment)
+    var onTabRemove: ((String) -> Unit)? = null
+    var onTabRestore: ((TabSessionState, Int) -> Unit)? = null
 
     init {
         // Observe group events and refresh when groups change
@@ -843,6 +844,12 @@ class TabViewModel(
 
     /**
      * Close a specific tab with undo functionality
+     *
+     * This follows the standard pattern:
+     * 1. Immediately remove tab from store (UI updates instantly)
+     * 2. Show snackbar with undo option
+     * 3. If undo clicked: restore the tab
+     * 4. If timeout: tab stays deleted
      */
     fun closeTab(tabId: String, showUndo: Boolean = true) {
         viewModelScope.launch {
@@ -861,34 +868,33 @@ class TabViewModel(
                 // Store deletion info for undo
                 pendingTabDeletion = PendingTabDeletion(tabId, tab, groupId, position)
 
+                // IMMEDIATELY remove the tab (this is the standard approach)
+                onTabRemove?.invoke(tabId)
+
                 // Show global snackbar with undo action
                 GlobalSnackbarManager.getInstance().showUndoSnackbar(
                     message = "Tab closed",
                     onUndo = { undoTabDeletion() },
-                    onConfirm = { confirmTabDeletion() }
+                    onConfirm = {
+                        // On confirm (timeout), just clear the pending deletion
+                        // Tab is already removed from store
+                        pendingTabDeletion = null
+                    }
                 )
             } else {
                 // Close immediately without undo
-                onTabDeleteConfirmed?.invoke(tabId)
+                onTabRemove?.invoke(tabId)
             }
         }
     }
 
     /**
-     * Undo tab deletion
+     * Undo tab deletion - restore the tab
      */
     fun undoTabDeletion() {
-        pendingTabDeletion = null
-        // Tab is still in the store, just clear the pending deletion
-    }
-
-    /**
-     * Confirm tab deletion (after undo timeout)
-     */
-    private fun confirmTabDeletion() {
         pendingTabDeletion?.let { deletion ->
-            // Notify UI to actually remove the tab
-            onTabDeleteConfirmed?.invoke(deletion.tabId)
+            // Restore the tab at its original position
+            onTabRestore?.invoke(deletion.tab, deletion.position)
         }
         pendingTabDeletion = null
     }

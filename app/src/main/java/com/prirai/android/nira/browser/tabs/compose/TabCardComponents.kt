@@ -52,19 +52,19 @@ fun TabCard(
 ) {
     val hasNullContext = tab.contextId == null
     val isTarget = false // Managed by parent
-    
+
     val borderColor = when {
         hasNullContext -> Color(0xFFFF9800) // Orange for null context
         groupColor != null -> groupColor
         else -> Color.Transparent
     }
-    
+
     val borderWidth = when {
         hasNullContext -> 2.dp
         isInGroup -> 0.dp
         else -> 0.dp
     }
-    
+
     Card(
         modifier = modifier
             .dragFeedbackScale(isTarget, isDragging)
@@ -112,14 +112,14 @@ fun TabCard(
                     }
                 }
             }
-            
+
             // Favicon
             FaviconImage(
                 tab = tab,
                 size = if (isCompact) 32.dp else 40.dp,
                 modifier = Modifier.padding(end = 12.dp)
             )
-            
+
             // Tab info
             Column(modifier = Modifier.weight(1f)) {
                 Text(
@@ -148,7 +148,7 @@ fun TabCard(
                     )
                 }
             }
-            
+
             // Close button
             IconButton(
                 onClick = onTabClose,
@@ -172,37 +172,12 @@ fun TabCard(
 /**
  * Favicon image with placeholder
  */
-@Composable
-fun FaviconImage(
-    tab: TabSessionState,
-    size: androidx.compose.ui.unit.Dp = 40.dp,
-    modifier: Modifier = Modifier
-) {
-    Box(
-        modifier = modifier
-            .size(size)
-            .clip(CircleShape)
-            .background(MaterialTheme.colorScheme.surfaceVariant),
-        contentAlignment = Alignment.Center
-    ) {
-        // Try to load favicon
-        tab.content.icon?.let { iconBitmap ->
-            Image(
-                bitmap = iconBitmap.asImageBitmap(),
-                contentDescription = "Favicon",
-                modifier = Modifier.size(size * 0.75f)
-            )
-        } ?: run {
-            // Placeholder icon
-            Icon(
-                imageVector = Icons.Default.Language,
-                contentDescription = "No favicon",
-                modifier = Modifier.size(size * 0.6f),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-    }
-}
+/**
+ * Legacy FaviconImage - now redirects to new FaviconImage from FaviconImage.kt
+ * This duplicate has been removed. Import from FaviconImage.kt instead.
+ * @deprecated Use FaviconImage from FaviconImage.kt
+ */
+// Removed duplicate - use FaviconImage from FaviconImage.kt
 
 /**
  * Thumbnail image for grid view - uses Coil to load from thumbnail storage
@@ -213,7 +188,7 @@ fun ThumbnailImage(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
-    
+
     Box(
         modifier = modifier
             .aspectRatio(16f / 10f)
@@ -228,13 +203,13 @@ fun ThumbnailImage(
                 .crossfade(true)
                 .build()
         }
-        
+
         AsyncImage(
             model = imageRequest,
             contentDescription = "Tab thumbnail",
             modifier = Modifier.fillMaxSize()
         )
-        
+
         // Fallback content when no thumbnail available
         if (tab.content.icon == null) {
             Column(
@@ -309,9 +284,9 @@ fun GroupHeaderCard(
                     .clip(RoundedCornerShape(8.dp))
                     .background(Color(group.color))
             )
-            
+
             Spacer(modifier = Modifier.width(12.dp))
-            
+
             // Expand/collapse icon
             Icon(
                 imageVector = if (isExpanded) {
@@ -322,9 +297,9 @@ fun GroupHeaderCard(
                 contentDescription = if (isExpanded) "Collapse" else "Expand",
                 tint = MaterialTheme.colorScheme.onSurface
             )
-            
+
             Spacer(modifier = Modifier.width(8.dp))
-            
+
             // Group name
             Text(
                 text = group.groupName,
@@ -332,7 +307,7 @@ fun GroupHeaderCard(
                 modifier = Modifier.weight(1f),
                 color = MaterialTheme.colorScheme.onSurface
             )
-            
+
             // Tab count badge
             Surface(
                 shape = RoundedCornerShape(12.dp),
@@ -346,7 +321,7 @@ fun GroupHeaderCard(
                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                 )
             }
-            
+
             // More options button
             IconButton(onClick = onMoreClick) {
                 Icon(

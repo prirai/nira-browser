@@ -110,33 +110,15 @@ fun TabGridCard(
                     verticalAlignment = Alignment.Top
                 ) {
                     // Favicon
-                    if (tab.content.icon != null) {
-                        Surface(
-                            shape = RoundedCornerShape(4.dp),
-                            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f)
-                        ) {
-                            Image(
-                                bitmap = tab.content.icon!!.asImageBitmap(),
-                                contentDescription = null,
-                                modifier = Modifier
-                                    .size(20.dp)
-                                    .padding(2.dp)
-                            )
-                        }
-                    } else {
-                        Surface(
-                            shape = RoundedCornerShape(4.dp),
-                            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Language,
-                                contentDescription = null,
-                                modifier = Modifier
-                                    .size(20.dp)
-                                    .padding(2.dp),
-                                tint = MaterialTheme.colorScheme.onSurface
-                            )
-                        }
+                    Surface(
+                        shape = RoundedCornerShape(4.dp),
+                        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f)
+                    ) {
+                        FaviconImage(
+                            tab = tab,
+                            size = 20.dp,
+                            modifier = Modifier.padding(2.dp)
+                        )
                     }
 
                     // Close button - consistent style with grouped tabs

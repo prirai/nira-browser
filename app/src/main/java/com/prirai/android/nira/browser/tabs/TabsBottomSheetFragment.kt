@@ -1326,11 +1326,20 @@ class TabsBottomSheetFragment : DialogFragment() {
         val viewModel = remember {
             TabViewModel(requireContext(), unifiedGroupManager).also {
                 tabViewModel = it
-                // Set up callback for confirmed tab deletions
-                it.onTabDeleteConfirmed = { tabId ->
-                    lifecycleScope.launch {
-                        requireContext().components.tabsUseCases.removeTab(tabId)
-                    }
+                // Set up callbacks for tab operations
+                it.onTabRemove = { tabId ->
+                    // Immediately remove tab from store
+                    requireContext().components.tabsUseCases.removeTab(tabId)
+                }
+                it.onTabRestore = { tab, position ->
+                    // Restore tab at original position
+                    val components = requireContext().components
+                    components.tabsUseCases.addTab(
+                        url = tab.content.url,
+                        private = tab.content.private,
+                        contextId = tab.contextId,
+                        selectTab = false
+                    )
                 }
             }
         }
