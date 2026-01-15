@@ -96,7 +96,7 @@ class WebAppSettingsMenuAdapter(
 
                 // Set click listeners
                 header.setOnClickListener { onWebAppClick(webApp) }
-                
+
                 enabledSwitch.setOnCheckedChangeListener { _, isChecked ->
                     onEnableToggle(webApp, isChecked)
                 }
@@ -111,26 +111,32 @@ class WebAppSettingsMenuAdapter(
                                 onAddShortcut(webApp)
                                 true
                             }
+
                             R.id.associate_profile -> {
                                 onAssociateProfile(webApp)
                                 true
                             }
+
                             R.id.clone_webapp -> {
                                 onClone(webApp)
                                 true
                             }
+
                             R.id.update_cache -> {
                                 onUpdateCache(webApp)
                                 true
                             }
+
                             R.id.clear_data -> {
                                 onClearData(webApp)
                                 true
                             }
+
                             R.id.uninstall -> {
                                 onUninstall(webApp)
                                 true
                             }
+
                             else -> false
                         }
                     }
@@ -141,43 +147,32 @@ class WebAppSettingsMenuAdapter(
 
         private suspend fun loadWebAppIcon(webApp: WebAppEntity): android.graphics.Bitmap? {
             return withContext(Dispatchers.IO) {
-                // Extract domain from URL
-                val domain = try {
-                    java.net.URL(webApp.url).host
-                } catch (e: Exception) {
-                    webApp.url
-                }
-                
-                // 1. Try webapp's stored icon
-                Components(context).webAppManager.loadIconFromFile(webApp.iconUrl)?.let { return@withContext it }
-                
-                // 2. Try favicon cache
-                FaviconCache.getInstance(context).loadFavicon(webApp.url)?.let { return@withContext it }
-                
-                // 3. Try Google's favicon service (most reliable)
                 try {
-                    val faviconUrl = "https://www.google.com/s2/favicons?domain=$domain&sz=128"
-                    val connection = java.net.URL(faviconUrl).openConnection()
-                    connection.connectTimeout = 5000
-                    connection.readTimeout = 5000
-                    val inputStream = connection.getInputStream()
-                    val bitmap = android.graphics.BitmapFactory.decodeStream(inputStream)
-                    inputStream.close()
-                    
-                    if (bitmap != null) {
-                        // Save to cache for future use
-                        FaviconCache.getInstance(context).saveFavicon(webApp.url, bitmap)
-                        return@withContext bitmap
-                    }
-                } catch (e: Exception) {
-                    // Continue to fallback
-                }
-                
-                // 4. Try fetching from browser icons as final fallback
-                try {
-                    val iconRequest = IconRequest(url = webApp.url)
+                    // 1. Try webapp's stored icon
+                    Components(context).webAppManager.loadIconFromFile(webApp.iconUrl)?.let { return@withContext it }
+
+                    // 2. Try favicon cache
+                    FaviconCache.getInstance(context).loadFavicon(webApp.url)?.let { return@withContext it }
+
+                    // 3. Use Mozilla Components BrowserIcons (standard approach)
+                    val iconRequest = IconRequest(
+                        url = webApp.url,
+                        size = IconRequest.Size.DEFAULT,
+                        resources = listOf(
+                            IconRequest.Resource(
+                                url = webApp.url,
+                                type = IconRequest.Resource.Type.FAVICON
+                            )
+                        )
+                    )
                     val icon = Components(context).icons.loadIcon(iconRequest).await()
-                    icon.bitmap
+                    if (icon.bitmap != null) {
+                        // Save to cache for future use
+                        FaviconCache.getInstance(context).saveFavicon(webApp.url, icon.bitmap)
+                        return@withContext icon.bitmap
+                    }
+
+                    null
                 } catch (e: Exception) {
                     null
                 }

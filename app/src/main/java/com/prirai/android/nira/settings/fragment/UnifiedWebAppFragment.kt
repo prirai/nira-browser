@@ -12,9 +12,10 @@ import com.prirai.android.nira.R
 import com.prirai.android.nira.databinding.FragmentUnifiedWebappBinding
 import com.prirai.android.nira.webapp.*
 import com.prirai.android.nira.components.Components
-import com.prirai.android.nira.utils.FaviconLoader
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import android.content.Intent
 import android.graphics.Bitmap
 import androidx.core.net.toUri
@@ -68,7 +69,7 @@ class UnifiedWebAppFragment : Fragment() {
             override fun onTabUnselected(tab: TabLayout.Tab) {}
             override fun onTabReselected(tab: TabLayout.Tab) {}
         })
-        
+
         // Select first tab (Installed) by default to trigger initial load
         binding.tabLayout.selectTab(binding.tabLayout.getTabAt(0))
     }
@@ -99,7 +100,7 @@ class UnifiedWebAppFragment : Fragment() {
         // Set initial layout manager for installed apps
         binding.recyclerView.layoutManager = LinearLayoutManager(requireContext())
         binding.recyclerView.setHasFixedSize(true)
-        
+
         // Set initial adapter for installed apps
         binding.recyclerView.adapter = installedAdapter
     }
@@ -129,7 +130,7 @@ class UnifiedWebAppFragment : Fragment() {
         // Load suggestions initially
         suggestionManager.getAllSuggestedPwas()
     }
-    
+
     private fun updateInstalledAppsVisibility(webApps: List<WebAppEntity>) {
         if (webApps.isEmpty()) {
             binding.emptyState.visibility = View.VISIBLE
@@ -139,7 +140,7 @@ class UnifiedWebAppFragment : Fragment() {
             binding.recyclerView.visibility = View.VISIBLE
         }
     }
-    
+
     private fun updateSuggestionsVisibility(suggestions: List<PwaSuggestionManager.PwaSuggestion>) {
         if (suggestions.isEmpty()) {
             binding.emptyState.visibility = View.VISIBLE
@@ -248,7 +249,7 @@ class UnifiedWebAppFragment : Fragment() {
             try {
                 // Load icon if available
                 val icon = Components(requireContext()).webAppManager.loadIconFromFile(webApp.iconUrl)
-                
+
                 // Create shortcut using WebAppInstaller
                 val context = requireContext()
                 val shortcut = androidx.core.content.pm.ShortcutInfoCompat.Builder(context, "webapp_${webApp.id}")
@@ -258,22 +259,27 @@ class UnifiedWebAppFragment : Fragment() {
                         action = Intent.ACTION_VIEW
                         data = webApp.url.toUri()
                         putExtra(WebAppActivity.EXTRA_WEB_APP_URL, webApp.url)
-                        flags = Intent.FLAG_ACTIVITY_NEW_TASK or 
-                                Intent.FLAG_ACTIVITY_NEW_DOCUMENT or 
+                        flags = Intent.FLAG_ACTIVITY_NEW_TASK or
+                                Intent.FLAG_ACTIVITY_NEW_DOCUMENT or
                                 Intent.FLAG_ACTIVITY_MULTIPLE_TASK
                     })
                     .apply {
                         if (icon != null) {
                             setIcon(androidx.core.graphics.drawable.IconCompat.createWithBitmap(icon))
                         } else {
-                            setIcon(androidx.core.graphics.drawable.IconCompat.createWithResource(context, R.drawable.ic_language))
+                            setIcon(
+                                androidx.core.graphics.drawable.IconCompat.createWithResource(
+                                    context,
+                                    R.drawable.ic_language
+                                )
+                            )
                         }
                     }
                     .build()
 
                 // Request to pin the shortcut
                 val success = androidx.core.content.pm.ShortcutManagerCompat.requestPinShortcut(context, shortcut, null)
-                
+
                 if (success) {
                     androidx.appcompat.app.AlertDialog.Builder(requireContext())
                         .setTitle(R.string.shortcut_added)
@@ -302,7 +308,7 @@ class UnifiedWebAppFragment : Fragment() {
         // Get current profile as default
         val profileManager = com.prirai.android.nira.browser.profile.ProfileManager.getInstance(requireContext())
         val currentProfile = profileManager.getActiveProfile()
-        
+
         // Show Material 3 dialog with profile selection (icon loads inside dialog)
         val dialog = WebAppInstallDialog(
             context = requireContext(),
@@ -314,7 +320,7 @@ class UnifiedWebAppFragment : Fragment() {
         ) { selectedProfileId ->
             startInstallation(pwa, selectedProfileId)
         }
-        
+
         dialog.show()
     }
 
@@ -322,7 +328,7 @@ class UnifiedWebAppFragment : Fragment() {
         viewLifecycleOwner.lifecycleScope.launch {
             try {
                 val webAppManager = Components(requireContext()).webAppManager
-                
+
                 // Check if already installed with same profile
                 if (webAppManager.webAppExists(pwa.url, profileId)) {
                     androidx.appcompat.app.AlertDialog.Builder(requireContext())
@@ -333,8 +339,36 @@ class UnifiedWebAppFragment : Fragment() {
                     return@launch
                 }
 
-                // Load icon for installation using centralized FaviconLoader
-                val icon: Bitmap? = FaviconLoader.loadFavicon(requireContext(), pwa.url)
+                // Load icon for installation using Mozilla Components BrowserIcons
+                val icon: Bitmap? = withContext(Dispatchers.IO) {
+                    try {
+                        // Try BrowserIcons first
+                        val iconRequest = mozilla.components.browser.icons.IconRequest(
+                            url = pwa.url,
+                            size = mozilla.components.browser.icons.IconRequest.Size.DEFAULT,
+                            resources = listOf(
+                                mozilla.components.browser.icons.IconRequest.Resource(
+                                    url = pwa.url,
+                                    type = mozilla.components.browser.icons.IconRequest.Resource.Type.FAVICON
+                                )
+                            )
+                        )
+                        val iconResult = Components(requireContext()).icons.loadIcon(iconRequest).await()
+                        if (iconResult.bitmap != null) {
+                            // Save to cache for future use
+                            com.prirai.android.nira.utils.FaviconCache.getInstance(requireContext())
+                                .saveFavicon(pwa.url, iconResult.bitmap)
+                            iconResult.bitmap
+                        } else {
+                            // Fallback to cache
+                            com.prirai.android.nira.utils.FaviconCache.getInstance(requireContext())
+                                .loadFavicon(pwa.url)
+                        }
+                    } catch (e: Exception) {
+                        // Fallback to cache on error
+                        com.prirai.android.nira.utils.FaviconCache.getInstance(requireContext()).loadFavicon(pwa.url)
+                    }
+                }
 
                 // Install using WebAppManager with profile
                 webAppManager.installWebApp(
@@ -352,8 +386,8 @@ class UnifiedWebAppFragment : Fragment() {
                     action = Intent.ACTION_VIEW
                     data = pwa.url.toUri()
                     putExtra(WebAppActivity.EXTRA_WEB_APP_URL, pwa.url)
-                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or 
-                            Intent.FLAG_ACTIVITY_NEW_DOCUMENT or 
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or
+                            Intent.FLAG_ACTIVITY_NEW_DOCUMENT or
                             Intent.FLAG_ACTIVITY_MULTIPLE_TASK
                 }
 
@@ -365,16 +399,18 @@ class UnifiedWebAppFragment : Fragment() {
                         if (icon != null) {
                             setIcon(androidx.core.graphics.drawable.IconCompat.createWithBitmap(icon))
                         } else {
-                            setIcon(androidx.core.graphics.drawable.IconCompat.createWithResource(
-                                requireContext(), 
-                                R.drawable.ic_language
-                            ))
+                            setIcon(
+                                androidx.core.graphics.drawable.IconCompat.createWithResource(
+                                    requireContext(),
+                                    R.drawable.ic_language
+                                )
+                            )
                         }
                     }
                     .build()
 
                 androidx.core.content.pm.ShortcutManagerCompat.requestPinShortcut(requireContext(), shortcut, null)
-                
+
                 androidx.appcompat.app.AlertDialog.Builder(requireContext())
                     .setTitle(getString(R.string.app_installed))
                     .setMessage(getString(R.string.pwa_installation_complete, pwa.name))
@@ -386,7 +422,7 @@ class UnifiedWebAppFragment : Fragment() {
 
                 // Switch to installed apps tab
                 binding.tabLayout.selectTab(binding.tabLayout.getTabAt(0))
-                
+
             } catch (e: Exception) {
                 androidx.appcompat.app.AlertDialog.Builder(requireContext())
                     .setTitle(R.string.installation_failed)
@@ -421,7 +457,7 @@ class UnifiedWebAppFragment : Fragment() {
         val profiles = profileManager.getAllProfiles()
         val profileNames = profiles.map { it.name }.toTypedArray()
         val currentIndex = profiles.indexOfFirst { it.id == webApp.profileId }.coerceAtLeast(0)
-        
+
         androidx.appcompat.app.AlertDialog.Builder(requireContext())
             .setTitle(R.string.associate_profile)
             .setSingleChoiceItems(profileNames, currentIndex) { dialog, which ->
@@ -441,9 +477,9 @@ class UnifiedWebAppFragment : Fragment() {
         val profileManager = com.prirai.android.nira.browser.profile.ProfileManager.getInstance(requireContext())
         val profiles = profileManager.getAllProfiles()
         val profileNames = profiles.map { it.name }.toTypedArray()
-        
+
         var selectedProfileId = profiles.first().id
-        
+
         androidx.appcompat.app.AlertDialog.Builder(requireContext())
             .setTitle(R.string.clone_webapp_dialog_title)
             .setMessage(getString(R.string.clone_webapp_dialog_message, webApp.name))
@@ -470,7 +506,7 @@ class UnifiedWebAppFragment : Fragment() {
                     backgroundColor = webApp.backgroundColor,
                     profileId = newProfileId
                 )
-                
+
                 androidx.appcompat.app.AlertDialog.Builder(requireContext())
                     .setTitle("Web App Cloned")
                     .setMessage("\"${webApp.name}\" has been cloned successfully!")

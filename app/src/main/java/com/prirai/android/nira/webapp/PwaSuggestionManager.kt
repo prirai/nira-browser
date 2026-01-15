@@ -3,7 +3,7 @@ package com.prirai.android.nira.webapp
 import android.content.Context
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
-import com.prirai.android.nira.utils.FaviconLoader
+
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -285,7 +285,22 @@ class PwaSuggestionManager(private val context: Context) {
     private suspend fun preloadFavicons() {
         highQualityPwas.forEach { pwa ->
             try {
-                FaviconLoader.loadFavicon(context, pwa.url)
+                // Use Mozilla Components BrowserIcons instead of legacy FaviconLoader
+                val iconRequest = mozilla.components.browser.icons.IconRequest(
+                    url = pwa.url,
+                    size = mozilla.components.browser.icons.IconRequest.Size.DEFAULT,
+                    resources = listOf(
+                        mozilla.components.browser.icons.IconRequest.Resource(
+                            url = pwa.url,
+                            type = mozilla.components.browser.icons.IconRequest.Resource.Type.FAVICON
+                        )
+                    )
+                )
+                val icon = com.prirai.android.nira.components.Components(context).icons.loadIcon(iconRequest).await()
+                if (icon.bitmap != null) {
+                    // Save to cache for future use
+                    com.prirai.android.nira.utils.FaviconCache.getInstance(context).saveFavicon(pwa.url, icon.bitmap)
+                }
             } catch (e: Exception) {
                 // Silently ignore errors
             }
