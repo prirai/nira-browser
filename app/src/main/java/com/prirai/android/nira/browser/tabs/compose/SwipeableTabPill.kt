@@ -195,7 +195,7 @@ fun SwipeableTabPill(
 
                 // Title
                 Text(
-                    text = tab.content.title.ifEmpty { "New Tab" },
+                    text = getTabDisplayTitle(tab),
                     style = MaterialTheme.typography.labelSmall,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -231,3 +231,19 @@ fun SwipeableTabPill(
  * }
  * ```
  */
+
+/**
+ * Get display title for a tab, avoiding "New Tab" for homepage
+ */
+fun getTabDisplayTitle(tab: TabSessionState): String {
+    return when {
+        // For homepage with no title, show "New Tab"
+        tab.content.url == "about:homepage" && tab.content.title.isEmpty() -> "New Tab"
+        // For other pages, show title if available
+        tab.content.title.isNotEmpty() -> tab.content.title
+        // If no title but has URL (not homepage), show URL
+        tab.content.url.isNotEmpty() && tab.content.url != "about:homepage" -> tab.content.url
+        // Last resort fallback
+        else -> "New Tab"
+    }
+}

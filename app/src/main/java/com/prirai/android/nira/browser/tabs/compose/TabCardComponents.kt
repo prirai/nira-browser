@@ -123,7 +123,7 @@ fun TabCard(
             // Tab info
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = tab.content.title.takeIf { it.isNotBlank() } ?: "New Tab",
+                    text = getTabDisplayTitle(tab),
                     style = if (isCompact) MaterialTheme.typography.bodyMedium else MaterialTheme.typography.bodyLarge,
                     maxLines = if (isCompact) 1 else 2,
                     overflow = TextOverflow.Ellipsis,
@@ -225,7 +225,7 @@ fun ThumbnailImage(
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = tab.content.title.takeIf { it.isNotBlank() } ?: "New Tab",
+                    text = getTabDisplayTitle(tab),
                     style = MaterialTheme.typography.bodySmall,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,

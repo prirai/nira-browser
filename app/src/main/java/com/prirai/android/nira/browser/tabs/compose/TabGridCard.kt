@@ -153,7 +153,7 @@ fun TabGridCard(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text(
-                        text = tab.content.title.ifEmpty { "New Tab" },
+                        text = getTabDisplayTitle(tab),
                         style = MaterialTheme.typography.bodySmall,
                         fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
                         color = MaterialTheme.colorScheme.onSurface,

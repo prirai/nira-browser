@@ -113,6 +113,13 @@
             app:singleLineTitle="false"
             app:defaultValue="true" />
 
+        <com.prirai.android.nira.settings.MaterialSwitchPreference
+            app:key="keep_wallpaper_dimmed"
+            app:title="Dim homepage wallpaper"
+            app:summary="Apply semi-transparent overlay to homepage background"
+            app:singleLineTitle="false"
+            app:defaultValue="true" />
+
     </PreferenceCategory>
 
     <PreferenceCategory android:title="Text &amp; Display">

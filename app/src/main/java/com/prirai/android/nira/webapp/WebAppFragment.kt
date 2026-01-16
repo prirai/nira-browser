@@ -8,10 +8,12 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import com.prirai.android.nira.R
 import com.prirai.android.nira.ext.components
+import com.prirai.android.nira.integration.ContextMenuIntegration
 import kotlinx.coroutines.launch
 import mozilla.components.browser.engine.gecko.GeckoEngineView
 import mozilla.components.concept.engine.EngineSession
 import mozilla.components.concept.engine.window.WindowRequest
+import mozilla.components.support.base.feature.ViewBoundFeatureWrapper
 import androidx.core.net.toUri
 
 /**
@@ -39,6 +41,7 @@ class WebAppFragment : Fragment(), EngineSession.Observer {
     private var profileId: String = "default"
     private var startUrl: String? = null
     private var canGoBack: Boolean = false
+    private val contextMenuIntegration = ViewBoundFeatureWrapper<ContextMenuIntegration>()
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -62,6 +65,12 @@ class WebAppFragment : Fragment(), EngineSession.Observer {
             activity?.finish()
             return
         }
+        
+        // Setup context menu integration
+        setupContextMenu(view)
+        
+        // Setup keyboard adjustment
+        setupKeyboardAdjustment()
         
         // Create a session with the specified profile context
         lifecycleScope.launch {
@@ -148,6 +157,56 @@ class WebAppFragment : Fragment(), EngineSession.Observer {
             // No history to go back to - let the activity close the webapp
             false
         }
+    }
+    
+    /**
+     * Initializes context menu integration for PWA to allow long-press actions on links.
+     * Provides options like copy link, share, open in new tab, save image, etc.
+     */
+    private fun setupContextMenu(view: View) {
+        val components = requireContext().components
+        
+        contextMenuIntegration.set(
+            feature = ContextMenuIntegration(
+                context = requireContext(),
+                fragmentManager = parentFragmentManager,
+                browserStore = components.store,
+                tabsUseCases = components.tabsUseCases,
+                contextMenuUseCases = components.contextMenuUseCases,
+                parentView = view,
+                sessionId = null, // PWAs don't use session IDs from store
+                engineView = engineView
+            ),
+            owner = this,
+            view = view
+        )
+    }
+    
+    /**
+     * Adjusts engine view bottom padding when keyboard appears to prevent content overlap.
+     * Uses WindowInsets to detect keyboard visibility and automatically adjust layout.
+     */
+    private fun setupKeyboardAdjustment() {
+        // Adjust engine view position when keyboard appears
+        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(engineView as View) { view, insets ->
+            val imeInsets = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.ime())
+            val systemBarsInsets = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars())
+            
+            // Adjust bottom padding when keyboard appears
+            if (imeInsets.bottom > systemBarsInsets.bottom) {
+                // Keyboard is showing, add bottom padding
+                val keyboardHeight = imeInsets.bottom - systemBarsInsets.bottom
+                view.setPadding(0, 0, 0, keyboardHeight)
+            } else {
+                // Keyboard is hidden, reset padding
+                view.setPadding(0, 0, 0, 0)
+            }
+            
+            insets
+        }
+        
+        // Request initial insets
+        androidx.core.view.ViewCompat.requestApplyInsets(engineView as View)
     }
     
     private fun openInCustomTab(url: String, profileId: String) {

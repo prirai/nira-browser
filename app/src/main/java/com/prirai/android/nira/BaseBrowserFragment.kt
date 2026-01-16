@@ -1085,9 +1085,9 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
                                     )
                                 }
 
-                                HomepageChoice.CUSTOM_PAGE.ordinal -> {
+                                HomepageChoice.ONLY_SEARCH_BAR.ordinal -> {
                                     components.tabsUseCases.addTab.invoke(
-                                        UserPreferences(requireContext()).customHomepageUrl,
+                                        "about:homepage",
                                         selectTab = true
                                     )
                                 }
@@ -1138,11 +1138,8 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
                             HomepageChoice.BLANK_PAGE.ordinal -> {
                                 components.tabsUseCases.addTab.invoke("about:blank", selectTab = true)
                             }
-                            HomepageChoice.CUSTOM_PAGE.ordinal -> {
-                                components.tabsUseCases.addTab.invoke(
-                                    UserPreferences(requireContext()).customHomepageUrl,
-                                    selectTab = true
-                                )
+                            HomepageChoice.ONLY_SEARCH_BAR.ordinal -> {
+                                components.tabsUseCases.addTab.invoke("about:homepage", selectTab = true)
                             }
                         }
                     } catch (e: Exception) {

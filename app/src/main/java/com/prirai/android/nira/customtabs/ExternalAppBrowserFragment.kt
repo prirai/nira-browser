@@ -17,6 +17,7 @@ import com.prirai.android.nira.BrowserActivity
 import com.prirai.android.nira.R
 import com.prirai.android.nira.databinding.FragmentBrowserBinding
 import com.prirai.android.nira.ext.components
+import com.prirai.android.nira.integration.ContextMenuIntegration
 import com.prirai.android.nira.integration.FindInPageIntegration
 import kotlinx.coroutines.flow.mapNotNull
 import mozilla.components.browser.state.selector.findCustomTab
@@ -46,6 +47,7 @@ class ExternalAppBrowserFragment : Fragment(), UserInteractionHandler {
     private val swipeRefreshFeature = ViewBoundFeatureWrapper<SwipeRefreshFeature>()
     private val findInPageIntegration = ViewBoundFeatureWrapper<FindInPageIntegration>()
     private val downloadsFeature = ViewBoundFeatureWrapper<mozilla.components.feature.downloads.DownloadsFeature>()
+    private val contextMenuIntegration = ViewBoundFeatureWrapper<ContextMenuIntegration>()
     
     private var customTabHeader: LinearLayout? = null
     private var customTabTitle: TextView? = null
@@ -163,6 +165,22 @@ class ExternalAppBrowserFragment : Fragment(), UserInteractionHandler {
             view = binding.root
         )
         
+        // Context menu feature - long press on links
+        contextMenuIntegration.set(
+            feature = ContextMenuIntegration(
+                context = requireContext(),
+                fragmentManager = parentFragmentManager,
+                browserStore = components.store,
+                tabsUseCases = components.tabsUseCases,
+                contextMenuUseCases = components.contextMenuUseCases,
+                parentView = binding.root,
+                sessionId = sessionId,
+                engineView = binding.engineView
+            ),
+            owner = this,
+            view = binding.root
+        )
+        
         // Downloads feature - CRITICAL for handling downloads
         downloadsFeature.set(
             feature = mozilla.components.feature.downloads.DownloadsFeature(
@@ -187,6 +205,32 @@ class ExternalAppBrowserFragment : Fragment(), UserInteractionHandler {
             owner = this,
             view = binding.root
         )
+        
+        // Setup keyboard adjustment
+        setupKeyboardAdjustment()
+    }
+    
+    /**
+     * Adjusts engine view bottom padding when keyboard appears to prevent content overlap.
+     * Uses WindowInsets to detect keyboard visibility and automatically adjust layout.
+     */
+    private fun setupKeyboardAdjustment() {
+        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(binding.engineView as View) { view, insets ->
+            val imeInsets = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.ime())
+            val systemBarsInsets = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars())
+            
+            // Adjust bottom padding when keyboard appears
+            if (imeInsets.bottom > systemBarsInsets.bottom) {
+                val keyboardHeight = imeInsets.bottom - systemBarsInsets.bottom
+                view.setPadding(0, 0, 0, keyboardHeight)
+            } else {
+                view.setPadding(0, 0, 0, 0)
+            }
+            
+            insets
+        }
+        
+        androidx.core.view.ViewCompat.requestApplyInsets(binding.engineView as View)
     }
     
     private fun setupCustomTabContentPadding(view: View) {

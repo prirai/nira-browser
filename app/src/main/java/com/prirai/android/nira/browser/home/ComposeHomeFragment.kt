@@ -179,6 +179,12 @@ class ComposeHomeFragment : Fragment() {
                 
                 // Check if toolbar is at top
                 val isToolbarAtTop = prefs.toolbarPosition == ToolbarPosition.TOP.ordinal
+                
+                // Get homepage type
+                val homepageType = prefs.homepageType
+                
+                // Get wallpaper dimming preference
+                val wallpaperDimmed = prefs.keepWallpaperDimmed
 
                 NiraTheme(
                     isPrivateMode = isPrivateMode,
@@ -194,6 +200,8 @@ class ComposeHomeFragment : Fragment() {
                         onProfileClick = {}, // Profile icon is now display-only
                         backgroundImageUrl = backgroundImageUrl,
                         isToolbarAtTop = isToolbarAtTop,
+                        homepageType = homepageType,
+                        wallpaperDimmed = wallpaperDimmed,
                         onShortcutClick = { shortcut ->
                             components.sessionUseCases.loadUrl(shortcut.url)
                             // Navigate to browser to show the loaded page
