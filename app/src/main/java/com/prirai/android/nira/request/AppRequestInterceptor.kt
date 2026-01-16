@@ -59,17 +59,8 @@ class AppRequestInterceptor(val context: Context) : RequestInterceptor {
                         null
                     }
                 }
-                com.prirai.android.nira.settings.HomepageChoice.CUSTOM_PAGE.ordinal -> {
-                    // Custom page - redirect to custom URL
-                    val customUrl = prefs.customHomepageUrl
-                    if (customUrl.isNotEmpty() && uri != customUrl) {
-                        InterceptionResponse.Url(customUrl)
-                    } else {
-                        null
-                    }
-                }
                 else -> {
-                    // VIEW mode - use about:homepage (default)
+                    // VIEW and ONLY_SEARCH_BAR modes - use about:homepage (default)
                     if (uri == "about:blank") {
                         InterceptionResponse.Url("about:homepage")
                     } else {
