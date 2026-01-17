@@ -170,16 +170,6 @@ fun TabCard(
 }
 
 /**
- * Favicon image with placeholder
- */
-/**
- * Legacy FaviconImage - now redirects to new FaviconImage from FaviconImage.kt
- * This duplicate has been removed. Import from FaviconImage.kt instead.
- * @deprecated Use FaviconImage from FaviconImage.kt
- */
-// Removed duplicate - use FaviconImage from FaviconImage.kt
-
-/**
  * Thumbnail image for grid view - uses Coil to load from thumbnail storage
  */
 @Composable

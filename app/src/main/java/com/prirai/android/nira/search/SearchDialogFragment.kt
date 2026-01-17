@@ -121,8 +121,14 @@ class SearchDialogFragment : AppCompatDialogFragment(), UserInteractionHandler {
         }
         
         return object : Dialog(dialogContext, this.theme) {
+            @Deprecated("Deprecated in Java")
             override fun onBackPressed() {
-                this@SearchDialogFragment.onBackPressed()
+                // Call the fragment's UserInteractionHandler.onBackPressed() instead
+                if (!this@SearchDialogFragment.onBackPressed()) {
+                    // If fragment doesn't handle it, use default behavior
+                    @Suppress("DEPRECATION")
+                    super.onBackPressed()
+                }
             }
         }
     }

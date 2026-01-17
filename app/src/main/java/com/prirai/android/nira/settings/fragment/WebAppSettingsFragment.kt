@@ -92,7 +92,7 @@ class WebAppSettingsFragment : Fragment() {
 
     private fun setupUI() {
         binding.toolbar.setNavigationOnClickListener {
-            requireActivity().onBackPressed()
+            requireActivity().onBackPressedDispatcher.onBackPressed()
         }
 
         binding.toolbar.title = getString(R.string.web_app_settings_title)
