@@ -1,6 +1,12 @@
 package com.prirai.android.nira
 
 import android.view.View
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
 import com.prirai.android.nira.browser.toolbar.ToolbarGestureHandler
@@ -10,6 +16,7 @@ import com.prirai.android.nira.ext.components
 import com.prirai.android.nira.ext.nav
 import com.prirai.android.nira.preferences.UserPreferences
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.distinctUntilChangedBy
 import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.launch
@@ -17,6 +24,7 @@ import mozilla.components.browser.state.state.SessionState
 import mozilla.components.browser.thumbnails.BrowserThumbnails
 import mozilla.components.feature.tabs.WindowFeature
 import mozilla.components.lib.state.ext.flowScoped
+import mozilla.components.lib.state.ext.observeAsComposableState
 import mozilla.components.support.base.feature.UserInteractionHandler
 import mozilla.components.support.base.feature.ViewBoundFeatureWrapper
 import mozilla.components.support.ktx.kotlinx.coroutines.flow.ifAnyChanged
@@ -32,6 +40,9 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
 
     // Track last tab IDs for auto-grouping detection
     private var lastTabIds = setOf<String>()
+    
+    // Homepage ViewModel for shortcuts and bookmarks
+    private lateinit var homeViewModel: com.prirai.android.nira.browser.home.compose.HomeViewModel
 
     // Toolbar icon for fullscreen toggle
 
@@ -40,6 +51,15 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
 
         val context = requireContext()
         val components = context.components
+        
+        // Initialize homepage ViewModel
+        initializeHomeViewModel()
+        
+        // Setup homepage ComposeView
+        setupHomePageComposeView()
+        
+        // Update visibility based on current tab URL
+        updateContentVisibility(tab.content.url)
 
         // Only add gesture handler if unifiedToolbar has a browser toolbar
         unifiedToolbar?.getBrowserToolbar()?.let { toolbar ->
@@ -241,36 +261,33 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
                         }
                     }
                     
-                    // Navigate to ComposeHomeFragment when about:homepage tab is selected
-                    if (isAdded && view != null) {
-                        // Toolbar updates handled automatically by UnifiedToolbar
+                    // NO NAVIGATION - HomePage content is now rendered inline in BrowserFragment
+                    // when URL is "about:homepage". This keeps the toolbar alive and prevents
+                    // tab pills from reloading. See fragment_browser.xml for homepage ComposeView.
+                }
+            }
+        }
 
-                        // Navigate to ComposeHomeFragment when about:homepage tab is selected
-                        // Only do this when switching TO a homepage tab, not when the current tab's URL changes
-                        val selectedTab = state.tabs.find { it.id == state.selectedTabId }
-                        val navController = try {
-                            androidx.navigation.fragment.NavHostFragment.findNavController(this@BrowserFragment)
-                        } catch (e: Exception) {
-                            null
-                        }
-                        
-                        // Only navigate to home if:
-                        // 1. URL is about:homepage
-                        // 2. Tab is not loading (stable state)
-                        // 3. We're not already on the home fragment
-                        // 4. Navigation controller is available
-                        if (selectedTab?.content?.url == "about:homepage" &&
-                            selectedTab.content.loading == false &&
-                            navController != null &&
-                            navController.currentDestination?.id != R.id.homeFragment) {
-                            try {
-                                navController.navigate(R.id.homeFragment)
-                            } catch (e: Exception) {
-                                // Navigation failed (e.g., already navigating)
-                            }
-                        }
+        // Observe tab changes to update content visibility (homepage vs web content)
+        components.store.flowScoped(viewLifecycleOwner) { flow ->
+            flow.mapNotNull { state -> state.selectedTabId }
+                .distinctUntilChanged()
+                .collect { tabId: String ->
+                    val tab = components.store.state.tabs.find { it.id == tabId }
+                    tab?.let {
+                        updateContentVisibility(it.content.url)
                     }
                 }
+        }
+
+        // Also observe URL changes within the same tab
+        components.store.flowScoped(viewLifecycleOwner) { flow ->
+            flow.mapNotNull { state ->
+                state.tabs.find { it.id == state.selectedTabId }
+            }
+            .distinctUntilChangedBy { it.content.url }
+            .collect { tab ->
+                updateContentVisibility(tab.content.url)
             }
         }
     }
@@ -1192,5 +1209,196 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
         }
         
         return handled
+    }
+    
+    /**
+     * Initialize homepage ViewModel for shortcuts and bookmarks
+     */
+    private fun initializeHomeViewModel() {
+        // Initialize database with migrations (same as ComposeHomeFragment)
+        val MIGRATION_1_2: androidx.room.migration.Migration = object : androidx.room.migration.Migration(1, 2) {
+            override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE shortcutentity ADD COLUMN title TEXT")
+            }
+        }
+
+        val MIGRATION_2_3: androidx.room.migration.Migration = object : androidx.room.migration.Migration(2, 3) {
+            override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
+                db.execSQL("CREATE TABLE shortcutentity_new (uid INTEGER NOT NULL, url TEXT, title TEXT, PRIMARY KEY(uid))")
+                db.execSQL("INSERT INTO shortcutentity_new (uid, url, title) SELECT uid, url, title FROM shortcutentity")
+                db.execSQL("DROP TABLE shortcutentity")
+                db.execSQL("ALTER TABLE shortcutentity_new RENAME TO shortcutentity")
+            }
+        }
+
+        val database = androidx.room.Room.databaseBuilder(
+            requireContext(),
+            com.prirai.android.nira.browser.shortcuts.ShortcutDatabase::class.java,
+            "shortcut-database"
+        ).addMigrations(MIGRATION_1_2, MIGRATION_2_3).build()
+
+        val factory = com.prirai.android.nira.browser.home.compose.HomeViewModelFactory(
+            bookmarkManager = com.prirai.android.nira.browser.bookmark.repository.BookmarkManager.getInstance(requireContext()),
+            shortcutDao = database.shortcutDao()
+        )
+
+        homeViewModel = androidx.lifecycle.ViewModelProvider(this, factory)[com.prirai.android.nira.browser.home.compose.HomeViewModel::class.java]
+    }
+    
+    /**
+     * Setup homepage Compose view with all the home screen content
+     */
+    private fun setupHomePageComposeView() {
+        val homePageView = binding.root.findViewById<androidx.compose.ui.platform.ComposeView>(
+            R.id.homePageComposeView
+        ) ?: return
+        
+        homePageView.setViewCompositionStrategy(
+            androidx.compose.ui.platform.ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed
+        )
+        
+        // Render the actual homepage content (same as ComposeHomeFragment)
+        homePageView.setContent {
+            val store = requireContext().components.store
+            val browsingModeManager = (requireActivity() as BrowserActivity).browsingModeManager
+            
+            // Observe selected tab
+            val selectedTabId by store.observeAsComposableState { state -> state.selectedTabId }
+            
+            val selectedTab = selectedTabId?.let { id ->
+                store.state.tabs.find { it.id == id }
+            }
+
+            val isPrivateMode = selectedTab?.content?.private ?: browsingModeManager.mode.isPrivate
+
+            val shortcuts by homeViewModel.shortcuts.collectAsState()
+            val bookmarks by homeViewModel.bookmarks.collectAsState()
+            val showAddDialog by homeViewModel.showAddShortcutDialog.collectAsState()
+            val isBookmarkExpanded by homeViewModel.isBookmarkSectionExpanded.collectAsState()
+
+            val profileManager =
+                com.prirai.android.nira.browser.profile.ProfileManager.getInstance(requireContext())
+            val currentProfile = run {
+                val tabContextId = selectedTab?.contextId
+                when {
+                    tabContextId == "private" || isPrivateMode -> {
+                        com.prirai.android.nira.browser.home.compose.ProfileInfo("private", "Private", "🕵️", true, 0)
+                    }
+
+                    tabContextId != null && tabContextId.startsWith("profile_") -> {
+                        val profileId = tabContextId.removePrefix("profile_")
+                        val profile = profileManager.getAllProfiles().find { it.id == profileId }
+                            ?: profileManager.getActiveProfile()
+                        com.prirai.android.nira.browser.home.compose.ProfileInfo(profile.id, profile.name, profile.emoji, false, profile.color)
+                    }
+
+                    else -> {
+                        val profile = profileManager.getActiveProfile()
+                        com.prirai.android.nira.browser.home.compose.ProfileInfo(profile.id, profile.name, profile.emoji, false, profile.color)
+                    }
+                }
+            }
+
+            val prefs = UserPreferences(requireContext())
+            val backgroundImageUrl = when (prefs.homepageBackgroundChoice) {
+                com.prirai.android.nira.settings.HomepageBackgroundChoice.NONE.ordinal -> null
+                com.prirai.android.nira.settings.HomepageBackgroundChoice.URL.ordinal,
+                com.prirai.android.nira.settings.HomepageBackgroundChoice.GALLERY.ordinal -> prefs.homepageBackgroundUrl
+                else -> null
+            }
+            
+            val isToolbarAtTop = prefs.toolbarPosition == com.prirai.android.nira.components.toolbar.ToolbarPosition.TOP.ordinal
+            val homepageType = prefs.homepageType
+            val wallpaperDimmed = prefs.keepWallpaperDimmed
+
+            com.prirai.android.nira.ui.theme.NiraTheme(
+                isPrivateMode = isPrivateMode,
+                amoledMode = prefs.amoledMode,
+                dynamicColor = prefs.dynamicColors
+            ) {
+                com.prirai.android.nira.browser.home.compose.HomeScreen(
+                    isPrivateMode = isPrivateMode,
+                    shortcuts = shortcuts,
+                    bookmarks = bookmarks,
+                    isBookmarkExpanded = isBookmarkExpanded,
+                    currentProfile = currentProfile,
+                    onProfileClick = {}, // Profile icon is display-only
+                    backgroundImageUrl = backgroundImageUrl,
+                    isToolbarAtTop = isToolbarAtTop,
+                    homepageType = homepageType,
+                    wallpaperDimmed = wallpaperDimmed,
+                    onShortcutClick = { shortcut ->
+                        components.sessionUseCases.loadUrl(shortcut.url)
+                        // URL will change, triggering visibility update automatically
+                    },
+                    onShortcutDelete = { shortcut ->
+                        com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
+                            .setTitle("Delete Shortcut")
+                            .setMessage("Are you sure you want to delete '${shortcut.title}'?")
+                            .setPositiveButton("Delete") { _, _ ->
+                                homeViewModel.deleteShortcut(shortcut)
+                            }
+                            .setNegativeButton("Cancel", null)
+                            .show()
+                    },
+                    onShortcutAdd = { homeViewModel.showAddShortcutDialog() },
+                    onBookmarkClick = { bookmark ->
+                        if (bookmark.isFolder) {
+                            val bookmarksBottomSheet = com.prirai.android.nira.browser.bookmark.ui.BookmarksBottomSheetFragment.newInstance(
+                                folderId = bookmark.id.toLongOrNull() ?: -1L
+                            )
+                            bookmarksBottomSheet.show(parentFragmentManager, "BookmarksBottomSheet")
+                        } else {
+                            components.sessionUseCases.loadUrl(bookmark.url)
+                            // URL will change, triggering visibility update automatically
+                        }
+                    },
+                    onBookmarkToggle = { homeViewModel.toggleBookmarkSection() },
+                    onSearchClick = {
+                        // Open search dialog
+                        val sessionId = components.store.state.selectedTabId
+                        val directions = NavGraphDirections.actionGlobalSearchDialog(sessionId = sessionId)
+                        try {
+                            androidx.navigation.fragment.NavHostFragment.findNavController(this@BrowserFragment).navigate(directions)
+                        } catch (e: Exception) {
+                            // Navigation failed
+                        }
+                    }
+                )
+
+                if (showAddDialog) {
+                    com.prirai.android.nira.browser.home.compose.AddShortcutDialog(
+                        onDismiss = { homeViewModel.hideAddShortcutDialog() },
+                        onSave = { url, title ->
+                            homeViewModel.addShortcut(url, title)
+                        }
+                    )
+                }
+            }
+        }
+    }
+    
+    /**
+     * Update content visibility based on current URL
+     * Shows homepage ComposeView for "about:homepage", otherwise shows engineView
+     */
+    private fun updateContentVisibility(url: String) {
+        val isHomepage = url == "about:homepage" || url.isEmpty()
+        
+        val homePageView = binding.root.findViewById<androidx.compose.ui.platform.ComposeView>(
+            R.id.homePageComposeView
+        )
+        
+        if (isHomepage) {
+            // Show homepage, hide engine view
+            binding.swipeRefresh.visibility = View.GONE
+            binding.engineView.asView().visibility = View.GONE
+            homePageView?.visibility = View.VISIBLE
+        } else {
+            // Show engine view, hide homepage
+            homePageView?.visibility = View.GONE
+            binding.swipeRefresh.visibility = View.VISIBLE
+            binding.engineView.asView().visibility = View.VISIBLE
+        }
     }
 }

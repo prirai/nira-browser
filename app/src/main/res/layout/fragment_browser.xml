@@ -38,6 +38,14 @@
                     android:visibility="gone"
                 />
             </mozilla.components.ui.widgets.VerticalSwipeRefreshLayout>
+            
+            <!-- Homepage Compose View - shown when about:homepage is loaded -->
+            <androidx.compose.ui.platform.ComposeView
+                android:id="@+id/homePageComposeView"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:visibility="gone"
+            />
 
             <ViewStub
                 android:id="@+id/stubFindInPage"
