@@ -3,7 +3,6 @@
     <string name="more">Mais Informações</string>
     <string name="version">Versão do aplicativo</string>
     <string name="licenses">Licenças de Código Aberto</string>
-    <string name="geckoview">GeckoView</string>
     <string name="custom">Personalizado</string>
     <string name="tabs">Abas</string>
     <string name="tab_grid">Mostrar abas em grade</string>
@@ -95,7 +94,6 @@
     <string name="homepage_type">Tipo de página inicial</string>
     <string name="default_word">Padrão</string>
     <string name="blank_page">Página em branco</string>
-    <string name="custom_page">Página personalizada</string>
     <string name="move_navbar">Mover barra de navegação para baixo</string>
     <string name="custom_collection">Coleção personalizada de extensões</string>
     <string name="use_custom_collection">Usar coleção personalizada de extensões</string>

@@ -3,7 +3,6 @@
     <string name="more">Więcej informacji</string>
     <string name="version">Wersja aplikacji</string>
     <string name="licenses">Licencje Open Source</string>
-    <string name="geckoview">GeckoView</string>
     <string name="custom">Niestandardowy</string>
     <string name="tabs">Karty</string>
     <string name="tab_grid">Pokaż karty pogrupowane w kratki</string>
@@ -95,7 +94,6 @@
     <string name="homepage_type">Typ strony głównej</string>
     <string name="default_word">Domyślnie</string>
     <string name="blank_page">Pusta strona</string>
-    <string name="custom_page">Własna strona</string>
     <string name="move_navbar">Przenieś pasek nawigacyjny na dół</string>
     <string name="custom_collection">Własna kolekcja dodatków</string>
     <string name="use_custom_collection">Użyj własnej kolekcji dodatków</string>

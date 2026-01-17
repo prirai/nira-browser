@@ -3,7 +3,6 @@
     <string name="more">Подробнее</string>
     <string name="version">Версия приложения</string>
     <string name="licenses">Open Source лицензии</string>
-    <string name="geckoview">GeckoView</string>
     <string name="custom">Настраиваемый</string>
     <string name="tabs">Вкладки</string>
     <string name="tab_grid">Показать вкладки в виде сетки</string>
@@ -95,7 +94,6 @@
     <string name="homepage_type">Тип домашней страницы</string>
     <string name="default_word">По-умолчанию</string>
     <string name="blank_page">Пустая страница</string>
-    <string name="custom_page">Пользовательская страница</string>
     <string name="move_navbar">Переместить панель навигации вниз</string>
     <string name="custom_collection">Пользовательская коллекция дополнений</string>
     <string name="use_custom_collection">Использовать пользовательскую коллекцию дополнений</string>

@@ -182,9 +182,6 @@ open class BrowserActivity : LocaleAwareAppCompatActivity(), ComponentCallbacks2
             }
         })
 
-        // Setup auto-tagging of new tabs with current profile
-        setupTabProfileTagging()
-
         // Enable edge-to-edge display with standardized approach
         enableEdgeToEdgeMode()
 
@@ -249,12 +246,6 @@ open class BrowserActivity : LocaleAwareAppCompatActivity(), ComponentCallbacks2
         if (!browsingModeManager.mode.isPrivate) {
             openToBrowser(BrowserDirection.FromGlobal, null)
         }
-    }
-
-    private fun setupTabProfileTagging() {
-        // Tab profile tagging is now handled by ProfileMiddleware
-        // which sets contextId on tab creation for proper Gecko-level cookie isolation
-        // This function kept for compatibility but logic moved to middleware
     }
 
     protected open fun createBrowsingModeManager(

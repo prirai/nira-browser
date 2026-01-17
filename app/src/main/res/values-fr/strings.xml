@@ -76,7 +76,6 @@
     <string name="current_profile">Profil : %1$s</string>
     <string name="custom">Personnalisé</string>
     <string name="custom_collection">Collection d’extensions personnalisée</string>
-    <string name="custom_page">Page personnalisée</string>
     <string name="custom_search_engine">Moteur de recherche personnalisé</string>
     <string name="custom_search_engine_details">Entrer l\'URL, en remplaçant la requête par \'{searchTerms}\'</string>
     <string name="custom_search_engine_error">L\'URL ne contient pas \'{searchTerms}\'</string>
@@ -117,7 +116,6 @@
     <string name="folder_name">Nom du dossier</string>
     <string name="font_size">Taille du texte</string>
     <string name="forward">Suivant</string>
-    <string name="geckoview">GeckoView</string>
     <string name="get_started">Commencer</string>
     <string name="hide_url_bar">Mode plein écran</string>
     <string name="highly_customizable">Interface hautement personnalisable</string>

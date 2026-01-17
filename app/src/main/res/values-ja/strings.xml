@@ -93,7 +93,6 @@
     <string name="homepage_type">ホームページの種類</string>
     <string name="default_word">デフォルト</string>
     <string name="blank_page">空のページ</string>
-    <string name="custom_page">カスタムページ</string>
     <string name="move_navbar">ナビゲーションバーを下に移動</string>
     <string name="custom_collection">カスタムアドオンコレクション</string>
     <string name="use_custom_collection">カスタムアドオンコレクションを使用する</string>
