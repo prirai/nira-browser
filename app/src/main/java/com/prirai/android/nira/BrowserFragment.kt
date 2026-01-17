@@ -315,10 +315,10 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
                             gravity = android.view.Gravity.BOTTOM
                             // IMPORTANT: Add scroll behavior for hide-on-scroll functionality
                             // Bottom components should hide when scrolling down, show when scrolling up
-                            behavior = mozilla.components.ui.widgets.behavior.EngineViewScrollingBehavior(
-                                context,
-                                null,
-                                mozilla.components.ui.widgets.behavior.ViewPosition.BOTTOM
+                            behavior = mozilla.components.ui.widgets.behavior.EngineViewScrollingGesturesBehavior(
+                                engineView = binding.engineView,
+                                dependency = container,
+                                dependencyGravity = mozilla.components.ui.widgets.behavior.DependencyGravity.Bottom
                             )
                         }
                         

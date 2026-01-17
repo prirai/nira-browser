@@ -139,7 +139,7 @@ class ComposeTabBarWithProfileSwitcher @JvmOverloads constructor(
             }
         }
 
-        // Derive reactive state from browserState
+        // Get current profile and mode - recalculate when browserState changes
         val currentProfile = remember(browserState.value) { profileManager.getActiveProfile() }
         val isPrivateMode = remember(browserState.value) { profileManager.isPrivateMode() }
 
@@ -206,22 +206,31 @@ class ComposeTabBarWithProfileSwitcher @JvmOverloads constructor(
             }
         }
 
+        // Create a stable key for the tab bar based on profile
+        val profileKey = remember(currentProfile, isPrivateMode) {
+            if (isPrivateMode) "private" else "profile_${currentProfile.id}"
+        }
+
         // Tab bar only - profile switching available via menu
-        TabBarCompose(
-            tabs = tabs,
-            viewModel = viewModel,
-            orderManager = orderManager,
-            selectedTabId = selectedTabId,
-            onTabClick = { tabId: String ->
-                onTabSelected?.invoke(tabId)
-            },
-            onTabClose = { tabId: String ->
-                // Use ViewModel's closeTab with undo support
-                viewModel.closeTab(tabId, showUndo = true)
-                // Still invoke callback for legacy support
-                onTabClosed?.invoke(tabId)
-            }
-        )
+        // Use key() to properly recreate composition on profile switch
+        key(profileKey) {
+            TabBarCompose(
+                tabs = tabs,
+                viewModel = viewModel,
+                orderManager = orderManager,
+                selectedTabId = selectedTabId,
+                onTabClick = { tabId: String ->
+                    onTabSelected?.invoke(tabId)
+                },
+                onTabClose = { tabId: String ->
+                    // Use ViewModel's closeTab with undo support
+                    viewModel.closeTab(tabId, showUndo = true)
+                    // Still invoke callback for legacy support
+                    onTabClosed?.invoke(tabId)
+                },
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
     }
 
 

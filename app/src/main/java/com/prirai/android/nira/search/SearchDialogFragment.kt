@@ -38,7 +38,8 @@ import mozilla.components.support.base.feature.UserInteractionHandler
 import mozilla.components.support.ktx.android.content.getColorFromAttr
 import mozilla.components.support.ktx.android.view.hideKeyboard
 import mozilla.components.ui.autocomplete.InlineAutocompleteEditText
-import mozilla.components.ui.widgets.behavior.ViewPosition as OldToolbarPosition
+import mozilla.components.ui.widgets.behavior.DependencyGravity
+import com.prirai.android.nira.components.toolbar.ToolbarPosition as OldToolbarPosition
 
 typealias SearchDialogFragmentStore = SearchFragmentStore
 
