@@ -11,7 +11,7 @@ import com.prirai.android.nira.preferences.UserPreferences
 import kotlinx.coroutines.launch
 import mozilla.components.concept.engine.EngineView
 import java.lang.ref.WeakReference
-import mozilla.components.ui.widgets.behavior.ViewPosition as OldToolbarPosition
+import com.prirai.android.nira.components.toolbar.ToolbarPosition as OldToolbarPosition
 
 /**
  * Handles properly animating the browser engine based on `SHOULD_ANIMATE_FLAG` passed in through

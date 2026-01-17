@@ -293,72 +293,54 @@ class CustomizationSettingsFragment : BaseSettingsFragment() {
     }
 
     private fun pickHomepageBackground() {
-        val startingChoice = UserPreferences(requireContext()).homepageBackgroundChoice
-        val checkedItem = UserPreferences(requireContext()).homepageBackgroundChoice
-
-        val dialogView = layoutInflater.inflate(R.layout.dialog_homepage_background_picker, null)
-        val noneCard = dialogView.findViewById<com.google.android.material.card.MaterialCardView>(R.id.noneCard)
-        val urlCard = dialogView.findViewById<com.google.android.material.card.MaterialCardView>(R.id.urlCard)
-        val galleryCard = dialogView.findViewById<com.google.android.material.card.MaterialCardView>(R.id.galleryCard)
+        // Simple dialog with three direct action options (matching enum order)
+        val items = arrayOf(
+            getString(R.string.none),
+            getString(R.string.homepage_background_gallery),
+            getString(R.string.homepage_background_url)
+        )
         
-        // Set initial checked state
-        when (checkedItem) {
-            HomepageBackgroundChoice.NONE.ordinal -> noneCard.isChecked = true
-            HomepageBackgroundChoice.URL.ordinal -> urlCard.isChecked = true
-            HomepageBackgroundChoice.GALLERY.ordinal -> galleryCard.isChecked = true
-        }
-        
-        var selectedChoice = checkedItem
-        
-        noneCard.setOnClickListener {
-            noneCard.isChecked = true
-            urlCard.isChecked = false
-            galleryCard.isChecked = false
-            selectedChoice = HomepageBackgroundChoice.NONE.ordinal
-        }
-        
-        urlCard.setOnClickListener {
-            noneCard.isChecked = false
-            urlCard.isChecked = true
-            galleryCard.isChecked = false
-            selectedChoice = HomepageBackgroundChoice.URL.ordinal
-        }
-        
-        galleryCard.setOnClickListener {
-            noneCard.isChecked = false
-            urlCard.isChecked = false
-            galleryCard.isChecked = true
-            selectedChoice = HomepageBackgroundChoice.GALLERY.ordinal
-        }
-
         MaterialAlertDialogBuilder(requireContext())
             .setTitle(resources.getString(R.string.homepage_background_image))
-            .setView(dialogView)
-            .setNegativeButton(resources.getString(R.string.cancel)) { _, _ ->
-                UserPreferences(requireContext()).homepageBackgroundChoice = startingChoice
-            }
-            .setPositiveButton(resources.getString(R.string.mozac_feature_prompts_ok)) { _, _ ->
-                UserPreferences(requireContext()).homepageBackgroundChoice = selectedChoice
-                val singleItems = resources.getStringArray(R.array.homepage_background_image_types)
-                preferenceScreen.findPreference<Preference>(requireContext().resources.getString(R.string.key_homepage_background_image))!!.summary =
-                    singleItems[selectedChoice]
-                    
-                when (selectedChoice) {
-                    HomepageBackgroundChoice.URL.ordinal -> {
-                        showUrlInputDialog()
+            .setItems(items) { _, which ->
+                when (which) {
+                    0 -> {
+                        // None - immediate action
+                        UserPreferences(requireContext()).homepageBackgroundChoice = HomepageBackgroundChoice.NONE.ordinal
+                        updateHomepageBackgroundSummary()
+                        Toast.makeText(
+                            context,
+                            requireContext().resources.getText(R.string.successful),
+                            Toast.LENGTH_SHORT
+                        ).show()
                     }
-                    HomepageBackgroundChoice.GALLERY.ordinal -> {
+                    1 -> {
+                        // Choose from gallery - launch picker immediately
                         val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
                             addCategory(Intent.CATEGORY_OPENABLE)
                             type = "image/*"
                             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                             addFlags(Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION)
                         }
+                        UserPreferences(requireContext()).homepageBackgroundChoice = HomepageBackgroundChoice.GALLERY.ordinal
                         getBackgroundImageUri.launch(intent)
+                    }
+                    2 -> {
+                        // Enter URL - show input dialog immediately
+                        showUrlInputDialog()
                     }
                 }
             }
+            .setNegativeButton(resources.getString(R.string.cancel), null)
             .show()
+    }
+    
+    private fun updateHomepageBackgroundSummary() {
+        val singleItems = resources.getStringArray(R.array.homepage_background_image_types)
+        val currentChoice = UserPreferences(requireContext()).homepageBackgroundChoice
+        preferenceScreen.findPreference<Preference>(
+            requireContext().resources.getString(R.string.key_homepage_background_image)
+        )?.summary = singleItems[currentChoice]
     }
     
     private fun showUrlInputDialog() {
@@ -374,24 +356,25 @@ class CustomizationSettingsFragment : BaseSettingsFragment() {
             .setView(dialogView)
             .setPositiveButton(resources.getString(R.string.mozac_feature_prompts_ok)) { _, _ ->
                 if (editText.text.toString().isNotEmpty()) {
+                    UserPreferences(requireContext()).homepageBackgroundChoice = HomepageBackgroundChoice.URL.ordinal
                     UserPreferences(requireContext()).homepageBackgroundUrl = editText.text.toString()
+                    updateHomepageBackgroundSummary()
                     Toast.makeText(
                         context,
                         requireContext().resources.getText(R.string.successful),
-                        Toast.LENGTH_LONG
+                        Toast.LENGTH_SHORT
                     ).show()
                 } else {
                     UserPreferences(requireContext()).homepageBackgroundChoice = HomepageBackgroundChoice.NONE.ordinal
+                    updateHomepageBackgroundSummary()
                     Toast.makeText(
                         context,
                         requireContext().resources.getText(R.string.failed),
-                        Toast.LENGTH_LONG
+                        Toast.LENGTH_SHORT
                     ).show()
                 }
             }
-            .setNegativeButton(resources.getString(R.string.cancel)) { _, _ ->
-                UserPreferences(requireContext()).homepageBackgroundChoice = HomepageBackgroundChoice.NONE.ordinal
-            }
+            .setNegativeButton(resources.getString(R.string.cancel), null)
             .show()
     }
 

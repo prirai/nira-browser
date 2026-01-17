@@ -123,7 +123,7 @@ dependencies {
     ksp "androidx.room:room-compiler:2.8.4"
 
     // Mozilla Components : https://maven.mozilla.org/maven2/?prefix=maven2/org/mozilla/geckoview/
-    final def mozComponentsVersion = "146.0"
+    final def mozComponentsVersion = "147.0"
 
     // Mozilla compose components
     implementation "org.mozilla.components:compose-awesomebar:$mozComponentsVersion"

@@ -3,7 +3,6 @@
     <string name="more">更多信息</string>
     <string name="version">应用版本</string>
     <string name="licenses">开放源代码许可证</string>
-    <string name="geckoview">GeckoView</string>
     <string name="custom">自定义</string>
     <string name="tabs">标签</string>
     <string name="tab_grid">以网格样式显示标签</string>
@@ -100,7 +99,6 @@
     <string name="homepage_type">主页类型</string>
     <string name="default_word">默认</string>
     <string name="blank_page">空白页</string>
-    <string name="custom_page">自定义页面</string>
     <string name="homepage_background_image">首页背景图像</string>
     <string name="homepage_background_gallery">从图库中选择</string>
     <string name="homepage_background_url">输入 URL</string>

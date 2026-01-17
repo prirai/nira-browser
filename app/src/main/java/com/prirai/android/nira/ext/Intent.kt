@@ -6,9 +6,6 @@ import android.os.Parcelable
 import mozilla.components.feature.intent.ext.getSessionId
 import mozilla.components.support.utils.SafeIntent
 
-/**
- * Type-safe replacement for deprecated getParcelableExtra()
- */
 inline fun <reified T : Parcelable> Intent.getParcelableExtraCompat(key: String): T? {
     return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
         getParcelableExtra(key, T::class.java)
@@ -17,9 +14,6 @@ inline fun <reified T : Parcelable> Intent.getParcelableExtraCompat(key: String)
     }
 }
 
-/**
- * Type-safe replacement for deprecated getParcelableArrayListExtra()
- */
 inline fun <reified T : Parcelable> Intent.getParcelableArrayListExtraCompat(key: String): ArrayList<T>? {
     return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
         getParcelableArrayListExtra(key, T::class.java)

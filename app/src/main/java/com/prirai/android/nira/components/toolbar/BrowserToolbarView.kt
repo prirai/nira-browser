@@ -19,9 +19,9 @@ import mozilla.components.browser.state.state.CustomTabSessionState
 import mozilla.components.browser.toolbar.BrowserToolbar
 import mozilla.components.browser.toolbar.display.DisplayToolbar
 import mozilla.components.support.ktx.util.URLStringUtils.toDisplayUrl
-import mozilla.components.ui.widgets.behavior.EngineViewScrollingBehavior
+import mozilla.components.ui.widgets.behavior.EngineViewScrollingGesturesBehavior
 import java.lang.ref.WeakReference
-import mozilla.components.ui.widgets.behavior.ViewPosition as MozacToolbarPosition
+import mozilla.components.ui.widgets.behavior.DependencyGravity as MozacToolbarPosition
 import androidx.core.net.toUri
 
 interface BrowserToolbarViewInteractor {
@@ -39,7 +39,8 @@ class BrowserToolbarView(
     private val toolbarPosition: ToolbarPosition,
     private val interactor: BrowserToolbarViewInteractor,
     private val customTabSession: CustomTabSessionState?,
-    private val lifecycleOwner: LifecycleOwner
+    private val lifecycleOwner: LifecycleOwner,
+    private val engineView: mozilla.components.concept.engine.EngineView? = null
 ) {
 
     private val settings = UserPreferences(container.context)
@@ -195,7 +196,7 @@ class BrowserToolbarView(
         }
         
         (targetView.layoutParams as? CoordinatorLayout.LayoutParams)?.apply {
-            (behavior as? EngineViewScrollingBehavior)?.forceExpand(targetView)
+            (behavior as? EngineViewScrollingGesturesBehavior)?.forceExpand()
         }
     }
 
@@ -212,7 +213,7 @@ class BrowserToolbarView(
         }
         
         (targetView.layoutParams as? CoordinatorLayout.LayoutParams)?.apply {
-            (behavior as? EngineViewScrollingBehavior)?.forceCollapse(targetView)
+            (behavior as? EngineViewScrollingGesturesBehavior)?.forceCollapse()
         }
     }
 
@@ -234,7 +235,7 @@ class BrowserToolbarView(
             ToolbarPosition.BOTTOM.ordinal -> {
                 // Always use dynamic toolbar behavior (scroll to hide)
                 if (!isPwaTabOrTwaTab) {
-                    setDynamicToolbarBehavior(MozacToolbarPosition.BOTTOM)
+                    setDynamicToolbarBehavior(MozacToolbarPosition.Bottom)
                 } else {
                     expandToolbarAndMakeItFixed()
                 }
@@ -244,7 +245,7 @@ class BrowserToolbarView(
                 if (shouldDisableScroll) {
                     expandToolbarAndMakeItFixed()
                 } else {
-                    setDynamicToolbarBehavior(MozacToolbarPosition.TOP)
+                    setDynamicToolbarBehavior(MozacToolbarPosition.Top)
                 }
             }
         }
@@ -267,6 +268,12 @@ class BrowserToolbarView(
 
     @VisibleForTesting
     internal fun setDynamicToolbarBehavior(toolbarPosition: MozacToolbarPosition) {
+        // Only set behavior if engineView is available
+        if (engineView == null) {
+            android.util.Log.w("BrowserToolbar", "Cannot set dynamic toolbar behavior - engineView not provided")
+            return
+        }
+        
         // Apply behavior to the correct view based on toolbar layout
         val targetView = if (toolbarLayout == R.layout.component_bottom_browser_toolbar) {
             toolbarContainer ?: layout
@@ -276,7 +283,11 @@ class BrowserToolbarView(
         
         
         (targetView.layoutParams as? CoordinatorLayout.LayoutParams)?.apply {
-            behavior = EngineViewScrollingBehavior(targetView.context, null, toolbarPosition)
+            behavior = EngineViewScrollingGesturesBehavior(
+                engineView = engineView,
+                dependency = targetView,
+                dependencyGravity = toolbarPosition
+            )
         } ?: android.util.Log.w("BrowserToolbar", "Failed to apply behavior - layoutParams is not CoordinatorLayout.LayoutParams")
     }
 

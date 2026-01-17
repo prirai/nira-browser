@@ -2,26 +2,12 @@ package com.prirai.android.nira.components.toolbar.modern
 
 import android.content.Context
 import android.util.AttributeSet
-import android.view.ViewGroup
 import android.widget.FrameLayout
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.ComposeView
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.LifecycleOwner
-import androidx.lifecycle.lifecycleScope
 import com.prirai.android.nira.browser.profile.BrowserProfile
 import com.prirai.android.nira.browser.profile.ProfileManager
 import com.prirai.android.nira.browser.tabs.compose.TabBarCompose
@@ -30,9 +16,6 @@ import com.prirai.android.nira.browser.tabs.compose.TabOrderManager
 import com.prirai.android.nira.browser.tabgroups.UnifiedTabGroupManager
 import com.prirai.android.nira.ext.components
 import com.prirai.android.nira.ui.theme.NiraTheme
-import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.launch
 import mozilla.components.browser.state.state.TabSessionState
 import mozilla.components.lib.state.ext.flowScoped
 
@@ -139,7 +122,7 @@ class ComposeTabBarWithProfileSwitcher @JvmOverloads constructor(
             }
         }
 
-        // Derive reactive state from browserState
+        // Get current profile and mode - recalculate when browserState changes
         val currentProfile = remember(browserState.value) { profileManager.getActiveProfile() }
         val isPrivateMode = remember(browserState.value) { profileManager.isPrivateMode() }
 
@@ -206,62 +189,33 @@ class ComposeTabBarWithProfileSwitcher @JvmOverloads constructor(
             }
         }
 
+        // Create a stable key for the tab bar based on profile
+        val profileKey = remember(currentProfile, isPrivateMode) {
+            if (isPrivateMode) "private" else "profile_${currentProfile.id}"
+        }
+
         // Tab bar only - profile switching available via menu
-        TabBarCompose(
-            tabs = tabs,
-            viewModel = viewModel,
-            orderManager = orderManager,
-            selectedTabId = selectedTabId,
-            onTabClick = { tabId: String ->
-                onTabSelected?.invoke(tabId)
-            },
-            onTabClose = { tabId: String ->
-                // Use ViewModel's closeTab with undo support
-                viewModel.closeTab(tabId, showUndo = true)
-                // Still invoke callback for legacy support
-                onTabClosed?.invoke(tabId)
-            }
-        )
+        // Use key() to properly recreate composition on profile switch
+        key(profileKey) {
+            TabBarCompose(
+                tabs = tabs,
+                viewModel = viewModel,
+                orderManager = orderManager,
+                selectedTabId = selectedTabId,
+                onTabClick = { tabId: String ->
+                    onTabSelected?.invoke(tabId)
+                },
+                onTabClose = { tabId: String ->
+                    // Use ViewModel's closeTab with undo support
+                    viewModel.closeTab(tabId, showUndo = true)
+                    // Still invoke callback for legacy support
+                    onTabClosed?.invoke(tabId)
+                },
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
     }
 
-
-    private fun showProfileSwitcherMenu() {
-        // Simple profile switcher - could be enhanced with a proper dialog
-        val profileManager = ProfileManager.getInstance(context)
-        val profiles = profileManager.getAllProfiles()
-        val currentProfile = profileManager.getActiveProfile()
-        val isPrivate = profileManager.isPrivateMode()
-
-        val options = mutableListOf<String>()
-        val actions = mutableListOf<() -> Unit>()
-
-        // Private mode
-        options.add("🕵️ Private")
-        actions.add {
-            profileManager.setPrivateMode(true)
-            onPrivateModeSelected?.invoke()
-            setupComposeContent() // Refresh UI
-        }
-
-        // Profiles
-        profiles.forEach { profile ->
-            options.add("${profile.emoji} ${profile.name}")
-            actions.add {
-                profileManager.setActiveProfile(profile)
-                profileManager.setPrivateMode(false)
-                onProfileSelected?.invoke(profile)
-                setupComposeContent() // Refresh UI
-            }
-        }
-
-        androidx.appcompat.app.AlertDialog.Builder(context)
-            .setTitle("Switch Profile")
-            .setItems(options.toTypedArray()) { _, which ->
-                actions[which]()
-            }
-            .setNegativeButton("Cancel", null)
-            .show()
-    }
 
     fun updateTabs(tabs: List<TabSessionState>, selectedId: String?) {
         // The compose content will automatically update via produceState
@@ -272,11 +226,4 @@ class ComposeTabBarWithProfileSwitcher @JvmOverloads constructor(
         setupComposeContent()
     }
 
-    fun updateToPrivateMode() {
-        setupComposeContent()
-    }
-
-    fun setProfileSwitcherVisible(visible: Boolean) {
-        // For now, always visible. Could be enhanced to hide/show
-    }
 }

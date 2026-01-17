@@ -4,20 +4,6 @@ import mozilla.components.browser.state.state.TabSessionState
 import com.prirai.android.nira.browser.tabgroups.TabGroupData
 
 /**
- * Unified item builder for all tab views (bar, list, grid).
- * Eliminates code duplication by providing a single source of truth for item construction.
- */
-
-/**
- * View mode for determining item structure
- */
-enum class ViewMode {
-    BAR,    // Horizontal tab bar (pill-style)
-    LIST,   // Vertical list view
-    GRID    // Grid view
-}
-
-/**
  * Base sealed class for all unified items
  */
 sealed class UnifiedItem {
@@ -104,19 +90,17 @@ object UnifiedItemBuilder {
      * @param tabs All tabs for the current profile
      * @param groups All groups for the current profile
      * @param expandedGroups Set of group IDs that are expanded
-     * @param viewMode The view mode (affects item structure)
      * @return List of unified items ready for display
      */
     fun buildItems(
         order: UnifiedTabOrder?,
         tabs: List<TabSessionState>,
         groups: List<TabGroupData>,
-        expandedGroups: Set<String>,
-        viewMode: ViewMode
+        expandedGroups: Set<String>
     ): List<UnifiedItem> {
         // If no order, use fallback
         if (order == null) {
-            return buildFallbackItems(tabs, groups, expandedGroups, viewMode)
+            return buildFallbackItems(tabs, groups, expandedGroups)
         }
 
         val items = mutableListOf<UnifiedItem>()
@@ -197,17 +181,13 @@ object UnifiedItemBuilder {
     private fun buildFallbackItems(
         tabs: List<TabSessionState>,
         groups: List<TabGroupData>,
-        expandedGroups: Set<String>,
-        viewMode: ViewMode
+        expandedGroups: Set<String>
     ): List<UnifiedItem> {
         val items = mutableListOf<UnifiedItem>()
         val addedTabIds = mutableSetOf<String>()
 
         // Create lookup map
         val tabsById = tabs.associateBy { it.id }
-
-        // Find all tabs that are grouped
-        val groupedTabIds = groups.flatMap { it.tabIds }.toSet()
 
         // Add groups first
         groups.forEachIndexed { groupIndex, group ->

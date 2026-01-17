@@ -157,6 +157,15 @@ class WebAppActivity : AppCompatActivity() {
         // Enable edge-to-edge with standardized approach
         enableEdgeToEdgeMode()
         
+        // Extract theme color from PWA manifest if available
+        val manifest = intent.getWebAppManifest()
+        val themeColor = manifest?.themeColor
+        
+        // Apply theme color to status bar if provided
+        if (themeColor != null) {
+            window.statusBarColor = themeColor
+        }
+        
         // Apply insets to webapp container
         findViewById<View>(R.id.webapp_container)?.applyPersistentInsets()
     }
