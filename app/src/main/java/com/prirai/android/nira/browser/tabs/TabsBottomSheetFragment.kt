@@ -11,19 +11,13 @@ import androidx.compose.runtime.produceState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.collectAsState
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.animation.*
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.fragment.app.DialogFragment
 import androidx.lifecycle.lifecycleScope
@@ -88,7 +82,6 @@ class TabsBottomSheetFragment : DialogFragment() {
     private var tabsAdapter: TabsWithGroupsAdapter? = null
     private var tabsGridAdapter: TabsGridAdapter? = null
     private var dragHelper: TabGroupDragHelper? = null
-    private var gridDragHelper: TabGridDragHelper? = null
     private var flatTabsAdapter: com.prirai.android.nira.browser.tabs.dragdrop.FlatTabsAdapter? = null
     private var unifiedDragHelper: com.prirai.android.nira.browser.tabs.dragdrop.UnifiedDragHelper? = null
     private lateinit var tabOrderPersistence: com.prirai.android.nira.browser.tabs.dragdrop.TabOrderPersistence
@@ -193,7 +186,6 @@ class TabsBottomSheetFragment : DialogFragment() {
             setupGridView()
         } else {
             setupTabsAdapter()
-            setupDragAndDrop()
             // Grid view is needed for both systems
             setupGridView()
         }
@@ -371,29 +363,6 @@ class TabsBottomSheetFragment : DialogFragment() {
             layoutManager = LinearLayoutManager(requireContext())
             adapter = tabsAdapter
         }
-    }
-
-    private fun setupDragAndDrop() {
-        // DEPRECATED - old RecyclerView drag system
-        /*
-        // List view drag helper
-        dragHelper = TabGroupDragHelper(
-            adapter = tabsAdapter!!,
-            groupManager = unifiedGroupManager,
-            scope = lifecycleScope,
-            onUpdate = { updateTabsDisplay() }
-        )
-        dragHelper!!.attachToRecyclerView(binding.tabsRecyclerView)
-
-        // Grid view drag helper
-        gridDragHelper = TabGridDragHelper(
-            adapter = tabsGridAdapter!!,
-            groupManager = unifiedGroupManager,
-            scope = lifecycleScope,
-            onUpdate = { updateGridDisplay() }
-        )
-        gridDragHelper!!.attachToRecyclerView(binding.tabsGridRecyclerView)
-        */
     }
 
     private fun setupMergedProfileButtons() {

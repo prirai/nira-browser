@@ -95,7 +95,6 @@
     <string name="homepage_type">نوع الصفحة الرئيسية</string>
     <string name="default_word">إفتراضي</string>
     <string name="blank_page">صفحة فارغة</string>
-    <string name="custom_page">صفحة مخصصة</string>
     <string name="move_navbar">تحريك شريط التنقل إلى الأسفل</string>
     <string name="custom_collection">مجموعة إضافات مخصصة</string>
     <string name="use_custom_collection">استخدام مجموعة إضافات مخصصة</string>

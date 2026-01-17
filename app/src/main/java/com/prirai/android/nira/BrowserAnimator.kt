@@ -11,7 +11,6 @@ import com.prirai.android.nira.preferences.UserPreferences
 import kotlinx.coroutines.launch
 import mozilla.components.concept.engine.EngineView
 import java.lang.ref.WeakReference
-import mozilla.components.ui.widgets.behavior.DependencyGravity
 import com.prirai.android.nira.components.toolbar.ToolbarPosition as OldToolbarPosition
 
 /**

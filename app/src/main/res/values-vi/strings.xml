@@ -76,7 +76,6 @@
     <string name="current_profile">Hồ sơ: %1$s</string>
     <string name="custom">Tùy chỉnh</string>
     <string name="custom_collection">Bộ sưu tập tiện ích bổ sung tùy chỉnh</string>
-    <string name="custom_page">Trang tùy chỉnh</string>
     <string name="custom_search_engine">Công cụ tìm kiếm tùy chỉnh</string>
     <string name="custom_search_engine_details">Nhập URL với \'{searchTerms}\' thay cho truy vấn</string>
     <string name="custom_search_engine_error">URL tìm kiếm không chứa \'{searchTerms}\'</string>
