@@ -59,17 +59,8 @@ class AppRequestInterceptor(val context: Context) : RequestInterceptor {
                         null
                     }
                 }
-                com.prirai.android.nira.settings.HomepageChoice.CUSTOM_PAGE.ordinal -> {
-                    // Custom page - redirect to custom URL
-                    val customUrl = prefs.customHomepageUrl
-                    if (customUrl.isNotEmpty() && uri != customUrl) {
-                        InterceptionResponse.Url(customUrl)
-                    } else {
-                        null
-                    }
-                }
                 else -> {
-                    // VIEW mode - use about:homepage (default)
+                    // VIEW and ONLY_SEARCH_BAR modes - use about:homepage (default)
                     if (uri == "about:blank") {
                         InterceptionResponse.Url("about:homepage")
                     } else {
@@ -303,7 +294,8 @@ class AppRequestInterceptor(val context: Context) : RequestInterceptor {
         ErrorType.ERROR_SAFEBROWSING_HARMFUL_URI,
         ErrorType.ERROR_SAFEBROWSING_PHISHING_URI,
         ErrorType.ERROR_SAFEBROWSING_MALWARE_URI,
-        ErrorType.ERROR_SAFEBROWSING_UNWANTED_URI -> ErrorCategory.Malware
+        ErrorType.ERROR_SAFEBROWSING_UNWANTED_URI,
+        ErrorType.ERROR_HARMFULADDON_URI -> ErrorCategory.Malware
     }
 
     internal enum class ErrorCategory(val htmlRes: String) {

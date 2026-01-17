@@ -123,7 +123,7 @@ fun TabCard(
             // Tab info
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = tab.content.title.takeIf { it.isNotBlank() } ?: "New Tab",
+                    text = getTabDisplayTitle(tab),
                     style = if (isCompact) MaterialTheme.typography.bodyMedium else MaterialTheme.typography.bodyLarge,
                     maxLines = if (isCompact) 1 else 2,
                     overflow = TextOverflow.Ellipsis,
@@ -168,16 +168,6 @@ fun TabCard(
         }
     }
 }
-
-/**
- * Favicon image with placeholder
- */
-/**
- * Legacy FaviconImage - now redirects to new FaviconImage from FaviconImage.kt
- * This duplicate has been removed. Import from FaviconImage.kt instead.
- * @deprecated Use FaviconImage from FaviconImage.kt
- */
-// Removed duplicate - use FaviconImage from FaviconImage.kt
 
 /**
  * Thumbnail image for grid view - uses Coil to load from thumbnail storage
@@ -225,7 +215,7 @@ fun ThumbnailImage(
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = tab.content.title.takeIf { it.isNotBlank() } ?: "New Tab",
+                    text = getTabDisplayTitle(tab),
                     style = MaterialTheme.typography.bodySmall,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,

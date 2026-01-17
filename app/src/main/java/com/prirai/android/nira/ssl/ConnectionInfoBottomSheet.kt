@@ -62,7 +62,7 @@ class ConnectionInfoBottomSheet : BottomSheetDialogFragment() {
             securityIcon.setImageResource(R.drawable.shield_lock_24)
             securityStatus.text = "Internal page"
             securityStatus.setTextColor(context.getColor(R.color.security_indicator_secure))
-        } else if (securityInfo?.secure == true) {
+        } else if (securityInfo?.isSecure == true) {
             securityIcon.setImageResource(R.drawable.security_24)
             securityStatus.text = "Connection is secure"
             securityStatus.setTextColor(com.prirai.android.nira.theme.ColorConstants.getSecureColor(context))

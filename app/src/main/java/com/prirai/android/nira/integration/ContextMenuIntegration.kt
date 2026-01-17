@@ -5,6 +5,7 @@ import android.view.View
 import androidx.fragment.app.FragmentManager
 import com.prirai.android.nira.databinding.FragmentBrowserBinding
 import mozilla.components.browser.state.store.BrowserStore
+import mozilla.components.concept.engine.EngineView
 import mozilla.components.feature.app.links.AppLinksUseCases
 import mozilla.components.feature.contextmenu.ContextMenuCandidate
 import mozilla.components.feature.contextmenu.ContextMenuCandidate.Companion.createAddContactCandidate
@@ -28,7 +29,8 @@ class ContextMenuIntegration(
     tabsUseCases: TabsUseCases,
     contextMenuUseCases: ContextMenuUseCases,
     parentView: View,
-    sessionId: String? = null
+    sessionId: String? = null,
+    engineView: EngineView? = null
 ) : LifecycleAwareFeature {
 
     val candidates = run {
@@ -64,7 +66,12 @@ class ContextMenuIntegration(
     }
 
     private val feature = ContextMenuFeature(
-        fragmentManager, browserStore, candidates, FragmentBrowserBinding.bind(parentView).engineView, contextMenuUseCases
+        fragmentManager, 
+        browserStore, 
+        candidates, 
+        engineView ?: FragmentBrowserBinding.bind(parentView).engineView, 
+        contextMenuUseCases,
+        tabId = sessionId
     )
 
     override fun start() {

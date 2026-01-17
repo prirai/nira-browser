@@ -92,8 +92,7 @@ fun TabSheetListView(
             order = currentOrder,
             tabs = tabs,
             groups = groups,
-            expandedGroups = expandedGroups,
-            viewMode = ViewMode.LIST
+            expandedGroups = expandedGroups
         )
     }
 

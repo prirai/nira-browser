@@ -14,19 +14,29 @@ import androidx.core.view.updatePadding
  * Enables edge-to-edge display for the activity following Mozilla's reference browser pattern.
  * This ensures consistent behavior across all Android versions.
  * 
- * - Uses fully transparent system bars
+ * - Uses fully transparent system bars (or custom color if provided)
  * - Content extends behind system bars
- * - System bar icon colors adapt based on theme
+ * - System bar icon colors adapt based on theme or color
+ * 
+ * @param statusBarColor Optional custom color for status bar (used by custom tabs)
  */
-fun ComponentActivity.enableEdgeToEdgeMode() {
-    val isDark = isAppInDarkTheme()
+fun ComponentActivity.enableEdgeToEdgeMode(statusBarColor: Int? = null) {
+    val isDark = if (statusBarColor != null) {
+        // For custom tabs with specific color, check if that color is dark
+        isColorDark(statusBarColor)
+    } else {
+        // For normal browser, use app theme
+        isAppInDarkTheme()
+    }
     
-    // Use Android's modern edge-to-edge API with transparent bars
+    val barColor = statusBarColor ?: Color.TRANSPARENT
+    
+    // Use Android's modern edge-to-edge API
     enableEdgeToEdge(
         statusBarStyle = if (isDark) {
-            SystemBarStyle.dark(Color.TRANSPARENT)
+            SystemBarStyle.dark(barColor)
         } else {
-            SystemBarStyle.light(Color.TRANSPARENT, Color.TRANSPARENT)
+            SystemBarStyle.light(barColor, barColor)
         },
         navigationBarStyle = if (isDark) {
             SystemBarStyle.dark(Color.TRANSPARENT)
@@ -34,6 +44,30 @@ fun ComponentActivity.enableEdgeToEdgeMode() {
             SystemBarStyle.light(Color.TRANSPARENT, Color.TRANSPARENT)
         }
     )
+    
+    // For custom tabs with specific color, also set window.statusBarColor
+    // This ensures the color is actually applied (SystemBarStyle alone may not be enough)
+    if (statusBarColor != null) {
+        window.statusBarColor = statusBarColor
+    }
+}
+
+/**
+ * Determines if a color is dark based on its luminance.
+ * Used to decide whether to use light or dark status bar icons.
+ */
+private fun isColorDark(color: Int): Boolean {
+    val red = Color.red(color) / 255.0
+    val green = Color.green(color) / 255.0
+    val blue = Color.blue(color) / 255.0
+    
+    // Calculate relative luminance
+    val r = if (red <= 0.03928) red / 12.92 else Math.pow((red + 0.055) / 1.055, 2.4)
+    val g = if (green <= 0.03928) green / 12.92 else Math.pow((green + 0.055) / 1.055, 2.4)
+    val b = if (blue <= 0.03928) blue / 12.92 else Math.pow((blue + 0.055) / 1.055, 2.4)
+    
+    val luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b
+    return luminance <= 0.5
 }
 
 /**

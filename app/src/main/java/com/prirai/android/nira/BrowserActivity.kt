@@ -1,19 +1,17 @@
 package com.prirai.android.nira
 
-// import com.prirai.android.nira.browser.home.HomeFragmentDirections // Removed - using BrowserFragment for homepage
 import android.content.ComponentCallbacks2
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.util.AttributeSet
 import android.view.View
+import androidx.activity.OnBackPressedCallback
 import androidx.annotation.IdRes
 import androidx.annotation.VisibleForTesting
 import androidx.appcompat.app.ActionBar
 import androidx.appcompat.widget.Toolbar
 import androidx.core.view.ViewCompat
-import androidx.core.view.WindowCompat
-import androidx.core.view.WindowInsetsCompat
 import androidx.fragment.app.FragmentManager
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
@@ -32,7 +30,6 @@ import com.prirai.android.nira.databinding.ActivityMainBinding
 import com.prirai.android.nira.ext.alreadyOnDestination
 import com.prirai.android.nira.ext.components
 import com.prirai.android.nira.ext.enableEdgeToEdgeMode
-import com.prirai.android.nira.ext.isAppInDarkTheme
 import com.prirai.android.nira.ext.nav
 import com.prirai.android.nira.preferences.UserPreferences
 import com.prirai.android.nira.search.SearchDialogFragmentDirections
@@ -182,9 +179,6 @@ open class BrowserActivity : LocaleAwareAppCompatActivity(), ComponentCallbacks2
             }
         })
 
-        // Setup auto-tagging of new tabs with current profile
-        setupTabProfileTagging()
-
         // Enable edge-to-edge display with standardized approach
         enableEdgeToEdgeMode()
 
@@ -199,6 +193,21 @@ open class BrowserActivity : LocaleAwareAppCompatActivity(), ComponentCallbacks2
         view.post {
             components.appRequestInterceptor.setNavController(navHost.navController)
         }
+
+        // Setup OnBackPressedDispatcher callback to replace deprecated onBackPressed()
+        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                supportFragmentManager.primaryNavigationFragment?.childFragmentManager?.fragments?.forEach {
+                    if (it is UserInteractionHandler && it.onBackPressed()) {
+                        return
+                    }
+                }
+                // If no fragment handled it, let the system handle it
+                isEnabled = false
+                onBackPressedDispatcher.onBackPressed()
+                isEnabled = true
+            }
+        })
     }
 
     override fun onStart() {
@@ -251,12 +260,6 @@ open class BrowserActivity : LocaleAwareAppCompatActivity(), ComponentCallbacks2
         }
     }
 
-    private fun setupTabProfileTagging() {
-        // Tab profile tagging is now handled by ProfileMiddleware
-        // which sets contextId on tab creation for proper Gecko-level cookie isolation
-        // This function kept for compatibility but logic moved to middleware
-    }
-
     protected open fun createBrowsingModeManager(
         initialMode: BrowsingMode,
         initialProfile: com.prirai.android.nira.browser.profile.BrowserProfile
@@ -280,15 +283,6 @@ open class BrowserActivity : LocaleAwareAppCompatActivity(), ComponentCallbacks2
         )
     }
 
-    final override fun onBackPressed() {
-        supportFragmentManager.primaryNavigationFragment?.childFragmentManager?.fragments?.forEach {
-            if (it is UserInteractionHandler && it.onBackPressed()) {
-                return
-            }
-        }
-        super.onBackPressed()
-    }
-
     override fun onCreateView(parent: View?, name: String, context: Context, attrs: AttributeSet): View? =
         when (name) {
             EngineView::class.java.name -> components.engine.createView(context, attrs).apply {
@@ -306,6 +300,7 @@ open class BrowserActivity : LocaleAwareAppCompatActivity(), ComponentCallbacks2
         if (UserPreferences(this).shouldUseBottomToolbar) {
             // Return a dummy action bar to satisfy the interface
             // The bottom toolbar doesn't need an ActionBar
+            @Suppress("DEPRECATION", "OVERRIDE_DEPRECATION")
             return object : ActionBar() {
                 override fun setCustomView(view: View?) {}
                 override fun setCustomView(view: View?, layoutParams: LayoutParams?) {}
@@ -581,81 +576,6 @@ open class BrowserActivity : LocaleAwareAppCompatActivity(), ComponentCallbacks2
         }
     }
 
-    /**
-     * Hide navigation toolbar completely for bottom toolbar mode
-     */
-    private fun hideNavigationToolbarForBottomMode() {
-        // Hide the ViewStub itself to prevent any space reservation
-        binding.navigationToolbarStub.visibility = View.GONE
-        binding.navigationToolbarStub.layoutParams?.apply {
-            height = 0
-            width = 0
-        }
-
-        // If already inflated, hide the toolbar completely
-        if (isToolbarInflated) {
-            navigationToolbar.visibility = View.GONE
-            navigationToolbar.layoutParams?.apply {
-                height = 0
-                width = 0
-            }
-        }
-    }
-
-    /**
-     * Setup status bar for bottom toolbar mode with optional blur effect
-     */
-    private fun setupStatusBarForBottomToolbar(userPrefs: UserPreferences) {
-        // Check if we should enable blur (enabled by default on Android 12+, or if user explicitly enabled it)
-        val shouldBlur = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
-            userPrefs.statusBarBlurEnabled // Default is true on Android 12+
-        } else {
-            userPrefs.statusBarBlurEnabled // Default is false on Android 11 and below
-        }
-
-        // Apply blur effect if enabled
-        if (shouldBlur) {
-            // Use system blur effect on Android 12+ (API 31+)
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
-                window.attributes = window.attributes.apply {
-                    blurBehindRadius = 80 // Blur radius in pixels
-                }
-                window.setBackgroundBlurRadius(80)
-            }
-            // Set semi-transparent background for blur effect
-            window.statusBarColor = if (isAppInDarkTheme()) {
-                android.graphics.Color.argb(180, 0, 0, 0) // Semi-transparent black
-            } else {
-                android.graphics.Color.argb(180, 255, 255, 255) // Semi-transparent white
-            }
-        } else {
-            // Use default theme-based background
-            window.statusBarColor = if (isAppInDarkTheme()) {
-                getColor(R.color.statusbar_background) // Dark theme color
-            } else {
-                getColor(R.color.statusbar_background) // Light theme color
-            }
-        }
-
-        // Enable content to draw behind status bar
-        WindowCompat.setDecorFitsSystemWindows(window, false)
-
-        // Set status bar icons color
-        androidx.core.view.WindowInsetsControllerCompat(window, window.decorView).apply {
-            isAppearanceLightStatusBars = !isAppInDarkTheme()
-            // Ensure system bars are always visible
-            show(WindowInsetsCompat.Type.systemBars())
-        }
-
-        // Set navigation bar to match toolbar background
-        window.navigationBarColor = com.prirai.android.nira.theme.ThemeManager.getToolbarBackgroundColor(this)
-
-        // Remove navigation bar contrast enforcement (removes the white pill/scrim on Android 10+)
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
-            window.isNavigationBarContrastEnforced = false
-        }
-    }
-
     private fun updateToolbarAndStatusBarTheme() {
         val selectedTab = components.store.state.tabs.find { it.id == components.store.state.selectedTabId }
         val isPrivate = selectedTab?.content?.private == true
@@ -669,38 +589,8 @@ open class BrowserActivity : LocaleAwareAppCompatActivity(), ComponentCallbacks2
         if (isPrivate) {
             val purpleColor = com.prirai.android.nira.theme.ColorConstants.PrivateMode.PURPLE
             unifiedToolbar?.setBackgroundColor(purpleColor) ?: toolbar?.setBackgroundColor(purpleColor)
-        } else {
-
         }
     }
-
-    private fun updateToolbarStyling() {
-        val selectedTab = components.store.state.tabs.find { it.id == components.store.state.selectedTabId }
-        val isPrivate = selectedTab?.content?.private == true
-
-        // Find the toolbar view
-        val toolbar = findViewById<View>(R.id.toolbar)
-
-        if (isPrivate) {
-            // Purple background for private mode
-            val purpleColor = com.prirai.android.nira.theme.ColorConstants.PrivateMode.PURPLE
-            toolbar?.setBackgroundColor(purpleColor)
-            window.statusBarColor = purpleColor
-            window.navigationBarColor = android.graphics.Color.TRANSPARENT
-        } else {
-
-
-            // Use ThemeManager for status bar and navigation bar too
-            window.statusBarColor = com.prirai.android.nira.theme.ThemeManager.getToolbarBackgroundColor(this)
-            window.navigationBarColor = com.prirai.android.nira.theme.ThemeManager.getToolbarBackgroundColor(this)
-        }
-    }
-
-    /**
-     * Enable true edge-to-edge display following Mozilla's approach.
-     * Makes the app draw behind system bars (status bar and navigation bar).
-     */
-
 
     /**
      * Get current active profile ID
@@ -709,7 +599,6 @@ open class BrowserActivity : LocaleAwareAppCompatActivity(), ComponentCallbacks2
         val profileManager = com.prirai.android.nira.browser.profile.ProfileManager.getInstance(this)
         return profileManager.getActiveProfile().id
     }
-
 
     companion object {
         const val OPEN_TO_BROWSER = "open_to_browser"

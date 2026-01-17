@@ -68,6 +68,7 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.prirai.android.nira.R
 import com.prirai.android.nira.browser.tabs.compose.FaviconImageFromUrl
+import com.prirai.android.nira.settings.HomepageChoice
 
 data class ProfileInfo(
     val id: String,
@@ -93,6 +94,8 @@ fun HomeScreen(
     onSearchClick: () -> Unit,
     backgroundImageUrl: String? = null,
     isToolbarAtTop: Boolean = false,
+    homepageType: Int = 0,
+    wallpaperDimmed: Boolean = true,
     modifier: Modifier = Modifier
 ) {
     isSystemInDarkTheme()
@@ -118,12 +121,14 @@ fun HomeScreen(
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Crop
             )
-            // Add semi-transparent overlay for better content readability
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(backgroundColor.copy(alpha = 0.85f))
-            )
+            // Add semi-transparent overlay for better content readability (controlled by preference)
+            if (wallpaperDimmed) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(backgroundColor.copy(alpha = 0.85f))
+                )
+            }
         }
 
         LazyColumn(
@@ -144,22 +149,26 @@ fun HomeScreen(
             ),
             verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
-            // Logo section with profile switcher
-            item {
-                LogoSection(
-                    isPrivateMode = isPrivateMode,
-                    currentProfile = currentProfile,
-                    onProfileClick = onProfileClick
-                )
+            // Logo section with profile switcher (hide for BLANK_PAGE)
+            if (homepageType != HomepageChoice.BLANK_PAGE.ordinal) {
+                item {
+                    LogoSection(
+                        isPrivateMode = isPrivateMode,
+                        currentProfile = currentProfile,
+                        onProfileClick = onProfileClick
+                    )
+                }
             }
 
-            // Centered search bar
-            item {
-                SearchBar(onSearchClick = onSearchClick)
+            // Centered search bar (hide for BLANK_PAGE)
+            if (homepageType != HomepageChoice.BLANK_PAGE.ordinal) {
+                item {
+                    SearchBar(onSearchClick = onSearchClick)
+                }
             }
 
-            // Only show shortcuts and bookmarks in normal mode
-            if (!isPrivateMode) {
+            // Show shortcuts and bookmarks only for default VIEW mode and in normal mode
+            if (!isPrivateMode && homepageType == HomepageChoice.VIEW.ordinal) {
                 // Shortcuts section
                 item {
                     ShortcutsSection(
@@ -179,8 +188,8 @@ fun HomeScreen(
                         onToggle = onBookmarkToggle
                     )
                 }
-            } else {
-                // Private browsing info
+            } else if (isPrivateMode && homepageType != HomepageChoice.BLANK_PAGE.ordinal) {
+                // Private browsing info (only if not blank page)
                 item {
                     PrivateBrowsingInfo()
                 }
@@ -281,7 +290,7 @@ fun SearchBar(
         modifier = modifier
             .fillMaxWidth()
             .clickable(onClick = onSearchClick),
-        shape = RoundedCornerShape(8.dp),
+        shape = RoundedCornerShape(16.dp),
         color = MaterialTheme.colorScheme.surfaceVariant,
         tonalElevation = 1.dp
     ) {

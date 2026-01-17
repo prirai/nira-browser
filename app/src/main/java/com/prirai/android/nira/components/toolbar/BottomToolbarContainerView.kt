@@ -7,7 +7,7 @@ import androidx.coordinatorlayout.widget.CoordinatorLayout
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import mozilla.components.concept.toolbar.ScrollableToolbar
-import mozilla.components.ui.widgets.behavior.EngineViewScrollingBehavior
+import mozilla.components.ui.widgets.behavior.EngineViewScrollingGesturesBehavior
 
 /**
  * A container view that hosts the bottom toolbar components (tab group bar, address bar, contextual toolbar).
@@ -46,25 +46,25 @@ class BottomToolbarContainerView @JvmOverloads constructor(
     
     override fun enableScrolling() {
         (layoutParams as? CoordinatorLayout.LayoutParams)?.apply {
-            (behavior as? EngineViewScrollingBehavior)?.enableScrolling()
+            (behavior as? EngineViewScrollingGesturesBehavior)?.enableScrolling()
         }
     }
 
     override fun disableScrolling() {
         (layoutParams as? CoordinatorLayout.LayoutParams)?.apply {
-            (behavior as? EngineViewScrollingBehavior)?.disableScrolling()
+            (behavior as? EngineViewScrollingGesturesBehavior)?.disableScrolling()
         }
     }
 
     override fun expand() {
         (layoutParams as? CoordinatorLayout.LayoutParams)?.apply {
-            (behavior as? EngineViewScrollingBehavior)?.forceExpand(this@BottomToolbarContainerView)
+            (behavior as? EngineViewScrollingGesturesBehavior)?.forceExpand()
         }
     }
 
     override fun collapse() {
         (layoutParams as? CoordinatorLayout.LayoutParams)?.apply {
-            (behavior as? EngineViewScrollingBehavior)?.forceCollapse(this@BottomToolbarContainerView)
+            (behavior as? EngineViewScrollingGesturesBehavior)?.forceCollapse()
         }
     }
 }

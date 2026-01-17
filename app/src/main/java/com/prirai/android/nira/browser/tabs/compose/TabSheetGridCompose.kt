@@ -4,14 +4,10 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -28,26 +24,13 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import mozilla.components.browser.state.state.TabSessionState
-import kotlinx.coroutines.launch
-import com.prirai.android.nira.browser.tabs.compose.DragLayer
-import com.prirai.android.nira.browser.tabs.compose.DraggableItemType
-import com.prirai.android.nira.browser.tabs.compose.DropTargetType
-import com.prirai.android.nira.browser.tabs.compose.InsertionIndicator
-import com.prirai.android.nira.browser.tabs.compose.draggableItem
-import com.prirai.android.nira.browser.tabs.compose.dragVisualFeedback
-import com.prirai.android.nira.browser.tabs.compose.dropTarget
-import com.prirai.android.nira.browser.tabs.compose.rememberDragCoordinator
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.boundsInRoot
 
@@ -97,8 +80,7 @@ fun TabSheetGridView(
             order = currentOrder,
             tabs = tabs,
             groups = groups,
-            expandedGroups = expandedGroups,
-            viewMode = ViewMode.GRID
+            expandedGroups = expandedGroups
         )
     }
 
@@ -135,6 +117,7 @@ fun TabSheetGridView(
                 key = { it.id },
                 span = { item ->
                     // Group containers, headers and rows span all columns
+                    @Suppress("DEPRECATION")
                     when (item) {
                         is UnifiedItem.GroupContainer -> androidx.compose.foundation.lazy.grid.GridItemSpan(3)
                         is UnifiedItem.GroupHeader -> androidx.compose.foundation.lazy.grid.GridItemSpan(3)
@@ -143,6 +126,7 @@ fun TabSheetGridView(
                     }
                 }
             ) { item ->
+                @Suppress("DEPRECATION")
                 when (item) {
                     is UnifiedItem.GroupContainer -> {
                         // New unified group structure - header as parent with child tabs
@@ -171,6 +155,7 @@ fun TabSheetGridView(
                     }
 
                     is UnifiedItem.GroupHeader -> {
+                        @Suppress("DEPRECATION")
                         val dismissState = rememberSwipeToDismissBoxState(
                             confirmValueChange = { dismissValue ->
                                 when (dismissValue) {
@@ -382,10 +367,12 @@ fun TabSheetGridView(
             }
 
             is DraggableItemType.Group -> {
+                @Suppress("DEPRECATION")
                 val item = uniqueItems.find {
                     (it is UnifiedItem.GroupHeader && it.groupId == draggedItem.groupId) ||
                             (it is UnifiedItem.GroupContainer && it.groupId == draggedItem.groupId)
                 }
+                @Suppress("DEPRECATION")
                 when (item) {
                     is UnifiedItem.GroupContainer -> {
                         GroupHeaderGridItem(

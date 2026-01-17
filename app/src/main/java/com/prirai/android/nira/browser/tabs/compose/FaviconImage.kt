@@ -65,11 +65,10 @@ fun FaviconImage(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
-    var faviconBitmap by remember(tab.id) { mutableStateOf<Bitmap?>(null) }
-
-    // Load favicon when tab changes or on first composition
-    LaunchedEffect(tab.id, tab.content.icon, tab.content.url) {
-        faviconBitmap = loadFavicon(tab, context)
+    
+    // Use produceState instead of LaunchedEffect + remember to handle lifecycle properly
+    val faviconBitmap by produceState<Bitmap?>(initialValue = tab.content.icon, tab.id, tab.content.icon, tab.content.url) {
+        value = loadFavicon(tab, context)
     }
 
     Box(
@@ -98,15 +97,14 @@ fun FaviconImage(
  * Load favicon from multiple sources
  */
 private suspend fun loadFavicon(tab: TabSessionState, context: android.content.Context): Bitmap? {
-    return withContext(Dispatchers.IO) {
-        try {
+    return try {
+        withContext(Dispatchers.IO) {
             // Priority 1: Tab's existing icon (from GeckoView)
             tab.content.icon?.let { return@withContext it }
 
             // Priority 2: BrowserIcons component (Mozilla's loader)
             // This is the standard way to load icons in Android Components
             val icons = context.components.icons
-
 
             val iconRequest = IconRequest(
                 url = tab.content.url,
@@ -128,10 +126,13 @@ private suspend fun loadFavicon(tab: TabSessionState, context: android.content.C
 
             // Priority 4: Return null to show fallback
             null
-        } catch (e: Exception) {
-            android.util.Log.e("FaviconImage", "Error loading favicon for ${tab.content.url}", e)
-            null
         }
+    } catch (e: Exception) {
+        // Only log actual errors, not cancellations
+        if (e !is kotlinx.coroutines.CancellationException) {
+            android.util.Log.e("FaviconImage", "Error loading favicon for ${tab.content.url}", e)
+        }
+        null
     }
 }
 
@@ -147,10 +148,10 @@ fun FaviconImageFromUrl(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
-    var faviconBitmap by remember(url) { mutableStateOf<Bitmap?>(null) }
-
-    LaunchedEffect(url) {
-        faviconBitmap = loadFaviconFromUrl(url, context)
+    
+    // Use produceState for proper lifecycle handling
+    val faviconBitmap by produceState<Bitmap?>(initialValue = null, url) {
+        value = loadFaviconFromUrl(url, context)
     }
 
     Box(
@@ -178,8 +179,8 @@ fun FaviconImageFromUrl(
  * Load favicon from URL only (no TabSessionState)
  */
 private suspend fun loadFaviconFromUrl(url: String, context: android.content.Context): Bitmap? {
-    return withContext(Dispatchers.IO) {
-        try {
+    return try {
+        withContext(Dispatchers.IO) {
             val icons = context.components.icons
 
             val iconRequest = IconRequest(
@@ -199,10 +200,13 @@ private suspend fun loadFaviconFromUrl(url: String, context: android.content.Con
             // Fallback to cache
             val faviconCache = context.components.faviconCache
             faviconCache.loadFavicon(url)
-        } catch (e: Exception) {
-            android.util.Log.e("FaviconImage", "Error loading favicon from URL: $url", e)
-            null
         }
+    } catch (e: Exception) {
+        // Only log actual errors, not cancellations
+        if (e !is kotlinx.coroutines.CancellationException) {
+            android.util.Log.e("FaviconImage", "Error loading favicon from URL: $url", e)
+        }
+        null
     }
 }
 

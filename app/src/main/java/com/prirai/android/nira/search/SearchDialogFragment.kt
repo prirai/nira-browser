@@ -38,7 +38,8 @@ import mozilla.components.support.base.feature.UserInteractionHandler
 import mozilla.components.support.ktx.android.content.getColorFromAttr
 import mozilla.components.support.ktx.android.view.hideKeyboard
 import mozilla.components.ui.autocomplete.InlineAutocompleteEditText
-import mozilla.components.ui.widgets.behavior.ViewPosition as OldToolbarPosition
+import mozilla.components.ui.widgets.behavior.DependencyGravity
+import com.prirai.android.nira.components.toolbar.ToolbarPosition as OldToolbarPosition
 
 typealias SearchDialogFragmentStore = SearchFragmentStore
 
@@ -120,8 +121,14 @@ class SearchDialogFragment : AppCompatDialogFragment(), UserInteractionHandler {
         }
         
         return object : Dialog(dialogContext, this.theme) {
+            @Deprecated("Deprecated in Java")
             override fun onBackPressed() {
-                this@SearchDialogFragment.onBackPressed()
+                // Call the fragment's UserInteractionHandler.onBackPressed() instead
+                if (!this@SearchDialogFragment.onBackPressed()) {
+                    // If fragment doesn't handle it, use default behavior
+                    @Suppress("DEPRECATION")
+                    super.onBackPressed()
+                }
             }
         }
     }

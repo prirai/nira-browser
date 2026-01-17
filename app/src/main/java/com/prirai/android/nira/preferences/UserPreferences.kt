@@ -42,13 +42,7 @@ class UserPreferences(appContext: Context) : mozilla.components.support.ktx.andr
      * Returns the appropriate URL for creating new tabs.
      */
     fun getHomepageUrl(): String {
-        return when (homepageType) {
-            com.prirai.android.nira.settings.HomepageChoice.VIEW.ordinal -> "about:homepage"
-            com.prirai.android.nira.settings.HomepageChoice.CUSTOM_PAGE.ordinal -> {
-                if (customHomepageUrl.isNotEmpty()) customHomepageUrl else "about:homepage"
-            }
-            else -> "about:homepage"
-        }
+        return "about:homepage"
     }
     var appThemeChoice by intPreference(APP_THEME_CHOICE, ThemeChoice.SYSTEM.ordinal)
     var webThemeChoice by intPreference(WEB_THEME_CHOICE, ThemeChoice.SYSTEM.ordinal)
@@ -95,6 +89,9 @@ class UserPreferences(appContext: Context) : mozilla.components.support.ktx.andr
     
     // Enable dynamic colors (Material You) on Android 12+
     var dynamicColors by booleanPreference(DYNAMIC_COLORS, true)
+    
+    // Homepage wallpaper dimming
+    var keepWallpaperDimmed by booleanPreference(KEEP_WALLPAPER_DIMMED, true)
     
     // Status bar blur - forced enabled on Android 12+, disabled on older versions
     val statusBarBlurEnabled: Boolean
@@ -157,5 +154,6 @@ class UserPreferences(appContext: Context) : mozilla.components.support.ktx.andr
         const val INTERFACE_FONT_SCALE = "interface_font_scale"
         const val AMOLED_MODE = "amoled_mode"
         const val DYNAMIC_COLORS = "dynamic_colors"
+        const val KEEP_WALLPAPER_DIMMED = "keep_wallpaper_dimmed"
     }
 }

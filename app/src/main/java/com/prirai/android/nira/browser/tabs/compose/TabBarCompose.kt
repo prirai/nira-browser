@@ -423,7 +423,7 @@ private fun TabPill(
 
             // Title - use onSurface color when dragging for better contrast
             Text(
-                text = tab.content.title.ifEmpty { "New Tab" },
+                text = getTabDisplayTitle(tab),
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
                 color = if (isDragging) MaterialTheme.colorScheme.onSurface else Color.Unspecified,

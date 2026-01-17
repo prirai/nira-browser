@@ -80,31 +80,6 @@ class GeneralSettingsFragment : BaseSettingsFragment() {
                 }
                 .setSingleChoiceItems(singleItems.toTypedArray(), checkedItem) { dialog, which ->
                     UserPreferences(requireContext()).homepageType = which
-                    if(UserPreferences(requireContext()).homepageType == HomepageChoice.CUSTOM_PAGE.ordinal){
-                        val builder = MaterialAlertDialogBuilder(requireContext())
-                        builder.setTitle(R.string.custom_page)
-
-                        val input = EditText(context)
-                        input.inputType = InputType.TYPE_CLASS_TEXT
-                        builder.setView(input)
-
-                        input.setText(UserPreferences(requireContext()).customHomepageUrl)
-
-                        builder.setPositiveButton(
-                            resources.getString(R.string.mozac_feature_prompts_ok)
-                        ) { innerDialog, _ ->
-                            UserPreferences(requireContext()).customHomepageUrl = input.text.toString()
-                            innerDialog.dismiss()
-                        }
-                        builder.setNegativeButton(
-                            resources.getString(R.string.cancel)
-                        ) { innerDialog, _ ->
-                            UserPreferences(requireContext()).homepageType = startingChoice
-                            innerDialog.dismiss()
-                        }
-
-                        builder.show()
-                    }
                 }
                 .show()
     }

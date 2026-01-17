@@ -7,6 +7,7 @@ import androidx.navigation.fragment.NavHostFragment
 import com.prirai.android.nira.BrowserActivity
 import com.prirai.android.nira.R
 import com.prirai.android.nira.ext.components
+import com.prirai.android.nira.ext.enableEdgeToEdgeMode
 import mozilla.components.browser.state.selector.findCustomTab
 import mozilla.components.feature.customtabs.CustomTabIntentProcessor
 import mozilla.components.feature.intent.ext.EXTRA_SESSION_ID
@@ -25,6 +26,16 @@ open class ExternalAppBrowserActivity : BrowserActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         hasCalledOnCreate = true
+        
+        // Extract toolbar color from intent for status bar theming
+        val toolbarColor = intent.getIntExtra(CustomTabsIntent.EXTRA_TOOLBAR_COLOR, -1)
+        
+        // Enable edge-to-edge display with custom tab color
+        if (toolbarColor != -1) {
+            enableEdgeToEdgeMode(statusBarColor = toolbarColor)
+        } else {
+            enableEdgeToEdgeMode()
+        }
         
         if (savedInstanceState == null) {
             // Use Mozilla's CustomTabIntentProcessor to handle the intent
