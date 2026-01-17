@@ -137,6 +137,8 @@ We welcome contributions! Here's how you can help:
 - [x] QR scanning for opening URLs
 
 ### Coming Soon
+- [ ] Profile context passing
+- [ ] Better and more curated PWA suggestion interface
 - [ ] Sync across devices
 - [ ] Profile import/export
 - [ ] More customization options (never ends?)
