@@ -89,8 +89,8 @@ abstract class ToolbarIntegration(
                     arrayOf(tab.content.securityInfo, tab.content.url)
                 }
                 .collect { tab ->
-                    updateSecurityBackground(tab.content.securityInfo?.secure ?: false)
-                    updateSecurityIconColor(tab.content.url, tab.content.securityInfo?.secure ?: false)
+                    updateSecurityBackground(tab.content.securityInfo?.isSecure ?: false)
+                    updateSecurityIconColor(tab.content.url, tab.content.securityInfo?.isSecure ?: false)
                 }
         }
     }
