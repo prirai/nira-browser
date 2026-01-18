@@ -38,6 +38,7 @@ import com.prirai.android.nira.databinding.FragmentTabsBottomSheetBinding
 import com.prirai.android.nira.ext.components
 import kotlinx.coroutines.launch
 import mozilla.components.browser.state.state.TabSessionState
+import mozilla.components.lib.state.ext.flowScoped
 import androidx.core.content.edit
 
 /**
@@ -728,6 +729,54 @@ class TabsBottomSheetFragment : DialogFragment() {
         // Get snackbar host state from global manager
         val snackbarHostState =
             com.prirai.android.nira.browser.tabs.compose.GlobalSnackbarManager.getInstance().snackbarHostState
+
+        // Load tabs for current profile - trigger recomposition on profile/mode changes
+        val trigger by profileStateTrigger
+        LaunchedEffect(trigger) {
+            val store = requireContext().components.store
+            val browsingMode = browsingModeManager.mode
+            val currentProfile = browsingModeManager.currentProfile
+            val isPrivateMode = browsingMode.isPrivate
+            val profileId = if (isPrivateMode) "private" else currentProfile.id
+
+            // Helper to filter tabs
+            fun filterTabs(tabs: List<TabSessionState>) = tabs.filter { tab ->
+                val tabIsPrivate = tab.content.private
+                if (tabIsPrivate != isPrivateMode) {
+                    false
+                } else if (isPrivateMode) {
+                    tab.contextId == "private"
+                } else {
+                    val expectedContextId = "profile_${currentProfile.id}"
+                    // Default profile shows null contextId tabs, other profiles don't
+                    if (currentProfile.id == "default") {
+                        (tab.contextId == expectedContextId) || (tab.contextId == null)
+                    } else {
+                        tab.contextId == expectedContextId
+                    }
+                }
+            }
+
+            // Collect store updates
+            launch {
+                store.flowScoped(viewLifecycleOwner) { flow ->
+                    flow.collect { state ->
+                        val filteredTabs = filterTabs(state.tabs)
+                        viewModel.loadTabsForProfile(profileId, filteredTabs, state.selectedTabId)
+                    }
+                }
+            }
+
+            // Listen to group events and trigger refresh
+            launch {
+                unifiedGroupManager.groupEvents.collect { event ->
+                    // When groups change, force a refresh with current store state
+                    val state = store.state
+                    val filteredTabs = filterTabs(state.tabs)
+                    viewModel.loadTabsForProfile(profileId, filteredTabs, state.selectedTabId)
+                }
+            }
+        }
 
         // Use Scaffold for proper snackbar positioning
         Scaffold(
