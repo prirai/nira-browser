@@ -21,6 +21,8 @@ class BottomToolbarContainerView @JvmOverloads constructor(
     defStyleAttr: Int = 0,
 ) : LinearLayout(context, attrs, defStyleAttr), ScrollableToolbar {
     
+    private var initialPaddingBottom = 0
+    
     init {
         // Set Material 3 background color with tonal elevation (3dp)
         val elevationDp = 3f * resources.displayMetrics.density
@@ -28,18 +30,23 @@ class BottomToolbarContainerView @JvmOverloads constructor(
             .compositeOverlayWithThemeSurfaceColorIfNeeded(elevationDp)
         setBackgroundColor(elevatedColor)
         
-        // Handle window insets for navigation bar
+        // Record initial padding
+        initialPaddingBottom = paddingBottom
+        
+        // Handle window insets for navigation bar using standard Android approach
+        // This properly supports both gesture navigation and button navigation
         ViewCompat.setOnApplyWindowInsetsListener(this) { view, insets ->
             val navigationBars = insets.getInsets(WindowInsetsCompat.Type.navigationBars())
             
-            // Add bottom padding for navigation bar
+            // Add bottom padding for navigation bar (gesture or button)
             view.setPadding(
                 paddingLeft,
                 paddingTop,
                 paddingRight,
-                navigationBars.bottom
+                initialPaddingBottom + navigationBars.bottom
             )
             
+            // Return insets to allow children to handle them if needed
             insets
         }
     }

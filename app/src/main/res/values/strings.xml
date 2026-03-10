@@ -806,8 +806,6 @@
     >Follow system theme preference</string>
 
     <string name="selected_count">%d selected</string>
-    <string name="exit_fullscreen">Exit fullscreen</string>
-    <string name="toggle_fullscreen">Toggle fullscreen</string>
     <string name="bookmark_title_placeholder">Bookmark Title</string>
     <string name="history_title_placeholder">History Title</string>
     <string name="tab_title_placeholder">Tab Title</string>

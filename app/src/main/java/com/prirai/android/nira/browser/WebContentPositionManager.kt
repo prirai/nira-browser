@@ -13,7 +13,7 @@ import mozilla.components.concept.engine.EngineView
  * This manager:
  * - Applies padding to engine view for system bars (status bar, navigation bar)
  * - Handles keyboard (IME) appearance with smooth animations
- * - Does NOT handle toolbar margins (that's done in BaseBrowserFragment)
+ * - Follows Android best practices for edge-to-edge display
  */
 class WebContentPositionManager(
     private val engineView: EngineView,
@@ -28,11 +28,6 @@ class WebContentPositionManager(
     private var navigationBarHeight = 0
     
     private var isDestroyed = false
-    private val drawListener = android.view.ViewTreeObserver.OnDrawListener {
-        if (!isDestroyed) {
-            updateMargins()
-        }
-    }
     
     /**
      * Initialize window insets handling for web content positioning
@@ -47,9 +42,6 @@ class WebContentPositionManager(
         // Setup IME (keyboard) animation listener for smooth transitions
         setupKeyboardAnimation()
         
-        // Listen for draw events to detect toolbar position changes during scroll
-        rootView.viewTreeObserver.addOnDrawListener(drawListener)
-        
         // Force initial insets application
         rootView.post {
             ViewCompat.requestApplyInsets(rootView)
@@ -60,7 +52,7 @@ class WebContentPositionManager(
      * Update engine view padding to position web content correctly.
      * Apply padding to prevent web content from drawing under system bars.
      */
-    private fun updateMargins() {
+    private fun updateEnginePadding() {
         val engineViewInstance = (engineView as? View) ?: return
         
         // Apply padding to engine view to prevent content under system bars
@@ -78,12 +70,13 @@ class WebContentPositionManager(
      */
     private fun handleWindowInsets(insets: WindowInsetsCompat) {
         // Get system bars insets (status bar at top, navigation bar at bottom)
+        // This properly handles both gesture navigation and button navigation
         val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
         statusBarHeight = systemBars.top
         navigationBarHeight = systemBars.bottom
         
         // Update engine view padding with system bar insets
-        updateMargins()
+        updateEnginePadding()
         
         // Get keyboard (IME) insets
         val ime = insets.getInsets(WindowInsetsCompat.Type.ime())
@@ -91,7 +84,7 @@ class WebContentPositionManager(
         // Calculate visible keyboard height (IME minus navigation bar)
         val visibleImeHeight = maxOf(0, ime.bottom - navigationBarHeight)
         
-        // When keyboard appears, set bottom padding on swipeRefreshView
+        // When keyboard appears, set bottom margin on swipeRefreshView
         // to push content above keyboard without black bar
         if (visibleImeHeight > 0 && visibleImeHeight != lastImeInset) {
             val layoutParams = swipeRefreshView.layoutParams as? CoordinatorLayout.LayoutParams ?: return
@@ -129,10 +122,10 @@ class WebContentPositionManager(
     }
     
     /**
-     * Manually trigger margin update (useful when toolbar visibility changes)
+     * Manually trigger update (useful when toolbar visibility changes)
      */
     fun requestUpdate() {
-        updateMargins()
+        updateEnginePadding()
     }
     
     /**
@@ -140,7 +133,6 @@ class WebContentPositionManager(
      */
     fun destroy() {
         isDestroyed = true
-        rootView.viewTreeObserver.removeOnDrawListener(drawListener)
         ViewCompat.setOnApplyWindowInsetsListener(rootView, null)
         ViewCompat.setWindowInsetsAnimationCallback(swipeRefreshView, null)
     }

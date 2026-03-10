@@ -382,26 +382,9 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
                 requestWebContentPositionUpdate()
             }
             
-            // Set toolbar offset listener for smooth margin adjustment (top toolbar only)
+            // Set toolbar offset listener for smooth margin adjustment
             unifiedToolbar?.setOnToolbarOffsetChangedListener { currentOffset, totalHeight ->
                 adjustWebContentMarginsForToolbarOffset(currentOffset, totalHeight)
-                // For bottom toolbar mode, also adjust fullscreen button
-                if (prefs.toolbarPosition == com.prirai.android.nira.components.toolbar.ToolbarPosition.BOTTOM.ordinal) {
-                    adjustFullscreenButtonPosition(currentOffset, totalHeight)
-                }
-            }
-            
-            // For TOP toolbar mode, track bottom components translation to move fullscreen button
-            if (prefs.toolbarPosition == com.prirai.android.nira.components.toolbar.ToolbarPosition.TOP.ordinal) {
-                unifiedToolbar?.getBottomComponentsContainer()?.let { container ->
-                    container.viewTreeObserver.addOnPreDrawListener {
-                        val fullscreenButton = view?.findViewById<com.google.android.material.floatingactionbutton.FloatingActionButton>(
-                            R.id.fullscreenToggleButton
-                        )
-                        fullscreenButton?.translationY = container.translationY
-                        true
-                    }
-                }
             }
 
             // Set contextual toolbar listener
@@ -464,6 +447,8 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
 
                 override fun onNewTabClicked() {
                     requireContext().components.tabsUseCases.addTab.invoke("about:homepage")
+                    // Trigger autofocus on the newly created tab
+                    com.prirai.android.nira.browser.tabs.compose.TabSheetStateManager.notifyTabSheetDismissed()
                 }
             }
 
@@ -474,9 +459,6 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
 
             // Initialize with current tab state
             initializeModernToolbarWithCurrentState()
-            
-            // Setup floating fullscreen toggle button
-            setupFloatingFullscreenButton()
 
         } catch (e: Exception) {
             // Silently handle toolbar initialization failure and apply simple fix
@@ -673,163 +655,7 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
     /**
      * Setup floating fullscreen toggle button above toolbars
      */
-    private fun setupFloatingFullscreenButton() {
-        val fullscreenButton = view?.findViewById<com.google.android.material.floatingactionbutton.FloatingActionButton>(
-            R.id.fullscreenToggleButton
-        )
-        
-        fullscreenButton?.let { button ->
-            // Position button to attach to bottom toolbars (U-shape)
-            positionFullscreenButtonAboveToolbars()
-            
-            // Set click listener
-            button.setOnClickListener {
-                toggleManualFullscreen()
-            }
-            
-            // Listen to toolbar position changes to reposition button
-            unifiedToolbar?.getToolbarView()?.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
-                positionFullscreenButtonAboveToolbars()
-            }
-            
-            // Apply rounded top corners only (U-shape attachment)
-            applyUShapeToButton(button)
-        }
-    }
-    
-    /**
-     * Apply U-shape styling to button (rounded top, flat bottom for attachment)
-     */
-    private fun applyUShapeToButton(button: com.google.android.material.floatingactionbutton.FloatingActionButton) {
-        // Create shape with only top corners rounded - using medium corners for more compact look
-        val cornerRadius = 16f * resources.displayMetrics.density // Medium corner radius
-        val shapeModel = com.google.android.material.shape.ShapeAppearanceModel.builder()
-            .setTopLeftCorner(com.google.android.material.shape.CornerFamily.ROUNDED, cornerRadius)
-            .setTopRightCorner(com.google.android.material.shape.CornerFamily.ROUNDED, cornerRadius)
-            .setBottomLeftCorner(com.google.android.material.shape.CornerFamily.ROUNDED, 0f)
-            .setBottomRightCorner(com.google.android.material.shape.CornerFamily.ROUNDED, 0f)
-            .build()
-        
-        button.shapeAppearanceModel = shapeModel
-    }
-    
-    private fun positionFullscreenButtonAboveToolbars() {
-        val fullscreenButton = view?.findViewById<com.google.android.material.floatingactionbutton.FloatingActionButton>(
-            R.id.fullscreenToggleButton
-        ) ?: return
-        
-        val prefs = UserPreferences(requireContext())
-        val layoutParams = fullscreenButton.layoutParams as? android.widget.FrameLayout.LayoutParams ?: return
-        
-        // Get navigation bar height
-        val windowInsets = androidx.core.view.ViewCompat.getRootWindowInsets(fullscreenButton)
-        val navBarHeight = windowInsets?.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars())?.bottom ?: 0
-        
-        val bottomMargin = if (prefs.toolbarPosition == com.prirai.android.nira.components.toolbar.ToolbarPosition.BOTTOM.ordinal) {
-            // BOTTOM toolbar: sum all components + nav bar
-            val tabGroupBar = unifiedToolbar?.getTabGroupBar()
-            val browserToolbar = unifiedToolbar?.getBrowserToolbar()
-            val contextualToolbar = unifiedToolbar?.getContextualToolbar()
-            
-            var totalHeight = navBarHeight
-            contextualToolbar?.let { if (prefs.showContextualToolbar && it.isVisible) totalHeight += it.height }
-            browserToolbar?.let { totalHeight += it.asView()?.height ?: 0 }
-            tabGroupBar?.let { if (prefs.showTabGroupBar && it.isVisible) totalHeight += it.height }
-            
-            if (totalHeight > navBarHeight) totalHeight else (160 * resources.displayMetrics.density).toInt() + navBarHeight
-        } else {
-            // TOP toolbar: Calculate total bottom height (bottom components + nav bar)
-            // This is the INITIAL position when toolbars are visible
-            val tabGroupBar = unifiedToolbar?.getTabGroupBar()
-            val contextualToolbar = unifiedToolbar?.getContextualToolbar()
-            
-            var totalHeight = navBarHeight  // Always include nav bar
-            contextualToolbar?.let { if (prefs.showContextualToolbar && it.isVisible) totalHeight += it.height }
-            tabGroupBar?.let { if (prefs.showTabGroupBar && it.isVisible) totalHeight += it.height }
-            
-            // Return full height including nav bar
-            totalHeight
-        }
-        
-        layoutParams.bottomMargin = bottomMargin
-        fullscreenButton.layoutParams = layoutParams
-    }
-    
-    private fun adjustFullscreenButtonPosition(currentOffset: Int, totalHeight: Int) {
-        val fullscreenButton = view?.findViewById<com.google.android.material.floatingactionbutton.FloatingActionButton>(
-            R.id.fullscreenToggleButton
-        ) ?: return
-        
-        val prefs = UserPreferences(requireContext())
-        
-        if (prefs.toolbarPosition == com.prirai.android.nira.components.toolbar.ToolbarPosition.BOTTOM.ordinal) {
-            // BOTTOM mode: button follows toolbar translation
-            // As toolbar scrolls down (hides), offset is positive, button moves down
-            fullscreenButton.translationY = currentOffset.toFloat()
-        } else {
-            // TOP mode: Bottom components have scroll behavior and hide downward
-            // Button should move down with them (same translationY as container)
-            val bottomComponentsContainer = unifiedToolbar?.getBottomComponentsContainer()
-            if (bottomComponentsContainer != null) {
-                // EngineViewScrollingBehavior uses translationY to hide/show
-                // Positive translationY means moved down (hidden)
-                fullscreenButton.translationY = bottomComponentsContainer.translationY
-            } else {
-                fullscreenButton.translationY = 0f
-            }
-        }
-    }
-    
-    private fun getBottomComponentsBaseHeight(): Int {
-        val prefs = UserPreferences(requireContext())
-        val windowInsets = androidx.core.view.ViewCompat.getRootWindowInsets(view?.findViewById(R.id.fullscreenToggleButton) ?: return 0)
-        val navBarHeight = windowInsets?.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars())?.bottom ?: 0
-        
-        val tabGroupBar = unifiedToolbar?.getTabGroupBar()
-        val contextualToolbar = unifiedToolbar?.getContextualToolbar()
-        
-        var totalHeight = navBarHeight
-        contextualToolbar?.let { if (prefs.showContextualToolbar && it.isVisible) totalHeight += it.height }
-        tabGroupBar?.let { if (prefs.showTabGroupBar && it.isVisible) totalHeight += it.height }
-        
-        return totalHeight
-    }
 
-    /**
-     * Update the fullscreen toggle button icon and visibility
-     */
-    override fun updateToolbarFullscreenIcon(isFullscreen: Boolean) {
-        val fullscreenButton = view?.findViewById<com.google.android.material.floatingactionbutton.FloatingActionButton>(
-            R.id.fullscreenToggleButton
-        ) ?: return
-        
-        if (isFullscreen) {
-            // Hide the button when in fullscreen (floating FAB takes over)
-            fullscreenButton.animate()
-                .alpha(0f)
-                .scaleX(0f)
-                .scaleY(0f)
-                .setDuration(200)
-                .withEndAction {
-                    fullscreenButton.visibility = View.GONE
-                }
-                .start()
-        } else {
-            // Show the button with enter fullscreen icon
-            val icon = androidx.core.content.ContextCompat.getDrawable(requireContext(), R.drawable.ic_fullscreen)
-            fullscreenButton.setImageDrawable(icon)
-            fullscreenButton.visibility = View.VISIBLE
-            fullscreenButton.alpha = 0f
-            fullscreenButton.scaleX = 0f
-            fullscreenButton.scaleY = 0f
-            fullscreenButton.animate()
-                .alpha(0.5f)
-                .scaleX(1f)
-                .scaleY(1f)
-                .setDuration(200)
-                .start()
-        }
-    }
 
     // Legacy method removed - no longer needed with UnifiedToolbar
 

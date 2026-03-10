@@ -107,44 +107,7 @@
         app:tint="?attr/colorOnSecondaryContainer"
         app:shapeAppearance="@style/ShapeAppearance.Material3.Corner.Large"
     />
-    
-    <com.google.android.material.floatingactionbutton.FloatingActionButton
-        android:id="@+id/fullscreenExitButton"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="end|bottom"
-        android:layout_marginEnd="12dp"
-        android:layout_marginBottom="0dp"
-        android:contentDescription="@string/exit_fullscreen"
-        android:src="@drawable/ic_fullscreen_exit"
-        android:visibility="gone"
-        android:alpha="0.5"
-        app:backgroundTint="?attr/colorPrimaryContainer"
-        app:tint="?attr/colorOnPrimaryContainer"
-        app:fabSize="mini"
-        app:elevation="0dp"
-        app:borderWidth="0dp"
-        app:shapeAppearance="@style/ShapeAppearance.Material3.Corner.Medium"
-    />
-    
-    <com.google.android.material.floatingactionbutton.FloatingActionButton
-        android:id="@+id/fullscreenToggleButton"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="end|bottom"
-        android:layout_marginEnd="12dp"
-        android:layout_marginBottom="0dp"
-        android:contentDescription="@string/toggle_fullscreen"
-        android:src="@drawable/ic_fullscreen"
-        android:visibility="visible"
-        android:alpha="0.5"
-        app:backgroundTint="?attr/colorPrimaryContainer"
-        app:tint="?attr/colorOnPrimaryContainer"
-        app:fabSize="mini"
-        app:elevation="0dp"
-        app:borderWidth="0dp"
-        app:shapeAppearance="@style/ShapeAppearance.Material3.Corner.Medium"
-    />
+
 
     <com.prirai.android.nira.browser.FakeTab
         android:id="@+id/tabPreview"
