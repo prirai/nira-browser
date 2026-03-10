@@ -8,17 +8,17 @@ buildscript {
         mavenCentral()
     }
     dependencies {
-        classpath 'com.android.tools.build:gradle:8.13.2'
-        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:2.2.0"
-        classpath "androidx.navigation:navigation-safe-args-gradle-plugin:2.9.6"
+        classpath 'com.android.tools.build:gradle:9.0.1'
+        classpath 'org.jetbrains.kotlin:kotlin-gradle-plugin:2.2.10'
+        classpath "androidx.navigation:navigation-safe-args-gradle-plugin:2.9.7"
 
         classpath "org.mozilla.components:tooling-glean-gradle:95.0.5"
     }
 }
 
 plugins {
-    id("com.google.devtools.ksp") version "2.2.20-2.0.3" apply false
-    id 'org.jetbrains.kotlin.plugin.compose' version '2.3.0' apply false
+    id("com.google.devtools.ksp") version '2.3.2' apply false
+    id 'org.jetbrains.kotlin.plugin.compose' version '2.3.10' apply false
 }
 
 allprojects {
