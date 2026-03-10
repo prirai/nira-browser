@@ -9,7 +9,7 @@ import mozilla.components.browser.state.action.ContentAction
 import mozilla.components.browser.state.action.TabListAction
 import mozilla.components.browser.state.state.BrowserState
 import mozilla.components.lib.state.Middleware
-import mozilla.components.lib.state.MiddlewareContext
+import mozilla.components.lib.state.Store
 
 /**
  * Middleware that monitors tab creation and applies cross-domain grouping logic.
@@ -26,7 +26,7 @@ class TabGroupMiddleware(
     private val pendingGrouping = mutableMapOf<String, String?>()
     
     override fun invoke(
-        context: MiddlewareContext<BrowserState, BrowserAction>,
+        store: Store<BrowserState, BrowserAction>,
         next: (BrowserAction) -> Unit,
         action: BrowserAction
     ) {
@@ -36,13 +36,13 @@ class TabGroupMiddleware(
         // Handle post-action state changes
         when (action) {
             is TabListAction.AddTabAction -> {
-                handleNewTab(context.state, action)
+                handleNewTab(store.state, action)
             }
             is ContentAction.UpdateUrlAction -> {
-                handleUrlUpdate(context.state, action)
+                handleUrlUpdate(store.state, action)
             }
             is TabListAction.SelectTabAction -> {
-                handleTabSelection(context.state, action)
+                handleTabSelection(store.state, action)
             }
             else -> {
                 // No action needed for other types
