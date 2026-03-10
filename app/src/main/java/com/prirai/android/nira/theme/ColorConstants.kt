@@ -44,6 +44,16 @@ object ColorConstants {
         const val DEEP_PURPLE = 0xFF673AB7.toInt()
         const val BROWN = 0xFF795548.toInt()
         
+        // UnifiedTabGroupManager AVAILABLE_COLORS palette (lighter shades)
+        const val LIGHT_RED = 0xFFE57373.toInt()
+        const val LIGHT_GREEN_ALT = 0xFF81C784.toInt()
+        const val LIGHT_BLUE = 0xFF64B5F6.toInt()
+        const val LIGHT_ORANGE = 0xFFFFB74D.toInt()
+        const val LIGHT_PURPLE = 0xFFBA68C8.toInt()
+        const val LIGHT_PINK = 0xFFF06292.toInt()
+        const val LIGHT_CYAN = 0xFF4DD0E1.toInt()
+        const val LIGHT_YELLOW = 0xFFFFF176.toInt()
+        
         fun parseColor(colorString: String): Int {
             return when (colorString.lowercase()) {
                 "blue" -> BLUE
@@ -62,6 +72,15 @@ object ColorConstants {
                 "light_green" -> LIGHT_GREEN
                 "deep_purple" -> DEEP_PURPLE
                 "brown" -> BROWN
+                // Support for lighter palette
+                "light_red" -> LIGHT_RED
+                "light_green_alt" -> LIGHT_GREEN_ALT
+                "light_blue" -> LIGHT_BLUE
+                "light_orange" -> LIGHT_ORANGE
+                "light_purple" -> LIGHT_PURPLE
+                "light_pink" -> LIGHT_PINK
+                "light_cyan" -> LIGHT_CYAN
+                "light_yellow" -> LIGHT_YELLOW
                 else -> BLUE // Default
             }
         }
@@ -84,6 +103,15 @@ object ColorConstants {
                 LIGHT_GREEN -> "light_green"
                 DEEP_PURPLE -> "deep_purple"
                 BROWN -> "brown"
+                // Support for lighter palette from UnifiedTabGroupManager.AVAILABLE_COLORS
+                LIGHT_RED -> "light_red"
+                LIGHT_GREEN_ALT -> "light_green_alt"
+                LIGHT_BLUE -> "light_blue"
+                LIGHT_ORANGE -> "light_orange"
+                LIGHT_PURPLE -> "light_purple"
+                LIGHT_PINK -> "light_pink"
+                LIGHT_CYAN -> "light_cyan"
+                LIGHT_YELLOW -> "light_yellow"
                 else -> "blue"
             }
         }

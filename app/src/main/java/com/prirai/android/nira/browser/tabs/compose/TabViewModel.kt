@@ -107,10 +107,23 @@ class TabViewModel(
 
         _groups.value = groupsList
 
-        // Preserve currently expanded groups or expand new ones
+        // Read expanded state from saved order, preserving current state as fallback
+        val savedOrder = orderManager.currentOrder.value
+        val savedExpandedStates = savedOrder?.primaryOrder
+            ?.filterIsInstance<UnifiedTabOrder.OrderItem.TabGroup>()
+            ?.associate { it.groupId to it.isExpanded }
+            ?: emptyMap()
+        
         val currentExpanded = _expandedGroups.value
-        val newExpanded = groupsList.map { it.id }.toSet()
-        _expandedGroups.value = currentExpanded + newExpanded
+        // For each group, use saved state if available, otherwise preserve current state, default to expanded for new groups
+        val updatedExpanded = groupsList.mapNotNull { group ->
+            when {
+                savedExpandedStates.containsKey(group.id) -> if (savedExpandedStates[group.id] == true) group.id else null
+                currentExpanded.contains(group.id) -> group.id
+                else -> group.id // New groups default to expanded
+            }
+        }.toSet()
+        _expandedGroups.value = updatedExpanded
     }
 
     /**
@@ -150,13 +163,30 @@ class TabViewModel(
                 group.tabIds.any { tabId -> tabs.any { it.id == tabId } }
             }
 
-            // Get ordered tabs
+            // Get ordered tabs (this also loads the order)
             val orderedTabs = getOrderedTabs(tabs, profileId, groupsList)
+
+            // Rebuild order to sync with latest database state (updates colors, names, etc.)
+            orderManager.rebuildOrderForProfile(profileId, tabs)
+
+            // Initialize expanded groups from the saved order
+            val savedOrder = orderManager.currentOrder.value
+            val expandedGroupIds = if (savedOrder != null) {
+                // Extract isExpanded state from saved order
+                savedOrder.primaryOrder
+                    .filterIsInstance<UnifiedTabOrder.OrderItem.TabGroup>()
+                    .filter { it.isExpanded }
+                    .map { it.groupId }
+                    .toSet()
+            } else {
+                // No saved order, expand all groups by default
+                groupsList.map { it.id }.toSet()
+            }
 
             // Update all state atomically to prevent flickering
             _tabs.value = orderedTabs
             _groups.value = groupsList
-            _expandedGroups.value = groupsList.map { it.id }.toSet()
+            _expandedGroups.value = expandedGroupIds
             _selectedTabId.value = selectedTabId
 
             // Auto-expand group containing selected tab
@@ -202,10 +232,23 @@ class TabViewModel(
 
                 _groups.value = groupsList
 
-                // Preserve currently expanded groups or expand new ones
+                // Read expanded state from saved order, preserving current state as fallback
+                val savedOrder = orderManager.currentOrder.value
+                val savedExpandedStates = savedOrder?.primaryOrder
+                    ?.filterIsInstance<UnifiedTabOrder.OrderItem.TabGroup>()
+                    ?.associate { it.groupId to it.isExpanded }
+                    ?: emptyMap()
+                
                 val currentExpanded = _expandedGroups.value
-                val newExpanded = groupsList.map { it.id }.toSet()
-                _expandedGroups.value = currentExpanded + newExpanded
+                // For each group, use saved state if available, otherwise preserve current state, default to expanded for new groups
+                val updatedExpanded = groupsList.mapNotNull { group ->
+                    when {
+                        savedExpandedStates.containsKey(group.id) -> if (savedExpandedStates[group.id] == true) group.id else null
+                        currentExpanded.contains(group.id) -> group.id
+                        else -> group.id // New groups default to expanded
+                    }
+                }.toSet()
+                _expandedGroups.value = updatedExpanded
 
                 // Update tabs based on saved order
                 _tabs.value = getOrderedTabs(tabs, profileId, groupsList)

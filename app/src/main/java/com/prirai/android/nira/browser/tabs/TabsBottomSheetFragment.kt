@@ -648,6 +648,10 @@ class TabsBottomSheetFragment : DialogFragment() {
 
     override fun onDestroyView() {
         super.onDestroyView()
+        
+        // Notify that the tab sheet was dismissed to trigger auto-scroll in tab bar
+        com.prirai.android.nira.browser.tabs.compose.TabSheetStateManager.notifyTabSheetDismissed()
+        
         _binding = null
     }
 

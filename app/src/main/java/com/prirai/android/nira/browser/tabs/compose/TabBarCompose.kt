@@ -47,7 +47,8 @@ fun TabBarCompose(
     selectedTabId: String?,
     onTabClick: (String) -> Unit,
     onTabClose: (String) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    shouldAutoScroll: Boolean = false
 ) {
     val scope = rememberCoroutineScope()
     val order by orderManager.currentOrder.collectAsState()
@@ -65,18 +66,20 @@ fun TabBarCompose(
         buildBarItems(order, tabs)
     }
 
-    // Auto-scroll to selected tab
-    LaunchedEffect(selectedTabId, order) {
-        val currentOrder = order
-        if (selectedTabId != null && currentOrder != null) {
-            val selectedIndex = currentOrder.primaryOrder.indexOfFirst { item ->
-                when (item) {
-                    is UnifiedTabOrder.OrderItem.SingleTab -> item.tabId == selectedTabId
-                    is UnifiedTabOrder.OrderItem.TabGroup -> selectedTabId in item.tabIds
+    // Auto-scroll to selected tab - only when shouldAutoScroll is true
+    LaunchedEffect(shouldAutoScroll, selectedTabId, order) {
+        if (shouldAutoScroll) {
+            val currentOrder = order
+            if (selectedTabId != null && currentOrder != null) {
+                val selectedIndex = currentOrder.primaryOrder.indexOfFirst { item ->
+                    when (item) {
+                        is UnifiedTabOrder.OrderItem.SingleTab -> item.tabId == selectedTabId
+                        is UnifiedTabOrder.OrderItem.TabGroup -> selectedTabId in item.tabIds
+                    }
                 }
-            }
-            if (selectedIndex >= 0) {
-                listState.animateScrollToItem(selectedIndex)
+                if (selectedIndex >= 0) {
+                    listState.animateScrollToItem(selectedIndex)
+                }
             }
         }
     }
@@ -91,6 +94,7 @@ fun TabBarCompose(
             LazyRow(
                 state = listState,
                 contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 itemsIndexed(items, key = { _, item -> item.id }) { index, item ->
@@ -105,6 +109,15 @@ fun TabBarCompose(
                                     .draggableItem(
                                         itemType = DraggableItemType.Tab(item.tab.id),
                                         coordinator = coordinator
+                                    )
+                                    .dropTarget(
+                                        id = item.tab.id,
+                                        type = DropTargetType.TAB,
+                                        coordinator = coordinator,
+                                        metadata = mapOf(
+                                            "tabId" to item.tab.id,
+                                            "contextId" to (item.tab.contextId ?: "")
+                                        )
                                     )
                                     .dragVisualFeedback(item.tab.id, coordinator)
                                     .pointerInput(item.tab.id) {
@@ -266,7 +279,7 @@ fun TabBarCompose(
                         }
                     }
 
-                    // Add divider after each item (except the last one)
+                    // Add invisible divider after each item for drag-and-drop (except the last one)
                     if (index < items.size - 1) {
                         TabDivider(
                             id = "divider_${index + 1}",
@@ -288,10 +301,10 @@ fun TabBarCompose(
                         // Glass-morphic dragged tab with pill shape
                         Surface(
                             modifier = Modifier
-                                .height(40.dp)
-                                .width(120.dp),
-                            shape = RoundedCornerShape(20.dp),
-                            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f),
+                                .height(32.dp)
+                                .width(100.dp),
+                            shape = RoundedCornerShape(12.dp),
+                            color = MaterialTheme.colorScheme.primaryContainer,
                             tonalElevation = 8.dp,
                             shadowElevation = 8.dp
                         ) {
@@ -386,7 +399,7 @@ sealed class BarItem {
 }
 
 /**
- * Tab pill composable - transparent background, uses container backdrop
+ * Tab pill composable - matches grouped tab pill appearance
  */
 @Composable
 private fun TabPill(
@@ -400,33 +413,33 @@ private fun TabPill(
 ) {
     Surface(
         modifier = modifier
-            .height(40.dp)
-            .width(120.dp),
-        shape = RoundedCornerShape(20.dp),
-        color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
-        border = if (isSelected) BorderStroke(2.dp, MaterialTheme.colorScheme.primary) else null
+            .height(32.dp)
+            .width(100.dp),
+        shape = RoundedCornerShape(12.dp),
+        color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
+        border = if (isSelected) BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary) else null
     ) {
         Row(
             modifier = Modifier
                 .fillMaxSize()
                 .clickable { onTabClick(tab.id) }
-                .padding(horizontal = 12.dp, vertical = 8.dp),
+                .padding(horizontal = 8.dp, vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(4.dp)
         ) {
             // Favicon
             FaviconImage(
                 tab = tab,
-                size = 16.dp,
+                size = 14.dp,
                 modifier = Modifier
             )
 
-            // Title - use onSurface color when dragging for better contrast
+            // Title
             Text(
                 text = getTabDisplayTitle(tab),
-                style = MaterialTheme.typography.bodyMedium,
+                style = MaterialTheme.typography.labelSmall,
                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                color = if (isDragging) MaterialTheme.colorScheme.onSurface else Color.Unspecified,
+                color = if (isDragging) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f)
@@ -436,7 +449,8 @@ private fun TabPill(
 }
 
 /**
- * Divider that acts as a drop target for reordering
+ * Invisible divider that acts as a drop target for reordering
+ * Used for drag-and-drop but not visually rendered
  */
 @Composable
 private fun TabDivider(
@@ -447,23 +461,16 @@ private fun TabDivider(
 ) {
     Box(
         modifier = modifier
-            .width(8.dp)
-            .height(40.dp)
+            .height(32.dp)
+            .width(4.dp)
             .dropTarget(
                 id = id,
                 type = DropTargetType.ROOT_POSITION,
                 coordinator = coordinator,
                 metadata = mapOf("position" to position)
-            ),
-        contentAlignment = Alignment.Center
+            )
     ) {
-        // Visual divider
-        Box(
-            modifier = Modifier
-                .width(2.dp)
-                .height(30.dp)
-                .background(MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
-        )
+        // No visual divider - just an invisible drop target
     }
 }
 
@@ -514,7 +521,7 @@ private fun ShowGroupMenu(
 }
 
 /**
- * Group pill composable - transparent background with dividers between tabs
+ * Group pill composable - solid background with dividers between tabs
  */
 @Composable
 private fun GroupPill(
@@ -535,13 +542,13 @@ private fun GroupPill(
 
     Surface(
         modifier = modifier
-            .height(40.dp)
+            .height(32.dp)
             .wrapContentWidth()
             .then(
                 if (isDragging) Modifier else Modifier
             ),
-        shape = RoundedCornerShape(20.dp),
-        color = Color(group.color).copy(alpha = 0.15f)
+        shape = RoundedCornerShape(12.dp),
+        color = Color(group.color).copy(alpha = 0.2f)
     ) {
         Row(
             modifier = Modifier

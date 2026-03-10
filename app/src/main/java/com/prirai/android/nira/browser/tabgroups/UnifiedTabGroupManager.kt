@@ -342,11 +342,16 @@ class UnifiedTabGroupManager private constructor(private val context: Context) {
         val group = groupsCache[groupId] ?: return@withContext false
         val dbGroup = dao.getGroupById(groupId) ?: return@withContext false
 
-        val updatedDbGroup = dbGroup.copy(color = colorToString(newColor))
+        val colorString = colorToString(newColor)
+        android.util.Log.d("UnifiedTabGroupManager", "Changing color for group $groupId (${group.name}) to: $newColor (0x${Integer.toHexString(newColor)}) = '$colorString'")
+        
+        val updatedDbGroup = dbGroup.copy(color = colorString)
         dao.updateGroup(updatedDbGroup)
 
         val updatedGroup = group.copy(color = newColor)
         groupsCache[groupId] = updatedGroup
+
+        android.util.Log.d("UnifiedTabGroupManager", "Updated cache for group $groupId, cache now has color: ${updatedGroup.color}")
 
         emitStateUpdate()
         _groupEvents.emit(GroupEvent.GroupColorChanged(groupId, newColor))

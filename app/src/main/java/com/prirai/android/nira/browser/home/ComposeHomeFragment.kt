@@ -399,6 +399,9 @@ class ComposeHomeFragment : Fragment() {
                     contextId = contextId
                 )
                 
+                // Trigger autofocus on the newly created tab
+                com.prirai.android.nira.browser.tabs.compose.TabSheetStateManager.notifyTabSheetDismissed()
+                
                 // Navigate to browser fragment to show the new tab
                 findNavController().navigate(R.id.browserFragment)
             }

@@ -15,8 +15,8 @@ import androidx.compose.ui.unit.dp
  * Material 3 visual constants for tabs
  */
 object TabVisualConstants {
-    val TAB_CORNER_RADIUS = 12.dp
-    val GROUP_CORNER_RADIUS = 16.dp
+    val TAB_CORNER_RADIUS = 8.dp
+    val GROUP_CORNER_RADIUS = 12.dp
     val TAB_ELEVATION_NORMAL = 1.dp
     val TAB_ELEVATION_DRAGGING = 8.dp
     val TAB_SPACING_NORMAL = 8.dp
