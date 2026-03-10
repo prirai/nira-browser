@@ -7,7 +7,7 @@ import mozilla.components.browser.state.action.BrowserAction
 import mozilla.components.browser.state.selector.selectedTab
 import mozilla.components.browser.state.state.BrowserState
 import mozilla.components.lib.state.Middleware
-import mozilla.components.lib.state.MiddlewareContext
+import mozilla.components.lib.state.Store
 
 /**
  * Enhanced middleware that triggers form data checks for priority tabs
@@ -31,7 +31,7 @@ class EnhancedStateCaptureMiddleware(
 ) : Middleware<BrowserState, BrowserAction> {
     
     override fun invoke(
-        context: MiddlewareContext<BrowserState, BrowserAction>,
+        store: Store<BrowserState, BrowserAction>,
         next: (BrowserAction) -> Unit,
         action: BrowserAction
     ) {
@@ -40,7 +40,7 @@ class EnhancedStateCaptureMiddleware(
             is AppLifecycleAction.PauseAction -> {
                 // Use checkForFormData instead of suspend to avoid page reload
                 scope.launch {
-                    context.state.selectedTab?.engineState?.engineSession?.checkForFormData(
+                    store.state.selectedTab?.engineState?.engineSession?.checkForFormData(
                         adjustPriority = false
                     )
                 }

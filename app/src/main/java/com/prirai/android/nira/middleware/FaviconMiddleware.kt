@@ -7,7 +7,7 @@ import mozilla.components.browser.state.action.BrowserAction
 import mozilla.components.browser.state.action.ContentAction
 import mozilla.components.browser.state.state.BrowserState
 import mozilla.components.lib.state.Middleware
-import mozilla.components.lib.state.MiddlewareContext
+import mozilla.components.lib.state.Store
 import com.prirai.android.nira.utils.FaviconCache
 
 /**
@@ -19,7 +19,7 @@ class FaviconMiddleware(
 ) : Middleware<BrowserState, BrowserAction> {
 
     override fun invoke(
-        context: MiddlewareContext<BrowserState, BrowserAction>,
+        store: Store<BrowserState, BrowserAction>,
         next: (BrowserAction) -> Unit,
         action: BrowserAction
     ) {
@@ -29,7 +29,7 @@ class FaviconMiddleware(
         // Handle favicon updates
         when (action) {
             is ContentAction.UpdateIconAction -> {
-                val tab = context.state.tabs.find { it.id == action.sessionId }
+                val tab = store.state.tabs.find { it.id == action.sessionId }
                 if (tab != null && action.icon != null) {
                     // Save the favicon asynchronously
                     scope.launch {
