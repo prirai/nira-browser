@@ -526,12 +526,16 @@ class TabOrderManager private constructor(
             UnifiedTabOrder(profileId, emptyList())
         }
         
-        // Build a map of existing positions
+        // Build a map of existing positions and preserve state (isExpanded)
         val existingPositions = mutableMapOf<String, Int>()
+        val existingGroupStates = mutableMapOf<String, Boolean>() // Map groupId to isExpanded
         existingOrder.primaryOrder.forEachIndexed { index, item ->
             when (item) {
                 is UnifiedTabOrder.OrderItem.SingleTab -> existingPositions[item.tabId] = index
-                is UnifiedTabOrder.OrderItem.TabGroup -> existingPositions["group_${item.groupId}"] = index
+                is UnifiedTabOrder.OrderItem.TabGroup -> {
+                    existingPositions["group_${item.groupId}"] = index
+                    existingGroupStates[item.groupId] = item.isExpanded
+                }
             }
         }
         
@@ -547,12 +551,14 @@ class TabOrderManager private constructor(
             val validTabIds = group.tabIds.filter { it in tabIds }
             if (validTabIds.isNotEmpty()) {
                 val position = existingPositions["group_${group.id}"] ?: Int.MAX_VALUE
+                // Preserve isExpanded state from existing order, default to true for new groups
+                val isExpanded = existingGroupStates[group.id] ?: true
                 itemsWithPositions.add(
                     position to UnifiedTabOrder.OrderItem.TabGroup(
                         groupId = group.id,
                         groupName = group.name,
                         color = group.color,
-                        isExpanded = true,
+                        isExpanded = isExpanded,
                         tabIds = validTabIds
                     )
                 )

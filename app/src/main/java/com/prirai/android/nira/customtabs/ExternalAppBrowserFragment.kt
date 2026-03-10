@@ -93,10 +93,6 @@ class ExternalAppBrowserFragment : Fragment(), UserInteractionHandler {
         val sessionId = customTabSessionId ?: return
         val tab = requireContext().components.store.state.findCustomTab(sessionId) ?: return
         
-        // Hide fullscreen buttons (only for main browser)
-        binding.fullscreenExitButton.visibility = View.GONE
-        binding.fullscreenToggleButton.visibility = View.GONE
-        
         // Setup edge-to-edge
         setupEdgeToEdge()
         

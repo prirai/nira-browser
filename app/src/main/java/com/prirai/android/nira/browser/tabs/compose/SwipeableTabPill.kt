@@ -79,7 +79,13 @@ fun SwipeableTabPill(
     swipeThreshold: Float = 40f
 ) {
     var offsetY by remember { mutableStateOf(0f) }
+    var isDeleted by remember { mutableStateOf(false) }
     val maxOffset = 80f
+
+    // If deleted, don't render anything
+    if (isDeleted) {
+        return
+    }
 
     Box(
         modifier = modifier
@@ -152,6 +158,7 @@ fun SwipeableTabPill(
                             when {
                                 offsetY < -swipeThreshold -> {
                                     // Swipe up - close tab
+                                    isDeleted = true
                                     onTabClose()
                                 }
 
@@ -166,10 +173,10 @@ fun SwipeableTabPill(
                         offsetY = 0f
                     }
                 },
-            shape = RoundedCornerShape(16.dp),
+            shape = RoundedCornerShape(12.dp),
             color = when {
-                isSelected && groupColor != null -> Color(groupColor).copy(alpha = 0.2f)
-                isSelected -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
+                isSelected && groupColor != null -> Color(groupColor).copy(alpha = 0.3f)
+                isSelected -> MaterialTheme.colorScheme.primaryContainer
                 else -> Color.Transparent
             },
             border = if (isSelected) {
