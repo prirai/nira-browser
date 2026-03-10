@@ -553,7 +553,6 @@ class TabOrderManager private constructor(
                 val position = existingPositions["group_${group.id}"] ?: Int.MAX_VALUE
                 // Preserve isExpanded state from existing order, default to true for new groups
                 val isExpanded = existingGroupStates[group.id] ?: true
-                android.util.Log.d("TabOrderManager", "Rebuilding group ${group.id} (${group.name}) with color: ${group.color} (0x${Integer.toHexString(group.color)})")
                 itemsWithPositions.add(
                     position to UnifiedTabOrder.OrderItem.TabGroup(
                         groupId = group.id,
