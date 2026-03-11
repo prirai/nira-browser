@@ -81,7 +81,8 @@ class ModernToolbarSystem @JvmOverloads constructor(
             }
         }
 
-        // No need to update clipping - we use margins instead
+        // Update engine view clipping after adding component
+        updateEngineViewClipping()
     }
 
     fun removeComponent(type: ComponentType) {
@@ -100,14 +101,21 @@ class ModernToolbarSystem @JvmOverloads constructor(
             }
         }
 
-        // No need to update clipping - we use margins instead
+        // Update engine view clipping after removing component
+        updateEngineViewClipping()
     }
 
     fun setEngineView(engine: EngineView) {
         engineView = engine
         
-        // Always disable dynamic toolbar - we use margins for top toolbar instead
-        engine.setDynamicToolbarMaxHeight(0)
+        // Enable dynamic toolbar with current height for proper clipping
+        // This tells GeckoView to reserve space and clip content accordingly
+        post {
+            val currentHeight = getTotalHeight()
+            if (currentHeight > 0) {
+                engine.setDynamicToolbarMaxHeight(currentHeight)
+            }
+        }
     }
 
     fun setToolbarPosition(position: ToolbarPosition) {
@@ -197,22 +205,43 @@ class ModernToolbarSystem @JvmOverloads constructor(
             ToolbarPosition.BOTTOM -> currentOffset.toFloat()  // Positive moves DOWN (hiding)
         }
 
-        // Notify listener for smooth margin adjustment (for both TOP and BOTTOM modes)
+        // Notify listener for engine view padding adjustment
         onOffsetChangedListener?.invoke(currentOffset, totalHeight)
 
-        // No clipping needed - we use margins instead
-        if (toolbarPosition == ToolbarPosition.TOP) {
-            // Keep toolbar visible but translated for smooth animation
-            visibility = VISIBLE
-            alpha = 1f
+        // Update engine view padding to maintain clipping
+        updateEngineViewClipping()
+        
+        // Make toolbar transparent when fully hidden to prevent visibility in gesture navigation bar
+        // Calculate hide percentage (0 = fully visible, 1 = fully hidden)
+        val hidePercentage = if (totalHeight > 0) {
+            (currentOffset.toFloat() / totalHeight.toFloat()).coerceIn(0f, 1f)
         } else {
-            // Bottom toolbar - normal fade behavior
-            alpha = if (totalHeight > 0) {
-                if (currentOffset >= totalHeight) 0f else 1f
-            } else 1f
-            
-            visibility = VISIBLE
+            0f
         }
+        
+        // Fade out toolbar as it hides (becomes fully transparent when completely hidden)
+        alpha = 1f - hidePercentage
+        
+        // Keep visibility as VISIBLE to maintain layout space
+        // (alpha handles transparency, not visibility)
+        visibility = VISIBLE
+    }
+    
+    /**
+     * Update engine view padding to prevent content from appearing under toolbar.
+     * Adjusts padding dynamically as toolbar hides/shows.
+     */
+    private fun updateEngineViewClipping() {
+        val engine = engineView ?: return
+        
+        val totalHeight = getTotalHeight()
+        if (totalHeight <= 0) return
+        
+        // Calculate visible toolbar height
+        val visibleHeight = (totalHeight - currentOffset).coerceAtLeast(0)
+        
+        // Tell GeckoView the current visible toolbar height for content coordination
+        engine.setDynamicToolbarMaxHeight(visibleHeight)
     }
 
     fun getCurrentOffset(): Int = currentOffset

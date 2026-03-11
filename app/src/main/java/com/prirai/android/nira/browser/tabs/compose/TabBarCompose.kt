@@ -48,7 +48,7 @@ fun TabBarCompose(
     onTabClick: (String) -> Unit,
     onTabClose: (String) -> Unit,
     modifier: Modifier = Modifier,
-    shouldAutoScroll: Boolean = false
+    autoScrollTrigger: Long = 0L
 ) {
     val scope = rememberCoroutineScope()
     val order by orderManager.currentOrder.collectAsState()
@@ -65,20 +65,67 @@ fun TabBarCompose(
     val items = remember(order, tabs) {
         buildBarItems(order, tabs)
     }
+    
+    // Track initial load to prevent animated transitions showing both states
+    var isInitialLoad by remember { mutableStateOf(true) }
+    LaunchedEffect(order) {
+        if (order != null && isInitialLoad) {
+            // Small delay to ensure order is fully processed
+            kotlinx.coroutines.delay(50)
+            isInitialLoad = false
+        }
+    }
 
-    // Auto-scroll to selected tab - only when shouldAutoScroll is true
-    LaunchedEffect(shouldAutoScroll, selectedTabId, order) {
-        if (shouldAutoScroll) {
-            val currentOrder = order
-            if (selectedTabId != null && currentOrder != null) {
-                val selectedIndex = currentOrder.primaryOrder.indexOfFirst { item ->
-                    when (item) {
-                        is UnifiedTabOrder.OrderItem.SingleTab -> item.tabId == selectedTabId
-                        is UnifiedTabOrder.OrderItem.TabGroup -> selectedTabId in item.tabIds
-                    }
+    // Scroll to selected tab once on initial composition (e.g. app open).
+    // Waits for order to finish loading, then scrolls instantly (no animation).
+    // Centers the selected tab in the viewport when possible.
+    var hasInitialScrolled by remember { mutableStateOf(false) }
+    LaunchedEffect(order, selectedTabId, listState.layoutInfo.viewportSize) {
+        if (!hasInitialScrolled && order != null && selectedTabId != null) {
+            val selectedIndex = order!!.primaryOrder.indexOfFirst { item ->
+                when (item) {
+                    is UnifiedTabOrder.OrderItem.SingleTab -> item.tabId == selectedTabId
+                    is UnifiedTabOrder.OrderItem.TabGroup -> selectedTabId in item.tabIds
                 }
-                if (selectedIndex >= 0) {
-                    listState.animateScrollToItem(selectedIndex)
+            }
+            if (selectedIndex >= 0) {
+                // Wait for layout to be ready
+                val viewportSize = listState.layoutInfo.viewportSize.width
+                if (viewportSize > 0) {
+                    // Calculate offset to center the selected tab
+                    // Negative offset moves the item towards the center
+                    val averageItemSize = 180 // Approximate tab width in pixels (150dp + spacing)
+                    val scrollOffset = -(viewportSize / 2 - averageItemSize / 2)
+                    
+                    listState.scrollToItem(selectedIndex, scrollOffset.coerceAtLeast(-viewportSize))
+                    hasInitialScrolled = true
+                }
+            }
+        }
+    }
+
+    // Auto-scroll to selected tab when explicitly triggered (tab sheet dismissed,
+    // new tab created, etc.). Only fires when autoScrollTrigger changes, so it
+    // never interrupts the user while they are manually scrolling the tab bar.
+    // Centers the selected tab in the viewport when possible.
+    LaunchedEffect(autoScrollTrigger) {
+        if (autoScrollTrigger > 0L) {
+            val currentOrder = order ?: return@LaunchedEffect
+            val currentTabId = selectedTabId ?: return@LaunchedEffect
+            val selectedIndex = currentOrder.primaryOrder.indexOfFirst { item ->
+                when (item) {
+                    is UnifiedTabOrder.OrderItem.SingleTab -> item.tabId == currentTabId
+                    is UnifiedTabOrder.OrderItem.TabGroup -> currentTabId in item.tabIds
+                }
+            }
+            if (selectedIndex >= 0) {
+                // Calculate offset to center the selected tab
+                val viewportSize = listState.layoutInfo.viewportSize.width
+                if (viewportSize > 0) {
+                    val averageItemSize = 180 // Approximate tab width in pixels
+                    val scrollOffset = -(viewportSize / 2 - averageItemSize / 2)
+                    
+                    listState.animateScrollToItem(selectedIndex, scrollOffset.coerceAtLeast(-viewportSize))
                 }
             }
         }
@@ -105,7 +152,7 @@ fun TabBarCompose(
 
                             Box(
                                 modifier = Modifier
-                                    .animateItem()
+                                    .then(if (!isInitialLoad) Modifier.animateItem() else Modifier)
                                     .draggableItem(
                                         itemType = DraggableItemType.Tab(item.tab.id),
                                         coordinator = coordinator
@@ -192,7 +239,7 @@ fun TabBarCompose(
 
                             Box(
                                 modifier = Modifier
-                                    .animateItem()
+                                    .then(if (!isInitialLoad) Modifier.animateItem() else Modifier)
                                     .draggableItem(
                                         itemType = DraggableItemType.Group(item.groupId),
                                         coordinator = coordinator
@@ -285,7 +332,7 @@ fun TabBarCompose(
                             id = "divider_${index + 1}",
                             coordinator = coordinator,
                             position = index + 1,
-                            modifier = Modifier.animateItem()
+                            modifier = if (!isInitialLoad) Modifier.animateItem() else Modifier
                         )
                     }
                 }
@@ -536,7 +583,8 @@ private fun GroupPill(
     isDragging: Boolean = false,
     modifier: Modifier = Modifier
 ) {
-    var expanded by remember { mutableStateOf(group.isExpanded) }
+    // Use remember with key to update when saved state changes
+    var expanded by remember(group.isExpanded, group.groupId) { mutableStateOf(group.isExpanded) }
     var menuTab by remember { mutableStateOf<TabSessionState?>(null) }
     var showTabMenu by remember { mutableStateOf(false) }
 
