@@ -194,14 +194,9 @@ class ComposeTabBarWithProfileSwitcher @JvmOverloads constructor(
             if (isPrivateMode) "private" else "profile_${currentProfile.id}"
         }
 
-        // Track tab sheet dismissal for auto-scroll
-        val tabSheetDismissed by com.prirai.android.nira.browser.tabs.compose.TabSheetStateManager.dismissedTimestamp.collectAsState()
-        var lastDismissalTimestamp by remember { mutableStateOf(0L) }
-        val shouldAutoScroll = remember(tabSheetDismissed) {
-            val shouldScroll = tabSheetDismissed > lastDismissalTimestamp
-            lastDismissalTimestamp = tabSheetDismissed
-            shouldScroll
-        }
+        // Observe tab sheet dismissal timestamp; passed directly to TabBarCompose
+        // so it can scroll to the active tab after each dismissal event.
+        val autoScrollTrigger by com.prirai.android.nira.browser.tabs.compose.TabSheetStateManager.dismissedTimestamp.collectAsState()
 
         // Tab bar only - profile switching available via menu
         // Use key() to properly recreate composition on profile switch
@@ -221,7 +216,7 @@ class ComposeTabBarWithProfileSwitcher @JvmOverloads constructor(
                     onTabClosed?.invoke(tabId)
                 },
                 modifier = Modifier.fillMaxWidth(),
-                shouldAutoScroll = shouldAutoScroll
+                autoScrollTrigger = autoScrollTrigger
             )
         }
     }

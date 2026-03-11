@@ -118,9 +118,8 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
         // Ensure tab preview is hidden (fixes doubled content issue after returning from settings)
         binding.tabPreview.visibility = View.GONE
 
-        // Reset EngineView's dynamic toolbar configuration to prevent rendering artifacts
-        // No clipping needed - we use margins instead
-        binding.engineView.setDynamicToolbarMaxHeight(0)
+        // Dynamic toolbar clipping is managed by ModernToolbarSystem
+        // No manual configuration needed here
         
         // Apply AMOLED mode background if enabled
         applyThemeColors()
@@ -613,8 +612,8 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
     private var lastTopMargin = -1
     
     /**
-     * Adjust web content top margin smoothly as toolbar offset changes
-     * Only needed for top toolbar position - provides smooth margin animation
+     * Adjust web content padding dynamically as toolbar scrolls to maintain clipping.
+     * Updates padding to prevent content from appearing under the toolbar.
      */
     private fun adjustWebContentMarginsForToolbarOffset(currentOffset: Int, totalHeight: Int) {
         // CRITICAL: Check if view is still attached to prevent crash when switching tabs
@@ -623,32 +622,20 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
         }
         
         val prefs = UserPreferences(requireContext())
-        if (prefs.toolbarPosition != com.prirai.android.nira.components.toolbar.ToolbarPosition.TOP.ordinal) {
-            return // Bottom toolbar doesn't need margin adjustment
-        }
         
-        // For top toolbar: adjust top margin based on toolbar scroll position
-        // Do NOT use translationY as it causes black bars when bottom components hide
-        val swipeRefreshParams = binding.swipeRefresh.layoutParams as? androidx.coordinatorlayout.widget.CoordinatorLayout.LayoutParams ?: return
+        // Calculate visible toolbar height
+        val visibleHeight = (totalHeight - currentOffset).coerceAtLeast(0)
         
-        // Only adjust top margin based on the address bar height (not bottom components)
-        val addressBarHeight = resources.getDimensionPixelSize(R.dimen.browser_toolbar_height)
-        
-        // Calculate how much of the address bar is visible
-        val visibleAddressBarHeight = addressBarHeight - currentOffset
-        val newTopMargin = maxOf(0, visibleAddressBarHeight)
-        
-        // OPTIMIZATION: Only update layout if margin actually changed significantly (> 1px)
-        // This prevents excessive layout passes and eliminates stutter
-        if (kotlin.math.abs(newTopMargin - lastTopMargin) > 1) {
-            swipeRefreshParams.topMargin = newTopMargin
-            lastTopMargin = newTopMargin
-            
-            // CRITICAL: Ensure bottom margin is ALWAYS 0 for top toolbar
-            // The bottom components float above the engine view, not pushing it up
-            swipeRefreshParams.bottomMargin = 0
-            
-            binding.swipeRefresh.layoutParams = swipeRefreshParams
+        // Update padding based on toolbar position
+        when (prefs.toolbarPosition) {
+            com.prirai.android.nira.components.toolbar.ToolbarPosition.BOTTOM.ordinal -> {
+                // Bottom toolbar: adjust bottom padding as toolbar hides/shows
+                binding.swipeRefresh.setPadding(0, 0, 0, visibleHeight)
+            }
+            else -> {
+                // Top toolbar: adjust top padding as toolbar hides/shows
+                binding.swipeRefresh.setPadding(0, visibleHeight, 0, 0)
+            }
         }
     }
 
