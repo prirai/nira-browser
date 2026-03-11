@@ -637,24 +637,39 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
     @VisibleForTesting
     internal fun initializeEngineView(toolbarHeight: Int) {
         val context = requireContext()
+        val prefs = UserPreferences(context)
 
-        // Always use 0 for dynamic toolbar (we use translation-based hiding)
-        binding.engineView.setDynamicToolbarMaxHeight(0)
+        // Enable dynamic toolbar with toolbar height for content coordination
+        binding.engineView.setDynamicToolbarMaxHeight(toolbarHeight)
         
-        // For top toolbar: add margin equal to address bar height
-        // For bottom toolbar: no margins needed (toolbar scrolls with content)
-        val swipeRefreshParams = binding.swipeRefresh.layoutParams as CoordinatorLayout.LayoutParams
-        if (UserPreferences(context).shouldUseBottomToolbar) {
-            swipeRefreshParams.bottomMargin = 0
-            swipeRefreshParams.topMargin = 0
-        } else {
-            // Top toolbar: margin = address bar height only (not full toolbar height)
-            val addressBarHeight = resources.getDimensionPixelSize(R.dimen.browser_toolbar_height)
-            swipeRefreshParams.topMargin = addressBarHeight
-            swipeRefreshParams.bottomMargin = 0
+        // Get actual toolbar height (may differ from parameter if components are hidden)
+        // Use post to ensure toolbar is measured
+        unifiedToolbar?.post {
+            val actualToolbarHeight = unifiedToolbar?.height ?: toolbarHeight
+            
+            // Set padding on swipeRefresh to prevent content from appearing under toolbar
+            // Padding ensures content is clipped and doesn't overlap with toolbar
+            val swipeRefreshParams = binding.swipeRefresh.layoutParams as CoordinatorLayout.LayoutParams
+            
+            when (prefs.toolbarPosition) {
+                com.prirai.android.nira.components.toolbar.ToolbarPosition.BOTTOM.ordinal -> {
+                    // Bottom toolbar: add bottom padding equal to actual toolbar height
+                    binding.swipeRefresh.setPadding(0, 0, 0, actualToolbarHeight)
+                    swipeRefreshParams.bottomMargin = 0
+                    swipeRefreshParams.topMargin = 0
+                }
+                else -> {
+                    // Top toolbar: add top padding equal to actual toolbar height
+                    binding.swipeRefresh.setPadding(0, actualToolbarHeight, 0, 0)
+                    swipeRefreshParams.topMargin = 0
+                    swipeRefreshParams.bottomMargin = 0
+                }
+            }
+            
+            binding.swipeRefresh.clipToPadding = false // Allow overscroll effects
+            binding.swipeRefresh.layoutParams = swipeRefreshParams
+            binding.swipeRefresh.requestLayout()
         }
-        binding.swipeRefresh.layoutParams = swipeRefreshParams
-        binding.swipeRefresh.requestLayout()
     }
 
     @VisibleForTesting

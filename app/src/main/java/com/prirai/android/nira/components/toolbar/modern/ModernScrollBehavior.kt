@@ -10,7 +10,11 @@ import mozilla.components.concept.toolbar.ScrollableToolbar
 /**
  * Scroll behavior for toolbar auto-hide on scroll.
  * 
- * Provides instant show/hide: scroll down hides toolbar, scroll up shows toolbar.
+ * Uses scroll distance accumulation (modern browser behavior):
+ * - Accumulates scroll distance in each direction
+ * - Hides toolbar after scrolling down a threshold distance
+ * - Shows toolbar after scrolling up a threshold distance
+ * 
  * Works with any ScrollableToolbar implementation (UnifiedToolbar or ModernToolbarSystem).
  */
 class ModernScrollBehavior(
@@ -20,6 +24,17 @@ class ModernScrollBehavior(
 
     private var isScrollingEnabled = true
     private var isToolbarHidden = false
+    
+    // Scroll distance accumulation
+    private var scrollYAccumulator = 0
+    
+    // Threshold in pixels to trigger show/hide (similar to Chrome/Firefox)
+    private val scrollThreshold = 56 // dp converted to pixels below
+    private val scrollThresholdPx: Int
+    
+    init {
+        scrollThresholdPx = (scrollThreshold * context.resources.displayMetrics.density).toInt()
+    }
 
     override fun onLayoutChild(
         parent: CoordinatorLayout,
@@ -63,17 +78,37 @@ class ModernScrollBehavior(
     ) {
         if (!isScrollingEnabled) return
 
-        // Instant show/hide based on scroll direction
+        // Accumulate scroll distance based on direction
         when {
-            dy > 0 && !isToolbarHidden -> {
-                // Scrolling down - hide toolbar
-                collapseToolbar(child)
-                isToolbarHidden = true
+            dy > 0 -> {
+                // Scrolling down - accumulate downward scroll
+                if (scrollYAccumulator > 0) {
+                    // Change of direction - reset accumulator
+                    scrollYAccumulator = 0
+                }
+                scrollYAccumulator += dy
+                
+                // Hide toolbar if threshold reached and not already hidden
+                if (!isToolbarHidden && scrollYAccumulator >= scrollThresholdPx) {
+                    collapseToolbar(child)
+                    isToolbarHidden = true
+                    scrollYAccumulator = 0 // Reset after action
+                }
             }
-            dy < 0 && isToolbarHidden -> {
-                // Scrolling up - show toolbar
-                expandToolbar(child)
-                isToolbarHidden = false
+            dy < 0 -> {
+                // Scrolling up - accumulate upward scroll
+                if (scrollYAccumulator < 0) {
+                    // Change of direction - reset accumulator
+                    scrollYAccumulator = 0
+                }
+                scrollYAccumulator += dy
+                
+                // Show toolbar if threshold reached and currently hidden
+                if (isToolbarHidden && scrollYAccumulator <= -scrollThresholdPx) {
+                    expandToolbar(child)
+                    isToolbarHidden = false
+                    scrollYAccumulator = 0 // Reset after action
+                }
             }
         }
     }
@@ -89,17 +124,33 @@ class ModernScrollBehavior(
         type: Int,
         consumed: IntArray
     ) {
-        // Handle overscroll/fling scenarios
+        // Handle overscroll/fling scenarios with same scroll distance logic
         when {
-            dyUnconsumed > 0 && !isToolbarHidden -> {
-                // Scrolling down past content - hide toolbar
-                collapseToolbar(child)
-                isToolbarHidden = true
+            dyUnconsumed > 0 -> {
+                // Scrolling down past content
+                if (scrollYAccumulator > 0) {
+                    scrollYAccumulator = 0
+                }
+                scrollYAccumulator += dyUnconsumed
+                
+                if (!isToolbarHidden && scrollYAccumulator >= scrollThresholdPx) {
+                    collapseToolbar(child)
+                    isToolbarHidden = true
+                    scrollYAccumulator = 0
+                }
             }
-            dyUnconsumed < 0 && isToolbarHidden -> {
-                // Scrolling up past content - show toolbar
-                expandToolbar(child)
-                isToolbarHidden = false
+            dyUnconsumed < 0 -> {
+                // Scrolling up past content
+                if (scrollYAccumulator < 0) {
+                    scrollYAccumulator = 0
+                }
+                scrollYAccumulator += dyUnconsumed
+                
+                if (isToolbarHidden && scrollYAccumulator <= -scrollThresholdPx) {
+                    expandToolbar(child)
+                    isToolbarHidden = false
+                    scrollYAccumulator = 0
+                }
             }
         }
     }
