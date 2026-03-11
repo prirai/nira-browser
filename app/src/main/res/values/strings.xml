@@ -828,4 +828,8 @@
     <item quantity="other">%1$d selected</item>
   </plurals>
     <string name="add_tab_to_group">Add tab to group</string>
+
+    <!-- Firefox Sync -->
+    <string name="settings_sync">Firefox Sync</string>
+    <string name="settings_sync_explain">Sign in to sync history and tabs</string>
 </resources>
