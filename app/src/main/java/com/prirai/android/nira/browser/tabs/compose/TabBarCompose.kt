@@ -48,7 +48,7 @@ fun TabBarCompose(
     onTabClick: (String) -> Unit,
     onTabClose: (String) -> Unit,
     modifier: Modifier = Modifier,
-    shouldAutoScroll: Boolean = false
+    autoScrollTrigger: Long = 0L
 ) {
     val scope = rememberCoroutineScope()
     val order by orderManager.currentOrder.collectAsState()
@@ -66,20 +66,39 @@ fun TabBarCompose(
         buildBarItems(order, tabs)
     }
 
-    // Auto-scroll to selected tab - only when shouldAutoScroll is true
-    LaunchedEffect(shouldAutoScroll, selectedTabId, order) {
-        if (shouldAutoScroll) {
-            val currentOrder = order
-            if (selectedTabId != null && currentOrder != null) {
-                val selectedIndex = currentOrder.primaryOrder.indexOfFirst { item ->
-                    when (item) {
-                        is UnifiedTabOrder.OrderItem.SingleTab -> item.tabId == selectedTabId
-                        is UnifiedTabOrder.OrderItem.TabGroup -> selectedTabId in item.tabIds
-                    }
+    // Scroll to selected tab once on initial composition (e.g. app open).
+    // Waits for order to finish loading, then scrolls instantly (no animation).
+    var hasInitialScrolled by remember { mutableStateOf(false) }
+    LaunchedEffect(order, selectedTabId) {
+        if (!hasInitialScrolled && order != null && selectedTabId != null) {
+            val selectedIndex = order!!.primaryOrder.indexOfFirst { item ->
+                when (item) {
+                    is UnifiedTabOrder.OrderItem.SingleTab -> item.tabId == selectedTabId
+                    is UnifiedTabOrder.OrderItem.TabGroup -> selectedTabId in item.tabIds
                 }
-                if (selectedIndex >= 0) {
-                    listState.animateScrollToItem(selectedIndex)
+            }
+            if (selectedIndex >= 0) {
+                listState.scrollToItem(selectedIndex)
+                hasInitialScrolled = true
+            }
+        }
+    }
+
+    // Auto-scroll to selected tab when explicitly triggered (tab sheet dismissed,
+    // new tab created, etc.). Only fires when autoScrollTrigger changes, so it
+    // never interrupts the user while they are manually scrolling the tab bar.
+    LaunchedEffect(autoScrollTrigger) {
+        if (autoScrollTrigger > 0L) {
+            val currentOrder = order ?: return@LaunchedEffect
+            val currentTabId = selectedTabId ?: return@LaunchedEffect
+            val selectedIndex = currentOrder.primaryOrder.indexOfFirst { item ->
+                when (item) {
+                    is UnifiedTabOrder.OrderItem.SingleTab -> item.tabId == currentTabId
+                    is UnifiedTabOrder.OrderItem.TabGroup -> currentTabId in item.tabIds
                 }
+            }
+            if (selectedIndex >= 0) {
+                listState.animateScrollToItem(selectedIndex)
             }
         }
     }
