@@ -765,15 +765,20 @@ class TabsBottomSheetFragment : DialogFragment() {
                     // Immediately remove tab from store
                     requireContext().components.tabsUseCases.removeTab(tabId)
                 }
-                it.onTabRestore = { tab, position ->
+                it.onTabRestore = { tab, position, groupId ->
                     // Restore tab at original position
                     val components = requireContext().components
-                    components.tabsUseCases.addTab(
+                    val newTabId = components.tabsUseCases.addTab(
                         url = tab.content.url,
                         private = tab.content.private,
                         contextId = tab.contextId,
                         selectTab = false
                     )
+                    if (groupId != null) {
+                        lifecycleScope.launch {
+                            unifiedGroupManager.addTabToGroup(newTabId, groupId)
+                        }
+                    }
                 }
             }
         }

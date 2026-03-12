@@ -68,7 +68,9 @@ import com.prirai.android.nira.ext.components
 import mozilla.components.browser.state.action.DownloadAction
 import mozilla.components.browser.state.state.content.DownloadState
 import mozilla.components.feature.downloads.AbstractFetchDownloadService
+import mozilla.components.feature.downloads.INTENT_EXTRA_DOWNLOAD_ID
 import mozilla.components.lib.state.ext.observeAsComposableState
+import java.util.UUID
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -171,11 +173,11 @@ fun DownloadsScreen(onDismiss: () -> Unit) {
                                 downloads = activeDownloads,
                                 onItemClick = { /* active items don't open */ },
                                 onCancelClick = { dl ->
-                                    val intent = Intent(context, DownloadService::class.java).apply {
-                                        action = AbstractFetchDownloadService.ACTION_CANCEL
-                                        putExtra(android.app.DownloadManager.EXTRA_DOWNLOAD_ID, dl.id)
+                                    val intent = Intent(AbstractFetchDownloadService.ACTION_CANCEL).apply {
+                                        setPackage(context.packageName)
+                                        putExtra(INTENT_EXTRA_DOWNLOAD_ID, dl.id)
                                     }
-                                    context.startService(intent)
+                                    context.sendBroadcast(intent)
                                     context.components.store.dispatch(DownloadAction.RemoveDownloadAction(dl.id))
                                 },
                                 onDelete = { id ->
@@ -196,14 +198,29 @@ fun DownloadsScreen(onDismiss: () -> Unit) {
                                     when (dl.status) {
                                         DownloadState.Status.COMPLETED -> openDownloadedFile(context, dl)
                                         DownloadState.Status.FAILED -> {
-                                            val intent = Intent(context, DownloadService::class.java).apply {
-                                                action = AbstractFetchDownloadService.ACTION_TRY_AGAIN
-                                                putExtra(android.app.DownloadManager.EXTRA_DOWNLOAD_ID, dl.id)
+                                            val intent = Intent(AbstractFetchDownloadService.ACTION_TRY_AGAIN).apply {
+                                                setPackage(context.packageName)
+                                                putExtra(INTENT_EXTRA_DOWNLOAD_ID, dl.id)
                                             }
-                                            context.startService(intent)
+                                            context.sendBroadcast(intent)
                                             Toast.makeText(context, "Retrying download…", Toast.LENGTH_SHORT).show()
                                         }
-                                        else -> { /* cancelled – nothing to do */ }
+                                        DownloadState.Status.CANCELLED -> {
+                                            context.components.store.dispatch(DownloadAction.RemoveDownloadAction(dl.id))
+                                            val freshDownload = DownloadState(
+                                                id = UUID.randomUUID().toString(),
+                                                url = dl.url,
+                                                fileName = dl.fileName,
+                                                contentType = dl.contentType,
+                                                contentLength = dl.contentLength,
+                                                userAgent = dl.userAgent,
+                                                referrerUrl = dl.referrerUrl,
+                                                status = DownloadState.Status.INITIATED
+                                            )
+                                            context.components.store.dispatch(DownloadAction.AddDownloadAction(freshDownload))
+                                            Toast.makeText(context, "Download requeued", Toast.LENGTH_SHORT).show()
+                                        }
+                                        else -> {}
                                     }
                                 },
                                 onCancelClick = null,
@@ -488,10 +505,29 @@ fun DownloadListItem(
                             tint = MaterialTheme.colorScheme.error,
                             modifier = Modifier.size(20.dp)
                         )
-                        DownloadState.Status.PAUSED -> Icon(
-                            imageVector = Icons.Default.Pause,
-                            contentDescription = "Paused",
-                            tint = Color(0xFFFF9800),
+                        DownloadState.Status.PAUSED -> {
+                            Icon(
+                                imageVector = Icons.Default.Pause,
+                                contentDescription = "Paused",
+                                tint = Color(0xFFFF9800),
+                                modifier = Modifier.size(20.dp)
+                            )
+                            if (onCancelClick != null) {
+                                Spacer(Modifier.width(4.dp))
+                                TextButton(
+                                    onClick = onCancelClick,
+                                    colors = ButtonDefaults.textButtonColors(
+                                        contentColor = MaterialTheme.colorScheme.error
+                                    )
+                                ) {
+                                    Text("Cancel", style = MaterialTheme.typography.labelMedium)
+                                }
+                            }
+                        }
+                        DownloadState.Status.CANCELLED -> Icon(
+                            imageVector = Icons.Default.Refresh,
+                            contentDescription = "Retry",
+                            tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(20.dp)
                         )
                         else -> {}
