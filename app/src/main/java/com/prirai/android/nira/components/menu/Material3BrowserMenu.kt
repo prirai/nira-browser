@@ -57,9 +57,26 @@ class Material3BrowserMenu(
             val icon2: Int,
             val onClick2: () -> Unit
         ) : MenuItem()
-        
+
+        data class QuadRow(
+            val title1: String, val icon1: Int, val onClick1: () -> Unit,
+            val title2: String, val icon2: Int, val onClick2: () -> Unit,
+            val title3: String, val icon3: Int, val onClick3: () -> Unit,
+            val title4: String, val icon4: Int, val onClick4: () -> Unit
+        ) : MenuItem()
+
+        data class IconRow(
+            val items: List<IconRowItem>
+        ) : MenuItem()
+
         object Divider : MenuItem()
     }
+
+    data class IconRowItem(
+        val title: String,
+        val iconRes: Int,
+        val onClick: () -> Unit
+    )
     
     private var popupWindow: PopupWindow? = null
     
@@ -69,34 +86,37 @@ class Material3BrowserMenu(
         
         val recyclerView = menuView.findViewById<RecyclerView>(R.id.menu_recycler)
         recyclerView.layoutManager = LinearLayoutManager(context)
-        recyclerView.adapter = MenuAdapter(items.filter { 
+        recyclerView.isNestedScrollingEnabled = false
+        recyclerView.overScrollMode = View.OVER_SCROLL_NEVER
+        recyclerView.adapter = MenuAdapter(items.filter {
             when (it) {
                 is MenuItem.Action -> it.visible
                 is MenuItem.Toggle -> it.visible
                 is MenuItem.ToolbarRow -> true
                 is MenuItem.PillRow -> true
+                is MenuItem.QuadRow -> true
+                is MenuItem.IconRow -> true
                 is MenuItem.Divider -> true
             }
-        }) { 
+        }) {
             popupWindow?.dismiss()
         }
-        
-        // Calculate max height - should be screen height minus some margin, not constrained by anchor
+
         val displayMetrics = context.resources.displayMetrics
         val screenHeight = displayMetrics.heightPixels
-        val maxHeight = (screenHeight * 0.7).toInt() // 70% of screen height
-        
-        // Measure the recycler to get its desired height
+        val menuWidthPx = (280 * displayMetrics.density).toInt()
+
+        // Measure without height constraint so the menu is never scrollable
         recyclerView.measure(
-            View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED),
-            View.MeasureSpec.makeMeasureSpec(maxHeight, View.MeasureSpec.AT_MOST)
+            View.MeasureSpec.makeMeasureSpec(menuWidthPx, View.MeasureSpec.EXACTLY),
+            View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
         )
-        
-        val menuHeight = recyclerView.measuredHeight.coerceAtMost(maxHeight)
+
+        val menuHeight = recyclerView.measuredHeight
         
         popupWindow = PopupWindow(
             menuView,
-            (280 * displayMetrics.density).toInt(), // Width in dp
+            menuWidthPx,
             menuHeight,
             true
         ).apply {
@@ -123,7 +143,7 @@ class Material3BrowserMenu(
             location[0]
             val anchorY = location[1]
             
-            val menuWidth = (280 * displayMetrics.density).toInt()
+            val menuWidth = menuWidthPx
             val gap = (8 * displayMetrics.density).toInt()
             
             // Check available space below and above
@@ -180,6 +200,8 @@ class Material3BrowserMenu(
             const val TYPE_DIVIDER = 2
             const val TYPE_TOOLBAR = 3
             const val TYPE_PILL = 4
+            const val TYPE_QUAD = 5
+            const val TYPE_ICON_ROW = 6
         }
         
         override fun getItemViewType(position: Int): Int {
@@ -188,6 +210,8 @@ class Material3BrowserMenu(
                 is MenuItem.Toggle -> TYPE_TOGGLE
                 is MenuItem.ToolbarRow -> TYPE_TOOLBAR
                 is MenuItem.PillRow -> TYPE_PILL
+                is MenuItem.QuadRow -> TYPE_QUAD
+                is MenuItem.IconRow -> TYPE_ICON_ROW
                 is MenuItem.Divider -> TYPE_DIVIDER
             }
         }
@@ -207,6 +231,12 @@ class Material3BrowserMenu(
                 TYPE_PILL -> PillViewHolder(
                     inflater.inflate(R.layout.menu_item_pill_row, parent, false)
                 )
+                TYPE_QUAD -> QuadViewHolder(
+                    inflater.inflate(R.layout.menu_item_quad_row, parent, false)
+                )
+                TYPE_ICON_ROW -> IconRowViewHolder(
+                    inflater.inflate(R.layout.menu_item_icon_row, parent, false)
+                )
                 else -> DividerViewHolder(
                     inflater.inflate(R.layout.menu_item_divider, parent, false)
                 )
@@ -219,6 +249,8 @@ class Material3BrowserMenu(
                 is MenuItem.Toggle -> (holder as ToggleViewHolder).bind(item, onDismiss)
                 is MenuItem.ToolbarRow -> (holder as ToolbarViewHolder).bind(item, onDismiss)
                 is MenuItem.PillRow -> (holder as PillViewHolder).bind(item, onDismiss)
+                is MenuItem.QuadRow -> (holder as QuadViewHolder).bind(item, onDismiss)
+                is MenuItem.IconRow -> (holder as IconRowViewHolder).bind(item, onDismiss)
                 is MenuItem.Divider -> {}
             }
         }
@@ -336,6 +368,63 @@ class Material3BrowserMenu(
             }
         }
         
+        private class QuadViewHolder(view: View) : RecyclerView.ViewHolder(view) {
+            private val action1: View = view.findViewById(R.id.quad_action_1)
+            private val icon1: android.widget.ImageView = view.findViewById(R.id.quad_icon_1)
+            private val title1: MaterialTextView = view.findViewById(R.id.quad_title_1)
+            private val action2: View = view.findViewById(R.id.quad_action_2)
+            private val icon2: android.widget.ImageView = view.findViewById(R.id.quad_icon_2)
+            private val title2: MaterialTextView = view.findViewById(R.id.quad_title_2)
+            private val action3: View = view.findViewById(R.id.quad_action_3)
+            private val icon3: android.widget.ImageView = view.findViewById(R.id.quad_icon_3)
+            private val title3: MaterialTextView = view.findViewById(R.id.quad_title_3)
+            private val action4: View = view.findViewById(R.id.quad_action_4)
+            private val icon4: android.widget.ImageView = view.findViewById(R.id.quad_icon_4)
+            private val title4: MaterialTextView = view.findViewById(R.id.quad_title_4)
+
+            fun bind(item: MenuItem.QuadRow, onDismiss: () -> Unit) {
+                icon1.setImageResource(item.icon1); title1.text = item.title1
+                action1.setOnClickListener { item.onClick1(); onDismiss() }
+                icon2.setImageResource(item.icon2); title2.text = item.title2
+                action2.setOnClickListener { item.onClick2(); onDismiss() }
+                icon3.setImageResource(item.icon3); title3.text = item.title3
+                action3.setOnClickListener { item.onClick3(); onDismiss() }
+                icon4.setImageResource(item.icon4); title4.text = item.title4
+                action4.setOnClickListener { item.onClick4(); onDismiss() }
+            }
+        }
+
+        private class IconRowViewHolder(view: View) : RecyclerView.ViewHolder(view) {
+            private val item1: View = view.findViewById(R.id.icon_row_item_1)
+            private val icon1: android.widget.ImageView = view.findViewById(R.id.icon_row_icon_1)
+            private val title1: MaterialTextView = view.findViewById(R.id.icon_row_title_1)
+            private val item2: View = view.findViewById(R.id.icon_row_item_2)
+            private val icon2: android.widget.ImageView = view.findViewById(R.id.icon_row_icon_2)
+            private val title2: MaterialTextView = view.findViewById(R.id.icon_row_title_2)
+            private val item3: View = view.findViewById(R.id.icon_row_item_3)
+            private val icon3: android.widget.ImageView = view.findViewById(R.id.icon_row_icon_3)
+            private val title3: MaterialTextView = view.findViewById(R.id.icon_row_title_3)
+
+            fun bind(row: MenuItem.IconRow, onDismiss: () -> Unit) {
+                val slots = listOf(
+                    Triple(item1, icon1, title1),
+                    Triple(item2, icon2, title2),
+                    Triple(item3, icon3, title3)
+                )
+                slots.forEachIndexed { index, (container, iconView, titleView) ->
+                    val rowItem = row.items.getOrNull(index)
+                    if (rowItem != null) {
+                        container.visibility = View.VISIBLE
+                        iconView.setImageResource(rowItem.iconRes)
+                        titleView.text = rowItem.title
+                        container.setOnClickListener { rowItem.onClick(); onDismiss() }
+                    } else {
+                        container.visibility = View.INVISIBLE
+                    }
+                }
+            }
+        }
+
         private class DividerViewHolder(view: View) : RecyclerView.ViewHolder(view)
     }
 }

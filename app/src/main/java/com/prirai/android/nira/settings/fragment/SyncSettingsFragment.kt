@@ -47,9 +47,13 @@ import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import android.widget.Toast
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import com.prirai.android.nira.ext.components
 import com.prirai.android.nira.preferences.UserPreferences
 import com.prirai.android.nira.theme.ThemeManager
@@ -89,8 +93,15 @@ class SyncSettingsFragment : Fragment() {
                 val isSyncing by syncManager.isSyncing.collectAsState()
                 val syncError by syncManager.syncError.collectAsState()
 
-                LaunchedEffect(Unit) {
-                    syncManager.refreshAuthState()
+                val lifecycleOwner = LocalLifecycleOwner.current
+                DisposableEffect(lifecycleOwner) {
+                    val observer = LifecycleEventObserver { _, event ->
+                        if (event == Lifecycle.Event.ON_RESUME) {
+                            coroutineScope.launch { syncManager.refreshAuthState() }
+                        }
+                    }
+                    lifecycleOwner.lifecycle.addObserver(observer)
+                    onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
                 }
                 LaunchedEffect(Unit) {
                     syncManager.authSuccessEvent.collect { email ->
@@ -371,13 +382,11 @@ private fun SyncEnginesCard() {
                     Icon(
                         imageVector = Icons.Rounded.Sync,
                         contentDescription = null,
-                        modifier = Modifier.size(20.dp),
-                        tint = MaterialTheme.colorScheme.outline
+                        modifier = Modifier.size(20.dp)
                     )
                 },
                 label = "Bookmarks",
-                enabled = false,
-                note = "Not available — uses custom storage"
+                enabled = true
             )
         }
     }

@@ -18,6 +18,10 @@ import com.prirai.android.nira.ext.components
 import com.prirai.android.nira.ui.theme.NiraTheme
 import mozilla.components.browser.state.state.TabSessionState
 import mozilla.components.lib.state.ext.flowScoped
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 
 
 /**
@@ -44,6 +48,7 @@ class ComposeTabBarWithProfileSwitcher @JvmOverloads constructor(
     private var tabOrderManager: TabOrderManager? = null
     private var groupManager: UnifiedTabGroupManager? = null
     private var tabViewModel: TabViewModel? = null
+    private val coroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
     init {
         clipToPadding = false
@@ -66,15 +71,20 @@ class ComposeTabBarWithProfileSwitcher @JvmOverloads constructor(
                 // Immediately remove tab from store
                 context.components.tabsUseCases.removeTab(tabId)
             }
-            viewModel.onTabRestore = { tab, position ->
+            viewModel.onTabRestore = { tab, position, groupId ->
                 // Restore tab at original position
                 val components = context.components
-                components.tabsUseCases.addTab(
+                val newTabId = components.tabsUseCases.addTab(
                     url = tab.content.url,
                     private = tab.content.private,
                     contextId = tab.contextId,
                     selectTab = false
                 )
+                if (groupId != null) {
+                    coroutineScope.launch {
+                        groupManager!!.addTabToGroup(newTabId, groupId)
+                    }
+                }
             }
         }
     }

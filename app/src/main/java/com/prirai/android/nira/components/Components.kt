@@ -31,6 +31,7 @@ import mozilla.components.browser.session.storage.SessionStorage
 import mozilla.components.browser.state.engine.EngineMiddleware
 import mozilla.components.browser.state.engine.middleware.SessionPrioritizationMiddleware
 import mozilla.components.browser.state.store.BrowserStore
+import mozilla.components.browser.storage.sync.PlacesBookmarksStorage
 import mozilla.components.browser.storage.sync.PlacesHistoryStorage
 import mozilla.components.browser.storage.sync.RemoteTabsStorage
 import mozilla.components.concept.base.crash.CrashReporting
@@ -199,6 +200,9 @@ open class Components(private val applicationContext: Context) {
     // Storage
     private val lazyHistoryStorage = lazy { PlacesHistoryStorage(applicationContext) }
     val historyStorage by lazy { lazyHistoryStorage.value }
+
+    private val lazyBookmarksStorage = lazy { PlacesBookmarksStorage(applicationContext) }
+    val bookmarksStorage by lazy { lazyBookmarksStorage.value }
 
     val remoteTabsStorage by lazy {
         RemoteTabsStorage(applicationContext, noOpCrashReporter)
@@ -419,6 +423,7 @@ open class Components(private val applicationContext: Context) {
         // Register syncable stores before starting FxaAccountManager.
         GlobalSyncableStoreProvider.configureStore(SyncEngine.History to lazyHistoryStorage)
         GlobalSyncableStoreProvider.configureStore(SyncEngine.Tabs to lazy { remoteTabsStorage })
+        GlobalSyncableStoreProvider.configureStore(SyncEngine.Bookmarks to lazyBookmarksStorage)
         com.prirai.android.nira.browser.sync.FxaSyncManager.getInstance(applicationContext)
     }
 

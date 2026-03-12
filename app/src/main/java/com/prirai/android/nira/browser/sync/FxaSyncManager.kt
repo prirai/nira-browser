@@ -81,7 +81,7 @@ class FxaSyncManager private constructor(private val context: Context) {
                 capabilities = setOf(DeviceCapability.SEND_TAB)
             ),
             syncConfig = SyncConfig(
-                supportedEngines = setOf(SyncEngine.History, SyncEngine.Tabs),
+                supportedEngines = setOf(SyncEngine.History, SyncEngine.Tabs, SyncEngine.Bookmarks),
                 periodicSyncConfig = PeriodicSyncConfig()
             ),
             applicationScopes = setOf("https://identity.mozilla.com/apps/oldsync")

@@ -24,6 +24,7 @@ class TabSearchFragment : BottomSheetDialogFragment() {
     
     private lateinit var searchAdapter: TabSearchAdapter
     private val searchResults = mutableListOf<SearchResultItem>()
+    private var currentQuery: String = ""
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -154,8 +155,7 @@ class TabSearchFragment : BottomSheetDialogFragment() {
         searchAdapter = TabSearchAdapter(
             items = searchResults,
             onItemClick = { item ->
-                when (item) {
-                    is SearchResultItem.HeaderResult -> {
+                when (item) {                    is SearchResultItem.HeaderResult -> {
                         // Headers are not clickable
                     }
                     is SearchResultItem.SubHeaderResult -> {
@@ -210,6 +210,11 @@ class TabSearchFragment : BottomSheetDialogFragment() {
                         dismiss()
                     }
                 }
+            },
+            onTabClose = { tabResult ->
+                requireContext().components.tabsUseCases.removeTab(tabResult.tab.id)
+                removeTabFromResults(tabResult.tab.id)
+                searchAdapter.notifyDataSetChanged()
             }
         )
         
@@ -396,6 +401,45 @@ class TabSearchFragment : BottomSheetDialogFragment() {
             diff < 604800000 -> "This week" // Less than 7 days
             diff < 2592000000 -> "This month" // Less than 30 days
             else -> "Older"
+        }
+    }
+
+    /**
+     * Immediately removes a tab entry and any now-empty sub-headers/headers from the results list.
+     * Called synchronously so the UI updates before the store async action completes.
+     */
+    private fun removeTabFromResults(tabId: String) {
+        searchResults.removeAll { it is SearchResultItem.TabResult && it.tab.id == tabId }
+
+        // Remove sub-headers that have no content items after them
+        var i = searchResults.size - 1
+        while (i >= 0) {
+            val item = searchResults[i]
+            if (item is SearchResultItem.SubHeaderResult) {
+                val next = searchResults.getOrNull(i + 1)
+                if (next == null || next is SearchResultItem.SubHeaderResult || next is SearchResultItem.HeaderResult) {
+                    searchResults.removeAt(i)
+                }
+            }
+            i--
+        }
+
+        // Remove headers that have no sub-headers or content after them
+        i = searchResults.size - 1
+        while (i >= 0) {
+            val item = searchResults[i]
+            if (item is SearchResultItem.HeaderResult) {
+                val next = searchResults.getOrNull(i + 1)
+                if (next == null || next is SearchResultItem.HeaderResult) {
+                    searchResults.removeAt(i)
+                }
+            }
+            i--
+        }
+
+        if (searchResults.isEmpty()) {
+            binding.emptyState.visibility = View.VISIBLE
+            binding.resultsRecyclerView.visibility = View.GONE
         }
     }
 
