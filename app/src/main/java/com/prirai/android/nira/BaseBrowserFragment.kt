@@ -82,6 +82,8 @@ import mozilla.components.feature.session.SessionFeature
 import mozilla.components.feature.session.SwipeRefreshFeature
 import mozilla.components.feature.sitepermissions.SitePermissionsFeature
 import mozilla.components.lib.state.ext.consumeFlow
+import mozilla.components.feature.accounts.FxaCapability
+import mozilla.components.feature.accounts.FxaWebChannelFeature
 import mozilla.components.support.base.feature.ActivityResultHandler
 import mozilla.components.support.base.feature.PermissionsFeature
 import mozilla.components.support.base.feature.UserInteractionHandler
@@ -121,6 +123,7 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
         get() = _unifiedToolbar
 
     protected val thumbnailsFeature = ViewBoundFeatureWrapper<BrowserThumbnails>()
+    private val fxaWebChannelFeature = ViewBoundFeatureWrapper<FxaWebChannelFeature>()
 
     private val sessionFeature = ViewBoundFeatureWrapper<SessionFeature>()
     private val contextMenuIntegration = ViewBoundFeatureWrapper<ContextMenuIntegration>()
@@ -452,7 +455,7 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
                 requireContext().applicationContext,
                 store = components.store,
                 useCases = components.downloadsUseCases,
-                fragmentManager = childFragmentManager,
+                fragmentManager = null,
                 shouldForwardToThirdParties = { UserPreferences(requireContext()).promptExternalDownloader },
                 onDownloadStopped = { download, id, status ->
                     debug("Download ID#$id $download with status $status is done.")
@@ -535,6 +538,19 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
                     components.tabsUseCases.addTab.invoke(url, selectTab = true)
                 },
                 view = view,
+            ),
+            owner = this,
+            view = view,
+        )
+
+        fxaWebChannelFeature.set(
+            feature = FxaWebChannelFeature(
+                customTabSessionId = customTabSessionId,
+                runtime = components.engine,
+                store = components.store,
+                accountManager = components.fxaSyncManager.accountManager,
+                serverConfig = components.fxaSyncManager.serverConfig,
+                fxaCapabilities = setOf(FxaCapability.CHOOSE_WHAT_TO_SYNC),
             ),
             owner = this,
             view = view,

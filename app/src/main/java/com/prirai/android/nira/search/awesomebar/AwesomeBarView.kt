@@ -20,7 +20,6 @@ import mozilla.components.feature.awesomebar.provider.BookmarksStorageSuggestion
 import mozilla.components.feature.awesomebar.provider.HistoryStorageSuggestionProvider
 import mozilla.components.feature.awesomebar.provider.SearchActionProvider
 import mozilla.components.feature.awesomebar.provider.SearchSuggestionProvider
-import mozilla.components.feature.awesomebar.provider.SessionSuggestionProvider
 import mozilla.components.feature.search.SearchUseCases
 import mozilla.components.feature.session.SessionUseCases
 import mozilla.components.feature.tabs.TabsUseCases
@@ -35,7 +34,7 @@ class AwesomeBarView(
     val interactor: AwesomeBarInteractor,
     val view: AwesomeBarWrapper,
 ) {
-    private val sessionProvider: SessionSuggestionProvider
+    private val sessionProvider: NiraTabSuggestionProvider
     private val historyStorageProvider: HistoryStorageSuggestionProvider
     private val bookmarksStorageSuggestionProvider: BookmarksStorageSuggestionProvider
     private val shortcutsEnginePickerProvider: ShortcutsSuggestionProvider
@@ -90,12 +89,11 @@ class AwesomeBarView(
             BrowsingMode.Private -> null
         }
         sessionProvider =
-            SessionSuggestionProvider(
-                components.store,
-                selectTabUseCase,
-                components.icons,
-                getDrawable(activity, R.drawable.ic_ios_search),
-                excludeSelectedSession = true,
+            NiraTabSuggestionProvider(
+                context = activity,
+                store = components.store,
+                selectTabUseCase = selectTabUseCase,
+                removeTabUseCase = components.tabsUseCases.removeTab,
                 switchToTabDescription = activity.resources.getString(R.string.switch_to_tab)
             )
 

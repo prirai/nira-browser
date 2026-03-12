@@ -83,6 +83,32 @@ class TabsBottomSheetFragment : DialogFragment() {
         requireContext().getSharedPreferences("tabs_view_prefs", android.content.Context.MODE_PRIVATE)
     }
 
+    /** ActivityResultLauncher registered at fragment creation time for profile ZIP import. */
+    private val importProfileLauncher = registerForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.GetContent()
+    ) { uri ->
+        uri ?: return@registerForActivityResult
+        lifecycleScope.launch {
+            try {
+                val exportManager = com.prirai.android.nira.browser.profile.ProfileExportManager
+                    .getInstance(requireContext())
+                val imported = exportManager.importProfile(uri)
+                setupMergedProfileButtons()
+                android.widget.Toast.makeText(
+                    requireContext(),
+                    "Profile \"${imported.name}\" imported",
+                    android.widget.Toast.LENGTH_SHORT
+                ).show()
+            } catch (e: Exception) {
+                android.widget.Toast.makeText(
+                    requireContext(),
+                    "Import failed: ${e.message}",
+                    android.widget.Toast.LENGTH_LONG
+                ).show()
+            }
+        }
+    }
+
     companion object {
         const val TAG = "TabsBottomSheet"
         fun newInstance() = TabsBottomSheetFragment()
@@ -575,6 +601,10 @@ class TabsBottomSheetFragment : DialogFragment() {
                         updateTabsDisplay()
 
                         (composeView.parent as? ViewGroup)?.removeView(composeView)
+                    },
+                    onImport = {
+                        (composeView.parent as? ViewGroup)?.removeView(composeView)
+                        importProfileLauncher.launch("*/*")
                     }
                 )
             }
@@ -638,6 +668,30 @@ class TabsBottomSheetFragment : DialogFragment() {
                         updateTabsDisplay()
 
                         (composeView.parent as? ViewGroup)?.removeView(composeView)
+                    },
+                    onExport = {
+                        (composeView.parent as? ViewGroup)?.removeView(composeView)
+                        lifecycleScope.launch {
+                            try {
+                                val exportManager = com.prirai.android.nira.browser.profile.ProfileExportManager
+                                    .getInstance(requireContext())
+                                val zipUri = exportManager.exportProfile(profile)
+                                val shareIntent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                                    type = "application/zip"
+                                    putExtra(android.content.Intent.EXTRA_STREAM, zipUri)
+                                    addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                }
+                                startActivity(
+                                    android.content.Intent.createChooser(shareIntent, "Share Profile")
+                                )
+                            } catch (e: Exception) {
+                                android.widget.Toast.makeText(
+                                    requireContext(),
+                                    "Export failed: ${e.message}",
+                                    android.widget.Toast.LENGTH_LONG
+                                ).show()
+                            }
+                        }
                     }
                 )
             }
@@ -711,15 +765,20 @@ class TabsBottomSheetFragment : DialogFragment() {
                     // Immediately remove tab from store
                     requireContext().components.tabsUseCases.removeTab(tabId)
                 }
-                it.onTabRestore = { tab, position ->
+                it.onTabRestore = { tab, position, groupId ->
                     // Restore tab at original position
                     val components = requireContext().components
-                    components.tabsUseCases.addTab(
+                    val newTabId = components.tabsUseCases.addTab(
                         url = tab.content.url,
                         private = tab.content.private,
                         contextId = tab.contextId,
                         selectTab = false
                     )
+                    if (groupId != null) {
+                        lifecycleScope.launch {
+                            unifiedGroupManager.addTabToGroup(newTabId, groupId)
+                        }
+                    }
                 }
             }
         }

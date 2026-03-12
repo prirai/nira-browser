@@ -13,7 +13,8 @@ import com.prirai.android.nira.R
 
 class TabSearchAdapter(
     private val items: List<SearchResultItem>,
-    private val onItemClick: (SearchResultItem) -> Unit
+    private val onItemClick: (SearchResultItem) -> Unit,
+    private val onTabClose: ((SearchResultItem.TabResult) -> Unit)? = null
 ) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
     companion object {
@@ -70,7 +71,7 @@ class TabSearchAdapter(
                 val isFirst = isFirstInSubGroup(position)
                 val isLast = isLastInSubGroup(position)
                 val showDivider = isLast && !isLastInMainGroup(position)
-                holder.bind(item as SearchResultItem.TabResult, onItemClick, isFirst, isLast, showDivider)
+                holder.bind(item as SearchResultItem.TabResult, onItemClick, onTabClose, isFirst, isLast, showDivider)
             }
             is BookmarkResultViewHolder -> {
                 val isFirst = isFirstInSubGroup(position)
@@ -143,9 +144,10 @@ class TabSearchAdapter(
         private val chipGroup: ChipGroup = itemView.findViewById(R.id.tabChipGroup)
         private val typeIcon: ImageView = itemView.findViewById(R.id.resultTypeIcon)
         private val divider: View = itemView.findViewById(R.id.resultDivider)
+        private val closeButton: ImageView = itemView.findViewById(R.id.tabCloseButton)
         private val cardView: com.google.android.material.card.MaterialCardView = itemView as com.google.android.material.card.MaterialCardView
 
-        fun bind(item: SearchResultItem.TabResult, onClick: (SearchResultItem) -> Unit, isFirst: Boolean, isLast: Boolean, showDivider: Boolean) {
+        fun bind(item: SearchResultItem.TabResult, onClick: (SearchResultItem) -> Unit, onClose: ((SearchResultItem.TabResult) -> Unit)?, isFirst: Boolean, isLast: Boolean, showDivider: Boolean) {
             titleText.text = item.tab.content.title.ifEmpty { item.tab.content.url }
             urlText.text = item.tab.content.url
             
@@ -181,6 +183,7 @@ class TabSearchAdapter(
             params.bottomMargin = 0
             cardView.layoutParams = params
             
+            closeButton.setOnClickListener { onClose?.invoke(item) }
             itemView.setOnClickListener { onClick(item) }
         }
 
