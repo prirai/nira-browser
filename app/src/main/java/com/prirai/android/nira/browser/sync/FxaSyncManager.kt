@@ -7,8 +7,13 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import mozilla.appservices.fxaclient.FxaConfig
 import mozilla.appservices.fxaclient.FxaServer
 import mozilla.components.concept.sync.AccountObserver
 import mozilla.components.concept.sync.AuthType
@@ -32,7 +37,7 @@ import mozilla.components.service.fxa.sync.SyncReason
 class FxaSyncManager private constructor(private val context: Context) {
 
     companion object {
-        const val CLIENT_ID = "3c49430b43dfba77"
+        const val CLIENT_ID = "a2270f727f45f648"
         const val REDIRECT_URL = "https://accounts.firefox.com/oauth/success/$CLIENT_ID"
 
         @Volatile private var instance: FxaSyncManager? = null
@@ -44,6 +49,9 @@ class FxaSyncManager private constructor(private val context: Context) {
     }
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+
+    /** Exposed for use by [mozilla.components.feature.accounts.FxaWebChannelFeature]. */
+    val serverConfig = FxaConfig(FxaServer.Release, CLIENT_ID, REDIRECT_URL)
 
     private val _isSignedIn = MutableStateFlow(false)
     val isSignedIn: StateFlow<Boolean> = _isSignedIn.asStateFlow()
@@ -59,6 +67,9 @@ class FxaSyncManager private constructor(private val context: Context) {
 
     private val _syncError = MutableStateFlow<String?>(null)
     val syncError: StateFlow<String?> = _syncError.asStateFlow()
+
+    private val _authSuccessEvent = MutableSharedFlow<String?>(extraBufferCapacity = 1)
+    val authSuccessEvent: SharedFlow<String?> = _authSuccessEvent.asSharedFlow()
 
     val accountManager: FxaAccountManager by lazy {
         FxaAccountManager(
@@ -81,14 +92,19 @@ class FxaSyncManager private constructor(private val context: Context) {
 
     private val accountObserver = object : AccountObserver {
         override fun onAuthenticated(account: OAuthAccount, authType: AuthType) {
+            android.util.Log.d("FxaSyncManager", "onAuthenticated: authType=$authType")
             _isSignedIn.value = true
             _syncError.value = null
             scope.launch {
-                _accountEmail.value = accountManager.accountProfile()?.email
+                val email = accountManager.accountProfile()?.email
+                android.util.Log.d("FxaSyncManager", "onAuthenticated: email=$email")
+                _accountEmail.value = email
+                _authSuccessEvent.emit(email)
             }
         }
 
         override fun onLoggedOut() {
+            android.util.Log.d("FxaSyncManager", "onLoggedOut called")
             _isSignedIn.value = false
             _accountEmail.value = null
             _lastSyncTime.value = null
@@ -96,12 +112,18 @@ class FxaSyncManager private constructor(private val context: Context) {
         }
 
         override fun onProfileUpdated(profile: Profile) {
+            android.util.Log.d("FxaSyncManager", "onProfileUpdated: email=${profile.email}")
             _accountEmail.value = profile.email
         }
 
         override fun onAuthenticationProblems() {
+            android.util.Log.d("FxaSyncManager", "onAuthenticationProblems called")
             _isSignedIn.value = false
             _syncError.value = "Authentication problem — please sign in again."
+        }
+
+        override fun onReady(authenticatedAccount: OAuthAccount?) {
+            android.util.Log.d("FxaSyncManager", "onReady: authenticated=${authenticatedAccount != null}")
         }
     }
 
@@ -119,6 +141,19 @@ class FxaSyncManager private constructor(private val context: Context) {
             }
         } catch (e: Exception) {
             // Sync is unavailable but the app continues normally
+        }
+    }
+
+    suspend fun refreshAuthState() = withContext(Dispatchers.IO) {
+        try {
+            val account = accountManager.authenticatedAccount()
+            val isNowSignedIn = account != null
+            _isSignedIn.value = isNowSignedIn
+            if (isNowSignedIn) {
+                _accountEmail.value = accountManager.accountProfile()?.email
+            }
+        } catch (e: Exception) {
+            // ignore; state stays as-is
         }
     }
 

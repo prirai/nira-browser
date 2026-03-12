@@ -213,6 +213,8 @@ class WebAppFragment : Fragment(), EngineSession.Observer {
         try {
             val customTabIntent = androidx.browser.customtabs.CustomTabsIntent.Builder().build()
             customTabIntent.intent.putExtra("PROFILE_ID", profileId)
+            // Target Nira specifically so the custom tab inherits the correct profile context
+            customTabIntent.intent.setPackage(requireContext().packageName)
             customTabIntent.launchUrl(requireContext(), url.toUri())
         } catch (e: Exception) {
             // Fallback: open in default system browser

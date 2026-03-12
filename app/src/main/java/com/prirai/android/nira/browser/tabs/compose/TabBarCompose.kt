@@ -108,8 +108,8 @@ fun TabBarCompose(
     // new tab created, etc.). Only fires when autoScrollTrigger changes, so it
     // never interrupts the user while they are manually scrolling the tab bar.
     // Centers the selected tab in the viewport when possible.
-    LaunchedEffect(autoScrollTrigger) {
-        if (autoScrollTrigger > 0L) {
+    LaunchedEffect(autoScrollTrigger, order) {
+        if (autoScrollTrigger > 0L && System.currentTimeMillis() - autoScrollTrigger < 2000L) {
             val currentOrder = order ?: return@LaunchedEffect
             val currentTabId = selectedTabId ?: return@LaunchedEffect
             val selectedIndex = currentOrder.primaryOrder.indexOfFirst { item ->

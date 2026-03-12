@@ -75,6 +75,8 @@ class BrowserApp : LocaleAwareApplication() {
         applicationScope.launch(Dispatchers.IO) {
             try {
                 components.fxaSyncManager.initialize()
+                // Eagerly init so fxaInterceptor is set before any FxA redirects are processed
+                components.fxaAuthFeature
             } catch (_: Exception) { /* sync unavailable */ }
         }
         

@@ -52,6 +52,7 @@ import mozilla.components.feature.contextmenu.ContextMenuUseCases
 import mozilla.components.feature.customtabs.store.CustomTabsServiceStore
 import mozilla.components.feature.downloads.DefaultDateTimeProvider
 import mozilla.components.feature.downloads.DefaultFileSizeFormatter
+import com.prirai.android.nira.downloads.DownloadConfirmationMiddleware
 import mozilla.components.feature.downloads.DownloadEstimator
 import mozilla.components.feature.downloads.DownloadMiddleware
 import mozilla.components.feature.downloads.DownloadsUseCases
@@ -213,6 +214,10 @@ open class Components(private val applicationContext: Context) {
         com.prirai.android.nira.browser.profile.ProfileManager.getInstance(applicationContext)
     }
     
+    val downloadConfirmationMiddleware by lazy {
+        DownloadConfirmationMiddleware(applicationContext)
+    }
+
     val profileMiddleware by lazy {
         com.prirai.android.nira.browser.profile.ProfileMiddleware(profileManager)
     }
@@ -220,6 +225,7 @@ open class Components(private val applicationContext: Context) {
     val store by lazy {
         BrowserStore(
                 middleware = listOf(
+                        downloadConfirmationMiddleware,
                         DownloadMiddleware(applicationContext, DownloadService::class.java, { true }),
                         ReaderViewMiddleware(),
                         ThumbnailsMiddleware(thumbnailStorage),
