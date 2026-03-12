@@ -98,10 +98,26 @@ fun GroupContainerListItem(
             ),
         shape = RoundedCornerShape(12.dp),
         color = Color(color).copy(alpha = 0.1f),
-        tonalElevation = 2.dp,
-        border = BorderStroke(1.dp, Color(color).copy(alpha = 0.3f))
+        tonalElevation = 2.dp
     ) {
-        Column(modifier = Modifier.fillMaxWidth()) {
+        // IntrinsicSize.Min lets the left accent strip fill the container's full height
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(IntrinsicSize.Min)
+        ) {
+            // 4dp colored left strip matching group color
+            Box(
+                modifier = Modifier
+                    .width(4.dp)
+                    .fillMaxHeight()
+                    .background(
+                        Color(color),
+                        RoundedCornerShape(topStart = 12.dp, bottomStart = 12.dp)
+                    )
+            )
+
+            Column(modifier = Modifier.weight(1f)) {
             // Header content integrated into container
             // Use pointerInput instead of clickable to avoid interfering with drag gestures
             Row(
@@ -231,7 +247,8 @@ fun GroupContainerListItem(
                     }
                 }
             }
-        }
+            } // end Column
+        } // end Row IntrinsicSize
     }
 }
 
@@ -329,7 +346,7 @@ private fun GroupedTabListItem(
             onTabClose = onTabClose,
             showDragHandle = false, // No drag handle for grouped tabs (container shows it)
             modifier = Modifier
-                .padding(horizontal = 0.dp, vertical = 2.dp) // Remove horizontal padding (SwipeToDismissBox handles it)
+                .padding(start = 12.dp, end = 0.dp, top = 2.dp, bottom = 2.dp) // Indent group members
                 .draggableItem(
                     itemType = DraggableItemType.Tab(tab.id, groupId),
                     coordinator = coordinator
@@ -399,10 +416,26 @@ fun GroupContainerGridItem(
             .groupHeaderFeedback(groupId, coordinator, hoverState, draggedScale = 0.85f),
         shape = RoundedCornerShape(12.dp),
         color = Color(color).copy(alpha = 0.1f),
-        tonalElevation = 2.dp,
-        border = BorderStroke(1.dp, Color(color).copy(alpha = 0.3f))
+        tonalElevation = 2.dp
     ) {
-        Column(modifier = Modifier.fillMaxWidth()) {
+        // IntrinsicSize.Min lets the left accent strip fill the container's full height
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(IntrinsicSize.Min)
+        ) {
+            // 4dp colored left strip matching group color
+            Box(
+                modifier = Modifier
+                    .width(4.dp)
+                    .fillMaxHeight()
+                    .background(
+                        Color(color),
+                        RoundedCornerShape(topStart = 12.dp, bottomStart = 12.dp)
+                    )
+            )
+
+            Column(modifier = Modifier.weight(1f)) {
             // Header content integrated into container
             // Use pointerInput instead of clickable to avoid interfering with drag gestures
             Row(
@@ -496,7 +529,8 @@ fun GroupContainerGridItem(
                     hoveredGroupId = hoveredGroupId
                 )
             }
-        }
+            } // end Column
+        } // end Row IntrinsicSize
     }
 }
 

@@ -92,7 +92,12 @@ class UserPreferences(appContext: Context) : mozilla.components.support.ktx.andr
     
     // Homepage wallpaper dimming
     var keepWallpaperDimmed by booleanPreference(KEEP_WALLPAPER_DIMMED, true)
-    
+
+    // Sync engine toggles — each controls whether that engine participates in Firefox Sync
+    var syncHistoryEnabled by booleanPreference(SYNC_HISTORY_ENABLED, true)
+    var syncTabsEnabled by booleanPreference(SYNC_TABS_ENABLED, true)
+    var syncBookmarksEnabled by booleanPreference(SYNC_BOOKMARKS_ENABLED, true)
+
     // Status bar blur - forced enabled on Android 12+, disabled on older versions
     val statusBarBlurEnabled: Boolean
         get() = android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S
@@ -155,5 +160,8 @@ class UserPreferences(appContext: Context) : mozilla.components.support.ktx.andr
         const val AMOLED_MODE = "amoled_mode"
         const val DYNAMIC_COLORS = "dynamic_colors"
         const val KEEP_WALLPAPER_DIMMED = "keep_wallpaper_dimmed"
+        const val SYNC_HISTORY_ENABLED = "sync_history_enabled"
+        const val SYNC_TABS_ENABLED = "sync_tabs_enabled"
+        const val SYNC_BOOKMARKS_ENABLED = "sync_bookmarks_enabled"
     }
 }

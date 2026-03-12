@@ -1,18 +1,22 @@
 package com.prirai.android.nira.browser.tabs.compose
 
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 
@@ -59,10 +63,11 @@ fun RenameGroupDialog(
         onDismissRequest = onDismiss,
         title = { Text("Rename Island") },
         text = {
-            TextField(
+            OutlinedTextField(
                 value = name,
                 onValueChange = { name = it },
                 label = { Text("Island Name") },
+                leadingIcon = { Icon(Icons.Rounded.Edit, contentDescription = null) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth()
             )
@@ -145,21 +150,32 @@ fun ColorPickerDialog(
                 columns = GridCells.Fixed(4),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
-                modifier = Modifier.height(300.dp)
+                modifier = Modifier.height(220.dp)
             ) {
                 items(colors) { color ->
+                    val isSelected = color == currentColor
+                    val scale by animateFloatAsState(
+                        targetValue = if (isSelected) 1.1f else 1f,
+                        label = "colorScale"
+                    )
                     Box(
+                        contentAlignment = Alignment.Center,
                         modifier = Modifier
-                            .size(56.dp)
+                            .size(40.dp)
+                            .scale(scale)
                             .clip(CircleShape)
                             .background(Color(color))
                             .clickable { onConfirm(color) }
-                            .border(
-                                width = if (color == currentColor) 3.dp else 0.dp,
-                                color = Color.White,
-                                shape = CircleShape
+                    ) {
+                        if (isSelected) {
+                            Icon(
+                                imageVector = Icons.Rounded.Check,
+                                contentDescription = "Selected",
+                                tint = Color.White,
+                                modifier = Modifier.size(20.dp)
                             )
-                    )
+                        }
+                    }
                 }
             }
         },

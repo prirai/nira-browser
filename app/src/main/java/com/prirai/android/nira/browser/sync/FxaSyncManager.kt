@@ -87,6 +87,16 @@ class FxaSyncManager private constructor(private val context: Context) {
             applicationScopes = setOf("https://identity.mozilla.com/apps/oldsync")
         ).also { manager ->
             manager.register(accountObserver)
+            // Start the account manager as early as possible so WebChannel/OAuth completions
+            // are not dropped when the user opens Sync Settings before initialize() runs.
+            // Calling start() multiple times is safe — it is idempotent after the first call.
+            scope.launch {
+                try {
+                    manager.start()
+                } catch (e: Exception) {
+                    android.util.Log.w("FxaSyncManager", "accountManager.start() failed: ${e.message}")
+                }
+            }
         }
     }
 
