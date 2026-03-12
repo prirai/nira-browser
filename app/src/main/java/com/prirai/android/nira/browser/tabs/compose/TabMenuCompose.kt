@@ -2,7 +2,6 @@ package com.prirai.android.nira.browser.tabs.compose
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -239,6 +238,7 @@ fun TabContextMenu(
                     )
                 },
                 text = "Close Tab",
+                contentColor = MaterialTheme.colorScheme.error,
                 onClick = {
                     scope.launch {
                         viewModel.closeTab(tab.id)
@@ -290,6 +290,7 @@ fun GroupContextMenu(
 
     val groups by viewModel.groups.collectAsState()
     val currentGroup = groups.find { it.id == groupId }
+    val groupAccentColor = currentGroup?.color?.let { Color(it) } ?: MaterialTheme.colorScheme.primary
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -372,7 +373,13 @@ fun GroupContextMenu(
             HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
             TabMenuItem(
-                icon = { Icon(painterResource(R.drawable.ic_palette), "Change Color") },
+                icon = {
+                    Icon(
+                        painterResource(R.drawable.ic_palette),
+                        "Change Color",
+                        tint = groupAccentColor
+                    )
+                },
                 text = "Change Color",
                 onClick = {
                     showColorPicker = true
@@ -417,6 +424,7 @@ fun GroupContextMenu(
             TabMenuItem(
                 icon = { Icon(painterResource(R.drawable.ic_close_small), "Close All") },
                 text = "Close All Tabs",
+                contentColor = MaterialTheme.colorScheme.error,
                 onClick = {
                     scope.launch {
                         viewModel.closeAllTabsInGroup(groupId)
@@ -527,30 +535,33 @@ private fun TabMenuHeader(tab: TabSessionState) {
 }
 
 /**
- * Reusable menu item component with icon and text.
- * Provides consistent styling across all menu items.
+ * Reusable menu item component using Material3 ListItem for consistent styling.
+ * Supports optional content color override for destructive actions.
  */
 @Composable
 private fun TabMenuItem(
     icon: @Composable () -> Unit,
     text: String,
     onClick: () -> Unit,
+    contentColor: Color = Color.Unspecified,
     modifier: Modifier = Modifier
 ) {
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        icon()
-        Text(
-            text = text,
-            style = MaterialTheme.typography.bodyLarge
-        )
-    }
+    ListItem(
+        headlineContent = {
+            Text(
+                text = text,
+                color = contentColor
+            )
+        },
+        leadingContent = {
+            CompositionLocalProvider(
+                LocalContentColor provides if (contentColor != Color.Unspecified) contentColor else LocalContentColor.current
+            ) {
+                icon()
+            }
+        },
+        modifier = modifier.clickable(onClick = onClick)
+    )
 }
 
 // ============================================================================

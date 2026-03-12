@@ -6,6 +6,7 @@ import androidx.navigation.NavController
 import com.prirai.android.nira.BrowserActivity
 import com.prirai.android.nira.BrowserAnimator
 import com.prirai.android.nira.R
+import com.prirai.android.nira.browser.sync.SendTabBottomSheetFragment
 import com.prirai.android.nira.ext.components
 import com.prirai.android.nira.history.HistoryActivity
 import com.prirai.android.nira.settings.activity.SettingsActivity
@@ -243,6 +244,16 @@ class DefaultBrowserToolbarMenuController(
 
             is ToolbarMenu.Item.Security -> {
                 activity.showSslDialog()
+            }
+
+            is ToolbarMenu.Item.SendTabToDevice -> {
+                currentSession?.let { session ->
+                    val sheet = SendTabBottomSheetFragment.newInstance(
+                        url = session.content.url,
+                        title = session.content.title ?: session.content.url
+                    )
+                    sheet.show(activity.supportFragmentManager, SendTabBottomSheetFragment.TAG)
+                }
             }
         }
     }
