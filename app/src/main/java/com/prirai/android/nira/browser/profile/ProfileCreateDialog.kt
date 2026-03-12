@@ -26,7 +26,8 @@ import com.prirai.android.nira.R
 @Composable
 fun ProfileCreateDialog(
     onDismiss: () -> Unit,
-    onConfirm: (name: String, color: Int, emoji: String) -> Unit
+    onConfirm: (name: String, color: Int, emoji: String) -> Unit,
+    onImport: (() -> Unit)? = null
 ) {
     var profileName by remember { mutableStateOf("") }
     var selectedColorIndex by remember { mutableIntStateOf(0) }
@@ -100,28 +101,35 @@ fun ProfileCreateDialog(
                 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End,
+                    horizontalArrangement = if (onImport != null) Arrangement.SpaceBetween else Arrangement.End,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    TextButton(onClick = onDismiss) {
-                        Text("Cancel")
+                    if (onImport != null) {
+                        TextButton(onClick = onImport) {
+                            Text("Import ZIP")
+                        }
                     }
-                    
-                    Spacer(modifier = Modifier.width(8.dp))
-                    
-                    Button(
-                        onClick = {
-                            if (profileName.isNotBlank()) {
-                                onConfirm(
-                                    profileName.trim(),
-                                    colors[selectedColorIndex],
-                                    emojis[selectedEmojiIndex]
-                                )
-                            }
-                        },
-                        enabled = profileName.isNotBlank()
-                    ) {
-                        Text("Create")
+                    Row {
+                        TextButton(onClick = onDismiss) {
+                            Text("Cancel")
+                        }
+                        
+                        Spacer(modifier = Modifier.width(8.dp))
+                        
+                        Button(
+                            onClick = {
+                                if (profileName.isNotBlank()) {
+                                    onConfirm(
+                                        profileName.trim(),
+                                        colors[selectedColorIndex],
+                                        emojis[selectedEmojiIndex]
+                                    )
+                                }
+                            },
+                            enabled = profileName.isNotBlank()
+                        ) {
+                            Text("Create")
+                        }
                     }
                 }
             }
@@ -210,7 +218,8 @@ fun ProfileEditDialog(
     profile: BrowserProfile,
     onDismiss: () -> Unit,
     onConfirm: (name: String, color: Int, emoji: String) -> Unit,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
+    onExport: (() -> Unit)? = null
 ) {
     var profileName by remember { mutableStateOf(profile.name) }
     var selectedColorIndex by remember { 
@@ -285,6 +294,23 @@ fun ProfileEditDialog(
                 
                 Spacer(modifier = Modifier.height(24.dp))
                 
+                // Export button row (shown above the action buttons when onExport is provided)
+                if (onExport != null) {
+                    OutlinedButton(
+                        onClick = onExport,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_share),
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Export Profile as ZIP")
+                    }
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
+
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,

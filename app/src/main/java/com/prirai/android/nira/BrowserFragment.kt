@@ -12,17 +12,21 @@ import androidx.lifecycle.lifecycleScope
 import com.prirai.android.nira.browser.toolbar.ToolbarGestureHandler
 import com.prirai.android.nira.browser.toolbar.WebExtensionToolbarFeature
 import com.prirai.android.nira.components.toolbar.ToolbarMenu
+import com.prirai.android.nira.downloads.DownloadsBottomSheetFragment
 import com.prirai.android.nira.ext.components
 import com.prirai.android.nira.ext.nav
 import com.prirai.android.nira.preferences.UserPreferences
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.distinctUntilChangedBy
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.launch
 import mozilla.components.browser.state.state.SessionState
+import mozilla.components.browser.state.state.content.DownloadState
 import mozilla.components.browser.thumbnails.BrowserThumbnails
 import mozilla.components.feature.tabs.WindowFeature
+import mozilla.components.lib.state.ext.flow
 import mozilla.components.lib.state.ext.flowScoped
 import mozilla.components.lib.state.ext.observeAsComposableState
 import mozilla.components.support.base.feature.UserInteractionHandler
@@ -109,6 +113,8 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
         // Tab groups and contextual toolbar handled by UnifiedToolbar
 
         observeTabChangesForToolbar()
+        observeDownloadsForSheet()
+        observeNewTabSelection()
     }
 
     override fun onResume() {
@@ -166,6 +172,50 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
         binding.browserWindow.setBackgroundColor(bgColor)
         binding.browserLayout.setBackgroundColor(bgColor)
         binding.swipeRefresh.setBackgroundColor(bgColor)
+    }
+
+    private fun observeDownloadsForSheet() {
+        val shownDownloadIds = mutableSetOf<String>()
+        viewLifecycleOwner.lifecycleScope.launch {
+            requireContext().components.store.flow()
+                .map { state ->
+                    state.downloads.values.filter {
+                        it.status == DownloadState.Status.INITIATED ||
+                        it.status == DownloadState.Status.DOWNLOADING
+                    }
+                }
+                .distinctUntilChanged()
+                .collect { activeDownloads ->
+                    val newDownloads = activeDownloads.filter { it.id !in shownDownloadIds }
+                    if (newDownloads.isNotEmpty()) {
+                        newDownloads.forEach { shownDownloadIds.add(it.id) }
+                        if (!isDetached && isAdded && activity != null) {
+                            val existing = parentFragmentManager.findFragmentByTag(DownloadsBottomSheetFragment.TAG)
+                            if (existing == null) {
+                                DownloadsBottomSheetFragment.newInstance()
+                                    .show(parentFragmentManager, DownloadsBottomSheetFragment.TAG)
+                            }
+                        }
+                    }
+                }
+        }
+    }
+
+    private fun observeNewTabSelection() {
+        if (!isAdded) return
+        var knownTabIds = requireContext().components.store.state.tabs.map { it.id }.toSet()
+        viewLifecycleOwner.lifecycleScope.launch {
+            requireContext().components.store.flow()
+                .map { state -> state.selectedTabId to state.tabs.map { it.id }.toSet() }
+                .distinctUntilChanged()
+                .collect { (selectedId, currentIds) ->
+                    val newIds = currentIds - knownTabIds
+                    knownTabIds = currentIds
+                    if (selectedId != null && selectedId in newIds) {
+                        com.prirai.android.nira.browser.tabs.compose.TabSheetStateManager.notifyTabSheetDismissed()
+                    }
+                }
+        }
     }
 
     private fun observeTabChangesForToolbar() {
@@ -902,7 +952,20 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
                 }
             )
         )
-        
+
+        // Downloads
+        menuItems.add(
+            com.prirai.android.nira.components.menu.Material3BrowserMenu.MenuItem.Action(
+                id = "downloads",
+                title = "Downloads",
+                iconRes = R.drawable.ic_baseline_download_24,
+                onClick = {
+                    val downloadsBottomSheet = com.prirai.android.nira.downloads.DownloadsBottomSheetFragment.newInstance()
+                    downloadsBottomSheet.show(parentFragmentManager, com.prirai.android.nira.downloads.DownloadsBottomSheetFragment.TAG)
+                }
+            )
+        )
+
         // Settings
         menuItems.add(
             com.prirai.android.nira.components.menu.Material3BrowserMenu.MenuItem.Action(

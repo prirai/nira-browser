@@ -46,8 +46,14 @@ import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import android.widget.Toast
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.platform.LocalContext
 import androidx.fragment.app.Fragment
 import com.prirai.android.nira.ext.components
+import com.prirai.android.nira.preferences.UserPreferences
+import com.prirai.android.nira.theme.ThemeManager
+import com.prirai.android.nira.ui.theme.NiraTheme
 import kotlinx.coroutines.launch
 import mozilla.components.concept.sync.FxAEntryPoint
 import java.text.DateFormat
@@ -63,6 +69,13 @@ class SyncSettingsFragment : Fragment() {
         return ComposeView(requireContext()).apply {
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
             setContent {
+                val context = LocalContext.current
+                val prefs = UserPreferences(context)
+                NiraTheme(
+                    darkTheme = ThemeManager.isDarkMode(context),
+                    amoledMode = prefs.amoledMode,
+                    dynamicColor = prefs.dynamicColors
+                ) {
                 val syncManager = requireContext().components.fxaSyncManager
                 val coroutineScope = rememberCoroutineScope()
 
@@ -75,6 +88,16 @@ class SyncSettingsFragment : Fragment() {
                 val lastSyncTime by syncManager.lastSyncTime.collectAsState()
                 val isSyncing by syncManager.isSyncing.collectAsState()
                 val syncError by syncManager.syncError.collectAsState()
+
+                LaunchedEffect(Unit) {
+                    syncManager.refreshAuthState()
+                }
+                LaunchedEffect(Unit) {
+                    syncManager.authSuccessEvent.collect { email ->
+                        val msg = if (email != null) "Signed in as $email" else "Signed in to Firefox"
+                        Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
+                    }
+                }
 
                 SyncSettingsScreen(
                     isSignedIn = isSignedIn,
@@ -89,6 +112,7 @@ class SyncSettingsFragment : Fragment() {
                     onSignOut = { coroutineScope.launch { syncManager.signOut() } },
                     onSyncNow = { coroutineScope.launch { syncManager.triggerSync() } }
                 )
+                }
             }
         }
     }
@@ -105,8 +129,7 @@ private fun SyncSettingsScreen(
     onSignOut: () -> Unit,
     onSyncNow: () -> Unit
 ) {
-    MaterialTheme {
-        Scaffold { innerPadding ->
+    Scaffold { innerPadding ->
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -143,7 +166,6 @@ private fun SyncSettingsScreen(
                 SyncEnginesCard()
             }
         }
-    }
 }
 
 @Composable

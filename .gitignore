@@ -11,6 +11,7 @@ prompts/
 inspection_xml/
 bm/
 docs/
+.kotlin/
 # Crowdin
 crowdin.properties
 

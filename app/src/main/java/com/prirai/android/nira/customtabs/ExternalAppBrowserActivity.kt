@@ -8,6 +8,7 @@ import com.prirai.android.nira.BrowserActivity
 import com.prirai.android.nira.R
 import com.prirai.android.nira.ext.components
 import com.prirai.android.nira.ext.enableEdgeToEdgeMode
+import mozilla.components.browser.state.action.CustomTabListAction
 import mozilla.components.browser.state.selector.findCustomTab
 import mozilla.components.feature.customtabs.CustomTabIntentProcessor
 import mozilla.components.feature.intent.ext.EXTRA_SESSION_ID
@@ -48,6 +49,22 @@ open class ExternalAppBrowserActivity : BrowserActivity() {
             // Process the intent to create the custom tab session
             if (processor.process(intent)) {
                 val sessionId = SafeIntent(intent).getStringExtra(EXTRA_SESSION_ID)
+                
+                // After the session is created, update its contextId to match the PWA profile.
+                // EngineDelegateMiddleware.loadUrl() runs in a coroutine, so patching the store
+                // state here (on the main thread) is guaranteed to happen before the engine
+                // session is created — preserving cookie / login state across the PWA and tab.
+                val profileId = SafeIntent(intent).getStringExtra("PROFILE_ID")
+                if (!profileId.isNullOrEmpty() && sessionId != null) {
+                    val contextId = "profile_$profileId"
+                    val customTab = components.store.state.findCustomTab(sessionId)
+                    if (customTab != null) {
+                        components.store.dispatch(CustomTabListAction.RemoveCustomTabAction(sessionId))
+                        components.store.dispatch(
+                            CustomTabListAction.AddCustomTabAction(customTab.copy(contextId = contextId))
+                        )
+                    }
+                }
                 
                 // Navigate to the external app browser fragment
                 val navHostFragment = supportFragmentManager.findFragmentById(R.id.container) as? NavHostFragment
