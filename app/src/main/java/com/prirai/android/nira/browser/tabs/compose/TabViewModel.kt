@@ -58,7 +58,7 @@ class TabViewModel(
 
     // Callbacks for tab operations (to be set by UI/Fragment)
     var onTabRemove: ((String) -> Unit)? = null
-    var onTabRestore: ((TabSessionState, Int) -> Unit)? = null
+    var onTabRestore: ((TabSessionState, Int, String?) -> Unit)? = null
 
     init {
         // Observe group events and refresh when groups change
@@ -936,8 +936,8 @@ class TabViewModel(
      */
     fun undoTabDeletion() {
         pendingTabDeletion?.let { deletion ->
-            // Restore the tab at its original position
-            onTabRestore?.invoke(deletion.tab, deletion.position)
+            // Restore the tab at its original position, re-adding to group if applicable
+            onTabRestore?.invoke(deletion.tab, deletion.position, deletion.groupId)
         }
         pendingTabDeletion = null
     }

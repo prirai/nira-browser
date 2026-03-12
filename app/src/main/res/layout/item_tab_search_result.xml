@@ -36,7 +36,8 @@
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:layout_marginStart="12dp"
-                android:orientation="vertical">
+                android:orientation="vertical"
+                android:layout_gravity="center_vertical">
 
                 <!-- Chips at top (optional, for group info) -->
                 <com.google.android.material.chip.ChipGroup
@@ -72,6 +73,17 @@
                     android:layout_marginTop="2dp" />
 
             </LinearLayout>
+
+            <ImageView
+                android:id="@+id/tabCloseButton"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:layout_gravity="center_vertical"
+                android:src="@drawable/ic_close_small"
+                android:padding="6dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Close tab"
+                app:tint="?attr/colorOnSurface" />
 
         </LinearLayout>
 

@@ -14,6 +14,14 @@
         android:title="@string/settings_general"
         android:singleLineTitle="false"
         android:summary="@string/settings_general_explain"/>
+
+    <!-- Firefox Sync -->
+    <androidx.preference.Preference
+        android:fragment="com.prirai.android.nira.settings.fragment.SyncSettingsFragment"
+        android:icon="@drawable/ic_sync"
+        android:title="@string/settings_sync"
+        android:singleLineTitle="false"
+        android:summary="@string/settings_sync_explain"/>
     
     <androidx.preference.Preference
         android:fragment="com.prirai.android.nira.settings.fragment.PrivacyAndSecuritySettingsFragment"

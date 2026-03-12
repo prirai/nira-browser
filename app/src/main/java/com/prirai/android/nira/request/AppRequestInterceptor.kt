@@ -25,6 +25,12 @@ class AppRequestInterceptor(val context: Context) : RequestInterceptor {
     private var navController: WeakReference<NavController>? = null
     private val webappSessions = mutableMapOf<EngineSession, Pair<String, String>>() // session -> (domain, profileId)
 
+    /**
+     * Installed lazily by [Components.fxaAuthFeature] to intercept the Firefox Accounts
+     * OAuth redirect and complete the authentication flow.
+     */
+    var fxaInterceptor: RequestInterceptor? = null
+
     fun setNavController(navController: NavController) {
         this.navController = WeakReference(navController)
     }
@@ -47,6 +53,12 @@ class AppRequestInterceptor(val context: Context) : RequestInterceptor {
         isDirectNavigation: Boolean,
         isSubframeRequest: Boolean
     ): InterceptionResponse? {
+        // Let the FxA interceptor handle the OAuth redirect first.
+        fxaInterceptor?.onLoadRequest(
+            engineSession, uri, lastUri, hasUserGesture, isSameDomain,
+            isRedirect, isDirectNavigation, isSubframeRequest
+        )?.let { return it }
+
         // Handle homepage type preference
         if (uri == "about:homepage" || uri == "about:blank") {
             val prefs = UserPreferences(context)

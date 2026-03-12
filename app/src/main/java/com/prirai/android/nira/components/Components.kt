@@ -21,6 +21,7 @@ import com.prirai.android.nira.utils.FaviconCache
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import mozilla.components.browser.engine.gecko.GeckoEngine
 import mozilla.components.browser.engine.gecko.ext.toContentBlockingSetting
 import mozilla.components.browser.engine.gecko.fetch.GeckoViewFetchClient
@@ -30,7 +31,10 @@ import mozilla.components.browser.session.storage.SessionStorage
 import mozilla.components.browser.state.engine.EngineMiddleware
 import mozilla.components.browser.state.engine.middleware.SessionPrioritizationMiddleware
 import mozilla.components.browser.state.store.BrowserStore
+import mozilla.components.browser.storage.sync.PlacesBookmarksStorage
 import mozilla.components.browser.storage.sync.PlacesHistoryStorage
+import mozilla.components.browser.storage.sync.RemoteTabsStorage
+import mozilla.components.concept.base.crash.CrashReporting
 import mozilla.components.browser.thumbnails.ThumbnailsMiddleware
 import mozilla.components.browser.thumbnails.storage.ThumbnailStorage
 import mozilla.components.concept.engine.DefaultSettings
@@ -38,6 +42,7 @@ import mozilla.components.concept.engine.Engine
 import mozilla.components.concept.engine.EngineSession
 import mozilla.components.concept.engine.mediaquery.PreferredColorScheme
 import mozilla.components.concept.fetch.Client
+import mozilla.components.feature.accounts.FirefoxAccountsAuthFeature
 import mozilla.components.feature.addons.AddonManager
 import mozilla.components.feature.addons.amo.AMOAddonsProvider
 import mozilla.components.feature.addons.migration.DefaultSupportedAddonsChecker
@@ -48,6 +53,7 @@ import mozilla.components.feature.contextmenu.ContextMenuUseCases
 import mozilla.components.feature.customtabs.store.CustomTabsServiceStore
 import mozilla.components.feature.downloads.DefaultDateTimeProvider
 import mozilla.components.feature.downloads.DefaultFileSizeFormatter
+import com.prirai.android.nira.downloads.DownloadConfirmationMiddleware
 import mozilla.components.feature.downloads.DownloadEstimator
 import mozilla.components.feature.downloads.DownloadMiddleware
 import mozilla.components.feature.downloads.DownloadsUseCases
@@ -72,6 +78,8 @@ import mozilla.components.feature.tabs.TabsUseCases
 import mozilla.components.feature.webcompat.WebCompatFeature
 import mozilla.components.feature.webnotifications.WebNotificationFeature
 import mozilla.components.lib.publicsuffixlist.PublicSuffixList
+import mozilla.components.service.fxa.SyncEngine
+import mozilla.components.service.fxa.sync.GlobalSyncableStoreProvider
 import mozilla.components.service.location.LocationService
 import mozilla.components.support.base.android.NotificationsDelegate
 import mozilla.components.support.base.worker.Frequency
@@ -82,6 +90,12 @@ import java.util.concurrent.TimeUnit
 
 
 private const val DAY_IN_MINUTES = 24 * 60L
+
+/** No-op [CrashReporting] for components that require one but Nira has no crash service. */
+private val noOpCrashReporter = object : CrashReporting {
+    override fun submitCaughtException(throwable: Throwable) = kotlinx.coroutines.Job()
+    override fun recordCrashBreadcrumb(breadcrumb: mozilla.components.concept.base.crash.Breadcrumb) = Unit
+}
 
 open class Components(private val applicationContext: Context) {
     
@@ -187,6 +201,13 @@ open class Components(private val applicationContext: Context) {
     private val lazyHistoryStorage = lazy { PlacesHistoryStorage(applicationContext) }
     val historyStorage by lazy { lazyHistoryStorage.value }
 
+    private val lazyBookmarksStorage = lazy { PlacesBookmarksStorage(applicationContext) }
+    val bookmarksStorage by lazy { lazyBookmarksStorage.value }
+
+    val remoteTabsStorage by lazy {
+        RemoteTabsStorage(applicationContext, noOpCrashReporter)
+    }
+
     val sessionStorage by lazy { SessionStorage(applicationContext, engine) }
 
     val permissionStorage by lazy { GeckoSitePermissionsStorage(runtime, OnDiskSitePermissionsStorage(applicationContext)) }
@@ -197,6 +218,10 @@ open class Components(private val applicationContext: Context) {
         com.prirai.android.nira.browser.profile.ProfileManager.getInstance(applicationContext)
     }
     
+    val downloadConfirmationMiddleware by lazy {
+        DownloadConfirmationMiddleware(applicationContext)
+    }
+
     val profileMiddleware by lazy {
         com.prirai.android.nira.browser.profile.ProfileMiddleware(profileManager)
     }
@@ -204,6 +229,7 @@ open class Components(private val applicationContext: Context) {
     val store by lazy {
         BrowserStore(
                 middleware = listOf(
+                        downloadConfirmationMiddleware,
                         DownloadMiddleware(applicationContext, DownloadService::class.java, { true }),
                         ReaderViewMiddleware(),
                         ThumbnailsMiddleware(thumbnailStorage),
@@ -322,6 +348,8 @@ open class Components(private val applicationContext: Context) {
     private val runtime by lazy {
         val builder = GeckoRuntimeSettings.Builder()
 
+        UserJsPreferences.applyTo(applicationContext, builder)
+
         val runtimeSettings = builder
             .aboutConfigEnabled(true)
             .extensionsProcessEnabled(true)
@@ -329,6 +357,8 @@ open class Components(private val applicationContext: Context) {
             .extensionsWebAPIEnabled(true)
             .contentBlocking(trackingPolicy.toContentBlockingSetting())
             .build()
+
+        UserJsPreferences.applyTypedSettings(runtimeSettings)
 
         runtimeSettings.contentBlocking.setSafeBrowsing(safeBrowsingPolicy)
 
@@ -386,5 +416,39 @@ open class Components(private val applicationContext: Context) {
     
     val customTabsUseCases by lazy { 
         mozilla.components.feature.tabs.CustomTabsUseCases(store, sessionUseCases.loadUrl) 
+    }
+
+    // Firefox Sync — default profile only
+    val fxaSyncManager by lazy {
+        // Register syncable stores before starting FxaAccountManager.
+        GlobalSyncableStoreProvider.configureStore(SyncEngine.History to lazyHistoryStorage)
+        GlobalSyncableStoreProvider.configureStore(SyncEngine.Tabs to lazy { remoteTabsStorage })
+        GlobalSyncableStoreProvider.configureStore(SyncEngine.Bookmarks to lazyBookmarksStorage)
+        com.prirai.android.nira.browser.sync.FxaSyncManager.getInstance(applicationContext)
+    }
+
+    /**
+     * Auth feature for Firefox Accounts sign-in. Opens the auth URL in the main browser so that
+     * GeckoView's request interceptor can complete the OAuth flow via the redirect URL.
+     * Must be accessed after [fxaSyncManager] has been initialised.
+     */
+    val fxaAuthFeature by lazy {
+        FirefoxAccountsAuthFeature(
+            accountManager = fxaSyncManager.accountManager,
+            redirectUrl = com.prirai.android.nira.browser.sync.FxaSyncManager.REDIRECT_URL,
+            onBeginAuthentication = { ctx, authUrl ->
+                CoroutineScope(SupervisorJob() + Dispatchers.Main).launch {
+                    tabsUseCases.addTab(authUrl, selectTab = true)
+                    ctx.startActivity(
+                        android.content.Intent(ctx, BrowserActivity::class.java).apply {
+                            flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK or
+                                    android.content.Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
+                        }
+                    )
+                }
+            }
+        ).also { feature ->
+            appRequestInterceptor.fxaInterceptor = feature.interceptor
+        }
     }
 }
