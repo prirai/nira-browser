@@ -332,24 +332,23 @@ class TabViewModel(
      */
     fun toggleGroupExpanded(groupId: String) {
         android.util.Log.d("TabViewModel", "toggleGroupExpanded called for: $groupId")
-        val current = _expandedGroups.value.toMutableSet()
-        if (current.contains(groupId)) {
-            android.util.Log.d("TabViewModel", "Collapsing group $groupId")
-            current.remove(groupId)
-        } else {
-            android.util.Log.d("TabViewModel", "Expanding group $groupId")
-            current.add(groupId)
-        }
-        _expandedGroups.value = current
-
-        // Also update in the order manager to keep them in sync
+        
+        // Update in the group manager (centralized state)
         viewModelScope.launch {
             try {
-                orderManager.toggleGroupExpansion(groupId)
+                groupManager.toggleGroupCollapsed(groupId)
+                android.util.Log.d("TabViewModel", "Successfully toggled group collapsed state in manager")
             } catch (e: Exception) {
-                android.util.Log.e("TabViewModel", "Error toggling group in order manager", e)
+                android.util.Log.e("TabViewModel", "Error toggling group collapsed state", e)
             }
         }
+    }
+    
+    /**
+     * Get a group by ID from the group manager
+     */
+    fun getGroup(groupId: String): TabGroupData? {
+        return groupManager.getGroup(groupId)
     }
 
     /**

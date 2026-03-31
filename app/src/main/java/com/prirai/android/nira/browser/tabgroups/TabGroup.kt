@@ -15,7 +15,8 @@ data class TabGroup(
     val color: String = "blue", // Color identifier for visual distinction
     val createdAt: Long = System.currentTimeMillis(),
     val isActive: Boolean = true,
-    val contextId: String? = null // Profile/browsing mode context (null = default, "private", "profile_xxx")
+    val contextId: String? = null, // Profile/browsing mode context (null = default, "private", "profile_xxx")
+    val isCollapsed: Boolean = false // Whether the group is collapsed in UI
 )
 
 /**

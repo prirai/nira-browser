@@ -133,6 +133,7 @@ class BrowserMenu(
             installWebApp,
             addToHomescreen.apply { visible = ::canAddToHomescreen },
             externalAppItem,
+            sendTabItem,
             desktopMode,
             BrowserMenuDivider(),
             newPrivateTabItem,
@@ -237,6 +238,15 @@ class BrowserMenu(
         imageResource = R.drawable.ic_baseline_lock
     ) {
         onItemTapped.invoke(ToolbarMenu.Item.Security)
+    }
+
+    val sendTabItem = ThemedBrowserMenuImageText(
+        label = context.getString(R.string.send_tab_to_device),
+        imageResource = R.drawable.ios_share_24
+    ) {
+        onItemTapped.invoke(ToolbarMenu.Item.SendTabToDevice)
+    }.apply {
+        visible = { context.components.fxaSyncManager.isSignedIn() }
     }
 
     @ColorRes

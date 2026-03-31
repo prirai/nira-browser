@@ -12,8 +12,12 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.rounded.GridView
+import androidx.compose.material.icons.rounded.ViewList
 import androidx.compose.material3.*
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -78,7 +82,10 @@ class TabsBottomSheetFragment : DialogFragment() {
     private val menuIsInGroupState = mutableStateOf(false) // Whether selected tab is in a group
 
     private var isInitializing = true
-    private var isGridView = false
+    private val isGridViewState = mutableStateOf(false)
+    private var isGridView: Boolean
+        get() = isGridViewState.value
+        set(value) { isGridViewState.value = value }
     private val viewPrefs by lazy {
         requireContext().getSharedPreferences("tabs_view_prefs", android.content.Context.MODE_PRIVATE)
     }
@@ -240,41 +247,16 @@ class TabsBottomSheetFragment : DialogFragment() {
             showTabSearch()
         }
 
+        // Hide XML view mode switcher — replaced by Compose SingleChoiceSegmentedButtonRow in header
+        binding.viewModeSwitcher.visibility = View.GONE
+
         // Setup view mode switcher
         setupViewModeSwitcher()
     }
 
     private fun setupViewModeSwitcher() {
-        // Restore saved view preference
-        isGridView = viewPrefs.getBoolean("is_grid_view", false)
-
-        if (isGridView) {
-            binding.viewModeSwitcher.check(binding.gridViewButton.id)
-        } else {
-            binding.viewModeSwitcher.check(binding.listViewButton.id)
-        }
-
-        binding.viewModeSwitcher.addOnButtonCheckedListener { _, checkedId, isChecked ->
-            if (!isChecked) return@addOnButtonCheckedListener
-
-            when (checkedId) {
-                binding.listViewButton.id -> {
-                    if (isGridView) {
-                        isGridView = false
-                        viewPrefs.edit { putBoolean("is_grid_view", false) }
-                        handleSwitchToListView()
-                    }
-                }
-
-                binding.gridViewButton.id -> {
-                    if (!isGridView) {
-                        isGridView = true
-                        viewPrefs.edit { putBoolean("is_grid_view", true) }
-                        handleSwitchToGridView()
-                    }
-                }
-            }
-        }
+        // Restore saved view preference; Compose header handles the toggle UI
+        isGridViewState.value = viewPrefs.getBoolean("is_grid_view", false)
     }
 
     private fun handleSwitchToListView() {
@@ -850,81 +832,124 @@ class TabsBottomSheetFragment : DialogFragment() {
                 )
             }
         ) { paddingValues ->
-            // Wrapper Box to hold tabs and menu overlay
-            Box(
+            val isGridView by isGridViewState
+            val tabs by viewModel.tabs.collectAsState()
+            Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(paddingValues)
             ) {
-                // Choose view based on grid mode
-                if (isGridView) {
-                    TabSheetGridView(
-                        viewModel = viewModel,
-                        orderManager = composeOrderManager!!,
-                        onTabClick = ::handleTabClickCompose,
-                        onTabClose = ::handleTabCloseCompose,
-                        onTabLongPress = ::handleTabLongPressCompose,
-                        onGroupClick = { groupId ->
-                            viewModel.toggleGroupExpanded(groupId)
-                        },
-                        onGroupOptionsClick = { groupId ->
-                            // Show group options menu - could be enhanced
-                        }
+                // Header: tab count + view mode toggle
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    val tabWord = if (tabs.size == 1) "Tab" else "Tabs"
+                    Text(
+                        text = "${tabs.size} $tabWord",
+                        style = MaterialTheme.typography.titleMedium
                     )
-                } else {
-                    TabSheetListView(
-                        viewModel = viewModel,
-                        orderManager = composeOrderManager!!,
-                        onTabClick = ::handleTabClickCompose,
-                        onTabClose = ::handleTabCloseCompose,
-                        onTabLongPress = ::handleTabLongPressCompose,
-                        onGroupClick = { groupId ->
-                            viewModel.toggleGroupExpanded(groupId)
-                        },
-                        onGroupOptionsClick = { groupId ->
-                            // Show group options menu - could be enhanced
+                    SingleChoiceSegmentedButtonRow {
+                        SegmentedButton(
+                            selected = !isGridView,
+                            onClick = {
+                                isGridViewState.value = false
+                                viewPrefs.edit { putBoolean("is_grid_view", false) }
+                            },
+                            shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2)
+                        ) {
+                            Icon(Icons.Rounded.ViewList, contentDescription = "List view")
                         }
-                    )
+                        SegmentedButton(
+                            selected = isGridView,
+                            onClick = {
+                                isGridViewState.value = true
+                                viewPrefs.edit { putBoolean("is_grid_view", true) }
+                            },
+                            shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2)
+                        ) {
+                            Icon(Icons.Rounded.GridView, contentDescription = "Grid view")
+                        }
+                    }
                 }
 
-                // Menu overlay - shows at bottom when tab is long-pressed
-                if (showMenu && menuTab != null) {
-                    // Clickable background to dismiss menu when clicking outside
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .clickable(
-                                indication = null,
-                                interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
-                            ) {
+                // Wrapper Box to hold tabs and menu overlay
+                Box(
+                    modifier = Modifier.weight(1f)
+                ) {
+                    // Choose view based on grid mode
+                    if (isGridView) {
+                        TabSheetGridView(
+                            viewModel = viewModel,
+                            orderManager = composeOrderManager!!,
+                            onTabClick = ::handleTabClickCompose,
+                            onTabClose = ::handleTabCloseCompose,
+                            onTabLongPress = ::handleTabLongPressCompose,
+                            onGroupClick = { groupId ->
+                                viewModel.toggleGroupExpanded(groupId)
+                            },
+                            onGroupOptionsClick = { groupId ->
+                                // Show group options menu - could be enhanced
+                            }
+                        )
+                    } else {
+                        TabSheetListView(
+                            viewModel = viewModel,
+                            orderManager = composeOrderManager!!,
+                            onTabClick = ::handleTabClickCompose,
+                            onTabClose = ::handleTabCloseCompose,
+                            onTabLongPress = ::handleTabLongPressCompose,
+                            onGroupClick = { groupId ->
+                                viewModel.toggleGroupExpanded(groupId)
+                            },
+                            onGroupOptionsClick = { groupId ->
+                                // Show group options menu - could be enhanced
+                            }
+                        )
+                    }
+
+                    // Menu overlay - shows at bottom when tab is long-pressed
+                    if (showMenu && menuTab != null) {
+                        // Clickable background to dismiss menu when clicking outside
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .clickable(
+                                    indication = null,
+                                    interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+                                ) {
+                                    showMenuState.value = false
+                                    menuTabState.value = null
+                                }
+                        )
+
+                        TabContextMenu(
+                            tab = menuTab!!,
+                            isInGroup = menuIsInGroup,
+                            onDismiss = {
                                 showMenuState.value = false
                                 menuTabState.value = null
-                            }
-                    )
-
-                    TabContextMenu(
-                        tab = menuTab!!,
-                        isInGroup = menuIsInGroup,
-                        onDismiss = {
-                            showMenuState.value = false
-                            menuTabState.value = null
-                        },
-                        onMoveToProfile = {
-                            showMoveToProfileDialog(listOf(menuTab!!.id))
-                            showMenuState.value = false
-                            menuTabState.value = null
-                        },
-                        onRemoveFromGroup = {
-                            lifecycleScope.launch {
-                                tabViewModel?.removeTabFromGroup(menuTab!!.id)
-                            }
-                            showMenuState.value = false
-                            menuTabState.value = null
-                        },
-                        modifier = Modifier
-                            .align(androidx.compose.ui.Alignment.BottomCenter)
-                            .fillMaxWidth()
-                    )
+                            },
+                            onMoveToProfile = {
+                                showMoveToProfileDialog(listOf(menuTab!!.id))
+                                showMenuState.value = false
+                                menuTabState.value = null
+                            },
+                            onRemoveFromGroup = {
+                                lifecycleScope.launch {
+                                    tabViewModel?.removeTabFromGroup(menuTab!!.id)
+                                }
+                                showMenuState.value = false
+                                menuTabState.value = null
+                            },
+                            modifier = Modifier
+                                .align(androidx.compose.ui.Alignment.BottomCenter)
+                                .fillMaxWidth()
+                        )
+                    }
                 }
             }
         }
@@ -1072,7 +1097,8 @@ class TabsBottomSheetFragment : DialogFragment() {
                         onClick = {
                             handleTabCloseCompose(tab.id)
                             onDismiss()
-                        }
+                        },
+                        contentColor = MaterialTheme.colorScheme.error
                     )
                 }
             }
@@ -1083,28 +1109,25 @@ class TabsBottomSheetFragment : DialogFragment() {
     private fun MenuOption(
         icon: androidx.compose.ui.graphics.vector.ImageVector,
         text: String,
-        onClick: () -> Unit
+        onClick: () -> Unit,
+        contentColor: androidx.compose.ui.graphics.Color = MaterialTheme.colorScheme.onSurface
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable(onClick = onClick)
-                .padding(horizontal = 12.dp, vertical = 12.dp),
-            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                modifier = Modifier.size(24.dp),
-                tint = MaterialTheme.colorScheme.onSurface
-            )
-
-            Spacer(modifier = Modifier.width(16.dp))
-
-            Text(
-                text = text,
-                style = MaterialTheme.typography.bodyLarge
-            )
-        }
+        ListItem(
+            headlineContent = {
+                Text(
+                    text = text,
+                    color = contentColor
+                )
+            },
+            leadingContent = {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    modifier = Modifier.size(24.dp),
+                    tint = contentColor
+                )
+            },
+            modifier = Modifier.clickable(onClick = onClick)
+        )
     }
 }

@@ -6,6 +6,7 @@ import android.content.pm.PackageManager
 import android.content.res.Configuration
 import android.os.Build
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -18,7 +19,6 @@ import androidx.coordinatorlayout.widget.CoordinatorLayout
 import androidx.core.content.ContextCompat
 import androidx.core.view.OnApplyWindowInsetsListener
 import androidx.core.view.ViewCompat
-import androidx.core.view.isGone
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
@@ -68,6 +68,8 @@ import mozilla.components.browser.state.state.TabSessionState
 import mozilla.components.browser.state.state.createTab
 import mozilla.components.browser.state.store.BrowserStore
 import mozilla.components.browser.thumbnails.BrowserThumbnails
+import mozilla.components.feature.accounts.FxaCapability
+import mozilla.components.feature.accounts.FxaWebChannelFeature
 import mozilla.components.feature.addons.Addon
 import mozilla.components.feature.app.links.AppLinksFeature
 import mozilla.components.feature.downloads.DownloadsFeature
@@ -82,8 +84,6 @@ import mozilla.components.feature.session.SessionFeature
 import mozilla.components.feature.session.SwipeRefreshFeature
 import mozilla.components.feature.sitepermissions.SitePermissionsFeature
 import mozilla.components.lib.state.ext.consumeFlow
-import mozilla.components.feature.accounts.FxaCapability
-import mozilla.components.feature.accounts.FxaWebChannelFeature
 import mozilla.components.support.base.feature.ActivityResultHandler
 import mozilla.components.support.base.feature.PermissionsFeature
 import mozilla.components.support.base.feature.UserInteractionHandler
@@ -96,7 +96,6 @@ import mozilla.components.support.ktx.kotlinx.coroutines.flow.ifAnyChanged
 import mozilla.components.support.locale.ActivityContextWrapper
 import mozilla.components.support.utils.ext.requestInPlacePermissions
 import java.lang.ref.WeakReference
-import androidx.core.graphics.toColorInt
 
 /**
  * Base fragment extended by [BrowserFragment].
@@ -543,6 +542,7 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
             view = view,
         )
 
+        Log.d("FxaAuth", "registering FxaWebChannelFeature (customTabSessionId=$customTabSessionId)")
         fxaWebChannelFeature.set(
             feature = FxaWebChannelFeature(
                 customTabSessionId = customTabSessionId,
