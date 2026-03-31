@@ -90,10 +90,13 @@ class FxaSyncManager private constructor(private val context: Context) {
             // Start the account manager as early as possible so WebChannel/OAuth completions
             // are not dropped when the user opens Sync Settings before initialize() runs.
             // Calling start() multiple times is safe — it is idempotent after the first call.
+            android.util.Log.d("FxaAuth", "accountManager lazy init: calling start()")
             scope.launch {
                 try {
                     manager.start()
+                    android.util.Log.d("FxaAuth", "accountManager.start() completed")
                 } catch (e: Exception) {
+                    android.util.Log.e("FxaAuth", "accountManager.start() failed: ${e.message}")
                     android.util.Log.w("FxaSyncManager", "accountManager.start() failed: ${e.message}")
                 }
             }
@@ -102,11 +105,13 @@ class FxaSyncManager private constructor(private val context: Context) {
 
     private val accountObserver = object : AccountObserver {
         override fun onAuthenticated(account: OAuthAccount, authType: AuthType) {
+            android.util.Log.d("FxaAuth", "onAuthenticated: authType=$authType")
             android.util.Log.d("FxaSyncManager", "onAuthenticated: authType=$authType")
             _isSignedIn.value = true
             _syncError.value = null
             scope.launch {
                 val email = accountManager.accountProfile()?.email
+                android.util.Log.d("FxaAuth", "onAuthenticated: email=$email")
                 android.util.Log.d("FxaSyncManager", "onAuthenticated: email=$email")
                 _accountEmail.value = email
                 _authSuccessEvent.emit(email)
@@ -114,6 +119,7 @@ class FxaSyncManager private constructor(private val context: Context) {
         }
 
         override fun onLoggedOut() {
+            android.util.Log.d("FxaAuth", "logged out")
             android.util.Log.d("FxaSyncManager", "onLoggedOut called")
             _isSignedIn.value = false
             _accountEmail.value = null
@@ -122,17 +128,20 @@ class FxaSyncManager private constructor(private val context: Context) {
         }
 
         override fun onProfileUpdated(profile: Profile) {
+            android.util.Log.d("FxaAuth", "onProfileUpdated: email=${profile.email}")
             android.util.Log.d("FxaSyncManager", "onProfileUpdated: email=${profile.email}")
             _accountEmail.value = profile.email
         }
 
         override fun onAuthenticationProblems() {
+            android.util.Log.d("FxaAuth", "authentication problems")
             android.util.Log.d("FxaSyncManager", "onAuthenticationProblems called")
             _isSignedIn.value = false
             _syncError.value = "Authentication problem — please sign in again."
         }
 
         override fun onReady(authenticatedAccount: OAuthAccount?) {
+            android.util.Log.d("FxaAuth", "onReady: hasAccount=${authenticatedAccount != null}")
             android.util.Log.d("FxaSyncManager", "onReady: authenticated=${authenticatedAccount != null}")
         }
     }
@@ -144,12 +153,15 @@ class FxaSyncManager private constructor(private val context: Context) {
      */
     suspend fun initialize() {
         try {
+            android.util.Log.d("FxaAuth", "initialize(): calling accountManager.start()")
             accountManager.start()
+            android.util.Log.d("FxaAuth", "initialize(): accountManager.start() returned")
             _isSignedIn.value = accountManager.authenticatedAccount() != null
             if (_isSignedIn.value) {
                 _accountEmail.value = accountManager.accountProfile()?.email
             }
         } catch (e: Exception) {
+            android.util.Log.e("FxaAuth", "initialize() failed: ${e.message}")
             // Sync is unavailable but the app continues normally
         }
     }

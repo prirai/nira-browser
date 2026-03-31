@@ -3,6 +3,7 @@ package com.prirai.android.nira.request
 // import com.prirai.android.nira.browser.home.HomeFragmentDirections // Removed - using BrowserFragment for homepage
 import android.content.Context
 import android.content.Intent
+import android.util.Log
 import androidx.core.content.ContextCompat.startActivity
 import androidx.core.net.toUri
 import androidx.navigation.NavController
@@ -53,6 +54,9 @@ class AppRequestInterceptor(val context: Context) : RequestInterceptor {
         isDirectNavigation: Boolean,
         isSubframeRequest: Boolean
     ): InterceptionResponse? {
+        if (uri.startsWith("https://accounts.firefox.com")) {
+            Log.d("FxaAuth", "onLoadRequest: url=$uri fxaInterceptorNull=${fxaInterceptor == null}")
+        }
         // Let the FxA interceptor handle the OAuth redirect first.
         fxaInterceptor?.onLoadRequest(
             engineSession, uri, lastUri, hasUserGesture, isSameDomain,
