@@ -604,8 +604,10 @@ private fun GroupPill(
     isDragging: Boolean = false,
     modifier: Modifier = Modifier
 ) {
-    // Use remember with key to update when saved state changes
-    var expanded by remember(group.isExpanded, group.groupId) { mutableStateOf(group.isExpanded) }
+    // Get expanded state from centralized group manager
+    val groupData = viewModel.getGroup(group.groupId)
+    val expanded = groupData?.let { !it.isCollapsed } ?: true
+    
     var menuTab by remember { mutableStateOf<TabSessionState?>(null) }
     var showTabMenu by remember { mutableStateOf(false) }
 
@@ -629,7 +631,7 @@ private fun GroupPill(
                 .clickable(
                     enabled = true,
                     onClick = {
-                        expanded = !expanded
+                        viewModel.toggleGroupExpanded(group.groupId)
                         onGroupClick?.invoke(group.groupId)
                     }
                 )

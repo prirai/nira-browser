@@ -151,7 +151,8 @@ class UnifiedTabGroupManager private constructor(private val context: Context) {
                     color = parseColor(dbGroup.color),
                     tabIds = tabIds,
                     createdAt = dbGroup.createdAt,
-                    contextId = dbGroup.contextId  // Load from database
+                    isCollapsed = dbGroup.isCollapsed,
+                    contextId = dbGroup.contextId
                 )
                 groupDataList.add(groupData)
             }
@@ -350,6 +351,26 @@ class UnifiedTabGroupManager private constructor(private val context: Context) {
 
         emitStateUpdate()
         _groupEvents.emit(GroupEvent.GroupColorChanged(groupId, newColor))
+
+        true
+    }
+
+    /**
+     * Toggles group collapsed/expanded state
+     */
+    suspend fun toggleGroupCollapsed(groupId: String): Boolean = withContext(Dispatchers.IO) {
+        val group = groupsCache[groupId] ?: return@withContext false
+        val dbGroup = dao.getGroupById(groupId) ?: return@withContext false
+
+        val newCollapsedState = !group.isCollapsed
+        val updatedDbGroup = dbGroup.copy(isCollapsed = newCollapsedState)
+        dao.updateGroup(updatedDbGroup)
+
+        val updatedGroup = group.copy(isCollapsed = newCollapsedState)
+        groupsCache[groupId] = updatedGroup
+
+        emitStateUpdate()
+        _groupEvents.emit(GroupEvent.GroupCollapsedChanged(groupId, newCollapsedState))
 
         true
     }
@@ -656,6 +677,7 @@ sealed class GroupEvent {
     data class GroupDeleted(val groupId: String) : GroupEvent()
     data class GroupRenamed(val groupId: String, val newName: String) : GroupEvent()
     data class GroupColorChanged(val groupId: String, val newColor: Int) : GroupEvent()
+    data class GroupCollapsedChanged(val groupId: String, val isCollapsed: Boolean) : GroupEvent()
     data class GroupUpdated(val groupId: String) : GroupEvent()
     data class TabAddedToGroup(val tabId: String, val groupId: String) : GroupEvent()
     data class TabRemovedFromGroup(val tabId: String, val groupId: String) : GroupEvent()
