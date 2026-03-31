@@ -15,7 +15,6 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -53,8 +52,11 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.RadioButton
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -69,7 +71,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -81,6 +82,7 @@ import androidx.compose.ui.unit.dp
 import com.prirai.android.nira.BrowserActivity
 import com.prirai.android.nira.R
 import com.prirai.android.nira.browser.SearchEngineList
+import com.prirai.android.nira.components.toolbar.ToolbarPosition
 import com.prirai.android.nira.ext.enableEdgeToEdgeMode
 import com.prirai.android.nira.preferences.UserPreferences
 import com.prirai.android.nira.settings.ThemeChoice
@@ -119,13 +121,17 @@ fun OnboardingScreen(
     userPreferences: UserPreferences,
     onComplete: () -> Unit
 ) {
-    val pageCount = 5
+    val pageCount = 8
     val pagerState = rememberPagerState(pageCount = { pageCount })
     val scope = rememberCoroutineScope()
 
     var appThemeChoice by remember { mutableStateOf(userPreferences.appThemeChoice) }
     var webThemeChoice by remember { mutableStateOf(userPreferences.webThemeChoice) }
     var searchEngineChoice by remember { mutableStateOf(userPreferences.searchEngineChoice) }
+    var toolbarPosition by remember { mutableStateOf(userPreferences.toolbarPosition) }
+    var showTabGroupBar by remember { mutableStateOf(userPreferences.showTabGroupBar) }
+    var showContextualToolbar by remember { mutableStateOf(userPreferences.showContextualToolbar) }
+    var toolbarIconSize by remember { mutableStateOf(userPreferences.toolbarIconSize) }
     var trackingProtection by remember { mutableStateOf(userPreferences.trackingProtection) }
     var safeBrowsing by remember { mutableStateOf(userPreferences.safeBrowsing) }
     var searchSuggestions by remember { mutableStateOf(userPreferences.searchSuggestionsEnabled) }
@@ -173,7 +179,33 @@ fun OnboardingScreen(
                         userPreferences.searchEngineChoice = index
                     }
                 )
-                3 -> PrivacyPage(
+                3 -> ToolbarPositionPage(
+                    toolbarPosition = toolbarPosition,
+                    onToolbarPositionSelected = { position ->
+                        toolbarPosition = position
+                        userPreferences.toolbarPosition = position
+                    }
+                )
+                4 -> TabBarPage(
+                    showTabBar = showTabGroupBar,
+                    onTabBarVisibilityChanged = { visible ->
+                        showTabGroupBar = visible
+                        userPreferences.showTabGroupBar = visible
+                    }
+                )
+                5 -> ContextualToolbarPage(
+                    showContextualToolbar = showContextualToolbar,
+                    toolbarIconSize = toolbarIconSize,
+                    onContextualToolbarChanged = { show ->
+                        showContextualToolbar = show
+                        userPreferences.showContextualToolbar = show
+                    },
+                    onIconSizeChanged = { size ->
+                        toolbarIconSize = size
+                        userPreferences.toolbarIconSize = size
+                    }
+                )
+                6 -> PrivacyPage(
                     trackingProtection = trackingProtection,
                     safeBrowsing = safeBrowsing,
                     searchSuggestions = searchSuggestions,
@@ -190,7 +222,7 @@ fun OnboardingScreen(
                         userPreferences.searchSuggestionsEnabled = v
                     }
                 )
-                4 -> GetStartedPage(
+                7 -> GetStartedPage(
                     appThemeChoice = appThemeChoice,
                     searchEngineIndex = searchEngineChoice,
                     trackingProtection = trackingProtection,
@@ -328,100 +360,68 @@ private fun WelcomePage() {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .verticalScroll(rememberScrollState()),
-        horizontalAlignment = Alignment.CenterHorizontally
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
     ) {
-        // Gradient hero area
+        Spacer(modifier = Modifier.height(32.dp))
+
         Box(
             modifier = Modifier
-                .fillMaxWidth()
-                .height(320.dp)
-                .background(
-                    Brush.verticalGradient(
-                        colors = listOf(
-                            MaterialTheme.colorScheme.primaryContainer,
-                            MaterialTheme.colorScheme.background
-                        )
-                    )
-                ),
+                .size(120.dp)
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)),
             contentAlignment = Alignment.Center
         ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Box(
-                    modifier = Modifier
-                        .size(120.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        painter = painterResource(R.drawable.ic_notification),
-                        contentDescription = null,
-                        modifier = Modifier.size(72.dp),
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                }
-            }
+            Icon(
+                painter = painterResource(R.drawable.ic_notification),
+                contentDescription = null,
+                modifier = Modifier.size(72.dp),
+                tint = MaterialTheme.colorScheme.primary
+            )
         }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        Text(
+            text = "Welcome to Nira",
+            style = MaterialTheme.typography.displaySmall,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center,
+            color = MaterialTheme.colorScheme.onBackground
+        )
 
         Spacer(modifier = Modifier.height(8.dp))
 
         Text(
-            text = "Welcome to Nira Browser",
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold,
+            text = "A fast, private browser",
+            style = MaterialTheme.typography.titleMedium,
             textAlign = TextAlign.Center,
-            modifier = Modifier.padding(horizontal = 32.dp)
-        )
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        Text(
-            text = "A private, powerful browser built on Firefox's engine",
-            style = MaterialTheme.typography.bodyLarge,
-            textAlign = TextAlign.Center,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(horizontal = 40.dp)
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
 
         Spacer(modifier = Modifier.height(32.dp))
 
-        // Feature highlight chips
         listOf(
-            Pair(Icons.Rounded.Shield, "Privacy First"),
-            Pair(Icons.Rounded.Security, "Tracker Blocking"),
-            Pair(Icons.Rounded.Star, "Extension Support")
-        ).forEach { (icon, label) ->
-            Row(
+            "• Built on Mozilla's powerful GeckoView engine",
+            "• Tab groups to stay organised",
+            "• Firefox Account sync across devices",
+            "• Powerful extension support",
+            "• Multiple profiles for different identities",
+            "• Download manager with progress tracking"
+        ).forEach { bullet ->
+            Text(
+                text = bullet,
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier
-                    .padding(horizontal = 32.dp, vertical = 6.dp)
-                    .fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(40.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.secondaryContainer),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = icon,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSecondaryContainer,
-                        modifier = Modifier.size(22.dp)
-                    )
-                }
-                Spacer(modifier = Modifier.width(16.dp))
-                Text(
-                    text = label,
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Medium
-                )
-            }
+                    .fillMaxWidth()
+                    .padding(vertical = 4.dp)
+            )
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(32.dp))
     }
 }
 
@@ -434,6 +434,17 @@ private fun ThemePage(
     onAppThemeSelected: (Int) -> Unit,
     onWebThemeSelected: (Int) -> Unit
 ) {
+    val appThemeOptions = listOf(
+        Triple(ThemeChoice.LIGHT.ordinal, "Light", Icons.Rounded.LightMode),
+        Triple(ThemeChoice.DARK.ordinal, "Dark", Icons.Rounded.DarkMode),
+        Triple(ThemeChoice.SYSTEM.ordinal, "System Default", Icons.Rounded.SettingsBrightness)
+    )
+    val webThemeOptions = listOf(
+        Triple(ThemeChoice.LIGHT.ordinal, "Light pages", Icons.Rounded.LightMode),
+        Triple(ThemeChoice.DARK.ordinal, "Dark pages", Icons.Rounded.DarkMode),
+        Triple(ThemeChoice.SYSTEM.ordinal, "Follow system", Icons.Rounded.SettingsBrightness)
+    )
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -457,110 +468,81 @@ private fun ThemePage(
             color = MaterialTheme.colorScheme.primary,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(bottom = 8.dp)
+                .padding(start = 4.dp, bottom = 8.dp)
         )
 
-        listOf(
-            Triple(ThemeChoice.LIGHT.ordinal, "Light", Icons.Rounded.LightMode),
-            Triple(ThemeChoice.DARK.ordinal, "Dark", Icons.Rounded.DarkMode),
-            Triple(ThemeChoice.SYSTEM.ordinal, "System Default", Icons.Rounded.SettingsBrightness)
-        ).forEach { (value, label, icon) ->
-            ThemeOptionCard(
-                icon = icon,
-                label = label,
-                selected = appThemeChoice == value,
-                onClick = { onAppThemeSelected(value) }
-            )
-            Spacer(modifier = Modifier.height(8.dp))
+        OnboardingOptionGroup {
+            appThemeOptions.forEachIndexed { index, (value, label, icon) ->
+                OnboardingOptionItem(
+                    icon = {
+                        Icon(
+                            imageVector = icon,
+                            contentDescription = null,
+                            tint = if (appThemeChoice == value)
+                                MaterialTheme.colorScheme.onPrimaryContainer
+                            else
+                                MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    },
+                    title = label,
+                    selected = appThemeChoice == value,
+                    onClick = { onAppThemeSelected(value) }
+                )
+                if (index < appThemeOptions.lastIndex) {
+                    HorizontalDivider(
+                        modifier = Modifier.padding(start = 72.dp),
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                    )
+                }
+            }
         }
 
-        // Web theme section — only shown when Dark app theme is selected
         AnimatedVisibility(
             visible = appThemeChoice == ThemeChoice.DARK.ordinal,
             enter = fadeIn() + expandVertically(),
             exit = fadeOut() + shrinkVertically()
         ) {
             Column {
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(20.dp))
                 Text(
                     text = "Web Page Theme",
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(bottom = 8.dp)
+                        .padding(start = 4.dp, bottom = 8.dp)
                 )
-                listOf(
-                    Triple(ThemeChoice.LIGHT.ordinal, "Light pages", Icons.Rounded.LightMode),
-                    Triple(ThemeChoice.DARK.ordinal, "Dark pages", Icons.Rounded.DarkMode),
-                    Triple(ThemeChoice.SYSTEM.ordinal, "Follow system", Icons.Rounded.SettingsBrightness)
-                ).forEach { (value, label, icon) ->
-                    ThemeOptionCard(
-                        icon = icon,
-                        label = label,
-                        selected = webThemeChoice == value,
-                        onClick = { onWebThemeSelected(value) }
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
+                OnboardingOptionGroup {
+                    webThemeOptions.forEachIndexed { index, (value, label, icon) ->
+                        OnboardingOptionItem(
+                            icon = {
+                                Icon(
+                                    imageVector = icon,
+                                    contentDescription = null,
+                                    tint = if (webThemeChoice == value)
+                                        MaterialTheme.colorScheme.onPrimaryContainer
+                                    else
+                                        MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                            },
+                            title = label,
+                            selected = webThemeChoice == value,
+                            onClick = { onWebThemeSelected(value) }
+                        )
+                        if (index < webThemeOptions.lastIndex) {
+                            HorizontalDivider(
+                                modifier = Modifier.padding(start = 72.dp),
+                                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                            )
+                        }
+                    }
                 }
             }
         }
 
         Spacer(modifier = Modifier.height(24.dp))
-    }
-}
-
-@Composable
-private fun ThemeOptionCard(
-    icon: ImageVector,
-    label: String,
-    selected: Boolean,
-    onClick: () -> Unit
-) {
-    val borderColor = if (selected) MaterialTheme.colorScheme.primary else Color.Transparent
-    val containerColor = if (selected)
-        MaterialTheme.colorScheme.primaryContainer
-    else
-        MaterialTheme.colorScheme.surfaceVariant
-
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .border(2.dp, borderColor, RoundedCornerShape(16.dp))
-            .clickable(onClick = onClick),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = containerColor)
-    ) {
-        Row(
-            modifier = Modifier
-                .padding(horizontal = 20.dp, vertical = 14.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = if (selected) MaterialTheme.colorScheme.onPrimaryContainer
-                       else MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(24.dp)
-            )
-            Spacer(modifier = Modifier.width(16.dp))
-            Text(
-                text = label,
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
-                color = if (selected) MaterialTheme.colorScheme.onPrimaryContainer
-                        else MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.weight(1f)
-            )
-            if (selected) {
-                Icon(
-                    imageVector = Icons.Rounded.CheckCircle,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(22.dp)
-                )
-            }
-        }
     }
 }
 
@@ -591,53 +573,30 @@ private fun SearchEnginePage(
 
         Spacer(modifier = Modifier.height(28.dp))
 
-        engines.forEachIndexed { index, engine ->
-            val isSelected = selectedIndex == index
-            val borderColor = if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent
-            val containerColor = if (isSelected)
-                MaterialTheme.colorScheme.primaryContainer
-            else
-                MaterialTheme.colorScheme.surfaceVariant
-
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .border(2.dp, borderColor, RoundedCornerShape(16.dp))
-                    .clickable { onEngineSelected(index) },
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = containerColor)
-            ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 14.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    androidx.compose.foundation.Image(
-                        painter = BitmapPainter(engine.icon.asImageBitmap()),
-                        contentDescription = engine.name,
-                        modifier = Modifier
-                            .size(36.dp)
-                            .clip(CircleShape)
-                    )
-                    Spacer(modifier = Modifier.width(16.dp))
-                    Text(
-                        text = engine.name,
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-                        color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer
-                                else MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.weight(1f)
-                    )
-                    if (isSelected) {
-                        Icon(
-                            imageVector = Icons.Rounded.CheckCircle,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(22.dp)
+        OnboardingOptionGroup {
+            engines.forEachIndexed { index, engine ->
+                OnboardingOptionItem(
+                    icon = {
+                        androidx.compose.foundation.Image(
+                            painter = BitmapPainter(engine.icon.asImageBitmap()),
+                            contentDescription = engine.name,
+                            modifier = Modifier
+                                .size(32.dp)
+                                .clip(CircleShape)
                         )
-                    }
+                    },
+                    title = engine.name,
+                    selected = selectedIndex == index,
+                    highlightIcon = false,
+                    onClick = { onEngineSelected(index) }
+                )
+                if (index < engines.lastIndex) {
+                    HorizontalDivider(
+                        modifier = Modifier.padding(start = 72.dp),
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                    )
                 }
             }
-            Spacer(modifier = Modifier.height(8.dp))
         }
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -672,7 +631,6 @@ private fun PrivacyPage(
 
         Spacer(modifier = Modifier.height(20.dp))
 
-        // Privacy feature highlights
         Card(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(20.dp),
@@ -716,83 +674,75 @@ private fun PrivacyPage(
             color = MaterialTheme.colorScheme.primary,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(bottom = 8.dp)
+                .padding(start = 4.dp, bottom = 8.dp)
         )
 
-        PrivacyToggleCard(
-            icon = Icons.Rounded.Block,
-            title = "Tracking Protection",
-            subtitle = "Block trackers and third-party cookies",
-            checked = trackingProtection,
-            onCheckedChange = onTrackingProtectionChanged
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        PrivacyToggleCard(
-            icon = Icons.Rounded.Security,
-            title = "Safe Browsing",
-            subtitle = "Warn about dangerous sites",
-            checked = safeBrowsing,
-            onCheckedChange = onSafeBrowsingChanged
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        PrivacyToggleCard(
-            icon = Icons.Rounded.Search,
-            title = "Search Suggestions",
-            subtitle = "Show suggestions as you type",
-            checked = searchSuggestions,
-            onCheckedChange = onSearchSuggestionsChanged
-        )
-
-        Spacer(modifier = Modifier.height(24.dp))
-    }
-}
-
-@Composable
-private fun PrivacyToggleCard(
-    icon: ImageVector,
-    title: String,
-    subtitle: String,
-    checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit
-) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onCheckedChange(!checked) },
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
-        )
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 20.dp, vertical = 14.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(24.dp)
+        OnboardingOptionGroup {
+            OnboardingOptionItem(
+                icon = {
+                    Icon(
+                        imageVector = Icons.Rounded.Block,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(24.dp)
+                    )
+                },
+                title = "Tracking Protection",
+                subtitle = "Block trackers and third-party cookies",
+                selected = trackingProtection,
+                highlightIcon = false,
+                onClick = { onTrackingProtectionChanged(!trackingProtection) },
+                trailing = {
+                    Switch(checked = trackingProtection, onCheckedChange = onTrackingProtectionChanged)
+                }
             )
-            Spacer(modifier = Modifier.width(16.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Medium
-                )
-                Text(
-                    text = subtitle,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            Spacer(modifier = Modifier.width(8.dp))
-            Switch(
-                checked = checked,
-                onCheckedChange = onCheckedChange
+            HorizontalDivider(
+                modifier = Modifier.padding(start = 72.dp),
+                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+            )
+            OnboardingOptionItem(
+                icon = {
+                    Icon(
+                        imageVector = Icons.Rounded.Security,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(24.dp)
+                    )
+                },
+                title = "Safe Browsing",
+                subtitle = "Warn about dangerous sites",
+                selected = safeBrowsing,
+                highlightIcon = false,
+                onClick = { onSafeBrowsingChanged(!safeBrowsing) },
+                trailing = {
+                    Switch(checked = safeBrowsing, onCheckedChange = onSafeBrowsingChanged)
+                }
+            )
+            HorizontalDivider(
+                modifier = Modifier.padding(start = 72.dp),
+                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+            )
+            OnboardingOptionItem(
+                icon = {
+                    Icon(
+                        imageVector = Icons.Rounded.Search,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(24.dp)
+                    )
+                },
+                title = "Search Suggestions",
+                subtitle = "Show suggestions as you type",
+                selected = searchSuggestions,
+                highlightIcon = false,
+                onClick = { onSearchSuggestionsChanged(!searchSuggestions) },
+                trailing = {
+                    Switch(checked = searchSuggestions, onCheckedChange = onSearchSuggestionsChanged)
+                }
             )
         }
+
+        Spacer(modifier = Modifier.height(24.dp))
     }
 }
 
@@ -852,7 +802,8 @@ private fun GetStartedPage(
             text = "You're all set!",
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold,
-            textAlign = TextAlign.Center
+            textAlign = TextAlign.Center,
+            color = MaterialTheme.colorScheme.onBackground
         )
 
         Spacer(modifier = Modifier.height(8.dp))
@@ -952,7 +903,373 @@ private fun SummaryRow(
     }
 }
 
-// ─── Shared composable ──────────────────────────────────────────────────────
+// ─── Pages: Toolbar, Tab Bar, Contextual Toolbar ─────────────────────────────
+
+@Composable
+private fun ToolbarPositionPage(
+    toolbarPosition: Int,
+    onToolbarPositionSelected: (Int) -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Spacer(modifier = Modifier.height(32.dp))
+
+        OnboardingPageHeader(
+            icon = Icons.Rounded.SettingsBrightness,
+            title = "Toolbar Position",
+            subtitle = "Choose where the address bar appears"
+        )
+
+        Spacer(modifier = Modifier.height(28.dp))
+
+        OnboardingOptionGroup {
+            listOf(
+                Triple(ToolbarPosition.TOP.ordinal, "Top", "Address bar at the top of the screen"),
+                Triple(ToolbarPosition.BOTTOM.ordinal, "Bottom", "Address bar at the bottom of the screen")
+            ).forEachIndexed { index, (value, label, description) ->
+                OnboardingOptionItem(
+                    icon = { ToolbarPositionPreview(isTop = value == ToolbarPosition.TOP.ordinal) },
+                    title = label,
+                    subtitle = description,
+                    selected = toolbarPosition == value,
+                    onClick = { onToolbarPositionSelected(value) }
+                )
+                if (index == 0) {
+                    HorizontalDivider(
+                        modifier = Modifier.padding(start = 72.dp),
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+    }
+}
+
+@Composable
+private fun ToolbarPositionPreview(isTop: Boolean) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.surfaceContainer)
+    ) {
+        Column(modifier = Modifier.fillMaxSize().padding(horizontal = 6.dp, vertical = 5.dp)) {
+            if (!isTop) Spacer(modifier = Modifier.weight(1f))
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(6.dp)
+                    .clip(RoundedCornerShape(3.dp))
+                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.7f))
+            )
+            if (isTop) Spacer(modifier = Modifier.weight(1f))
+        }
+    }
+}
+
+@Composable
+private fun TabBarPage(
+    showTabBar: Boolean,
+    onTabBarVisibilityChanged: (Boolean) -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Spacer(modifier = Modifier.height(32.dp))
+
+        OnboardingPageHeader(
+            icon = Icons.Rounded.Star,
+            title = "Tab Bar",
+            subtitle = "Quick-access bar for switching tab groups"
+        )
+
+        Spacer(modifier = Modifier.height(28.dp))
+
+        OnboardingOptionGroup {
+            listOf(
+                Triple(true, "Show Tab Bar", "Switch between tab groups at a glance"),
+                Triple(false, "Hide Tab Bar", "More screen space while browsing")
+            ).forEachIndexed { index, (value, label, description) ->
+                OnboardingOptionItem(
+                    icon = { TabBarPreview(visible = value) },
+                    title = label,
+                    subtitle = description,
+                    selected = showTabBar == value,
+                    onClick = { onTabBarVisibilityChanged(value) }
+                )
+                if (index == 0) {
+                    HorizontalDivider(
+                        modifier = Modifier.padding(start = 72.dp),
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+    }
+}
+
+@Composable
+private fun TabBarPreview(visible: Boolean) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.surfaceContainer)
+    ) {
+        Column(modifier = Modifier.fillMaxSize().padding(4.dp)) {
+            Spacer(modifier = Modifier.weight(1f))
+            if (visible) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(3.dp)
+                ) {
+                    repeat(3) {
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(6.dp)
+                                .clip(RoundedCornerShape(3.dp))
+                                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.7f))
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ContextualToolbarPage(
+    showContextualToolbar: Boolean,
+    toolbarIconSize: Float,
+    onContextualToolbarChanged: (Boolean) -> Unit,
+    onIconSizeChanged: (Float) -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Spacer(modifier = Modifier.height(32.dp))
+
+        OnboardingPageHeader(
+            icon = Icons.Rounded.Shield,
+            title = "Contextual Toolbar",
+            subtitle = "Toolbar shown while browsing pages"
+        )
+
+        Spacer(modifier = Modifier.height(28.dp))
+
+        OnboardingOptionGroup {
+            listOf(
+                Triple(true, "Show Contextual Toolbar", "Quick-access browser actions while browsing"),
+                Triple(false, "Hide Contextual Toolbar", "More vertical space for page content")
+            ).forEachIndexed { index, (value, label, description) ->
+                OnboardingOptionItem(
+                    icon = { ContextualToolbarPreview(visible = value) },
+                    title = label,
+                    subtitle = description,
+                    selected = showContextualToolbar == value,
+                    onClick = { onContextualToolbarChanged(value) }
+                )
+                if (index == 0) {
+                    HorizontalDivider(
+                        modifier = Modifier.padding(start = 72.dp),
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                    )
+                }
+            }
+        }
+
+        AnimatedVisibility(
+            visible = showContextualToolbar,
+            enter = fadeIn() + expandVertically(),
+            exit = fadeOut() + shrinkVertically()
+        ) {
+            Column(modifier = Modifier.padding(top = 20.dp)) {
+                Text(
+                    text = "Icon Size",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 4.dp, bottom = 8.dp)
+                )
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    tonalElevation = 1.dp
+                ) {
+                    Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp)) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(36.dp)
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(MaterialTheme.colorScheme.surfaceContainer),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 12.dp),
+                                horizontalArrangement = Arrangement.SpaceEvenly,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                val dotSize = (12 * toolbarIconSize).dp
+                                repeat(4) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(dotSize)
+                                            .clip(CircleShape)
+                                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.7f))
+                                    )
+                                }
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Slider(
+                            value = toolbarIconSize,
+                            onValueChange = onIconSizeChanged,
+                            valueRange = 0.8f..1.5f,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = "Small",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Text(
+                                text = "Large",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+    }
+}
+
+@Composable
+private fun ContextualToolbarPreview(visible: Boolean) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.surfaceContainer)
+    ) {
+        if (visible) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .align(Alignment.Center)
+                    .padding(horizontal = 4.dp),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                repeat(3) {
+                    Box(
+                        modifier = Modifier
+                            .size(8.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.7f))
+                    )
+                }
+            }
+        }
+    }
+}
+
+// ─── Shared list-item helpers ─────────────────────────────────────────────────
+
+@Composable
+private fun OnboardingOptionGroup(content: @Composable () -> Unit) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        tonalElevation = 1.dp
+    ) {
+        Column { content() }
+    }
+}
+
+@Composable
+private fun OnboardingOptionItem(
+    icon: @Composable () -> Unit,
+    title: String,
+    subtitle: String? = null,
+    selected: Boolean = false,
+    highlightIcon: Boolean = true,
+    onClick: () -> Unit,
+    trailing: (@Composable () -> Unit)? = null
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Surface(
+            modifier = Modifier.size(44.dp),
+            shape = RoundedCornerShape(12.dp),
+            color = if (highlightIcon && selected)
+                MaterialTheme.colorScheme.primaryContainer
+            else
+                MaterialTheme.colorScheme.surfaceVariant
+        ) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                icon()
+            }
+        }
+        Spacer(modifier = Modifier.width(16.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = if (selected) FontWeight.Medium else FontWeight.Normal,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            if (subtitle != null) {
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+        if (trailing != null) {
+            trailing()
+        } else {
+            RadioButton(selected = selected, onClick = onClick)
+        }
+    }
+}
 
 @Composable
 private fun OnboardingPageHeader(
@@ -979,7 +1296,8 @@ private fun OnboardingPageHeader(
         text = title,
         style = MaterialTheme.typography.headlineSmall,
         fontWeight = FontWeight.Bold,
-        textAlign = TextAlign.Center
+        textAlign = TextAlign.Center,
+        color = MaterialTheme.colorScheme.onBackground
     )
     Spacer(modifier = Modifier.height(8.dp))
     Text(
