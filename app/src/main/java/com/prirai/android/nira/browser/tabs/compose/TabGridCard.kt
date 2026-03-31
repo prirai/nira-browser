@@ -3,7 +3,6 @@ package com.prirai.android.nira.browser.tabs.compose
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -11,18 +10,15 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Language
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -31,7 +27,7 @@ import mozilla.components.browser.state.state.TabSessionState
 
 /**
  * Reusable grid card component for both grouped and ungrouped tabs.
- * Provides consistent UI with thumbnail, gradient overlay, and layered content.
+ * Provides consistent UI with thumbnail, bottom-gradient overlay, and layered content.
  *
  * @param tab The tab session state
  * @param isSelected Whether this tab is currently selected
@@ -58,15 +54,15 @@ fun TabGridCard(
             .scale(scale.value),
         shape = RoundedCornerShape(12.dp),
         color = when {
-            isSelected && groupColor != null -> Color(groupColor).copy(alpha = 0.2f)
-            isSelected -> MaterialTheme.colorScheme.primaryContainer
+            isSelected && groupColor != null -> Color(groupColor).copy(alpha = 0.15f)
+            isSelected -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
             groupColor != null -> Color(groupColor).copy(alpha = 0.05f)
-            else -> MaterialTheme.colorScheme.surface
+            else -> MaterialTheme.colorScheme.surfaceVariant
         },
-        tonalElevation = if (isSelected) 3.dp else 1.dp,
+        tonalElevation = if (isSelected) 4.dp else 1.dp,
         border = when {
-            isSelected && groupColor != null -> BorderStroke(2.dp, Color(groupColor))
-            isSelected -> BorderStroke(2.dp, MaterialTheme.colorScheme.primary)
+            isSelected && groupColor != null -> BorderStroke(2.5.dp, Color(groupColor))
+            isSelected -> BorderStroke(2.5.dp, MaterialTheme.colorScheme.primary)
             groupColor != null -> BorderStroke(1.dp, Color(groupColor).copy(alpha = 0.3f))
             else -> null
         }
@@ -76,91 +72,89 @@ fun TabGridCard(
                 .fillMaxSize()
                 .clickable { onTabClick() }
         ) {
-            // Thumbnail preview (background)
+            // Thumbnail fills the full card
             ThumbnailImageView(
                 tab = tab,
                 modifier = Modifier.fillMaxSize()
             )
 
-            // Overlay with gradient for better text readability
+            // Bottom-focused gradient so the thumbnail is fully visible at the top
             Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .background(
                         Brush.verticalGradient(
-                            colors = listOf(
-                                Color.Black.copy(alpha = 0.3f),
-                                Color.Black.copy(alpha = 0.6f)
-                            )
+                            0f to Color.Transparent,
+                            0.45f to Color.Transparent,
+                            1f to Color.Black.copy(alpha = 0.75f)
                         )
                     )
             )
 
-            // Content overlay
-            Column(
+            // Close button — small, semi-transparent, top-right corner
+            Box(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .padding(8.dp),
-                verticalArrangement = Arrangement.SpaceBetween
+                    .align(Alignment.TopEnd)
+                    .padding(6.dp)
             ) {
-                // Header with favicon and close button
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.Top
+                Surface(
+                    shape = CircleShape,
+                    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.85f),
+                    tonalElevation = 2.dp,
+                    modifier = Modifier.size(26.dp)
                 ) {
-                    // Favicon
-                    Surface(
-                        shape = RoundedCornerShape(4.dp),
-                        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f)
+                    IconButton(
+                        onClick = {
+                            scope.launch {
+                                scale.animateTo(0.8f, animationSpec = tween(150))
+                                onTabClose()
+                            }
+                        },
+                        modifier = Modifier.size(26.dp)
                     ) {
-                        FaviconImage(
-                            tab = tab,
-                            size = 20.dp,
-                            modifier = Modifier.padding(2.dp)
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "Close tab",
+                            modifier = Modifier.size(14.dp),
+                            tint = MaterialTheme.colorScheme.onSurface
                         )
                     }
-
-                    // Close button - consistent style with grouped tabs
-                    Surface(
-                        shape = CircleShape,
-                        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
-                        modifier = Modifier.size(24.dp)
-                    ) {
-                        IconButton(
-                            onClick = {
-                                scope.launch {
-                                    scale.animateTo(0.8f, animationSpec = tween(150))
-                                    onTabClose()
-                                }
-                            },
-                            modifier = Modifier.size(24.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Close,
-                                contentDescription = "Close tab",
-                                modifier = Modifier.size(16.dp),
-                                tint = MaterialTheme.colorScheme.onSurface
-                            )
-                        }
-                    }
                 }
+            }
 
-                // Title with background for readability
+            // Frosted-glass title overlay at the bottom — favicon + title in one row
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .fillMaxWidth()
+                    .padding(6.dp)
+            ) {
                 Surface(
-                    shape = RoundedCornerShape(4.dp),
+                    shape = RoundedCornerShape(8.dp),
                     color = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text(
-                        text = getTabDisplayTitle(tab),
-                        style = MaterialTheme.typography.bodySmall,
-                        fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.padding(4.dp)
-                    )
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 6.dp, vertical = 5.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(5.dp)
+                    ) {
+                        FaviconImage(
+                            tab = tab,
+                            size = 14.dp
+                        )
+                        Text(
+                            text = getTabDisplayTitle(tab),
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
                 }
             }
         }

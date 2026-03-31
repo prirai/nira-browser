@@ -71,12 +71,18 @@ class BrowserApp : LocaleAwareApplication() {
             initializeWebExtensions()
         }
         
+        // CRITICAL: Eagerly init fxaAuthFeature on the Main thread so that
+        // appRequestInterceptor.fxaInterceptor is set before any FxA redirect URL
+        // can be processed. Doing this inside an IO coroutine causes a race condition
+        // where the interceptor may not be ready when the OAuth callback arrives.
+        try {
+            components.fxaAuthFeature
+        } catch (_: Exception) { /* sync unavailable */ }
+
         // Initialize Firefox Sync (non-blocking — degrades gracefully if unavailable)
         applicationScope.launch(Dispatchers.IO) {
             try {
                 components.fxaSyncManager.initialize()
-                // Eagerly init so fxaInterceptor is set before any FxA redirects are processed
-                components.fxaAuthFeature
             } catch (_: Exception) { /* sync unavailable */ }
         }
         

@@ -200,21 +200,29 @@ class AdvancedSettingsFragment : BaseSettingsFragment() {
         )
 
         try {
-            // Copy file to cache directory
+            // Copy file to permanent extensions directory instead of cache
             val contentResolver = requireContext().contentResolver
             val inputStream = contentResolver.openInputStream(uri)
-            val cacheDir = requireContext().cacheDir
-            val tempFile = File(cacheDir, "temp_extension.xpi")
+            
+            // Create permanent extensions directory in app's internal storage
+            val extensionsDir = File(requireContext().filesDir, "sideloaded_extensions")
+            if (!extensionsDir.exists()) {
+                extensionsDir.mkdirs()
+            }
+            
+            // Generate unique filename based on timestamp
+            val timestamp = System.currentTimeMillis()
+            val permanentFile = File(extensionsDir, "extension_${timestamp}.xpi")
 
             inputStream?.use { input ->
-                FileOutputStream(tempFile).use { output ->
+                FileOutputStream(permanentFile).use { output ->
                     input.copyTo(output)
                 }
             }
 
-            // Install from the local file
+            // Install from the permanent file location
             components.engine.installWebExtension(
-                "file://${tempFile.absolutePath}",
+                "file://${permanentFile.absolutePath}",
                 InstallationMethod.FROM_FILE,
                 onSuccess = { extension ->
                     CoroutineScope(Dispatchers.IO).launch {
@@ -232,8 +240,8 @@ class AdvancedSettingsFragment : BaseSettingsFragment() {
                                     components.engine.uninstallWebExtension(extension)
                                 }
                                 loadingDialog.dismiss()
-                                // Clean up temp file
-                                tempFile.delete()
+                                // Clean up permanent file if installation failed
+                                permanentFile.delete()
                                 return@launch
                             }
                         }
@@ -245,8 +253,7 @@ class AdvancedSettingsFragment : BaseSettingsFragment() {
                                 Toast.LENGTH_LONG
                             ).show()
                         }
-                        // Clean up temp file
-                        tempFile.delete()
+                        // Do NOT delete the permanent file - it's needed for restart persistence
                     }
                 },
                 onError = { error ->
@@ -258,8 +265,8 @@ class AdvancedSettingsFragment : BaseSettingsFragment() {
                         ).show()
                         loadingDialog.dismiss()
                     }
-                    // Clean up temp file
-                    tempFile.delete()
+                    // Clean up permanent file if installation failed
+                    permanentFile.delete()
                 })
         } catch (e: Exception) {
             runOnUiThread {

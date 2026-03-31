@@ -158,6 +158,7 @@
   <string name="no_history">No browsing history yet</string>
   <string name="action_bookmarks">Bookmarks</string>
     <string name="action_add_bookmark">Add bookmark</string>
+    <string name="send_tab_to_device">Send Tab to Device</string>
 
     <string name="forward">Forward</string>
   <string name="reload">Reload</string>
