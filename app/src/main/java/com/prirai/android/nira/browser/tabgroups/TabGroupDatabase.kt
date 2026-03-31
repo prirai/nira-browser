@@ -9,7 +9,7 @@ import android.content.Context
 
 @Database(
     entities = [TabGroup::class, TabGroupMember::class],
-    version = 2,
+    version = 3,
     exportSchema = false
 )
 abstract class TabGroupDatabase : RoomDatabase() {
@@ -26,6 +26,13 @@ abstract class TabGroupDatabase : RoomDatabase() {
             }
         }
         
+        private val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                // Add isCollapsed column to tab_groups table
+                database.execSQL("ALTER TABLE tab_groups ADD COLUMN isCollapsed INTEGER NOT NULL DEFAULT 0")
+            }
+        }
+        
         fun getInstance(context: Context): TabGroupDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -33,7 +40,7 @@ abstract class TabGroupDatabase : RoomDatabase() {
                     TabGroupDatabase::class.java,
                     "tab_groups_database"
                 )
-                .addMigrations(MIGRATION_1_2)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
                 .build()
                 INSTANCE = instance
                 instance
