@@ -6,15 +6,16 @@
 #   http://developer.android.com/guide/developing/tools/proguard.html
 
 # Security hardening rules
--obfuscationdictionary dictionary.txt
--classobfuscationdictionary dictionary.txt
--packageobfuscationdictionary dictionary.txt
+# -obfuscationdictionary dictionary.txt
+# -classobfuscationdictionary dictionary.txt
+# -packageobfuscationdictionary dictionary.txt
 
 # OPTIMIZED: Keep only essential Mozilla Components classes instead of everything
 # Old rule was too broad: -keep class mozilla.components.** { *; }
 
 # Keep GeckoView engine (critical for browser functionality)
 -keep class org.mozilla.geckoview.** { *; }
+-keep class org.mozilla.gecko.** { *; }
 -keep class mozilla.components.browser.engine.gecko.** { *; }
 
 # Keep browser state and store (core architecture)
@@ -108,7 +109,7 @@
 -mergeinterfacesaggressively
 
 # Remove unused code more aggressively
--repackageclasses ''
+# -repackageclasses ''
 
 # If your project uses WebView with JS, uncomment the following
 # and specify the fully qualified class name to the JavaScript interface
