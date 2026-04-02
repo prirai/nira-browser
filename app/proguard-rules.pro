@@ -10,63 +10,65 @@
 # -classobfuscationdictionary dictionary.txt
 # -packageobfuscationdictionary dictionary.txt
 
-# OPTIMIZED: Keep only essential Mozilla Components classes instead of everything
-# Old rule was too broad: -keep class mozilla.components.** { *; }
+# Preserve package names to prevent Package.getName() from returning null
+-keeppackagenames org.mozilla.**
+-keeppackagenames com.prirai.android.nira.**
 
-# Keep GeckoView engine (critical for browser functionality)
--keep class org.mozilla.geckoview.** { *; }
--keep class org.mozilla.gecko.** { *; }
--keep class mozilla.components.browser.engine.gecko.** { *; }
+# Keep GeckoView and Mozilla Components (CRITICAL)
+# Many Mozilla components use reflection or JNI that breaks with obfuscation
+-keep class org.mozilla.** { *; }
+-keep interface org.mozilla.** { *; }
+
+# Keep application classes that are used by reflection
+-keep public class com.prirai.android.nira.** extends androidx.fragment.app.Fragment
+-keep public class com.prirai.android.nira.** extends androidx.appcompat.app.AppCompatActivity
+-keep class com.prirai.android.nira.** { *; }
 
 # Keep browser state and store (core architecture)
--keep class mozilla.components.browser.state.** { *; }
--keep class mozilla.components.lib.state.** { *; }
+-keep class org.mozilla.components.browser.state.** { *; }
+-keep class org.mozilla.components.lib.state.** { *; }
 
 # Keep web extension support (required for addons)
--keep class mozilla.components.concept.engine.webextension.** { *; }
--keep class mozilla.components.feature.addons.** { *; }
--keep class mozilla.components.support.webextensions.** { *; }
+-keep class org.mozilla.components.concept.engine.webextension.** { *; }
+-keep class org.mozilla.components.feature.addons.** { *; }
+-keep class org.mozilla.components.support.webextensions.** { *; }
 
 # Keep feature interfaces and public APIs
--keep public class * extends mozilla.components.support.base.feature.LifecycleAwareFeature { *; }
--keep public class * extends mozilla.components.support.base.feature.UserInteractionHandler { *; }
--keep class mozilla.components.concept.** { *; }
+-keep public class * extends org.mozilla.components.support.base.feature.LifecycleAwareFeature { *; }
+-keep public class * extends org.mozilla.components.support.base.feature.UserInteractionHandler { *; }
+-keep class org.mozilla.components.concept.** { *; }
 
 # Keep UI components that use reflection or databinding
--keep class mozilla.components.browser.toolbar.** { *; }
--keep class mozilla.components.browser.menu.** { *; }
--keep class mozilla.components.ui.** { *; }
+-keep class org.mozilla.components.browser.toolbar.** { *; }
+-keep class org.mozilla.components.browser.menu.** { *; }
+-keep class org.mozilla.components.ui.** { *; }
 
 # Keep storage implementations
--keep class mozilla.components.browser.storage.sync.** { *; }
--keep class mozilla.components.browser.session.storage.** { *; }
--keep class mozilla.components.feature.sitepermissions.OnDiskSitePermissionsStorage { *; }
+-keep class org.mozilla.components.browser.storage.sync.** { *; }
+-keep class org.mozilla.components.browser.session.storage.** { *; }
+-keep class org.mozilla.components.feature.sitepermissions.OnDiskSitePermissionsStorage { *; }
 
 # Keep search components
--keep class mozilla.components.feature.search.** { *; }
--keep class mozilla.components.browser.state.search.** { *; }
+-keep class org.mozilla.components.feature.search.** { *; }
+-keep class org.mozilla.components.browser.state.search.** { *; }
 
 # Keep support utilities that may use reflection
--keep class mozilla.components.support.base.** { *; }
--keep class mozilla.components.support.ktx.** { *; }
--keep class mozilla.components.support.utils.** { *; }
--keep class mozilla.components.support.locale.** { *; }
+-keep class org.mozilla.components.support.base.** { *; }
+-keep class org.mozilla.components.support.ktx.** { *; }
+-keep class org.mozilla.components.support.utils.** { *; }
+-keep class org.mozilla.components.support.locale.** { *; }
 
 # Keep service components
--keep class mozilla.components.service.location.** { *; }
+-keep class org.mozilla.components.service.location.** { *; }
 
 # Allow shrinking of unused feature implementations
--dontwarn mozilla.components.feature.webcompat.**
--dontwarn mozilla.components.feature.webnotifications.**
+-dontwarn org.mozilla.components.feature.webcompat.**
+-dontwarn org.mozilla.components.feature.webnotifications.**
 
 # Fix R8 missing Kotlin annotation classes
 -dontwarn kotlin.annotations.jvm.MigrationStatus
 -dontwarn kotlin.annotations.jvm.UnderMigration
 -keep class kotlin.annotations.jvm.** { *; }
-
-# Keep application classes that are used by reflection
--keep public class com.prirai.android.nira.** extends androidx.fragment.app.Fragment
--keep public class com.prirai.android.nira.** extends androidx.appcompat.app.AppCompatActivity
 
 # Remove debugging information in release builds
 -assumenosideeffects class android.util.Log {
@@ -77,7 +79,7 @@
 }
 
 # Remove Mozilla Logger debug calls
--assumenosideeffects class mozilla.components.support.base.log.logger.Logger {
+-assumenosideeffects class org.mozilla.components.support.base.log.logger.Logger {
     public *** debug(...);
 }
 
@@ -95,8 +97,8 @@
     static void checkNotNullExpressionValue(...);
 }
 
-# Preserve line numbers for crash reports but hide source file names
--keepattributes SourceFile,LineNumberTable
+# Preserve attributes needed for reflection and crash reports
+-keepattributes Signature,AnnotationDefault,EnclosingMethod,InnerClasses,SourceFile,LineNumberTable
 -renamesourcefileattribute SourceFile
 
 # Additional optimization flags
@@ -108,12 +110,5 @@
 # Merge classes and interfaces aggressively
 -mergeinterfacesaggressively
 
-# Remove unused code more aggressively
+# Repackaging can break package-based lookups
 # -repackageclasses ''
-
-# If your project uses WebView with JS, uncomment the following
-# and specify the fully qualified class name to the JavaScript interface
-# class:
-#-keepclassmembers class fqcn.of.javascript.interface.for.webview {
-#   public *;
-#}
