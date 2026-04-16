@@ -1,122 +1,59 @@
-# Add project specific ProGuard rules here.
-# You can control the set of applied configuration files using the
-# proguardFiles setting in build.gradle.
-#
-# For more details, see
-#   http://developer.android.com/guide/developing/tools/proguard.html
+# ProGuard rules for Nira Browser
 
-# Security hardening rules
-# -obfuscationdictionary dictionary.txt
-# -classobfuscationdictionary dictionary.txt
-# -packageobfuscationdictionary dictionary.txt
-
-# Preserve package names to prevent Package.getName() from returning null
-# This is critical for GeckoView and Mozilla Components which use package-based lookups
+# 1. Global package preservation to prevent Package.getName() NullPointerExceptions
+# This is critical for libraries that use reflection to look up package information.
 -keeppackagenames org.mozilla.**
--keeppackagenames mozilla.components.**
--keeppackagenames com.prirai.android.nira.**
+-keeppackagenames mozilla.**
+-keeppackagenames com.prirai.**
+-keeppackagenames org.yaml.snakeyaml.**
 
-# Keep GeckoView (CRITICAL)
+# 2. Prevent R8 from moving classes to the default package or stripping package info
+-keepattributes Signature,InnerClasses,EnclosingMethod,*Annotation*,SourceFile,LineNumberTable
+
+# 3. Comprehensive Keep rules for GeckoView (CRITICAL)
 -keep class org.mozilla.geckoview.** { *; }
 -keep class org.mozilla.gecko.** { *; }
 -keep interface org.mozilla.geckoview.** { *; }
 -keep interface org.mozilla.gecko.** { *; }
 
-# Keep Mozilla Components (CRITICAL)
-# Note: The package name is 'mozilla.components', NOT 'org.mozilla.components'
+# 4. Comprehensive Keep rules for Mozilla Components
 -keep class mozilla.components.** { *; }
 -keep interface mozilla.components.** { *; }
 
-# Keep application classes that are used by reflection
--keep public class com.prirai.android.nira.** extends androidx.fragment.app.Fragment
--keep public class com.prirai.android.nira.** extends androidx.appcompat.app.AppCompatActivity
+# 5. Keep SnakeYAML (Used by GeckoView DebugConfig)
+# The crash in TypeDescription.<clinit> is due to Package.getName() returning null.
+-keep class org.yaml.snakeyaml.** { *; }
+-dontwarn org.yaml.snakeyaml.**
+
+# 6. Keep all BuildConfig classes
+-keep class **.BuildConfig { *; }
+
+# 7. Keep application classes
 -keep class com.prirai.android.nira.** { *; }
+-keep public class * extends androidx.fragment.app.Fragment
+-keep public class * extends androidx.appcompat.app.AppCompatActivity
+-keep public class * extends android.app.Service
+-keep public class * extends android.app.Application
 
-# Keep browser state and store (core architecture)
--keep class mozilla.components.browser.state.** { *; }
--keep class mozilla.components.lib.state.** { *; }
+# 8. Specific fixes for known GeckoView/Mozilla issues
+-dontwarn org.mozilla.**
+-dontwarn mozilla.**
+-keep class **.package-info { *; }
 
-# Keep web extension support (required for addons)
--keep class mozilla.components.concept.engine.webextension.** { *; }
--keep class mozilla.components.feature.addons.** { *; }
--keep class mozilla.components.support.webextensions.** { *; }
+# 9. Optimization settings
+-optimizations !code/simplification/arithmetic,!code/simplification/cast,!field/*,!class/merging/*
+-optimizationpasses 5
+-allowaccessmodification
+-dontpreverify
 
-# Keep feature interfaces and public APIs
--keep public class * extends mozilla.components.support.base.feature.LifecycleAwareFeature { *; }
--keep public class * extends mozilla.components.support.base.feature.UserInteractionHandler { *; }
--keep class mozilla.components.concept.** { *; }
-
-# Keep UI components that use reflection or databinding
--keep class mozilla.components.browser.toolbar.** { *; }
--keep class mozilla.components.browser.menu.** { *; }
--keep class mozilla.components.ui.** { *; }
-
-# Keep storage implementations
--keep class mozilla.components.browser.storage.sync.** { *; }
--keep class mozilla.components.browser.session.storage.** { *; }
--keep class mozilla.components.feature.sitepermissions.OnDiskSitePermissionsStorage { *; }
-
-# Keep search components
--keep class mozilla.components.feature.search.** { *; }
--keep class mozilla.components.browser.state.search.** { *; }
-
-# Keep support utilities that may use reflection
--keep class mozilla.components.support.base.** { *; }
--keep class mozilla.components.support.ktx.** { *; }
--keep class mozilla.components.support.utils.** { *; }
--keep class mozilla.components.support.locale.** { *; }
-
-# Keep service components
--keep class mozilla.components.service.location.** { *; }
-
-# Allow shrinking of unused feature implementations
--dontwarn mozilla.components.feature.webcompat.**
--dontwarn mozilla.components.feature.webnotifications.**
-
-# Fix R8 missing Kotlin annotation classes
--dontwarn kotlin.annotations.jvm.MigrationStatus
--dontwarn kotlin.annotations.jvm.UnderMigration
+# 10. Support for Kotlin and Compose
 -keep class kotlin.annotations.jvm.** { *; }
+-dontwarn kotlin.annotations.jvm.**
 
-# Remove debugging information in release builds
+# 11. Removal of logs in release
 -assumenosideeffects class android.util.Log {
     public static *** d(...);
     public static *** v(...);
     public static *** i(...);
     public static *** w(...);
 }
-
-# Remove Mozilla Logger debug calls
--assumenosideeffects class mozilla.components.support.base.log.logger.Logger {
-    public *** debug(...);
-}
-
-# Remove println and System.out debugging
--assumenosideeffects class java.io.PrintStream {
-    public void println(...);
-    public void print(...);
-}
-
-# Optimization: Remove assertions in release
--assumenosideeffects class kotlin.jvm.internal.Intrinsics {
-    static void checkParameterIsNotNull(...);
-    static void checkNotNullParameter(...);
-    static void checkExpressionValueIsNotNull(...);
-    static void checkNotNullExpressionValue(...);
-}
-
-# Preserve attributes needed for reflection and crash reports
--keepattributes Signature,AnnotationDefault,EnclosingMethod,InnerClasses,SourceFile,LineNumberTable,*Annotation*
--renamesourcefileattribute SourceFile
-
-# Additional optimization flags
--optimizations !code/simplification/arithmetic,!code/simplification/cast,!field/*,!class/merging/*
--optimizationpasses 5
--allowaccessmodification
--dontpreverify
-
-# Merge classes and interfaces aggressively
--mergeinterfacesaggressively
-
-# Repackaging can break package-based lookups like Package.getName()
-# -repackageclasses ''
