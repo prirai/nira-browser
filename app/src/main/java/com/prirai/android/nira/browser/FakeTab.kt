@@ -22,7 +22,7 @@ class FakeTab @JvmOverloads constructor(
 ) : FrameLayout(context, attrs, defStyle) {
 
     private val binding = TabPreviewBinding.inflate(LayoutInflater.from(context), this)
-    private val thumbnailLoader = ThumbnailLoader(context.components.thumbnailStorage)
+    private val thumbnailLoader = context.components.thumbnailLoader
     private val preferences = UserPreferences(context)
 
     init {

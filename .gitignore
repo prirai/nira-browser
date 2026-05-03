@@ -60,5 +60,7 @@ out
 # https://gitlab.com/fdroid/fdroidclient/raw/master/.gitignore
 
 *.iml
-/.kotlin/sessions/*
-/fixes.md
+ /.kotlin/sessions/*
+ /fixes.md
+ /PROJECT_LOG.md
+/AGENT_JOURNAL.md

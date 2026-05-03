@@ -158,6 +158,7 @@
         <com.prirai.android.nira.settings.MaterialSwitchPreference
             app:key="@string/key_swipe_refresh"
             app:title="@string/swipe_to_refresh"
+            app:summary="@string/swipe_to_refresh_summary"
             app:singleLineTitle="false"
             app:defaultValue="true" />
 
