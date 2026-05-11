@@ -37,7 +37,10 @@ class HistoryActivity : AppCompatActivity(), SearchView.OnQueryTextListener {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_history)
-        if (supportActionBar != null) supportActionBar!!.setDisplayHomeAsUpEnabled(true); supportActionBar!!.elevation = 0f
+        supportActionBar?.apply {
+            setDisplayHomeAsUpEnabled(true)
+            elevation = 0f
+        }
 
         // Enable edge-to-edge with standardized approach
         enableEdgeToEdgeMode()

@@ -34,8 +34,10 @@ abstract class InflationAwareFeature(
     @UiThread
     fun launch() {
         // If we have a feature and view, we can launch immediately.
-        if (feature != null && view.get() != null) {
-            onLaunch(view.get()!!, feature!!)
+        val f = feature
+        val v = view.get()
+        if (f != null && v != null) {
+            onLaunch(v, f)
         } else {
             stub.apply {
                 setOnInflateListener(stubListener)

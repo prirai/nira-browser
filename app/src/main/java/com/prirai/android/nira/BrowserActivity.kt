@@ -385,7 +385,7 @@ open class BrowserActivity : LocaleAwareAppCompatActivity(), ComponentCallbacks2
             width = android.view.ViewGroup.LayoutParams.MATCH_PARENT
         }
 
-        return supportActionBar!!
+        return supportActionBar ?: throw IllegalStateException("supportActionBar is null — ensure setSupportActionBar was called")
     }
 
     final override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {

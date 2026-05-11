@@ -43,21 +43,16 @@ internal class ShortcutGridAdapter(
             convertView: View?,
             parent: ViewGroup
     ): View {
-        var convertView = convertView
-        if (layoutInflater == null) {
-            layoutInflater =
-                context.getSystemService(Context.LAYOUT_INFLATER_SERVICE) as LayoutInflater
-        }
-        if (convertView == null) {
-            convertView = layoutInflater!!.inflate(R.layout.shortcut_item, null)
-        }
-        imageView = convertView!!.findViewById(R.id.shortcut_icon)
-        nameView = convertView.findViewById(R.id.shortcut_name)
+        val resultView = convertView ?: LayoutInflater.from(context)
+            .inflate(R.layout.shortcut_item, parent, false)
+        imageView = resultView.findViewById(R.id.shortcut_icon)
+        nameView = resultView.findViewById(R.id.shortcut_name)
 
-        val protocolUrl = if(shortcuts[position].url!!.startsWith("http")) shortcuts[position].url else "https://" +  shortcuts[position].url
+        val rawUrl = shortcuts[position].url ?: return resultView
+        val protocolUrl = if (rawUrl.startsWith("http")) rawUrl else "https://$rawUrl"
 
         val iconPlaceholder =
-            Utils().createImage(name = getUrlCharacter(protocolUrl!!), context = context)
+            Utils().createImage(name = getUrlCharacter(protocolUrl), context = context)
                 .toDrawable(context.resources)
         if(UserPreferences(context).loadShortcutIcons) {
             context.components.icons.loadIntoView(
@@ -72,7 +67,7 @@ internal class ShortcutGridAdapter(
 
         nameView.text = shortcuts[position].title
 
-        return convertView
+        return resultView
     }
 
     private fun getUrlHost(url: String): String {

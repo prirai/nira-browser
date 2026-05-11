@@ -52,7 +52,9 @@ class AwesomeBarWrapper @JvmOverloads constructor(
                     onStopListener?.invoke()
                 },
                 onAutoComplete = { suggestion ->
-                    onEditSuggestionListener?.invoke(suggestion.editSuggestion!!)
+                    suggestion.editSuggestion?.let { editSuggestion ->
+                        onEditSuggestionListener?.invoke(editSuggestion)
+                    }
                 }
             )
         }

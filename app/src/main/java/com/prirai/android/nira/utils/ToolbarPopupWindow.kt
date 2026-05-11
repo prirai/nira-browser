@@ -69,12 +69,14 @@ object ToolbarPopupWindow {
 
         binding.paste.setOnClickListener {
             popupWindow.dismiss()
-            handlePaste(clipboard.text!!)
+            val text = clipboard.text ?: return@setOnClickListener
+            handlePaste(text)
         }
 
         binding.pasteAndGo.setOnClickListener {
             popupWindow.dismiss()
-            handlePasteAndGo(clipboard.text!!)
+            val text = clipboard.text ?: return@setOnClickListener
+            handlePasteAndGo(text)
         }
 
         view.get()?.let {

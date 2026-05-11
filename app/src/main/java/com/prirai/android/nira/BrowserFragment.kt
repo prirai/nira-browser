@@ -135,8 +135,9 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
     }
     
     private fun updateToolbarForPrivateMode() {
-        val selectedTab = requireContext().components.store.state.tabs.find { 
-            it.id == requireContext().components.store.state.selectedTabId 
+        val ctx = context ?: return
+        val selectedTab = ctx.components.store.state.tabs.find { 
+            it.id == ctx.components.store.state.selectedTabId 
         }
         val isPrivate = selectedTab?.content?.private == true
         
@@ -175,9 +176,11 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
     }
 
     private fun observeDownloadsForSheet() {
+        val ctx = context ?: return
         val shownDownloadIds = mutableSetOf<String>()
+        val store = ctx.components.store
         viewLifecycleOwner.lifecycleScope.launch {
-            requireContext().components.store.flow()
+            store.flow()
                 .map { state ->
                     state.downloads.values.filter {
                         it.status == DownloadState.Status.INITIATED ||
@@ -202,10 +205,11 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
     }
 
     private fun observeNewTabSelection() {
-        if (!isAdded) return
-        var knownTabIds = requireContext().components.store.state.tabs.map { it.id }.toSet()
+        val ctx = context ?: return
+        var knownTabIds = ctx.components.store.state.tabs.map { it.id }.toSet()
+        val store = ctx.components.store
         viewLifecycleOwner.lifecycleScope.launch {
-            requireContext().components.store.flow()
+            store.flow()
                 .map { state -> state.selectedTabId to state.tabs.map { it.id }.toSet() }
                 .distinctUntilChanged()
                 .collect { (selectedId, currentIds) ->
@@ -219,19 +223,16 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
     }
 
     private fun observeTabChangesForToolbar() {
-        // Safety check: ensure fragment is attached before accessing context
-        if (!isAdded) return
-        
-        val lruManager = com.prirai.android.nira.browser.tabs.TabLRUManager.getInstance(requireContext())
+        val ctx = context ?: return
+        val store = ctx.components.store
+        val lruManager = com.prirai.android.nira.browser.tabs.TabLRUManager.getInstance(ctx)
         
         // Observe browser state changes to update toolbar in real-time
         viewLifecycleOwner.lifecycleScope.launch {
-            requireContext().components.store.flowScoped(viewLifecycleOwner) { flow ->
+            store.flowScoped(viewLifecycleOwner) { flow ->
                 flow.mapNotNull { state ->
-                    // Safety check: ensure fragment is still attached
                     if (!isAdded) return@mapNotNull null
-                    val currentTab = state.tabs.find { it.id == state.selectedTabId }
-                    currentTab
+                    state.tabs.find { it.id == state.selectedTabId }
                 }.ifAnyChanged { tab ->
                     arrayOf(
                         tab.content.loading,
@@ -248,11 +249,10 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
 
         // Track tab removals for LRU
         viewLifecycleOwner.lifecycleScope.launch {
-            // Safety check before accessing context
             if (!isAdded) return@launch
             
-            var lastTabIds = requireContext().components.store.state.tabs.map { it.id }.toSet()
-            requireContext().components.store.flowScoped(viewLifecycleOwner) { flow ->
+            var lastTabIds = store.state.tabs.map { it.id }.toSet()
+            store.flowScoped(viewLifecycleOwner) { flow ->
                 flow.mapNotNull { state -> 
                     if (!isAdded) return@mapNotNull null
                     state.tabs.map { it.id }.toSet() 
@@ -268,16 +268,14 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
 
         // Also observe tab selection changes
         viewLifecycleOwner.lifecycleScope.launch {
-            requireContext().components.store.flowScoped(viewLifecycleOwner) { flow ->
+            store.flowScoped(viewLifecycleOwner) { flow ->
                 flow.mapNotNull { state ->
-                    // Safety check: ensure fragment is still attached
                     if (!isAdded) return@mapNotNull null
                     state
                 }.distinctUntilChangedBy { it.selectedTabId }.collect { state ->
-                    // Safety check before accessing context
                     if (!isAdded || context == null) return@collect
                     
-                    val fragmentContext = requireContext()
+                    val fragmentContext = context ?: return@collect
                     
                     // Track tab selection in LRU manager
                     state.selectedTabId?.let { tabId ->
@@ -423,7 +421,7 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
             
             // Set tab selection listener
             unifiedToolbar?.setOnTabSelectedListener { tabId ->
-                requireContext().components.tabsUseCases.selectTab(tabId)
+                context?.components?.tabsUseCases?.selectTab(tabId)
             }
             
             // Set expansion state listener to update web content positioning
@@ -439,11 +437,11 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
             // Set contextual toolbar listener
             val contextualListener = object : com.prirai.android.nira.toolbar.ContextualBottomToolbar.ContextualToolbarListener {
                 override fun onBackClicked() {
-                    requireContext().components.sessionUseCases.goBack()
+                    context?.components?.sessionUseCases?.goBack()
                 }
 
                 override fun onForwardClicked() {
-                    requireContext().components.sessionUseCases.goForward()
+                    context?.components?.sessionUseCases?.goForward()
                 }
 
                 override fun onBookmarksClicked() {
@@ -452,9 +450,9 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
                 }
 
                 override fun onShareClicked() {
-                    val state = requireContext().components.store.state
-                    val selectedTab = state.tabs.find { it.id == state.selectedTabId }
-                    val currentUrl = selectedTab?.content?.url
+                    val currentUrl = context?.components?.store?.state?.let { state ->
+                        state.tabs.find { it.id == state.selectedTabId }?.content?.url
+                    }
                     if (!currentUrl.isNullOrBlank()) {
                         val shareIntent = android.content.Intent()
                         shareIntent.action = android.content.Intent.ACTION_SEND
@@ -495,7 +493,7 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
                 }
 
                 override fun onNewTabClicked() {
-                    requireContext().components.tabsUseCases.addTab.invoke("about:homepage")
+                    context?.components?.tabsUseCases?.addTab?.invoke("about:homepage")
                     // Trigger autofocus on the newly created tab
                     com.prirai.android.nira.browser.tabs.compose.TabSheetStateManager.notifyTabSheetDismissed()
                 }
@@ -520,17 +518,18 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
 
 
     private fun handleNewTabInIsland(islandId: String) {
+        val ctx = context ?: return
         // Navigate to Compose home fragment
         try {
             androidx.navigation.fragment.NavHostFragment.findNavController(this).navigate(R.id.homeFragment)
         } catch (e: Exception) {
             // Fallback: Create a new tab and automatically add it to the specified island
-            val store = requireContext().components.store
+            val store = ctx.components.store
             val state = store.state
             val selectedTab = state.tabs.find { it.id == state.selectedTabId }
 
             // Create new tab with current tab as parent to enable auto-grouping
-            val newTabId = requireContext().components.tabsUseCases.addTab.invoke(
+            val newTabId = ctx.components.tabsUseCases.addTab.invoke(
                 url = "about:homepage",
                 selectTab = true,
                 parentId = selectedTab?.id
@@ -539,19 +538,20 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
             // Manually add to island since we're creating from plus button
             if (newTabId != null) {
                 val islandManager =
-                    com.prirai.android.nira.components.toolbar.modern.TabIslandManager.getInstance(requireContext())
+                    com.prirai.android.nira.components.toolbar.modern.TabIslandManager.getInstance(ctx)
                 islandManager.addTabToIsland(newTabId, islandId)
             }
         }
     }
 
     private fun observeTabChangesForModernToolbar() {
+        val ctx = context ?: return
         // Track last known tab IDs for detecting new tabs
         var lastTabIds = emptySet<String>()
 
         // Use proper flow-based observation instead of polling
         viewLifecycleOwner.lifecycleScope.launch {
-            val store = requireContext().components.store
+            val store = ctx.components.store
 
             store.flowScoped(viewLifecycleOwner) { flow ->
                 flow.mapNotNull { state ->
@@ -561,7 +561,7 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
                     val activity = activity as? BrowserActivity ?: return@mapNotNull null
                     val isPrivateMode = activity.browsingModeManager.mode.isPrivate
                     val profileManager =
-                        com.prirai.android.nira.browser.profile.ProfileManager.getInstance(requireContext())
+                        com.prirai.android.nira.browser.profile.ProfileManager.getInstance(ctx)
                     val currentProfile = profileManager.getActiveProfile()
                     val currentProfileContextId = if (isPrivateMode) {
                         "private"
@@ -666,12 +666,13 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
      * Updates padding to prevent content from appearing under the toolbar.
      */
     private fun adjustWebContentMarginsForToolbarOffset(currentOffset: Int, totalHeight: Int) {
+        val ctx = context ?: return
         // CRITICAL: Check if view is still attached to prevent crash when switching tabs
         if (!isAdded || view == null) {
             return
         }
         
-        val prefs = UserPreferences(requireContext())
+        val prefs = UserPreferences(ctx)
         
         // Calculate visible toolbar height
         val visibleHeight = (totalHeight - currentOffset).coerceAtLeast(0)
@@ -762,7 +763,8 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
         // BaseBrowserFragment will call initializeEngineView automatically
 }
     private fun showBrowserMenu() {
-        val store = requireContext().components.store
+        val ctx = context ?: return
+        val store = ctx.components.store
         val selectedTab = store.state.tabs.find { it.id == store.state.selectedTabId }
         
         val menuItems = mutableListOf<com.prirai.android.nira.components.menu.Material3BrowserMenu.MenuItem>()
@@ -814,14 +816,14 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
                                 val title = tab.content.title.ifEmpty { tab.content.url }
                                 val url = tab.content.url
                                 val dialog = com.prirai.android.nira.browser.bookmark.ui.AddBookmarkSiteDialog(
-                                    requireActivity(),
+                                    activity ?: return@let,
                                     title,
                                     url
                                 )
                                 dialog.setOnClickListener { _, _ ->
-                                    com.prirai.android.nira.browser.bookmark.repository.BookmarkManager.getInstance(requireContext()).save()
+                                    com.prirai.android.nira.browser.bookmark.repository.BookmarkManager.getInstance(ctx).save()
                                     android.widget.Toast.makeText(
-                                        requireContext(),
+                                        ctx,
                                         "Bookmark added",
                                         android.widget.Toast.LENGTH_SHORT
                                     ).show()
@@ -866,8 +868,8 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
         menuItems.add(com.prirai.android.nira.components.menu.Material3BrowserMenu.MenuItem.Divider)
 
         // Add to Homescreen/Install (conditional)
-        if (requireContext().components.webAppUseCases.isPinningSupported()) {
-            if (requireContext().components.webAppUseCases.isInstallable()) {
+        if (ctx.components.webAppUseCases.isPinningSupported()) {
+            if (ctx.components.webAppUseCases.isInstallable()) {
                 menuItems.add(
                     com.prirai.android.nira.components.menu.Material3BrowserMenu.MenuItem.Action(
                         id = "install_webapp",
@@ -894,7 +896,7 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
 
         // Open in App (conditional)
         selectedTab?.let { tab ->
-            if (requireContext().components.appLinksUseCases.appLinkRedirect(tab.content.url).hasExternalApp()) {
+            if (ctx.components.appLinksUseCases.appLinkRedirect(tab.content.url).hasExternalApp()) {
                 menuItems.add(
                     com.prirai.android.nira.components.menu.Material3BrowserMenu.MenuItem.Action(
                         id = "open_in_app",
@@ -977,13 +979,13 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
         menuItems.add(
             com.prirai.android.nira.components.menu.Material3BrowserMenu.MenuItem.ToolbarRow(
                 onBackClick = {
-                    requireContext().components.sessionUseCases.goBack()
+                    ctx.components.sessionUseCases.goBack()
                 },
                 onForwardClick = {
-                    requireContext().components.sessionUseCases.goForward()
+                    ctx.components.sessionUseCases.goForward()
                 },
                 onReloadClick = {
-                    requireContext().components.sessionUseCases.reload()
+                    ctx.components.sessionUseCases.reload()
                 },
                 onShareClick = {
                     browserInteractor.onBrowserToolbarMenuItemTapped(
@@ -997,7 +999,7 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
         
         // Find anchor for menu
         // When contextual toolbar is enabled, prioritize menu button from it, not from address bar
-        val prefs = UserPreferences(requireContext())
+        val prefs = UserPreferences(ctx)
         val menuButton = view?.findViewById<android.widget.ImageButton>(R.id.menu_button)
         val toolbarView = unifiedToolbar?.getToolbarView()
         
@@ -1014,19 +1016,20 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
         
         anchor?.let {
             com.prirai.android.nira.components.menu.Material3BrowserMenu(
-                requireContext(),
+                ctx,
                 menuItems
             ).show(it, preferBottom)
         }
     }
 
     override fun onBackPressed(): Boolean {
+        val ctx = context ?: return super.onBackPressed()
         // First, try the default back handling (reader mode, find in page, fullscreen, etc.)
         val handled = super.onBackPressed()
         
         if (!handled) {
             // If nothing handled the back press, check if we can go back in browser history
-            val store = requireContext().components.store
+            val store = ctx.components.store
             val selectedTab = store.state.tabs.find { it.id == store.state.selectedTabId }
             
             // If we can't go back in history, navigate to home fragment
@@ -1053,6 +1056,7 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
      * Initialize homepage ViewModel for shortcuts and bookmarks
      */
     private fun initializeHomeViewModel() {
+        val ctx = context ?: return
         // Initialize database with migrations (same as ComposeHomeFragment)
         val MIGRATION_1_2: androidx.room.migration.Migration = object : androidx.room.migration.Migration(1, 2) {
             override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
@@ -1070,13 +1074,13 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
         }
 
         val database = androidx.room.Room.databaseBuilder(
-            requireContext(),
+            ctx,
             com.prirai.android.nira.browser.shortcuts.ShortcutDatabase::class.java,
             "shortcut-database"
         ).addMigrations(MIGRATION_1_2, MIGRATION_2_3).build()
 
         val factory = com.prirai.android.nira.browser.home.compose.HomeViewModelFactory(
-            bookmarkManager = com.prirai.android.nira.browser.bookmark.repository.BookmarkManager.getInstance(requireContext()),
+            bookmarkManager = com.prirai.android.nira.browser.bookmark.repository.BookmarkManager.getInstance(ctx),
             shortcutDao = database.shortcutDao()
         )
 
@@ -1087,6 +1091,8 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
      * Setup homepage Compose view with all the home screen content
      */
     private fun setupHomePageComposeView() {
+        val ctx = context ?: return
+        val act = activity
         val homePageView = binding.root.findViewById<androidx.compose.ui.platform.ComposeView>(
             R.id.homePageComposeView
         ) ?: return
@@ -1097,8 +1103,8 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
         
         // Render the actual homepage content (same as ComposeHomeFragment)
         homePageView.setContent {
-            val store = requireContext().components.store
-            val browsingModeManager = (requireActivity() as BrowserActivity).browsingModeManager
+            val store = ctx.components.store
+            val browsingModeManager = (act as? BrowserActivity)?.browsingModeManager
             
             // Observe selected tab
             val selectedTabId by store.observeAsComposableState { state -> state.selectedTabId }
@@ -1107,7 +1113,7 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
                 store.state.tabs.find { it.id == id }
             }
 
-            val isPrivateMode = selectedTab?.content?.private ?: browsingModeManager.mode.isPrivate
+            val isPrivateMode = selectedTab?.content?.private ?: browsingModeManager?.mode?.isPrivate ?: false
 
             val shortcuts by homeViewModel.shortcuts.collectAsState()
             val bookmarks by homeViewModel.bookmarks.collectAsState()
@@ -1115,7 +1121,7 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
             val isBookmarkExpanded by homeViewModel.isBookmarkSectionExpanded.collectAsState()
 
             val profileManager =
-                com.prirai.android.nira.browser.profile.ProfileManager.getInstance(requireContext())
+                com.prirai.android.nira.browser.profile.ProfileManager.getInstance(ctx)
             val currentProfile = run {
                 val tabContextId = selectedTab?.contextId
                 when {
@@ -1137,7 +1143,7 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
                 }
             }
 
-            val prefs = UserPreferences(requireContext())
+            val prefs = UserPreferences(ctx)
             val backgroundImageUrl = when (prefs.homepageBackgroundChoice) {
                 com.prirai.android.nira.settings.HomepageBackgroundChoice.NONE.ordinal -> null
                 com.prirai.android.nira.settings.HomepageBackgroundChoice.URL.ordinal,
@@ -1170,7 +1176,7 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
                         // URL will change, triggering visibility update automatically
                     },
                     onShortcutDelete = { shortcut ->
-                        com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
+                        com.google.android.material.dialog.MaterialAlertDialogBuilder(ctx)
                             .setTitle("Delete Shortcut")
                             .setMessage("Are you sure you want to delete '${shortcut.title}'?")
                             .setPositiveButton("Delete") { _, _ ->

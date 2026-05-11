@@ -1267,7 +1267,7 @@ fun DragLayer(
                         scaleY = 1.05f
                     }
             ) {
-                content(dragState.draggedItem!!)
+                dragState.draggedItem?.let { content(it) }
             }
         }
     }

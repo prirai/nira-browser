@@ -5,6 +5,9 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -14,6 +17,7 @@ import kotlinx.coroutines.withContext
  * Handles checking for updates, downloading, and installing updates
  */
 class WebAppUpdateManager(private val context: Context) {
+    private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private val _updateState = MutableLiveData<UpdateState>()
     val updateState: LiveData<UpdateState> = _updateState
 
@@ -49,7 +53,7 @@ class WebAppUpdateManager(private val context: Context) {
     fun checkForUpdates() {
         _updateState.value = UpdateState.CheckingForUpdates
 
-        CoroutineScope(Dispatchers.IO).launch {
+        scope.launch {
             try {
                 // Get all installed PWAs
                 val webApps = webAppManager.getAllWebApps().first()
@@ -132,7 +136,7 @@ class WebAppUpdateManager(private val context: Context) {
     fun installUpdate(pwaUpdate: PwaUpdate) {
         _updateState.value = UpdateState.DownloadingUpdate(pwaUpdate.webAppId, 0)
 
-        CoroutineScope(Dispatchers.IO).launch {
+        scope.launch {
             try {
                 // Simulate download progress
                 for (progress in 1..100 step 10) {
@@ -140,7 +144,7 @@ class WebAppUpdateManager(private val context: Context) {
                         _updateState.value = UpdateState.DownloadingUpdate(pwaUpdate.webAppId, progress)
                     }
                     kotlin.runCatching {
-                        Thread.sleep(200) // Simulate download time
+                        delay(200) // Simulate download time
                     }
                 }
 
@@ -197,6 +201,10 @@ class WebAppUpdateManager(private val context: Context) {
     /**
      * Reset update state
      */
+    fun destroy() {
+        scope.cancel()
+    }
+
     fun reset() {
         _updateState.value = UpdateState.Idle
         _availableUpdates.value = emptyList()

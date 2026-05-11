@@ -11,7 +11,8 @@ import com.prirai.android.nira.components.Components
  * Get the components of this application.
  */
 val Fragment.components: Components
-    get() = context!!.components
+    get() = context?.components
+        ?: throw IllegalStateException("Fragment $this is not attached to a context")
 
 fun Fragment.nav(@IdRes id: Int?, directions: NavDirections, options: NavOptions? = null) {
     NavHostFragment.findNavController(this).nav(id, directions, options)

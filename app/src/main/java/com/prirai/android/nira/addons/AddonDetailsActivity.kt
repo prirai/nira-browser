@@ -200,7 +200,8 @@ class AddonDetailsActivity : AppCompatActivity() {
 
     private fun formatDate(text: String): String {
         val formatter = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.getDefault())
-        return DateFormat.getDateInstance().format(formatter.parse(text)!!)
+        val date = formatter.parse(text) ?: return text
+        return DateFormat.getDateInstance().format(date)
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {

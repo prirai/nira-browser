@@ -72,12 +72,12 @@ class BookmarkFoldersDialog(private val context: Context, private val manager: B
         }
 
         mListView.setOnItemClickListener { _, _, position, _ ->
-            val folder = mFolderList[position] ?: mCurrentFolder.parent!!
+            val folder = mFolderList[position] ?: mCurrentFolder.parent ?: return@setOnItemClickListener
             setFolder(folder)
         }
 
         mListView.setOnItemLongClickListener { _, _, position, _ ->
-            val folder = mFolderList[position] ?: mCurrentFolder.parent!!
+            val folder = mFolderList[position] ?: mCurrentFolder.parent ?: return@setOnItemLongClickListener false
             mOnFolderSelectedListener?.onFolderSelected(mDialog, folder) ?: false
         }
     }

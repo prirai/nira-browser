@@ -132,7 +132,8 @@ class ComposeTabGroupBar @JvmOverloads constructor(
     private fun SingleTabItem(tabId: String) {
         val store = context.components.store
         val tab by produceState<TabSessionState?>(initialValue = null) {
-            store.flowScoped(lifecycleOwner!!) { flow ->
+            val owner = lifecycleOwner ?: return@produceState
+            store.flowScoped(owner) { flow ->
                 flow.map { it.tabs.find { tab -> tab.id == tabId } }
                     .distinctUntilChanged()
                     .collect { value = it }
