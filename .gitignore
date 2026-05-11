@@ -62,3 +62,6 @@ out
 *.iml
 /.kotlin/sessions/*
 /fixes.md
+/PROJECT_LOG.md
+/AGENT_JOURNAL.md
+/nira_crash.log
