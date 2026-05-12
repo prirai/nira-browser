@@ -57,6 +57,7 @@ class ModernToolbarSystem @JvmOverloads constructor(
     }
 
     fun addComponent(component: View, type: ComponentType) {
+        android.util.Log.d("ToolbarDebug", "addComponent type=$type component=$component childCount=$childCount")
 
         val layoutParams = LayoutParams(
             LayoutParams.MATCH_PARENT,

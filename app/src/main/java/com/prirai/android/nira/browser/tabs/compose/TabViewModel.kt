@@ -64,15 +64,19 @@ class TabViewModel(
         // Observe group events and refresh when groups change
         viewModelScope.launch {
             groupManager.groupEvents.collect { event ->
+                android.util.Log.d("TabGroupDebug", "TabViewModel received event: $event")
                 // Debounce rapid group events to prevent flickering
                 rebuildJob?.cancel()
                 rebuildJob = launch {
+                    android.util.Log.d("TabGroupDebug", "TabViewModel: starting 150ms debounce")
                     delay(150) // Debounce for 150ms
                     // Refresh groups when any group event occurs
                     _currentProfileId.value?.let { profileId ->
+                        android.util.Log.d("TabGroupDebug", "TabViewModel: refreshing groups for $profileId")
                         refreshGroupsForProfile(profileId)
                         // Also reload the order to reflect group changes
                         orderManager.rebuildOrderForProfile(profileId, _tabs.value)
+                        android.util.Log.d("TabGroupDebug", "TabViewModel: rebuild done, _groups=${_groups.value.size}")
                     }
                 }
             }
@@ -383,10 +387,9 @@ class TabViewModel(
                             contextId = normalizedContextId
                         )
 
-                        // Save new order after group creation completes
+                        // Refresh groups synchronously so saveCurrentOrder sees the new group
+                        refreshGroupsForProfile(profileId)
                         saveCurrentOrder(profileId)
-
-                        // Note: Group events observer will trigger the UI refresh
                     }
                 }
             }
@@ -423,10 +426,9 @@ class TabViewModel(
                             notifyChange = true
                         )
 
-                        // Save order
+                        // Refresh groups synchronously so saveCurrentOrder sees the updated group
+                        refreshGroupsForProfile(profileId)
                         saveCurrentOrder(profileId)
-
-                        // Note: Group events observer will trigger the UI refresh
                     }
                 }
             }
@@ -635,9 +637,9 @@ class TabViewModel(
                     contextId = contextId
                 )
 
+                // Refresh groups synchronously so saveCurrentOrder sees the new group
+                refreshGroupsForProfile(profileId)
                 saveCurrentOrder(profileId)
-
-                // Note: Group events observer will trigger the UI refresh
             }
         }
     }
@@ -650,9 +652,9 @@ class TabViewModel(
             _currentProfileId.value?.let { profileId ->
                 groupManager.addTabToGroup(tabId, groupId)
 
+                // Refresh groups synchronously so saveCurrentOrder sees the updated group
+                refreshGroupsForProfile(profileId)
                 saveCurrentOrder(profileId)
-
-                // Note: Group events observer will trigger the UI refresh
             }
         }
     }
@@ -665,9 +667,9 @@ class TabViewModel(
             _currentProfileId.value?.let { profileId ->
                 groupManager.removeTabFromGroup(tabId)
 
+                // Refresh groups synchronously so saveCurrentOrder sees the updated group state
+                refreshGroupsForProfile(profileId)
                 saveCurrentOrder(profileId)
-
-                // Note: Group events observer will trigger the UI refresh
             }
         }
     }
@@ -684,9 +686,9 @@ class TabViewModel(
                     groupManager.addTabToGroup(tabId, targetGroupId, notifyChange = true)
                 }
 
+                // Refresh groups synchronously so saveCurrentOrder sees the merged state
+                refreshGroupsForProfile(profileId)
                 saveCurrentOrder(profileId)
-
-                // Note: Group events observer will trigger the UI refresh
             }
         }
     }
@@ -727,9 +729,9 @@ class TabViewModel(
                         tabIds = tabIds
                     )
 
+                    // Refresh groups synchronously so saveCurrentOrder sees the reordered state
+                    refreshGroupsForProfile(profileId)
                     saveCurrentOrder(profileId)
-
-                    // Note: Group events observer will trigger the UI refresh
                 }
             }
         }

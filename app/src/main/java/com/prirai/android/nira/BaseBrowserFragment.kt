@@ -1171,11 +1171,14 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
     override fun onDestroyView() {
         super.onDestroyView()
 
+        android.util.Log.d("TabBarDebug", "BaseBrowserFragment.onDestroyView: clearing _unifiedToolbar=$_unifiedToolbar")
+
         // Lifecycle-aware features cleaned up automatically
         webContentPositionManager?.destroy()
         webContentPositionManager = null
         binding.engineView.setActivityContext(null)
         _browserInteractor = null
+        _unifiedToolbar?.destroy()
         _unifiedToolbar = null
         _binding = null
     }

@@ -53,6 +53,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import mozilla.components.browser.state.state.TabSessionState
+import com.prirai.android.nira.browser.tabgroups.TabGroupData
 import kotlin.math.abs
 
 /**
@@ -66,6 +67,7 @@ fun TabBarCompose(
     viewModel: TabViewModel,
     orderManager: TabOrderManager,
     selectedTabId: String?,
+    groups: List<com.prirai.android.nira.browser.tabgroups.TabGroupData>,
     onTabClick: (String) -> Unit,
     onTabClose: (String) -> Unit,
     modifier: Modifier = Modifier,
@@ -82,20 +84,14 @@ fun TabBarCompose(
         orderManager = orderManager
     )
 
-    // Build items from order
-    val items = remember(order, tabs) {
-        buildBarItems(order, tabs)
+    // Build items from order, using the latest groups to prevent duplicate
+    // rendering during the race between order rebuild and group creation.
+    val items = remember(order, tabs, groups) {
+        buildBarItems(order, tabs, groups)
     }
     
     // Track initial load to prevent animated transitions showing both states
-    var isInitialLoad by remember { mutableStateOf(true) }
-    LaunchedEffect(order) {
-        if (order != null && isInitialLoad) {
-            // Small delay to ensure order is fully processed
-            kotlinx.coroutines.delay(50)
-            isInitialLoad = false
-        }
-    }
+    var                     isInitialLoad by remember { mutableStateOf(false) }
 
     // Scroll to selected tab once on initial composition (e.g. app open).
     // Waits for order to finish loading, then scrolls instantly (no animation).
@@ -260,7 +256,6 @@ fun TabBarCompose(
 
                             Box(
                                 modifier = Modifier
-                                    .then(if (!isInitialLoad) Modifier.animateItem() else Modifier)
                                     .draggableItem(
                                         itemType = DraggableItemType.Group(item.groupId),
                                         coordinator = coordinator
@@ -352,8 +347,7 @@ fun TabBarCompose(
                         TabDivider(
                             id = "divider_${index + 1}",
                             coordinator = coordinator,
-                            position = index + 1,
-                            modifier = if (!isInitialLoad) Modifier.animateItem() else Modifier
+                            position = index + 1
                         )
                     }
                 }
@@ -412,35 +406,148 @@ fun TabBarCompose(
 }
 
 /**
- * Build bar items from order
+ * Build bar items from order, using live group data as the source of truth
+ * to prevent duplicate rendering during the race between order rebuild and
+ * group creation by the middleware's fire-and-forget coroutine.
+ *
+ * If the order is stale (missing a new group), we:
+ * 1. Filter out SingleTab items whose tabs belong to a known group
+ * 2. Synthesize Group items from the live groups data at the position of
+ *    the group's first tab in the current order
  */
-private fun buildBarItems(order: UnifiedTabOrder?, tabs: List<TabSessionState>): List<BarItem> {
-    if (order == null) return tabs.map { BarItem.SingleTab(it) }
+private fun buildBarItems(order: UnifiedTabOrder?, tabs: List<TabSessionState>, groups: List<TabGroupData>): List<BarItem> {
+    android.util.Log.d("TabBarDebug", "buildBarItems: order=${order?.primaryOrder?.size ?: null} groups=${groups.size} tabs=${tabs.size}")
 
-    return order.primaryOrder.mapNotNull { orderItem ->
-        when (orderItem) {
+    if (order == null) {
+        android.util.Log.d("TabBarDebug", "  -> order is null, returning ${tabs.size} SingleTab items")
+        return tabs.map { BarItem.SingleTab(it) }
+    }
+
+    if (groups.isEmpty()) {
+        // No groups — render all tabs individually
+        val result = order.primaryOrder.mapNotNull { item ->
+            when (item) {
+                is UnifiedTabOrder.OrderItem.SingleTab ->
+                    tabs.find { it.id == item.tabId }?.let { BarItem.SingleTab(it) }
+                else -> null
+            }
+        }
+        android.util.Log.d("TabBarDebug", "  -> no groups, returning ${result.size} SingleTab items from order")
+        return result
+    }
+
+    // Build a map of tab ID -> group for fast lookup
+    val tabIdToGroup = groups.associateBy { it.id }.flatMap { (groupId, group) ->
+        group.tabIds.map { tabId -> tabId to group }
+    }.toMap()
+
+    // Build set of all tab IDs that belong to any group
+    val tabIdsInGroups = tabIdToGroup.keys
+
+    // Index each tab's position in the current order for placement
+    val tabOrderIndex = mutableMapOf<String, Int>()
+    order.primaryOrder.forEachIndexed { index, item ->
+        when (item) {
+            is UnifiedTabOrder.OrderItem.SingleTab -> tabOrderIndex[item.tabId] = index
+            is UnifiedTabOrder.OrderItem.TabGroup -> item.tabIds.forEach { tabOrderIndex[it] = index }
+        }
+    }
+
+    // Deduplicate: keep each group once, keyed by groupId
+    val seenGroups = mutableSetOf<String>()
+    val result = mutableListOf<BarItem>()
+
+    // Walk the order to build items, replacing grouped tabs with their group
+    order.primaryOrder.forEach { item ->
+        when (item) {
             is UnifiedTabOrder.OrderItem.SingleTab -> {
-                tabs.find { it.id == orderItem.tabId }?.let { BarItem.SingleTab(it) }
+                val tab = tabs.find { it.id == item.tabId } ?: return@forEach
+                val group = tabIdToGroup[item.tabId]
+                if (group != null) {
+                    // This tab belongs to a group — emit the group if not already done
+                    if (group.id !in seenGroups) {
+                        seenGroups.add(group.id)
+                        val groupTabs = group.tabIds.mapNotNull { tid ->
+                            tabs.find { it.id == tid }
+                        }
+                        if (groupTabs.isNotEmpty()) {
+                            result.add(
+                                BarItem.Group(
+                                    groupId = group.id,
+                                    groupName = group.name,
+                                    color = group.color,
+                                    contextId = groupTabs.first().contextId,
+                                    tabs = groupTabs,
+                                    tabIds = group.tabIds,
+                                    isExpanded = item@ order.primaryOrder
+                                        .filterIsInstance<UnifiedTabOrder.OrderItem.TabGroup>()
+                                        .find { it.groupId == group.id }
+                                        ?.isExpanded ?: true
+                                )
+                            )
+                            android.util.Log.d("TabBarDebug", "  -> SYNTHESIZED Group from live data: ${group.id} (${groupTabs.size} tabs)")
+                        }
+                    }
+                    // Skip individual tab — it's part of the group above
+                } else {
+                    result.add(BarItem.SingleTab(tab))
+                }
             }
 
             is UnifiedTabOrder.OrderItem.TabGroup -> {
-                val groupTabs = orderItem.tabIds.mapNotNull { tabId ->
+                val groupTabs = item.tabIds.mapNotNull { tabId ->
                     tabs.find { it.id == tabId }
                 }
                 if (groupTabs.isNotEmpty()) {
-                    BarItem.Group(
-                        groupId = orderItem.groupId,
-                        groupName = orderItem.groupName,
-                        color = orderItem.color,
-                        contextId = groupTabs.first().contextId,
-                        tabs = groupTabs,
-                        tabIds = orderItem.tabIds,
-                        isExpanded = orderItem.isExpanded
-                    )
-                } else null
+                    if (item.groupId !in seenGroups) {
+                        seenGroups.add(item.groupId)
+                        result.add(
+                            BarItem.Group(
+                                groupId = item.groupId,
+                                groupName = item.groupName,
+                                color = item.color,
+                                contextId = groupTabs.first().contextId,
+                                tabs = groupTabs,
+                                tabIds = item.tabIds,
+                                isExpanded = item.isExpanded
+                            )
+                        )
+                    }
+                    android.util.Log.d("TabBarDebug", "  -> ORDER Group: ${item.groupId} (${groupTabs.size} tabs) expanded=${item.isExpanded}")
+                }
             }
         }
     }
+
+    // Handle groups whose tabs aren't in the order at all yet (brand-new group
+    // created by middleware before the order rebuild). Place at the end,
+    // sorted by the group's creation order.
+    val newGroups = groups.filter { it.id !in seenGroups }
+    if (newGroups.isNotEmpty()) {
+        android.util.Log.d("TabBarDebug", "  -> APPENDING ${newGroups.size} brand-new groups from live data")
+    }
+    newGroups
+        .sortedBy { it.createdAt }
+        .forEach { group ->
+            val groupTabs = group.tabIds.mapNotNull { tid -> tabs.find { it.id == tid } }
+            if (groupTabs.isNotEmpty()) {
+                result.add(
+                    BarItem.Group(
+                        groupId = group.id,
+                        groupName = group.name,
+                        color = group.color,
+                        contextId = groupTabs.first().contextId,
+                        tabs = groupTabs,
+                        tabIds = group.tabIds,
+                        isExpanded = true
+                    )
+                )
+            }
+        }
+
+    val resultSummary = result.joinToString(",") { it.toString() }
+    android.util.Log.d("TabBarDebug", "  => RESULT: ${result.size} items - [$resultSummary]")
+    return result
 }
 
 /**

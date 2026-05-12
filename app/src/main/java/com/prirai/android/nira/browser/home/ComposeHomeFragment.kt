@@ -205,11 +205,9 @@ class ComposeHomeFragment : Fragment() {
                         onShortcutClick = { shortcut ->
                             components.sessionUseCases.loadUrl(shortcut.url)
                             // Navigate to browser to show the loaded page
-                            try {
-                                findNavController().navigate(R.id.browserFragment)
-                            } catch (e: Exception) {
-                                // Ignore navigation errors
-                            }
+                            (requireActivity() as BrowserActivity).openToBrowser(
+                                from = com.prirai.android.nira.BrowserDirection.FromHome
+                            )
                         },
                         onShortcutDelete = { shortcut ->
                             MaterialAlertDialogBuilder(requireContext())
@@ -231,11 +229,9 @@ class ComposeHomeFragment : Fragment() {
                             } else {
                                 components.sessionUseCases.loadUrl(bookmark.url)
                                 // Navigate to browser to show the loaded page
-                                try {
-                                    findNavController().navigate(R.id.browserFragment)
-                                } catch (e: Exception) {
-                                    // Ignore navigation errors
-                                }
+                                (requireActivity() as BrowserActivity).openToBrowser(
+                                    from = com.prirai.android.nira.BrowserDirection.FromHome
+                                )
                             }
                         },
                         onBookmarkToggle = { viewModel.toggleBookmarkSection() },
@@ -269,7 +265,6 @@ class ComposeHomeFragment : Fragment() {
     }
 
     private fun setupUnifiedToolbar(coordinatorLayout: CoordinatorLayout) {
-        val prefs = UserPreferences(requireContext())
         requireContext().components.tabGroupManager
 
         // Create toolbar interactor
@@ -308,6 +303,7 @@ class ComposeHomeFragment : Fragment() {
         }
 
         // Create UnifiedToolbar in the coordinatorLayout (not fragment container)
+        android.util.Log.d("TabBarDebug", "ComposeHomeFragment.setupUnifiedToolbar: creating UnifiedToolbar")
         unifiedToolbar = UnifiedToolbar.create(
             context = requireContext(),
             parent = coordinatorLayout,
@@ -316,36 +312,19 @@ class ComposeHomeFragment : Fragment() {
             customTabSession = null,
             store = components.store
         )
+        // Remove the tab group bar to prevent duplicate tab bar instances.
+        // BrowserFragment already creates its own tab bar, and having both
+        // fragments' toolbars in the back stack causes duplicate islands.
+        unifiedToolbar?.removeTabGroupBar()
+        
+        // Do NOT call getBottomComponentsContainer() here. The home fragment only
+        // needs the address bar — never the bottom container (tab bar / contextual).
+        // Adding a bottom container creates a duplicate during fragment transitions.
+        
+        android.util.Log.d("TabBarDebug", "ComposeHomeFragment.setupUnifiedToolbar: done, unifiedToolbar=$unifiedToolbar")
         
         // Add swipe gesture support to toolbar for tab switching
         setupToolbarGestureHandler(coordinatorLayout)
-        
-        // For TOP toolbar mode, add bottom components directly to fragment layout
-        if (prefs.toolbarPosition == ToolbarPosition.TOP.ordinal) {
-            val bottomContainer = unifiedToolbar?.getBottomComponentsContainer()
-            
-            bottomContainer?.let { container ->
-                val layoutParams = CoordinatorLayout.LayoutParams(
-                    CoordinatorLayout.LayoutParams.MATCH_PARENT,
-                    CoordinatorLayout.LayoutParams.WRAP_CONTENT
-                ).apply {
-                    gravity = android.view.Gravity.BOTTOM
-                }
-                
-                // Apply window insets to avoid navigation bar
-                androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(container) { view, insets ->
-                    val systemBars = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars())
-                    view.setPadding(0, 0, 0, systemBars.bottom)
-                    insets
-                }
-                
-                coordinatorLayout.addView(container, layoutParams)
-                container.visibility = View.VISIBLE
-                
-                // Request insets to be applied
-                androidx.core.view.ViewCompat.requestApplyInsets(container)
-            }
-        }
 
         // Set tab selection listener - using EXACT same approach as TabsBottomSheetFragment
         unifiedToolbar?.setOnTabSelectedListener { tabId ->
@@ -403,7 +382,9 @@ class ComposeHomeFragment : Fragment() {
                 com.prirai.android.nira.browser.tabs.compose.TabSheetStateManager.notifyTabSheetDismissed()
                 
                 // Navigate to browser fragment to show the new tab
-                findNavController().navigate(R.id.browserFragment)
+                (requireActivity() as BrowserActivity).openToBrowser(
+                    from = com.prirai.android.nira.BrowserDirection.FromHome
+                )
             }
 
             override fun onTabCountClicked() {
@@ -476,11 +457,9 @@ class ComposeHomeFragment : Fragment() {
                 if (url != null && url != "about:homepage" && url != "about:privatebrowsing") {
                     // Navigate to browser fragment to show the tab
                     if (isAdded && view != null) {
-                        try {
-                            findNavController().navigate(R.id.browserFragment)
-                        } catch (e: Exception) {
-                            // Navigation failed, ignore
-                        }
+                        (requireActivity() as BrowserActivity).openToBrowser(
+                            from = com.prirai.android.nira.BrowserDirection.FromHome
+                        )
                     }
                 }
             }
@@ -555,6 +534,8 @@ class ComposeHomeFragment : Fragment() {
 
     override fun onDestroyView() {
         super.onDestroyView()
+        android.util.Log.d("TabBarDebug", "ComposeHomeFragment.onDestroyView: clearing unifiedToolbar=$unifiedToolbar")
+        unifiedToolbar = null
         restoreDefaultStyling()
     }
 
@@ -581,7 +562,9 @@ class ComposeHomeFragment : Fragment() {
             components.tabsUseCases.selectTab(newTab.id)
 
             if (newTab.content.url != "about:homepage") {
-                findNavController().navigate(R.id.browserFragment)
+                (requireActivity() as BrowserActivity).openToBrowser(
+                    from = com.prirai.android.nira.BrowserDirection.FromHome
+                )
             }
         }
     }

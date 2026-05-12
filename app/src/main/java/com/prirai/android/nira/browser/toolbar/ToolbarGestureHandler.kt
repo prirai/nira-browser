@@ -230,7 +230,9 @@ class ToolbarGestureHandler(
 
                 val currentTab = store.state.selectedTab ?: return@doOnEnd
                 if(currentTab.content.url == "about:homepage" && tab.content.url != "about:homepage") {
-                    activity.findNavController(R.id.container).navigate(R.id.browserFragment)
+                    (activity as com.prirai.android.nira.BrowserActivity).openToBrowser(
+                        from = com.prirai.android.nira.BrowserDirection.FromHome
+                    )
                 } else if(tab.content.url == "about:homepage" && currentTab.content.url != "about:homepage") {
                     activity.findNavController(R.id.container).navigate(R.id.homeFragment)
                 }

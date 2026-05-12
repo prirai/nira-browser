@@ -233,7 +233,9 @@ class UnifiedTabGroupManager private constructor(private val context: Context) {
             tabToGroupMap[tabId] = groupId
         }
 
+        android.util.Log.d("TabGroupDebug", "createGroup: updating groupsState (${groupsCache.size} groups)")
         emitStateUpdate()
+        android.util.Log.d("TabGroupDebug", "createGroup: emitting GroupCreated event for $groupId")
         _groupEvents.emit(GroupEvent.GroupCreated(groupData))
 
         groupData

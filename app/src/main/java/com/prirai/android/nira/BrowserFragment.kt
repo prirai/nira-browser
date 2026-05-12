@@ -341,7 +341,13 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
 
 
     override fun initializeUnifiedToolbar(view: View, tab: SessionState) {
+        if (_unifiedToolbar != null) {
+            android.util.Log.d("TabBarDebug", "initializeUnifiedToolbar: already initialized, skipping")
+            return
+        }
+
         val prefs = UserPreferences(requireContext())
+        android.util.Log.d("TabBarDebug", "initializeUnifiedToolbar: parent=${System.identityHashCode(binding.browserLayout)}")
 
         try {
             // Create UnifiedToolbar using the interactor from base class

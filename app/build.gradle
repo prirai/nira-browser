@@ -23,7 +23,7 @@ android {
         minSdkVersion 26
         targetSdkVersion 36
         // Increment by 4 with each update, by 1 with each fix
-        versionCode = 46
+        versionCode = 47
         versionName = "0.5.4"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -46,6 +46,7 @@ android {
         debug {
             resValue "string", "app_name", "Nira (Debug)"
             applicationIdSuffix = '.debug'
+            buildConfigField "String", "DEBUG_VERSION", '"d59"'
         }
     }
 

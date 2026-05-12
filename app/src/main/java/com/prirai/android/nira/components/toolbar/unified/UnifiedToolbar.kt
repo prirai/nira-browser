@@ -256,6 +256,12 @@ class UnifiedToolbar @JvmOverloads constructor(
             return
         }
 
+        if (tabGroupBar != null) {
+            android.util.Log.d("TabBarDebug", "createTabGroupBar: tabGroupBar already exists, skipping")
+            return
+        }
+
+        android.util.Log.d("TabBarDebug", "createTabGroupBar: creating new ComposeTabBarWithProfileSwitcher")
         tabGroupBar = ComposeTabBarWithProfileSwitcher(context).apply {
             // Material 3 theming is already applied by ComposeTabBarWithProfileSwitcher
             
@@ -754,26 +760,27 @@ class UnifiedToolbar @JvmOverloads constructor(
             return null
         }
         
-        // Create container lazily
-        if (bottomComponentsContainer == null) {
-            val container = android.widget.LinearLayout(context).apply {
-                orientation = android.widget.LinearLayout.VERTICAL
-                layoutParams = LayoutParams(
-                    LayoutParams.MATCH_PARENT,
-                    LayoutParams.WRAP_CONTENT
-                ).apply {
-                    gravity = android.view.Gravity.BOTTOM
-                }
+        // Always create a fresh container so each caller (e.g. each fragment)
+        // gets its own view that lives and dies with that fragment's hierarchy.
+        val container = android.widget.LinearLayout(context).apply {
+            orientation = android.widget.LinearLayout.VERTICAL
+            layoutParams = LayoutParams(
+                LayoutParams.MATCH_PARENT,
+                LayoutParams.WRAP_CONTENT
+            ).apply {
+                gravity = android.view.Gravity.BOTTOM
             }
-            
-            // Add tab bar if it exists
-            tabGroupBar?.let { container.addView(it) }
-            
-            // Add contextual toolbar if it exists
-            contextualToolbar?.let { container.addView(it) }
-            
-            bottomComponentsContainer = container
         }
+        
+        // Reparent tab bar into the new container
+        (tabGroupBar?.parent as? ViewGroup)?.removeView(tabGroupBar)
+        tabGroupBar?.let { container.addView(it) }
+        
+        // Reparent contextual toolbar into the new container
+        (contextualToolbar?.parent as? ViewGroup)?.removeView(contextualToolbar)
+        contextualToolbar?.let { container.addView(it) }
+        
+        bottomComponentsContainer = container
         
         return bottomComponentsContainer
     }
@@ -869,6 +876,21 @@ class UnifiedToolbar @JvmOverloads constructor(
             } else {
                 android.graphics.Color.argb(255, 255, 251, 254) // 100% opaque Material 3 light surface
             }
+        }
+    }
+
+    fun destroy() {
+        reloadStopIntegration?.stop()
+        reloadStopIntegration = null
+        browserToolbarView = null
+        tabGroupBar = null
+        contextualToolbar = null
+    }
+
+    fun removeTabGroupBar() {
+        tabGroupBar?.let { bar ->
+            (bar.parent as? ViewGroup)?.removeView(bar)
+            tabGroupBar = null
         }
     }
 

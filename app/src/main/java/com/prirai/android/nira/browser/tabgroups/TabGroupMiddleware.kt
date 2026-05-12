@@ -137,12 +137,14 @@ class TabGroupMiddleware(
                 // Group the new tab with the source tab
                 CoroutineScope(Dispatchers.IO).launch {
                     try {
+                        android.util.Log.d(TAG, "BEFORE createGroup: source=${sourceTab.id}, new=${newTab.id}")
                         tabGroupManager.handleNewTabFromLink(
                             newTabId = newTab.id,
                             newTabUrl = effectiveUrl,
                             sourceTabId = sourceTab.id,
                             sourceTabUrl = sourceUrl
                         )
+                        android.util.Log.d(TAG, "AFTER createGroup: groupsCache=${tabGroupManager.getAllGroups().map { "${it.id.substring(0..7)}=${it.tabIds}" }}")
                         Log.d(TAG, "Successfully grouped tabs")
                     } catch (e: Exception) {
                         Log.e(TAG, "Failed to group tabs", e)

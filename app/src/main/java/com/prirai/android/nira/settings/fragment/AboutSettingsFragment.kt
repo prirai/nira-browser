@@ -2,8 +2,9 @@ package com.prirai.android.nira.settings.fragment
 
 import android.os.Bundle
 import androidx.core.content.pm.PackageInfoCompat
+import com.prirai.android.nira.BuildConfig
 import com.prirai.android.nira.R
-import org.mozilla.geckoview.BuildConfig
+import org.mozilla.geckoview.BuildConfig as GeckoBuildConfig
 
 
 class AboutSettingsFragment : BaseSettingsFragment() {
@@ -15,15 +16,21 @@ class AboutSettingsFragment : BaseSettingsFragment() {
         val packageInfo =
             requireContext().packageManager.getPackageInfo(requireContext().packageName, 0)
 
+        val versionSummary = if (BuildConfig.DEBUG) {
+            "${packageInfo.versionName} (${PackageInfoCompat.getLongVersionCode(packageInfo)}) — ${BuildConfig.DEBUG_VERSION}"
+        } else {
+            "${packageInfo.versionName} (${PackageInfoCompat.getLongVersionCode(packageInfo)})"
+        }
+
         clickablePreference(
             preference = "pref_version",
-            summary = "${packageInfo.versionName} (${PackageInfoCompat.getLongVersionCode(packageInfo)})",
+            summary = versionSummary,
             onClick = { }
         )
 
         clickablePreference(
             preference = "pref_version_geckoview",
-            summary = BuildConfig.MOZ_APP_VERSION + "-" + BuildConfig.MOZ_APP_BUILDID,
+            summary = GeckoBuildConfig.MOZ_APP_VERSION + "-" + GeckoBuildConfig.MOZ_APP_BUILDID,
             onClick = { }
         )
 

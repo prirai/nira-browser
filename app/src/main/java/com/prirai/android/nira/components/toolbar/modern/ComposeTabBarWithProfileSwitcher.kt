@@ -34,6 +34,39 @@ class ComposeTabBarWithProfileSwitcher @JvmOverloads constructor(
     defStyleAttr: Int = 0
 ) : FrameLayout(context, attrs, defStyleAttr) {
 
+    companion object {
+        private var nextInstanceId = 0
+        private val activeInstances = mutableListOf<java.lang.ref.WeakReference<ComposeTabBarWithProfileSwitcher>>()
+        fun liveCount(): Int = activeInstances.count { it.get() != null }
+    }
+
+    private val instanceId = nextInstanceId++
+
+    init {
+        android.util.Log.d("TabBarDebug", "CTBPS #$instanceId created (live=${liveCount()})")
+        android.util.Log.d("TabBarDebug", "  stack=" + android.util.Log.getStackTraceString(Exception()))
+    }
+
+    override fun onAttachedToWindow() {
+        super.onAttachedToWindow()
+        // Hide all other instances that are still attached
+        activeInstances.removeAll { it.get() == null }
+        activeInstances.forEach { ref ->
+            val other = ref.get()
+            if (other != null && other !== this) {
+                other.visibility = android.view.View.GONE
+                android.util.Log.w("TabBarDebug", "Hiding stale CTBPS #${other.instanceId}, keeping #${this.instanceId}")
+            }
+        }
+        activeInstances.add(java.lang.ref.WeakReference(this))
+        android.util.Log.d("TabBarDebug", "CTBPS #$instanceId attached, parent=$parent, live=${liveCount()}")
+    }
+
+    override fun onDetachedFromWindow() {
+        super.onDetachedFromWindow()
+        android.util.Log.d("TabBarDebug", "CTBPS #$instanceId detached")
+        activeInstances.removeAll { it.get() == null || it.get() === this }
+    }
     private val composeView = ComposeView(context).apply {
         setViewCompositionStrategy(
             androidx.compose.ui.platform.ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed
@@ -49,6 +82,7 @@ class ComposeTabBarWithProfileSwitcher @JvmOverloads constructor(
     private var groupManager: UnifiedTabGroupManager? = null
     private var tabViewModel: TabViewModel? = null
     private val coroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+    private val _profileIconTrigger = kotlinx.coroutines.flow.MutableStateFlow(0)
 
     init {
         clipToPadding = false
@@ -100,7 +134,12 @@ class ComposeTabBarWithProfileSwitcher @JvmOverloads constructor(
         this.onProfileSelected = onProfileSelected
         this.onPrivateModeSelected = onPrivateModeSelected
 
+        android.util.Log.d("TabBarDebug", "setup #$instanceId: composeView parent=${composeView.parent}")
+        android.util.Log.d("TabBarDebug", "setup #$instanceId: this.parent=${this.parent} this.isAttachedToWindow=${this.isAttachedToWindow}")
         setupComposeContent()
+        post {
+            android.util.Log.d("TabBarDebug", "after setup #$instanceId: childCount=$childCount, this.parent=${this.parent}")
+        }
     }
 
     private fun setupComposeContent() {
@@ -132,9 +171,12 @@ class ComposeTabBarWithProfileSwitcher @JvmOverloads constructor(
             }
         }
 
-        // Get current profile and mode - recalculate when browserState changes
-        val currentProfile = remember(browserState.value) { profileManager.getActiveProfile() }
-        val isPrivateMode = remember(browserState.value) { profileManager.isPrivateMode() }
+        // Observe profile icon trigger so that updateProfileIcon() forces re-evaluation
+        val profileTrigger by _profileIconTrigger.collectAsState()
+
+        // Get current profile and mode - recalculate when browserState or trigger changes
+        val currentProfile = remember(browserState.value, profileTrigger) { profileManager.getActiveProfile() }
+        val isPrivateMode = remember(browserState.value, profileTrigger) { profileManager.isPrivateMode() }
 
         // Filter tabs based on current profile - this will update when browserState changes
         val tabs = remember(browserState.value.tabs, currentProfile, isPrivateMode) {
@@ -155,15 +197,46 @@ class ComposeTabBarWithProfileSwitcher @JvmOverloads constructor(
 
         val orderManager = tabOrderManager ?: return
         val viewModel = tabViewModel ?: return
+        val manager = groupManager ?: return
+
+        // Collect groups directly from the manager (updated synchronously on IO)
+        // rather than from the ViewModel (updated via 150ms-debounced observer).
+        // This ensures the UI sees new groups immediately, preventing a stale
+        // intermediate order that renders duplicate tab items.
+        val rawGroups by manager.groupsState.collectAsState()
+        android.util.Log.d("TabBarDebug", "rawGroups changed: size=${rawGroups.size} ids=${rawGroups.map { it.id.substring(0..7) }}")
+
+        // Determine contextId for the active profile
+        val profileId = if (isPrivateMode) "private" else currentProfile.id
+        val profileContextId = when {
+            isPrivateMode -> "private"
+            profileId == "default" -> "profile_default"
+            else -> "profile_$profileId"
+        }
+
+        // Filter groups to the current profile (mirrors refreshGroupsForProfile logic)
+        val profileGroups = remember(rawGroups, profileContextId, tabs) {
+            val filtered = rawGroups.filter { group ->
+                when {
+                    profileId == "default" -> group.contextId == "profile_default" || group.contextId == null
+                    else -> group.contextId == profileContextId
+                }
+            }.filter { group ->
+                group.tabIds.any { tabId -> tabs.any { it.id == tabId } }
+            }
+            android.util.Log.d("TabBarDebug", "profileGroups filtered: ${filtered.size} groups")
+            filtered
+        }
 
         // Update orderManager and viewModel with current tabs
-        LaunchedEffect(tabs, selectedTabId, currentProfile, isPrivateMode) {
-            val profileId = if (isPrivateMode) "private" else currentProfile.id
-
-            // Rebuild order to include any new tabs
+        LaunchedEffect(tabs, selectedTabId, currentProfile, isPrivateMode, profileGroups) {
+            android.util.Log.d("TabBarDebug", "LaunchedEffect fired: profileId=$profileId tabs=${tabs.size} profileGroups=${profileGroups.size}")
+            // Rebuild order to include any new tabs/groups
             orderManager.rebuildOrderForProfile(profileId, tabs)
+            android.util.Log.d("TabBarDebug", "rebuildOrderForProfile done, currentOrder=${orderManager.currentOrder.value?.primaryOrder?.size}")
 
             viewModel.loadTabsForProfile(profileId, tabs, selectedTabId)
+            android.util.Log.d("TabBarDebug", "loadTabsForProfile done, viewModel groups=${viewModel.groups.value.size}")
         }
 
         // Set up global snackbar manager scope
@@ -216,6 +289,7 @@ class ComposeTabBarWithProfileSwitcher @JvmOverloads constructor(
                 viewModel = viewModel,
                 orderManager = orderManager,
                 selectedTabId = selectedTabId,
+                groups = profileGroups,
                 onTabClick = { tabId: String ->
                     onTabSelected?.invoke(tabId)
                 },
@@ -233,12 +307,14 @@ class ComposeTabBarWithProfileSwitcher @JvmOverloads constructor(
 
 
     fun updateTabs(tabs: List<TabSessionState>, selectedId: String?) {
-        // The compose content will automatically update via produceState
-        setupComposeContent()
+        // No-op: the composable already observes the store reactively via produceState.
+        // Calling setupComposeContent() here restarts the entire composition on every
+        // store emission (20+ times during page load), which can cause duplicate
+        // composition instances to accumulate on the ComposeView.
     }
 
     fun updateProfileIcon(profile: BrowserProfile) {
-        setupComposeContent()
+        _profileIconTrigger.value++
     }
 
 }

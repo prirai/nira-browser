@@ -210,7 +210,9 @@ class HomeToolbarGestureHandler(
                 contentLayout.translationX = 0f
 
                 if(tab.content.url != "about:homepage") {
-                    activity.findNavController(R.id.container).navigate(R.id.browserFragment)
+                    (activity as com.prirai.android.nira.BrowserActivity).openToBrowser(
+                        from = com.prirai.android.nira.BrowserDirection.FromHome
+                    )
                 }
 
                 lruManager.markAsSwipeNavigation(tab.id)
