@@ -8,6 +8,7 @@ import androidx.core.content.ContextCompat.startActivity
 import androidx.core.net.toUri
 import androidx.navigation.NavController
 import com.prirai.android.nira.addons.AddonsActivity
+import com.prirai.android.nira.browser.sync.FxaSyncManager
 import com.prirai.android.nira.ext.components
 import com.prirai.android.nira.preferences.UserPreferences
 import kotlinx.coroutines.CoroutineScope
@@ -57,7 +58,13 @@ class AppRequestInterceptor(val context: Context) : RequestInterceptor {
         if (uri.startsWith("https://accounts.firefox.com")) {
             Log.d("FxaAuth", "onLoadRequest: url=$uri fxaInterceptorNull=${fxaInterceptor == null}")
         }
-        // Let the FxA interceptor handle the OAuth redirect first.
+        // Handle FxA OAuth redirect directly to complete authentication.
+        // This bypasses FirefoxAccountsAuthFeature.interceptor which may fail silently
+        // when latestAuthState doesn't match or OAuth state is not properly tracked.
+        if (uri.startsWith(FxaSyncManager.REDIRECT_URL)) {
+            handleFxaRedirect(uri)?.let { return it }
+        }
+        // Fallback: let the Mozilla FxA interceptor handle the OAuth redirect
         fxaInterceptor?.onLoadRequest(
             engineSession, uri, lastUri, hasUserGesture, isSameDomain,
             isRedirect, isDirectNavigation, isSubframeRequest
@@ -129,7 +136,35 @@ class AppRequestInterceptor(val context: Context) : RequestInterceptor {
 
         return response
     }
-    
+
+    private fun handleFxaRedirect(uri: String): InterceptionResponse? {
+        Log.d("FxaAuth", "handleFxaRedirect: uri=$uri")
+        try {
+            val parsedUri = uri.toUri()
+            val code = parsedUri.getQueryParameter("code")
+            val state = parsedUri.getQueryParameter("state")
+            Log.d("FxaAuth", "handleFxaRedirect: code=$code state=$state")
+            if (code != null && state != null) {
+                val action = parsedUri.getQueryParameter("action")
+                Log.d("FxaAuth", "handleFxaRedirect: calling finishAuthentication action=$action")
+                CoroutineScope(Dispatchers.Main).launch {
+                    try {
+                        context.components.fxaSyncManager.finishAuthentication(code, state, action)
+                        Log.d("FxaAuth", "handleFxaRedirect: finishAuthentication returned")
+                    } catch (e: Exception) {
+                        Log.e("FxaAuth", "handleFxaRedirect: finishAuthentication error: ${e.message}")
+                    }
+                }
+                return InterceptionResponse.Url("about:blank")
+            } else {
+                Log.d("FxaAuth", "handleFxaRedirect: missing code or state, falling through")
+            }
+        } catch (e: Exception) {
+            Log.e("FxaAuth", "handleFxaRedirect: parse error: ${e.message}")
+        }
+        return null
+    }
+
     private fun handleCustomScheme(uri: String) {
         when {
             uri.startsWith("nira://search?q=") -> {

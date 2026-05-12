@@ -64,8 +64,6 @@ import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.fragment.app.Fragment
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.prirai.android.nira.BrowserActivity
 import com.prirai.android.nira.ext.components
@@ -125,17 +123,6 @@ class SyncSettingsFragment : Fragment() {
                     var deviceCount by remember { mutableStateOf<Int?>(null) }
 
                     val lifecycleOwner = LocalLifecycleOwner.current
-
-                    // Refresh auth state on resume
-                    DisposableEffect(lifecycleOwner) {
-                        val observer = LifecycleEventObserver { _, event ->
-                            if (event == Lifecycle.Event.ON_RESUME) {
-                                coroutineScope.launch { syncManager.refreshAuthState() }
-                            }
-                        }
-                        lifecycleOwner.lifecycle.addObserver(observer)
-                        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
-                    }
 
                     // Show toast on successful sign-in
                     LaunchedEffect(Unit) {
@@ -218,6 +205,7 @@ class SyncSettingsFragment : Fragment() {
                         syncBookmarksEnabled = syncBookmarksEnabled,
                         onSignIn = {
                             isSigningIn = true
+                            android.util.Log.d("FxaAuth", "Sign in button pressed, calling beginAuthentication")
                             requireContext().components.fxaAuthFeature
                                 .beginAuthentication(requireContext(), settingsEntryPoint)
                         },

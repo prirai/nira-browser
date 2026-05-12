@@ -438,7 +438,11 @@ open class Components(private val applicationContext: Context) {
             redirectUrl = com.prirai.android.nira.browser.sync.FxaSyncManager.REDIRECT_URL,
             onBeginAuthentication = { ctx, authUrl ->
                 CoroutineScope(SupervisorJob() + Dispatchers.Main).launch {
-                    tabsUseCases.addTab(authUrl, selectTab = true)
+                    android.util.Log.d("FxaAuth", "onBeginAuthentication: $authUrl")
+                    tabsUseCases.addTab(
+                        url = authUrl,
+                        selectTab = true,
+                    )
                     ctx.startActivity(
                         android.content.Intent(ctx, BrowserActivity::class.java).apply {
                             flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK or

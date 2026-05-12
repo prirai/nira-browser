@@ -187,6 +187,14 @@ class TabViewModel(
                 groupsList.map { it.id }.toSet()
             }
 
+            // Safety guard: prevent setting empty tabs when store has tabs
+            // (prevents transient empty states from corrupting the tab view)
+            if (orderedTabs.isEmpty() && tabs.isNotEmpty()) {
+                android.util.Log.w("TabViewModel",
+                    "loadTabsForProfile: orderedTabs empty but store has ${tabs.size} tabs — skipping update")
+                return@launch
+            }
+
             // Update all state atomically to prevent flickering
             _tabs.value = orderedTabs
             _groups.value = groupsList

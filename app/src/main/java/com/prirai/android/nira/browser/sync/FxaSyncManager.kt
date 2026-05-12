@@ -2,32 +2,39 @@ package com.prirai.android.nira.browser.sync
 
 import android.content.Context
 import android.os.Build
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.LifecycleRegistry
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import mozilla.appservices.fxaclient.FxaConfig
 import mozilla.appservices.fxaclient.FxaServer
+import mozilla.components.concept.sync.AccountEvent
+import mozilla.components.concept.sync.AccountEventsObserver
 import mozilla.components.concept.sync.AccountObserver
 import mozilla.components.concept.sync.AuthType
 import mozilla.components.concept.sync.DeviceCapability
+import mozilla.components.concept.sync.DeviceCommandIncoming
 import mozilla.components.concept.sync.DeviceConfig
 import mozilla.components.concept.sync.DeviceType
 import mozilla.components.concept.sync.OAuthAccount
 import mozilla.components.concept.sync.Profile
+import mozilla.components.service.fxa.FxaAuthData
 import mozilla.components.service.fxa.PeriodicSyncConfig
 import mozilla.components.service.fxa.ServerConfig
 import mozilla.components.service.fxa.SyncConfig
 import mozilla.components.service.fxa.SyncEngine
 import mozilla.components.service.fxa.manager.FxaAccountManager
 import mozilla.components.service.fxa.sync.SyncReason
+import mozilla.components.service.fxa.toAuthType
 
 /**
  * Singleton wrapper around [FxaAccountManager].
@@ -50,6 +57,14 @@ class FxaSyncManager private constructor(private val context: Context) {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
+    private val noOpLifecycleOwner = object : LifecycleOwner {
+        private val registry = LifecycleRegistry(this)
+        override val lifecycle: Lifecycle get() = registry
+        init {
+            registry.handleLifecycleEvent(Lifecycle.Event.ON_RESUME)
+        }
+    }
+
     /** Exposed for use by [mozilla.components.feature.accounts.FxaWebChannelFeature]. */
     val serverConfig = FxaConfig(FxaServer.Release, CLIENT_ID, REDIRECT_URL)
 
@@ -71,6 +86,9 @@ class FxaSyncManager private constructor(private val context: Context) {
     private val _authSuccessEvent = MutableSharedFlow<String?>(extraBufferCapacity = 1)
     val authSuccessEvent: SharedFlow<String?> = _authSuccessEvent.asSharedFlow()
 
+    private val _incomingTabs = MutableSharedFlow<DeviceCommandIncoming.TabReceived>(extraBufferCapacity = 5)
+    val incomingTabs: SharedFlow<DeviceCommandIncoming.TabReceived> = _incomingTabs.asSharedFlow()
+
     val accountManager: FxaAccountManager by lazy {
         FxaAccountManager(
             context = context,
@@ -78,7 +96,8 @@ class FxaSyncManager private constructor(private val context: Context) {
             deviceConfig = DeviceConfig(
                 name = "Nira Browser on ${Build.MODEL}",
                 type = DeviceType.MOBILE,
-                capabilities = setOf(DeviceCapability.SEND_TAB)
+                capabilities = setOf(DeviceCapability.SEND_TAB),
+                secureStateAtRest = true,
             ),
             syncConfig = SyncConfig(
                 supportedEngines = setOf(SyncEngine.History, SyncEngine.Tabs, SyncEngine.Bookmarks),
@@ -87,40 +106,33 @@ class FxaSyncManager private constructor(private val context: Context) {
             applicationScopes = setOf("https://identity.mozilla.com/apps/oldsync")
         ).also { manager ->
             manager.register(accountObserver)
-            // Start the account manager as early as possible so WebChannel/OAuth completions
-            // are not dropped when the user opens Sync Settings before initialize() runs.
-            // Calling start() multiple times is safe — it is idempotent after the first call.
-            android.util.Log.d("FxaAuth", "accountManager lazy init: calling start()")
-            scope.launch {
-                try {
-                    manager.start()
-                    android.util.Log.d("FxaAuth", "accountManager.start() completed")
-                } catch (e: Exception) {
-                    android.util.Log.e("FxaAuth", "accountManager.start() failed: ${e.message}")
-                    android.util.Log.w("FxaSyncManager", "accountManager.start() failed: ${e.message}")
-                }
-            }
+            manager.registerForAccountEvents(accountEventsObserver, noOpLifecycleOwner, false)
+            // start() is called explicitly from BrowserApp.initializeAfterFirstFrame()
         }
     }
 
     private val accountObserver = object : AccountObserver {
+
+        override fun onReady(authenticatedAccount: OAuthAccount?) {
+            _isSignedIn.value = authenticatedAccount != null
+            if (authenticatedAccount != null) {
+                scope.launch {
+                    _accountEmail.value = accountManager.accountProfile()?.email
+                }
+            }
+        }
+
         override fun onAuthenticated(account: OAuthAccount, authType: AuthType) {
-            android.util.Log.d("FxaAuth", "onAuthenticated: authType=$authType")
-            android.util.Log.d("FxaSyncManager", "onAuthenticated: authType=$authType")
             _isSignedIn.value = true
             _syncError.value = null
             scope.launch {
-                val email = accountManager.accountProfile()?.email
-                android.util.Log.d("FxaAuth", "onAuthenticated: email=$email")
-                android.util.Log.d("FxaSyncManager", "onAuthenticated: email=$email")
-                _accountEmail.value = email
-                _authSuccessEvent.emit(email)
+                val profile = accountManager.accountProfile()
+                _accountEmail.value = profile?.email
+                _authSuccessEvent.emit(profile?.email)
             }
         }
 
         override fun onLoggedOut() {
-            android.util.Log.d("FxaAuth", "logged out")
-            android.util.Log.d("FxaSyncManager", "onLoggedOut called")
             _isSignedIn.value = false
             _accountEmail.value = null
             _lastSyncTime.value = null
@@ -128,54 +140,40 @@ class FxaSyncManager private constructor(private val context: Context) {
         }
 
         override fun onProfileUpdated(profile: Profile) {
-            android.util.Log.d("FxaAuth", "onProfileUpdated: email=${profile.email}")
-            android.util.Log.d("FxaSyncManager", "onProfileUpdated: email=${profile.email}")
             _accountEmail.value = profile.email
         }
 
         override fun onAuthenticationProblems() {
-            android.util.Log.d("FxaAuth", "authentication problems")
-            android.util.Log.d("FxaSyncManager", "onAuthenticationProblems called")
             _isSignedIn.value = false
             _syncError.value = "Authentication problem — please sign in again."
         }
+    }
 
-        override fun onReady(authenticatedAccount: OAuthAccount?) {
-            android.util.Log.d("FxaAuth", "onReady: hasAccount=${authenticatedAccount != null}")
-            android.util.Log.d("FxaSyncManager", "onReady: authenticated=${authenticatedAccount != null}")
+    private val accountEventsObserver = object : AccountEventsObserver {
+        override fun onEvents(events: List<AccountEvent>) {
+            events.forEach {
+                when (it) {
+                    is AccountEvent.DeviceCommandIncoming -> {
+                        when (it.command) {
+                            is DeviceCommandIncoming.TabReceived -> {
+                                val cmd = it.command as DeviceCommandIncoming.TabReceived
+                                scope.launch { _incomingTabs.emit(cmd) }
+                            }
+                            is DeviceCommandIncoming.TabsClosed -> { /* ignore */ }
+                        }
+                    }
+                    else -> { /* ignore other event types */ }
+                }
+            }
         }
     }
 
-    /**
-     * Starts the account manager and restores any existing session.
-     * Must be called once during app startup (from a coroutine).
-     * Gracefully degrades if initialization fails.
-     */
-    suspend fun initialize() {
+    suspend fun start() {
         try {
-            android.util.Log.d("FxaAuth", "initialize(): calling accountManager.start()")
             accountManager.start()
-            android.util.Log.d("FxaAuth", "initialize(): accountManager.start() returned")
-            _isSignedIn.value = accountManager.authenticatedAccount() != null
-            if (_isSignedIn.value) {
-                _accountEmail.value = accountManager.accountProfile()?.email
-            }
+            android.util.Log.d("FxaAuth", "start() completed successfully")
         } catch (e: Exception) {
-            android.util.Log.e("FxaAuth", "initialize() failed: ${e.message}")
-            // Sync is unavailable but the app continues normally
-        }
-    }
-
-    suspend fun refreshAuthState() = withContext(Dispatchers.IO) {
-        try {
-            val account = accountManager.authenticatedAccount()
-            val isNowSignedIn = account != null
-            _isSignedIn.value = isNowSignedIn
-            if (isNowSignedIn) {
-                _accountEmail.value = accountManager.accountProfile()?.email
-            }
-        } catch (e: Exception) {
-            // ignore; state stays as-is
+            android.util.Log.e("FxaAuth", "start() failed: ${e.message}")
         }
     }
 
@@ -183,16 +181,29 @@ class FxaSyncManager private constructor(private val context: Context) {
         try {
             accountManager.logout()
         } catch (e: Exception) {
-            // Ignore sign-out errors
+            android.util.Log.e("FxaAuth", "signOut error: ${e.message}")
         }
     }
 
-    /** Triggers an immediate sync. Catches network errors and exposes them via [syncError]. */
+    suspend fun finishAuthentication(code: String, state: String, action: String?) {
+        try {
+            val authData = FxaAuthData(
+                authType = action.toAuthType(),
+                code = code,
+                state = state,
+            )
+            accountManager.finishAuthentication(authData)
+        } catch (e: Exception) {
+            android.util.Log.e("FxaAuth", "finishAuthentication failed: ${e.message}")
+        }
+    }
+
     suspend fun triggerSync() {
         try {
             _isSyncing.value = true
             _syncError.value = null
             accountManager.syncNow(reason = SyncReason.User)
+            accountManager.authenticatedAccount()?.deviceConstellation()?.pollForCommands()
             _lastSyncTime.value = System.currentTimeMillis()
         } catch (e: Exception) {
             _syncError.value = "Sync failed: ${e.message ?: "network error"}"
@@ -204,4 +215,8 @@ class FxaSyncManager private constructor(private val context: Context) {
     fun isSignedIn(): Boolean = accountManager.authenticatedAccount() != null
 
     fun getAccountEmail(): String? = accountManager.accountProfile()?.email
+
+    fun close() {
+        accountManager.close()
+    }
 }

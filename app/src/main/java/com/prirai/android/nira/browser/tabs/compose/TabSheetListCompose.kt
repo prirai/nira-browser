@@ -36,6 +36,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import mozilla.components.browser.state.state.TabSessionState
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import com.prirai.android.nira.browser.tabs.compose.DragLayer
 import com.prirai.android.nira.browser.tabs.compose.DraggableItemType
@@ -366,6 +367,8 @@ fun TabSheetListView(
                     is UnifiedItem.GroupedTab -> {
                         val group = groups.find { it.id == item.groupId }
 
+                        var pendingDismissClose by remember { mutableStateOf(false) }
+
                         val dismissState = rememberSwipeToDismissBoxState(
                             confirmValueChange = { dismissValue ->
                                 // Disable swipe during drag to prevent conflicts
@@ -374,7 +377,7 @@ fun TabSheetListView(
                                 } else {
                                     when (dismissValue) {
                                         SwipeToDismissBoxValue.EndToStart -> {
-                                            onTabClose(item.tab.id)
+                                            pendingDismissClose = true
                                             true
                                         }
 
@@ -390,6 +393,13 @@ fun TabSheetListView(
                                 }
                             }
                         )
+
+                        if (pendingDismissClose) {
+                            LaunchedEffect(Unit) {
+                                delay(400)
+                                onTabClose(item.tab.id)
+                            }
+                        }
 
                         SwipeToDismissBox(
                             state = dismissState,
@@ -474,6 +484,8 @@ fun TabSheetListView(
                     }
 
                     is UnifiedItem.SingleTab -> {
+                        var pendingDismissClose by remember { mutableStateOf(false) }
+
                         val dismissState = rememberSwipeToDismissBoxState(
                             confirmValueChange = { dismissValue ->
                                 // Disable swipe during drag to prevent conflicts
@@ -482,7 +494,7 @@ fun TabSheetListView(
                                 } else {
                                     when (dismissValue) {
                                         SwipeToDismissBoxValue.EndToStart -> {
-                                            onTabClose(item.tab.id)
+                                            pendingDismissClose = true
                                             true
                                         }
 
@@ -498,6 +510,13 @@ fun TabSheetListView(
                                 }
                             }
                         )
+
+                        if (pendingDismissClose) {
+                            LaunchedEffect(Unit) {
+                                delay(400)
+                                onTabClose(item.tab.id)
+                            }
+                        }
 
                         SwipeToDismissBox(
                             state = dismissState,

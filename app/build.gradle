@@ -23,8 +23,8 @@ android {
         minSdkVersion 26
         targetSdkVersion 36
         // Increment by 4 with each update, by 1 with each fix
-        versionCode = 47
-        versionName = "0.5.4"
+        versionCode = 51
+        versionName = "0.5.5"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -46,7 +46,7 @@ android {
         debug {
             resValue "string", "app_name", "Nira (Debug)"
             applicationIdSuffix = '.debug'
-            buildConfigField "String", "DEBUG_VERSION", '"d59"'
+            buildConfigField "String", "DEBUG_VERSION", '"d63"'
         }
     }
 
@@ -201,6 +201,8 @@ dependencies {
     implementation "org.mozilla.components:lib-state:$mozComponentsVersion"
     implementation "org.mozilla.components:lib-publicsuffixlist:$mozComponentsVersion"
     implementation "org.mozilla.components:lib-fetch-httpurlconnection:$mozComponentsVersion"
+    implementation "org.mozilla.components:lib-dataprotect:$mozComponentsVersion"
+    implementation "org.mozilla.components:support-appservices:$mozComponentsVersion"
 
     implementation 'androidx.credentials:credentials:1.5.0'
     implementation 'androidx.credentials:credentials-play-services-auth:1.5.0'

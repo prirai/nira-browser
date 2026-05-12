@@ -9,12 +9,17 @@ import kotlinx.coroutines.launch
 import mozilla.components.browser.state.action.SystemAction
 import mozilla.components.browser.state.selector.selectedTab
 import mozilla.components.feature.addons.update.GlobalAddonDependencyProvider
+import mozilla.components.lib.fetch.httpurlconnection.HttpURLConnectionClient
 import mozilla.components.support.base.facts.Facts
 import mozilla.components.support.base.facts.processor.LogFactProcessor
 import mozilla.components.support.base.log.logger.Logger
 import mozilla.components.support.ktx.android.content.isMainProcess
 import mozilla.components.support.ktx.android.content.runOnlyInMainProcess
 import mozilla.components.support.locale.LocaleAwareApplication
+import mozilla.components.support.AppServicesInitializer
+import mozilla.components.support.base.log.Log
+import mozilla.components.support.rusthttp.RustHttpConfig
+import mozilla.components.support.rustlog.RustLog
 import mozilla.components.support.webextensions.WebExtensionSupport
 import java.util.concurrent.TimeUnit
 
@@ -39,6 +44,26 @@ class BrowserApp : LocaleAwareApplication() {
         }
 
         Facts.registerProcessor(LogFactProcessor())
+
+        // CRITICAL: Load NSS native libraries so the Rust megazord can find
+        // them via dlopen(). The Rust fxaclient needs NSS for PKCE crypto
+        // during beginAuthentication(). Without pre-loading, dlopen fails and
+        // we get "NSS has not initialized" despite RustComponentsInitializer.init().
+        System.loadLibrary("mozglue")
+        System.loadLibrary("nss3")
+        System.loadLibrary("freebl3")
+        System.loadLibrary("softokn3")
+
+        // CRITICAL: Initialize Rust component infrastructure (NSS, logging, etc.).
+        // RustComponentsInitializer.init() loads the megazord and calls the
+        // native initialize() function, which initializes NSS for crypto ops.
+        AppServicesInitializer.init(
+            AppServicesInitializer.Config(
+                crashReporting = null,
+                logLevel = Log.Priority.DEBUG,
+            )
+        )
+        RustHttpConfig.setClient(lazy { HttpURLConnectionClient() })
 
         // CRITICAL: Only warmUp the engine - don't trigger full initialization yet
         // This prepares GeckoView but doesn't block on heavy operations
@@ -75,14 +100,33 @@ class BrowserApp : LocaleAwareApplication() {
         // appRequestInterceptor.fxaInterceptor is set before any FxA redirect URL
         // can be processed. Doing this inside an IO coroutine causes a race condition
         // where the interceptor may not be ready when the OAuth callback arrives.
+        // This also triggers fxaSyncManager lazy init which starts FxaAccountManager.
         try {
             components.fxaAuthFeature
+            logger.info("FxA auth feature initialized")
         } catch (_: Exception) { /* sync unavailable */ }
 
-        // Initialize Firefox Sync (non-blocking — degrades gracefully if unavailable)
+        // Start the FxA account manager — this must complete before any
+        // authentication call (beginAuthentication, finishAuthentication) can succeed.
         applicationScope.launch(Dispatchers.IO) {
             try {
-                components.fxaSyncManager.initialize()
+                components.fxaSyncManager.start()
+                logger.info("FxA sync manager start() completed")
+            } catch (_: Exception) { /* sync unavailable */ }
+        }
+
+        // Collect incoming FxA tabs (e.g. Send Tab from another device)
+        applicationScope.launch(Dispatchers.Main) {
+            try {
+                components.fxaSyncManager.incomingTabs.collect { tabReceived ->
+                    val entries = tabReceived.entries
+                    entries.forEach { tab ->
+                        components.tabsUseCases.addTab(
+                            url = tab.url,
+                            selectTab = entries.size == 1,
+                        )
+                    }
+                }
             } catch (_: Exception) { /* sync unavailable */ }
         }
         

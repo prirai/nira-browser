@@ -36,8 +36,13 @@ object UserJsPreferences {
     private val privacyPrefs = mapOf<String, Any>(
         // Disables navigator.sendBeacon — prevents silent background data leakage
         "beacon.enabled" to false,
-        // Classic fingerprint resistance (letterboxing, uniform UA, etc.)
-        "privacy.resistFingerprinting" to true,
+        // NOTE: privacy.resistFingerprinting is intentionally NOT set here.
+        // Firefox Accounts (FxA) WebChannel relies on Firefox-specific JavaScript APIs and
+        // navigator properties (UA, platform, etc.) to detect the browser. When resistFingerprinting
+        // is enabled, GeckoView spoofs these properties, which prevents the FxA page from
+        // initializing the WebChannel, breaking the OAuth sign-in flow entirely.
+        // All other privacy hardening (HTTPs-only, referrer trim, DNT, storage partitioning) is
+        // kept in place.
         // Send Do-Not-Track request header
         "privacy.donottrackheader.enabled" to true,
         // Clear cookies and HTTP sessions on browser shutdown
