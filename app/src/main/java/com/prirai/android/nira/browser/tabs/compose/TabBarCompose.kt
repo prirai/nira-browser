@@ -483,7 +483,7 @@ private fun TabPill(
 ) {
     Surface(
         modifier = modifier
-            .height(32.dp)
+            .height(40.dp)
             .width(100.dp),
         shape = RoundedCornerShape(12.dp),
         color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
