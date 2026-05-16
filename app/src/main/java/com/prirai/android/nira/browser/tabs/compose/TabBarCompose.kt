@@ -22,6 +22,8 @@ import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -693,12 +695,19 @@ private fun GroupPill(
 
                         // Wrap SwipeableTabPill with draggable and drop target for individual tab reordering
                         val isTabSelected = selectedTabId == tab.id
+                        val bringIntoViewRequester = remember(tab.id) { BringIntoViewRequester() }
+                        LaunchedEffect(isTabSelected) {
+                            if (isTabSelected) {
+                                bringIntoViewRequester.bringIntoView()
+                            }
+                        }
                         Box(
                             modifier = Modifier
                                 .draggableItem(
                                     itemType = DraggableItemType.Tab(tab.id),
                                     coordinator = coordinator
                                 )
+                                .bringIntoViewRequester(bringIntoViewRequester)
                                 .dropTarget(
                                     id = tab.id,
                                     type = DropTargetType.TAB,
