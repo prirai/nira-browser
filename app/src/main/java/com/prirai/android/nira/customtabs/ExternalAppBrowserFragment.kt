@@ -24,6 +24,7 @@ import mozilla.components.browser.state.selector.findCustomTab
 import mozilla.components.browser.state.state.SessionState
 import mozilla.components.concept.engine.EngineView
 import mozilla.components.feature.customtabs.CustomTabWindowFeature
+import mozilla.components.feature.prompts.PromptFeature
 import mozilla.components.feature.session.SessionFeature
 import mozilla.components.feature.session.SwipeRefreshFeature
 import mozilla.components.lib.state.ext.flowScoped
@@ -45,6 +46,7 @@ class ExternalAppBrowserFragment : Fragment(), UserInteractionHandler {
     private val sessionFeature = ViewBoundFeatureWrapper<SessionFeature>()
     private val customTabWindowFeature = ViewBoundFeatureWrapper<CustomTabWindowFeature>()
     private val swipeRefreshFeature = ViewBoundFeatureWrapper<SwipeRefreshFeature>()
+    private val promptsFeature = ViewBoundFeatureWrapper<PromptFeature>()
     private val findInPageIntegration = ViewBoundFeatureWrapper<FindInPageIntegration>()
     private val downloadsFeature = ViewBoundFeatureWrapper<mozilla.components.feature.downloads.DownloadsFeature>()
     private val contextMenuIntegration = ViewBoundFeatureWrapper<ContextMenuIntegration>()
@@ -132,6 +134,22 @@ class ExternalAppBrowserFragment : Fragment(), UserInteractionHandler {
                 components.sessionUseCases.goForward,
                 binding.engineView,
                 sessionId
+            ),
+            owner = this,
+            view = binding.root
+        )
+
+        // Prompt feature - required for select dropdowns, dialogs, and file pickers
+        promptsFeature.set(
+            feature = PromptFeature(
+                fragment = this,
+                store = components.store,
+                tabsUseCases = components.tabsUseCases,
+                fragmentManager = parentFragmentManager,
+                fileUploadsDirCleaner = components.fileUploadsDirCleaner,
+                onNeedToRequestPermissions = { permissions ->
+                    requestPermissions(permissions, REQUEST_CODE_PROMPT_PERMISSIONS)
+                }
             ),
             owner = this,
             view = binding.root
@@ -489,6 +507,9 @@ class ExternalAppBrowserFragment : Fragment(), UserInteractionHandler {
             REQUEST_CODE_DOWNLOAD_PERMISSIONS -> {
                 downloadsFeature.get()?.onPermissionsResult(permissions, grantResults)
             }
+            REQUEST_CODE_PROMPT_PERMISSIONS -> {
+                promptsFeature.get()?.onPermissionsResult(permissions, grantResults)
+            }
         }
     }
     
@@ -500,5 +521,6 @@ class ExternalAppBrowserFragment : Fragment(), UserInteractionHandler {
     
     companion object {
         private const val REQUEST_CODE_DOWNLOAD_PERMISSIONS = 1
+        private const val REQUEST_CODE_PROMPT_PERMISSIONS = 2
     }
 }
