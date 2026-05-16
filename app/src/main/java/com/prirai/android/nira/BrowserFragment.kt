@@ -679,8 +679,8 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
         // Update padding based on toolbar position
         when (prefs.toolbarPosition) {
             com.prirai.android.nira.components.toolbar.ToolbarPosition.BOTTOM.ordinal -> {
-                // Bottom toolbar: adjust bottom padding as toolbar hides/shows
-                binding.swipeRefresh.setPadding(0, 0, 0, visibleHeight)
+                // Bottom toolbar: no padding; rely on dynamic toolbar clipping
+                binding.swipeRefresh.setPadding(0, 0, 0, 0)
             }
             else -> {
                 // Top toolbar: adjust top padding as toolbar hides/shows

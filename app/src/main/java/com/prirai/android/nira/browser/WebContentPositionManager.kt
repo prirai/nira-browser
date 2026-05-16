@@ -54,6 +54,7 @@ class WebContentPositionManager(
      */
     private fun updateEnginePadding() {
         val engineViewInstance = (engineView as? View) ?: return
+        val bottomSystemBarPadding = navigationBarHeight
         
         // Apply padding to engine view to prevent content under system bars
         // Status bar at top, navigation bar at bottom
@@ -61,7 +62,7 @@ class WebContentPositionManager(
             0,
             statusBarHeight,  // Top padding for status bar
             0,
-            navigationBarHeight  // Bottom padding for navigation bar
+            bottomSystemBarPadding  // Avoid double padding when bottom toolbars handle nav bar
         )
     }
     

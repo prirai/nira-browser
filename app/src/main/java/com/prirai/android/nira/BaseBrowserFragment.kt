@@ -669,8 +669,8 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
             
             when (prefs.toolbarPosition) {
                 com.prirai.android.nira.components.toolbar.ToolbarPosition.BOTTOM.ordinal -> {
-                    // Bottom toolbar: add bottom padding equal to actual toolbar height
-                    binding.swipeRefresh.setPadding(0, 0, 0, actualToolbarHeight)
+                    // Bottom toolbar: no padding; rely on dynamic toolbar clipping
+                    binding.swipeRefresh.setPadding(0, 0, 0, 0)
                     swipeRefreshParams.bottomMargin = 0
                     swipeRefreshParams.topMargin = 0
                 }
