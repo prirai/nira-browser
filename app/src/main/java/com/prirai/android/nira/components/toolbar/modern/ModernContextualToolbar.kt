@@ -61,12 +61,12 @@ class ModernContextualToolbar @JvmOverloads constructor(
     private fun setupModernToolbar() {
         orientation = HORIZONTAL
         gravity = android.view.Gravity.CENTER_VERTICAL
-        setPadding(12, 8, 12, 8) // Increased padding for better spacing
+        setPadding(12, 4, 12, 4) // Tighter vertical spacing
 
         // CRITICAL: Increased height for better usability
         layoutParams = android.view.ViewGroup.LayoutParams(
             LayoutParams.MATCH_PARENT,
-            72 // Increased height for better touch targets
+            64
         )
 
         // Create modern layout with original functionality
@@ -142,7 +142,7 @@ class ModernContextualToolbar @JvmOverloads constructor(
     private fun createWeightedLayoutParams(): LayoutParams {
         return LayoutParams(0, LayoutParams.MATCH_PARENT).apply {
             weight = 1f
-            setMargins(2, 4, 2, 4) // Reduced margins to prevent clipping
+            setMargins(2, 2, 2, 2)
         }
     }
 

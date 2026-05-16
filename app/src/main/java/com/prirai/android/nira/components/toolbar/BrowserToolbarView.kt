@@ -149,6 +149,7 @@ class BrowserToolbarView(
                     trackingProtection = primaryTextColor
                 )
 
+
                 display.hint = context.getString(R.string.search)
             }
 
