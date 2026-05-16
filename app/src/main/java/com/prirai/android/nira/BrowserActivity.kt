@@ -192,6 +192,11 @@ open class BrowserActivity : LocaleAwareAppCompatActivity(), ComponentCallbacks2
         // OPTIMIZATION: Defer non-critical component initialization to after first frame
         view.post {
             components.appRequestInterceptor.setNavController(navHost.navController)
+
+            // Clean up orphaned thumbnails on app start
+            lifecycleScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                cleanupOrphanedThumbnails()
+            }
         }
 
         // Setup OnBackPressedDispatcher callback to replace deprecated onBackPressed()
@@ -228,6 +233,35 @@ open class BrowserActivity : LocaleAwareAppCompatActivity(), ComponentCallbacks2
 
         // Update toolbar and status bar theme immediately
         updateToolbarAndStatusBarTheme()
+    }
+
+    override fun onTrimMemory(level: Int) {
+        super.onTrimMemory(level)
+
+        when {
+            level >= ComponentCallbacks2.TRIM_MEMORY_RUNNING_CRITICAL -> {
+                // Critical: Close non-selected engine sessions to free memory
+                components.store.state.tabs
+                    .filter { it.id != components.store.state.selectedTabId }
+                    .forEach { tab ->
+                        tab.engineState.engineSession?.close()
+                    }
+                // Request thumbnail cleanup
+                lifecycleScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                    cleanupOrphanedThumbnails()
+                }
+            }
+            level >= ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW -> {
+                // Low: Clean up disk space
+                lifecycleScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                    cleanupOrphanedThumbnails()
+                }
+            }
+            level >= ComponentCallbacks2.TRIM_MEMORY_BACKGROUND -> {
+                // Background: Trim icons memory
+                components.icons.onTrimMemory(level)
+            }
+        }
     }
 
     final override fun onNewIntent(intent: Intent) {
@@ -582,10 +616,44 @@ open class BrowserActivity : LocaleAwareAppCompatActivity(), ComponentCallbacks2
 
         // Update status bar
         com.prirai.android.nira.theme.ThemeManager.applySystemBarsTheme(this, isPrivate)
+    }
 
+    /**
+     * Clean up orphaned thumbnails that don't belong to any existing tab.
+     * This prevents storage bloat from closed tabs' thumbnails.
+     */
+    private fun cleanupOrphanedThumbnails() {
+        try {
+            val currentTabIds = components.store.state.tabs.map { it.id }.toSet()
+            val thumbnailDir = java.io.File(applicationContext.filesDir, "thumbnails")
+
+            if (thumbnailDir.exists() && thumbnailDir.isDirectory) {
+                var deletedCount = 0
+                thumbnailDir.listFiles()?.forEach { file ->
+                    val tabId = file.nameWithoutExtension
+                    if (!currentTabIds.contains(tabId)) {
+                        if (file.delete()) {
+                            deletedCount++
+                        }
+                    }
+                }
+                if (deletedCount > 0) {
+                    android.util.Log.i("BrowserActivity", "Cleaned up $deletedCount orphaned thumbnail(s)")
+                }
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("BrowserActivity", "Error cleaning up thumbnails", e)
+        }
+    }
+
+    /**
+     * Update toolbar background based on private mode
+     */
+    private fun updateToolbarBackground() {
         // Update toolbar background - use safe cast as it could be UnifiedToolbar or BrowserToolbar
         val toolbar = findViewById<View>(R.id.toolbar)
         val unifiedToolbar = toolbar as? com.prirai.android.nira.components.toolbar.unified.UnifiedToolbar
+        val isPrivate = components.store.state.tabs.find { it.id == components.store.state.selectedTabId }?.content?.private == true
         if (isPrivate) {
             val purpleColor = com.prirai.android.nira.theme.ColorConstants.PrivateMode.PURPLE
             unifiedToolbar?.setBackgroundColor(purpleColor) ?: toolbar?.setBackgroundColor(purpleColor)

@@ -32,7 +32,7 @@ class TabIslandsVerticalAdapter(
 
     private val items = mutableListOf<ListItem>()
     private var selectedTabId: String? = null
-    private val thumbnailLoader = ThumbnailLoader(context.components.thumbnailStorage)
+    private val thumbnailLoader = context.components.thumbnailLoader
 
     companion object {
         private const val VIEW_TYPE_ISLAND_COLLAPSED = 0

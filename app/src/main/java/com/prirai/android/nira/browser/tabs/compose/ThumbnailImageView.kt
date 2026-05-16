@@ -34,7 +34,7 @@ fun ThumbnailImageView(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
-    val thumbnailLoader = remember { ThumbnailLoader(context.components.thumbnailStorage) }
+    val thumbnailLoader = remember(context.components) { context.components.thumbnailLoader }
     val backgroundColor = MaterialTheme.colorScheme.surfaceVariant
     
     Box(

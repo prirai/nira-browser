@@ -37,6 +37,7 @@ import mozilla.components.browser.storage.sync.RemoteTabsStorage
 import mozilla.components.concept.base.crash.CrashReporting
 import mozilla.components.browser.thumbnails.ThumbnailsMiddleware
 import mozilla.components.browser.thumbnails.storage.ThumbnailStorage
+import mozilla.components.browser.thumbnails.loader.ThumbnailLoader
 import mozilla.components.concept.engine.DefaultSettings
 import mozilla.components.concept.engine.Engine
 import mozilla.components.concept.engine.EngineSession
@@ -213,6 +214,7 @@ open class Components(private val applicationContext: Context) {
     val permissionStorage by lazy { GeckoSitePermissionsStorage(runtime, OnDiskSitePermissionsStorage(applicationContext)) }
 
     val thumbnailStorage by lazy { ThumbnailStorage(applicationContext) }
+    val thumbnailLoader by lazy { ThumbnailLoader(thumbnailStorage) }
     
     val profileManager by lazy { 
         com.prirai.android.nira.browser.profile.ProfileManager.getInstance(applicationContext)
