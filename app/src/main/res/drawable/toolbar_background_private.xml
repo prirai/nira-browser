@@ -1,13 +1,10 @@
 <?xml version="1.0" encoding="utf-8" ?>
-<shape xmlns:android="http://schemas.android.com/apk/res/android">
-    <!-- Material 3 elevated surface color for URL field in private mode -->
-    <solid android:color="?attr/colorSurfaceContainerHighest" />
-
-    <!-- Purple stroke for private mode indication -->
-    <stroke
-        android:width="2dp"
-        android:color="@color/toolbar_private_outline"
-    />
-
-    <corners android:radius="12dp" />
-</shape>
+<!-- Material 3 URL field background - expressive private container -->
+<ripple xmlns:android="http://schemas.android.com/apk/res/android"
+    android:color="?attr/colorControlHighlight">
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="?attr/colorSurfaceContainerHighest" />
+        </shape>
+    </item>
+</ripple>
