@@ -211,22 +211,24 @@ class ExternalAppBrowserFragment : Fragment(), UserInteractionHandler {
      * Uses WindowInsets to detect keyboard visibility and automatically adjust layout.
      */
     private fun setupKeyboardAdjustment() {
-        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(binding.engineView as View) { view, insets ->
+        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(binding.browserLayout) { _, insets ->
             val imeInsets = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.ime())
             val systemBarsInsets = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars())
-            
-            // Adjust bottom padding when keyboard appears
-            if (imeInsets.bottom > systemBarsInsets.bottom) {
-                val keyboardHeight = imeInsets.bottom - systemBarsInsets.bottom
-                view.setPadding(0, 0, 0, keyboardHeight)
-            } else {
-                view.setPadding(0, 0, 0, 0)
+
+            val keyboardHeight = (imeInsets.bottom - systemBarsInsets.bottom).coerceAtLeast(0)
+            val layoutParams = binding.swipeRefresh.layoutParams as? androidx.coordinatorlayout.widget.CoordinatorLayout.LayoutParams
+                ?: return@setOnApplyWindowInsetsListener insets
+
+            if (layoutParams.bottomMargin != keyboardHeight) {
+                layoutParams.bottomMargin = keyboardHeight
+                binding.swipeRefresh.layoutParams = layoutParams
+                binding.swipeRefresh.requestLayout()
             }
-            
+
             insets
         }
-        
-        androidx.core.view.ViewCompat.requestApplyInsets(binding.engineView as View)
+
+        androidx.core.view.ViewCompat.requestApplyInsets(binding.browserLayout)
     }
     
     private fun setupCustomTabContentPadding(view: View) {
