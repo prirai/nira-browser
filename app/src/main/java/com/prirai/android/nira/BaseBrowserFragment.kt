@@ -652,6 +652,10 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
 
     @VisibleForTesting
     internal fun initializeEngineView(toolbarHeight: Int) {
+        // Return if fragment is detached or binding is null
+        if (context == null) return
+        if (_binding == null) return
+
         val context = requireContext()
         val prefs = UserPreferences(context)
 
@@ -661,6 +665,9 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
         // Get actual toolbar height (may differ from parameter if components are hidden)
         // Use post to ensure toolbar is measured
         unifiedToolbar?.post {
+            // Guard: view may have been destroyed while this was queued
+            if (_binding == null) return@post
+
             val actualToolbarHeight = unifiedToolbar?.height ?: toolbarHeight
             
             // Set padding on swipeRefresh to prevent content from appearing under toolbar
