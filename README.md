@@ -84,8 +84,14 @@ Download the latest APK from the [Releases page](https://github.com/prirai/nira-
    ```
    *On Windows, use `gradlew.bat assembleDebug`*
 
-3. **Install on device**
-   
+3. **Run recommended checks**
+   ```bash
+   ./gradlew lintDebug testDebugUnitTest
+   ```
+   *On Windows, use `gradlew.bat lintDebug testDebugUnitTest`*
+
+4. **Install on device**
+    
    The build creates architecture-specific APKs:
    ```bash
    # For ARM64 devices (most modern Android phones)
