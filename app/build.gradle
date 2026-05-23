@@ -20,11 +20,11 @@ android {
 
     defaultConfig {
         applicationId = "com.prirai.android.nira"
-        minSdkVersion 26
+        minSdkVersion 27
         targetSdkVersion 36
         // Increment by 4 with each update, by 1 with each fix
         versionCode = 46
-        versionName = "0.5.4"
+        versionName = "0.5.5"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
