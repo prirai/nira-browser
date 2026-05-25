@@ -44,6 +44,7 @@ class ComposeTabBarWithProfileSwitcher @JvmOverloads constructor(
     private var onTabClosed: ((String) -> Unit)? = null
     private var onProfileSelected: ((BrowserProfile) -> Unit)? = null
     private var onPrivateModeSelected: (() -> Unit)? = null
+    private var lastSelectedTabId: String? = null
 
     private var tabOrderManager: TabOrderManager? = null
     private var groupManager: UnifiedTabGroupManager? = null
@@ -53,6 +54,9 @@ class ComposeTabBarWithProfileSwitcher @JvmOverloads constructor(
     init {
         clipToPadding = false
         clipChildren = false
+        val elevationDp = 12f * resources.displayMetrics.density
+        elevation = elevationDp
+        translationZ = elevationDp
 
         // Add compose view
         addView(
@@ -146,7 +150,11 @@ class ComposeTabBarWithProfileSwitcher @JvmOverloads constructor(
                     tab.contextId == "private"
                 } else {
                     val expectedContextId = "profile_${currentProfile.id}"
-                    (tab.contextId == expectedContextId) || (tab.contextId == null)
+                    if (currentProfile.id == "default") {
+                        (tab.contextId == expectedContextId) || (tab.contextId == null)
+                    } else {
+                        tab.contextId == expectedContextId
+                    }
                 }
             }
         }
@@ -164,6 +172,14 @@ class ComposeTabBarWithProfileSwitcher @JvmOverloads constructor(
             orderManager.rebuildOrderForProfile(profileId, tabs)
 
             viewModel.loadTabsForProfile(profileId, tabs, selectedTabId)
+        }
+
+        LaunchedEffect(selectedTabId) {
+            val currentTabId = selectedTabId
+            if (currentTabId != null && currentTabId != lastSelectedTabId) {
+                com.prirai.android.nira.browser.tabs.compose.TabSheetStateManager.notifyTabSheetDismissed()
+                lastSelectedTabId = currentTabId
+            }
         }
 
         // Set up global snackbar manager scope

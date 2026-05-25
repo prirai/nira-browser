@@ -360,6 +360,7 @@ class UnifiedToolbar @JvmOverloads constructor(
                 }
             }
         }
+
     }
     
     /**
@@ -768,7 +769,7 @@ class UnifiedToolbar @JvmOverloads constructor(
             
             // Add tab bar if it exists
             tabGroupBar?.let { container.addView(it) }
-            
+
             // Add contextual toolbar if it exists
             contextualToolbar?.let { container.addView(it) }
             

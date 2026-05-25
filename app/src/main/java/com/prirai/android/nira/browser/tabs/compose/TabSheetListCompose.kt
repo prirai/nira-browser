@@ -28,6 +28,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -155,6 +156,21 @@ fun TabSheetListView(
     // Pass scroll state to coordinator to prevent updates during scroll
     LaunchedEffect(isScrolling) {
         coordinator.setIsScrolling(isScrolling)
+    }
+
+    LaunchedEffect(selectedTabId, uniqueItems) {
+        val tabId = selectedTabId ?: return@LaunchedEffect
+        val targetIndex = uniqueItems.indexOfFirst { item ->
+            when (item) {
+                is UnifiedItem.SingleTab -> item.tab.id == tabId
+                is UnifiedItem.GroupedTab -> item.tab.id == tabId
+                is UnifiedItem.GroupContainer -> item.children.any { it.id == tabId }
+                else -> false
+            }
+        }
+        if (targetIndex >= 0) {
+            listState.scrollToItem(targetIndex)
+        }
     }
 
     Box(
@@ -373,10 +389,10 @@ fun TabSheetListView(
                                     false
                                 } else {
                                     when (dismissValue) {
-                                        SwipeToDismissBoxValue.EndToStart -> {
-                                            onTabClose(item.tab.id)
-                                            true
-                                        }
+                                    SwipeToDismissBoxValue.EndToStart -> {
+                                        onTabClose(item.tab.id)
+                                        false
+                                    }
 
                                         SwipeToDismissBoxValue.StartToEnd -> {
                                             menuTab = item.tab
@@ -481,10 +497,10 @@ fun TabSheetListView(
                                     false
                                 } else {
                                     when (dismissValue) {
-                                        SwipeToDismissBoxValue.EndToStart -> {
-                                            onTabClose(item.tab.id)
-                                            true
-                                        }
+                                    SwipeToDismissBoxValue.EndToStart -> {
+                                        onTabClose(item.tab.id)
+                                        false
+                                    }
 
                                         SwipeToDismissBoxValue.StartToEnd -> {
                                             menuTab = item.tab

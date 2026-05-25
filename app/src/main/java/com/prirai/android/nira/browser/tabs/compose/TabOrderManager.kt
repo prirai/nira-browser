@@ -340,7 +340,6 @@ class TabOrderManager private constructor(
                     val remainingTabs = item.tabIds.filter { it != tabId }
                     when (remainingTabs.size) {
                         0 -> null // Remove empty group
-                        1 -> UnifiedTabOrder.OrderItem.SingleTab(remainingTabs.first()) // Ungroup last tab
                         else -> item.copy(tabIds = remainingTabs) // Keep group with remaining tabs
                     }
                 }
