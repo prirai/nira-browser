@@ -316,7 +316,7 @@ private fun GroupedTabListItem(
                 when (dismissValue) {
                     SwipeToDismissBoxValue.EndToStart -> {
                         onTabClose()
-                        true
+                        false
                     }
 
                     SwipeToDismissBoxValue.StartToEnd -> {

@@ -26,6 +26,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -94,6 +95,21 @@ fun TabSheetGridView(
     // Hover state manager for contextual drag feedback
     val hoverState = rememberTabSheetHoverState(coordinator, uniqueItems)
     val hoveredGroupId = hoverState.getHoveredGroupIdForUngroupedDragGrid()
+    LaunchedEffect(selectedTabId, uniqueItems) {
+        val tabId = selectedTabId ?: return@LaunchedEffect
+        val targetIndex = uniqueItems.indexOfFirst { item ->
+            when (item) {
+                is UnifiedItem.SingleTab -> item.tab.id == tabId
+                is UnifiedItem.GroupedTab -> item.tab.id == tabId
+                is UnifiedItem.GroupContainer -> item.children.any { it.id == tabId }
+                else -> false
+            }
+        }
+        if (targetIndex >= 0) {
+            gridState.scrollToItem(targetIndex)
+        }
+    }
+
     Box(
         modifier = modifier
             .fillMaxSize()

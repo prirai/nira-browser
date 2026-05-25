@@ -337,6 +337,9 @@ class TabViewModel(
         viewModelScope.launch {
             try {
                 groupManager.toggleGroupCollapsed(groupId)
+                _currentProfileId.value?.let { profileId ->
+                    saveCurrentOrder(profileId)
+                }
                 android.util.Log.d("TabViewModel", "Successfully toggled group collapsed state in manager")
             } catch (e: Exception) {
                 android.util.Log.e("TabViewModel", "Error toggling group collapsed state", e)

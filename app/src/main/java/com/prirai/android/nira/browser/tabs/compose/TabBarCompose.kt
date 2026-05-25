@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -51,11 +52,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.zIndex
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import mozilla.components.browser.state.state.TabSessionState
 import kotlin.math.abs
+import kotlin.math.roundToInt
 
 /**
  * Horizontal tab bar with Chromium-style drag & drop support
@@ -125,6 +129,35 @@ fun TabBarCompose(
                 }
             }
         }
+    }
+
+    var lastSelectedTabId by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(selectedTabId, order) {
+        val currentOrder = order ?: return@LaunchedEffect
+        val currentTabId = selectedTabId ?: return@LaunchedEffect
+        if (currentTabId == lastSelectedTabId || !hasInitialScrolled) {
+            lastSelectedTabId = currentTabId
+            return@LaunchedEffect
+        }
+
+        if (!listState.isScrollInProgress) {
+            val selectedIndex = currentOrder.primaryOrder.indexOfFirst { item ->
+                when (item) {
+                    is UnifiedTabOrder.OrderItem.SingleTab -> item.tabId == currentTabId
+                    is UnifiedTabOrder.OrderItem.TabGroup -> currentTabId in item.tabIds
+                }
+            }
+            if (selectedIndex >= 0) {
+                val viewportSize = listState.layoutInfo.viewportSize.width
+                if (viewportSize > 0) {
+                    val averageItemSize = 180
+                    val scrollOffset = -(viewportSize / 2 - averageItemSize / 2)
+                    listState.scrollToItem(selectedIndex, scrollOffset.coerceAtLeast(-viewportSize))
+                }
+            }
+        }
+
+        lastSelectedTabId = currentTabId
     }
 
     // Auto-scroll to selected tab when explicitly triggered (tab sheet dismissed,
@@ -217,7 +250,10 @@ fun TabBarCompose(
                                     coordinator = coordinator,
                                     onTabClick = onTabClick,
                                     onTabClose = onTabClose,
-                                    isDragging = false
+                                    isDragging = false,
+                                    modifier = Modifier
+                                        .offset { IntOffset(0, offsetY.roundToInt()) }
+                                        .zIndex(1f)
                                 )
 
                                 // Swipe feedback
@@ -309,7 +345,10 @@ fun TabBarCompose(
                                         viewModel.toggleGroupExpanded(groupId)
                                     },
                                     viewModel = viewModel,
-                                    isDragging = false
+                                    isDragging = false,
+                                    modifier = Modifier
+                                        .offset { IntOffset(0, offsetY.roundToInt()) }
+                                        .zIndex(1f)
                                 )
 
                                 // Swipe feedback

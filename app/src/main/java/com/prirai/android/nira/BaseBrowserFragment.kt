@@ -573,11 +573,13 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
                 sessionId = customTabSessionId,
                 stub = stub,
                 engineView = binding.engineView,
-                toolbarInfo = FindInPageIntegration.ToolbarInfo(
-                    toolbar = unifiedToolbar?.getBrowserToolbar()!!,
-                    isToolbarDynamic = true,
-                    isToolbarPlacedAtTop = true
-                ),
+                toolbarInfo = unifiedToolbar?.getBrowserToolbar()?.let { toolbar ->
+                    FindInPageIntegration.ToolbarInfo(
+                        toolbar = toolbar,
+                        isToolbarDynamic = true,
+                        isToolbarPlacedAtTop = true
+                    )
+                } ?: return,
                 prepareLayout = {
                     // Layout adjustments when find in page opens
                 },
