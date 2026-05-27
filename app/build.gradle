@@ -4,7 +4,7 @@ plugins {
     id 'com.google.devtools.ksp'
     id 'androidx.navigation.safeargs.kotlin'
     id 'org.jetbrains.kotlin.plugin.compose'
-    id 'org.jetbrains.kotlin.plugin.serialization' version '2.3.20'
+    id 'org.jetbrains.kotlin.plugin.serialization' version '2.3.21'
 }
 
 
@@ -99,9 +99,9 @@ androidComponents {
 
 dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar'])
-    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:2.2.10"
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:2.3.21"
     implementation 'androidx.constraintlayout:constraintlayout:2.2.1'
-    implementation 'com.google.android.material:material:1.13.0'
+    implementation 'com.google.android.material:material:1.14.0'
 
     // Support libraries
     implementation "androidx.recyclerview:recyclerview:1.4.0"
@@ -110,18 +110,18 @@ dependencies {
     implementation "androidx.drawerlayout:drawerlayout:1.2.0"
     implementation "androidx.preference:preference-ktx:1.2.1"
     implementation "androidx.palette:palette-ktx:1.0.0"
-    implementation "androidx.annotation:annotation:1.9.1"
+    implementation "androidx.annotation:annotation:1.10.0"
     implementation "androidx.appcompat:appcompat:1.7.1"
     implementation 'androidx.legacy:legacy-support-v4:1.0.0'
-    implementation 'androidx.navigation:navigation-fragment-ktx:2.9.7'
-    implementation 'androidx.navigation:navigation-ui-ktx:2.9.7'
+    implementation 'androidx.navigation:navigation-fragment-ktx:2.9.8'
+    implementation 'androidx.navigation:navigation-ui-ktx:2.9.8'
 
     // Room
     implementation "androidx.room:room-runtime:2.8.4"
     ksp "androidx.room:room-compiler:2.8.4"
 
     // Mozilla Components : https://maven.mozilla.org/maven2/?prefix=maven2/org/mozilla/geckoview/
-    final def mozComponentsVersion = "148.0"
+    final def mozComponentsVersion = "151.0"
 
     // Mozilla compose components
     implementation "org.mozilla.components:compose-awesomebar:$mozComponentsVersion"
@@ -201,8 +201,8 @@ dependencies {
     implementation "org.mozilla.components:lib-publicsuffixlist:$mozComponentsVersion"
     implementation "org.mozilla.components:lib-fetch-httpurlconnection:$mozComponentsVersion"
 
-    implementation 'androidx.credentials:credentials:1.5.0'
-    implementation 'androidx.credentials:credentials-play-services-auth:1.5.0'
+    implementation 'androidx.credentials:credentials:1.6.0'
+    implementation 'androidx.credentials:credentials-play-services-auth:1.6.0'
     implementation 'com.google.android.gms:play-services-auth:21.5.1'
 
     testImplementation 'junit:junit:4.13.2'
@@ -216,13 +216,13 @@ dependencies {
     // OkHTTP
     implementation "com.squareup.okhttp3:okhttp:5.3.2"
 
-    implementation "androidx.compose.ui:ui:1.10.6"
-    implementation "androidx.compose.foundation:foundation:1.10.6"
-    implementation "androidx.compose.material:material:1.10.6"
+    implementation "androidx.compose.ui:ui:1.11.2"
+    implementation "androidx.compose.foundation:foundation:1.11.2"
+    implementation "androidx.compose.material:material:1.11.2"
     implementation "androidx.compose.material:material-icons-extended:1.7.8"
     implementation "androidx.compose.material3:material3:1.4.0"
-    implementation "androidx.compose.runtime:runtime:1.10.6"
-    implementation "androidx.compose.ui:ui-tooling-preview:1.10.6"
+    implementation "androidx.compose.runtime:runtime:1.11.2"
+    implementation "androidx.compose.ui:ui-tooling-preview:1.11.2"
     implementation "androidx.activity:activity-compose:1.13.0"
     implementation "androidx.lifecycle:lifecycle-viewmodel-compose:2.10.0"
     implementation "io.coil-kt:coil-compose:2.7.0"
@@ -231,9 +231,9 @@ dependencies {
     implementation "androidx.datastore:datastore-preferences:1.2.1"
 
     // Kotlinx Serialization
-    implementation "org.jetbrains.kotlinx:kotlinx-serialization-json:1.10.0"
+    implementation "org.jetbrains.kotlinx:kotlinx-serialization-json:1.11.0"
 
-    implementation 'org.jsoup:jsoup:1.22.1'
+    implementation 'org.jsoup:jsoup:1.22.2'
 }
 
 project.configurations.configureEach {

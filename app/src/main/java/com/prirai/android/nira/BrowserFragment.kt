@@ -16,6 +16,7 @@ import com.prirai.android.nira.downloads.DownloadsBottomSheetFragment
 import com.prirai.android.nira.ext.components
 import com.prirai.android.nira.ext.nav
 import com.prirai.android.nira.preferences.UserPreferences
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.distinctUntilChangedBy
@@ -226,7 +227,7 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
         
         // Observe browser state changes to update toolbar in real-time
         viewLifecycleOwner.lifecycleScope.launch {
-            requireContext().components.store.flowScoped(viewLifecycleOwner) { flow ->
+            requireContext().components.store.flowScoped(viewLifecycleOwner, Dispatchers.Main) { flow ->
                 flow.mapNotNull { state ->
                     // Safety check: ensure fragment is still attached
                     if (!isAdded) return@mapNotNull null
@@ -252,7 +253,7 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
             if (!isAdded) return@launch
             
             var lastTabIds = requireContext().components.store.state.tabs.map { it.id }.toSet()
-            requireContext().components.store.flowScoped(viewLifecycleOwner) { flow ->
+            requireContext().components.store.flowScoped(viewLifecycleOwner, Dispatchers.Main) { flow ->
                 flow.mapNotNull { state -> 
                     if (!isAdded) return@mapNotNull null
                     state.tabs.map { it.id }.toSet() 
@@ -268,7 +269,7 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
 
         // Also observe tab selection changes
         viewLifecycleOwner.lifecycleScope.launch {
-            requireContext().components.store.flowScoped(viewLifecycleOwner) { flow ->
+            requireContext().components.store.flowScoped(viewLifecycleOwner, Dispatchers.Main) { flow ->
                 flow.mapNotNull { state ->
                     // Safety check: ensure fragment is still attached
                     if (!isAdded) return@mapNotNull null
@@ -318,7 +319,7 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
         }
 
         // Observe tab changes to update content visibility (homepage vs web content)
-        components.store.flowScoped(viewLifecycleOwner) { flow ->
+        components.store.flowScoped(viewLifecycleOwner, Dispatchers.Main) { flow ->
             flow.mapNotNull { state -> state.selectedTabId }
                 .distinctUntilChanged()
                 .collect { tabId: String ->
@@ -330,7 +331,7 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
         }
 
         // Also observe URL changes within the same tab
-        components.store.flowScoped(viewLifecycleOwner) { flow ->
+        components.store.flowScoped(viewLifecycleOwner, Dispatchers.Main) { flow ->
             flow.mapNotNull { state ->
                 state.tabs.find { it.id == state.selectedTabId }
             }
@@ -553,7 +554,7 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
         viewLifecycleOwner.lifecycleScope.launch {
             val store = requireContext().components.store
 
-            store.flowScoped(viewLifecycleOwner) { flow ->
+            store.flowScoped(viewLifecycleOwner, Dispatchers.Main) { flow ->
                 flow.mapNotNull { state ->
                     // Check if fragment is still attached before proceeding
                     if (!isAdded) return@mapNotNull null

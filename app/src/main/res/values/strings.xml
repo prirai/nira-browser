@@ -435,6 +435,26 @@
         name="mozac_feature_addons_settings_allow_in_private_browsing"
     >Allow in private browsing</string>
   <string
+        name="mozac_feature_addons_failed_to_query_extensions"
+    >Failed to query extensions</string>
+  <string name="mozac_feature_addons_cant_install_extension">"Can't install extension"</string>
+  <string name="mozac_feature_addons_blocklisted_2">"%1$s is blocked and can't be installed on %2$s."</string>
+  <string name="mozac_feature_addons_soft_blocked_2">"%1$s is restricted and can't be installed on %2$s."</string>
+
+  <string
+        name="mozac_feature_addons_extension_failed_to_install"
+    >Extension failed to install</string>
+  <string
+        name="mozac_feature_addons_extension_failed_to_install_network_error"
+    >Extension failed to install due to a network error.</string>
+  <string
+        name="mozac_feature_addons_extension_failed_to_install_corrupt_error"
+    >Extension failed to install because the file appears to be corrupt.</string>
+  <string name="mozac_feature_addons_extension_failed_to_install_not_signed_error">"Extension failed to install because it isn't signed."</string>
+  <string
+        name="mozac_feature_addons_failed_to_install_incompatible_error"
+    >%1$s is incompatible with %2$s %3$s.</string>
+  <string
         name="mozac_feature_addons_successfully_enabled"
     >%s enabled successfully</string>
   <string
@@ -450,8 +470,8 @@
         name="mozac_feature_addons_successfully_uninstalled"
     >%s uninstalled successfully</string>
   <string
-        name="mozac_feature_addons_failed_to_uninstall"
-    >Failed to uninstall %s</string>
+        name="mozac_feature_addons_failed_to_install"
+    >Failed to install %1$s</string>
 
   <!-- Download related strings for Mozilla Components 145.0 compatibility -->
 

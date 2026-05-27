@@ -18,6 +18,7 @@ import com.prirai.android.nira.components.toolbar.modern.ComposeTabBarWithProfil
 import com.prirai.android.nira.ext.components
 import com.prirai.android.nira.preferences.UserPreferences
 import com.prirai.android.nira.toolbar.ContextualBottomToolbar
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import mozilla.components.browser.state.selector.selectedTab
 import mozilla.components.browser.state.state.CustomTabSessionState
@@ -330,7 +331,7 @@ class UnifiedToolbar @JvmOverloads constructor(
         // 3. Guest tabs from custom tabs (contextId == null) are shown in normal mode
         // 4. Tab bar updates automatically when profile switches or tabs change
         lifecycleOwner.lifecycleScope.launch {
-            store.flowScoped { flow ->
+            store.flowScoped(dispatcher = Dispatchers.Main) { flow ->
                 flow.collect { state ->
                     val profileManager = com.prirai.android.nira.browser.profile.ProfileManager.getInstance(context)
                     val isPrivateMode = profileManager.isPrivateMode()
@@ -625,7 +626,7 @@ class UnifiedToolbar @JvmOverloads constructor(
         val lifecycleOwner = context as? LifecycleOwner ?: return
         
         lifecycleOwner.lifecycleScope.launch {
-            store.flowScoped { flow ->
+            store.flowScoped(dispatcher = Dispatchers.Main) { flow ->
                 flow.collect { state ->
                     val profileManager = com.prirai.android.nira.browser.profile.ProfileManager.getInstance(context)
                     val isPrivateMode = profileManager.isPrivateMode()

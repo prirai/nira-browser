@@ -14,11 +14,11 @@ import mozilla.components.support.base.facts.processor.LogFactProcessor
 import mozilla.components.support.base.log.logger.Logger
 import mozilla.components.support.ktx.android.content.isMainProcess
 import mozilla.components.support.ktx.android.content.runOnlyInMainProcess
-import mozilla.components.support.locale.LocaleAwareApplication
+import android.app.Application
 import mozilla.components.support.webextensions.WebExtensionSupport
 import java.util.concurrent.TimeUnit
 
-class BrowserApp : LocaleAwareApplication() {
+class BrowserApp : Application() {
 
     private val logger = Logger("BrowserApp")
     

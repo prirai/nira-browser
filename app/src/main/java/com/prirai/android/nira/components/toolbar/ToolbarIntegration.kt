@@ -83,7 +83,7 @@ abstract class ToolbarIntegration(
     }
 
     private fun startSecurityBackgroundObserver() {
-        securityBackgroundScope = store.flowScoped { flow ->
+        securityBackgroundScope = store.flowScoped(dispatcher = kotlinx.coroutines.Dispatchers.Main) { flow ->
             flow.mapNotNull { state -> state.selectedTab }
                 .ifAnyChanged { tab ->
                     arrayOf(tab.content.securityInfo, tab.content.url)

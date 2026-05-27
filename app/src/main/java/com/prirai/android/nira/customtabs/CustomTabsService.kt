@@ -17,7 +17,7 @@ import com.prirai.android.nira.ext.components
  * - Compatible with Trusted Web Activities (TWA)
  */
 class CustomTabsService : AbstractCustomTabsService() {
-    private val scope = MainScope()
+    override val scope = MainScope()
     
     override val engine: Engine by lazy { components.engine }
     override val customTabsServiceStore by lazy { components.customTabsStore }

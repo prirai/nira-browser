@@ -14,6 +14,7 @@ import androidx.fragment.app.FragmentManager
 import com.prirai.android.nira.R
 import com.prirai.android.nira.ext.components
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.mapNotNull
@@ -56,7 +57,7 @@ class WebExtensionPromptFeature(
      * and opens / closes tabs as needed.
      */
     override fun start() {
-        scope = store.flowScoped { flow ->
+        scope = store.flowScoped(dispatcher = Dispatchers.Main) { flow ->
             flow.mapNotNull { state ->
                 state.webExtensionPromptRequest
             }.distinctUntilChanged().collect { promptRequest ->
@@ -157,7 +158,7 @@ class WebExtensionPromptFeature(
 
             is WebExtensionInstallException.SoftBlocked -> {
                 url = formatBlocklistURL(exception)
-                context.getString(R.string.mozac_feature_addons_soft_blocked_1, addonName, appName)
+                context.getString(R.string.mozac_feature_addons_soft_blocked_2, addonName, appName)
             }
 
             is WebExtensionInstallException.UserCancelled -> {
