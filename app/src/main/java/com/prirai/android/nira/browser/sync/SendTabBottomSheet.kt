@@ -46,6 +46,7 @@ import com.prirai.android.nira.ui.theme.NiraTheme
 import kotlinx.coroutines.launch
 import mozilla.components.concept.sync.Device
 import mozilla.components.concept.sync.DeviceCommandOutgoing
+import mozilla.components.concept.sync.TabPrivacy
 import mozilla.components.concept.sync.DeviceType
 import mozilla.components.service.fxa.manager.FxaAccountManager
 
@@ -183,7 +184,7 @@ fun SendTabBottomSheet(
                                         ?.deviceConstellation()
                                         ?.sendCommandToDevice(
                                             device.id,
-                                            DeviceCommandOutgoing.SendTab(title, url)
+                                            DeviceCommandOutgoing.SendTab(title, url, TabPrivacy.Normal)
                                         )
                                     snackbarHostState.showSnackbar("Tab sent!")
                                     onDismiss()

@@ -459,6 +459,14 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
                 onDownloadStopped = { download, id, status ->
                     debug("Download ID#$id $download with status $status is done.")
                 },
+                downloadFileUtils = mozilla.components.support.utils.DefaultDownloadFileUtils(
+                    context = requireContext().applicationContext,
+                    downloadLocation = {
+                        android.os.Environment.getExternalStoragePublicDirectory(
+                            android.os.Environment.DIRECTORY_DOWNLOADS
+                        ).path
+                    }
+                ),
                 downloadManager = FetchDownloadManager(
                     requireContext().applicationContext,
                     components.store,

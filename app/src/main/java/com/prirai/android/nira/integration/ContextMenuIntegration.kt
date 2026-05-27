@@ -41,7 +41,15 @@ class ContextMenuIntegration(
                 createCopyLinkTextCandidate(context, parentView, snackbarDelegate),
                 createShareLinkCandidate(context),
                 createOpenImageInNewTabCandidate(context, tabsUseCases, parentView, snackbarDelegate),
-                createSaveImageCandidate(context, contextMenuUseCases),
+                createSaveImageCandidate(
+                    context,
+                    contextMenuUseCases,
+                    downloadsLocation = {
+                        android.os.Environment.getExternalStoragePublicDirectory(
+                            android.os.Environment.DIRECTORY_DOWNLOADS
+                        ).path
+                    }
+                ),
                 createCopyImageLocationCandidate(context, parentView, snackbarDelegate),
                 createAddContactCandidate(context),
                 createShareEmailAddressCandidate(context),
@@ -60,7 +68,12 @@ class ContextMenuIntegration(
                 context,
                 tabsUseCases,
                 contextMenuUseCases,
-                parentView
+                parentView,
+                downloadsLocation = {
+                    android.os.Environment.getExternalStoragePublicDirectory(
+                        android.os.Environment.DIRECTORY_DOWNLOADS
+                    ).path
+                }
             ) + appLinksCandidate + createCopyLinkTextCandidate(context, parentView, snackbarDelegate)
         }
     }

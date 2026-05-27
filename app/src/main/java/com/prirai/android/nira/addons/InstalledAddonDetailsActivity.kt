@@ -10,7 +10,7 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updatePadding
-import com.google.android.material.switchmaterial.SwitchMaterial
+
 import com.prirai.android.nira.BrowserActivity
 import com.prirai.android.nira.R
 import com.prirai.android.nira.ext.components
@@ -87,7 +87,7 @@ class InstalledAddonDetailsActivity : AppCompatActivity() {
 
         // Hide irrelevant items when add-on has been sideloaded
         if(!addon.isSupported()){
-            findViewById<SwitchMaterial>(R.id.enable_switch).visibility = View.GONE
+            findViewById<SwitchCompat>(R.id.enable_switch).visibility = View.GONE
             findViewById<SwitchCompat>(R.id.allow_in_private_browsing_switch).visibility = View.GONE
             findViewById<View>(R.id.details).visibility = View.GONE
             findViewById<View>(R.id.permissions).visibility = View.GONE
@@ -107,14 +107,14 @@ class InstalledAddonDetailsActivity : AppCompatActivity() {
     }
 
     private fun bindEnableSwitch(addon: Addon) {
-        val switch = findViewById<SwitchMaterial>(R.id.enable_switch)
-        switch.setState(addon.isEnabled())
+        val switch = findViewById<SwitchCompat>(R.id.enable_switch)
+        switch.isChecked = addon.isEnabled()
         switch.setOnCheckedChangeListener { _, isChecked ->
             if (isChecked) {
                 this.components.addonManager.enableAddon(
                         addon,
                         onSuccess = {
-                            switch.setState(true)
+                            switch.isChecked = true
                             Toast.makeText(
                                     this,
                                     getString(R.string.mozac_feature_addons_successfully_enabled, addon.translateName(this)),
@@ -133,7 +133,7 @@ class InstalledAddonDetailsActivity : AppCompatActivity() {
                 this.components.addonManager.disableAddon(
                         addon,
                         onSuccess = {
-                            switch.setState(false)
+                            switch.isChecked = false
                             Toast.makeText(
                                     this,
                                     getString(R.string.mozac_feature_addons_successfully_disabled, addon.translateName(this)),
@@ -225,7 +225,5 @@ class InstalledAddonDetailsActivity : AppCompatActivity() {
         }
     }
 
-    private fun SwitchCompat.setState(checked: Boolean) {
-        isChecked = checked
-    }
+    
 }

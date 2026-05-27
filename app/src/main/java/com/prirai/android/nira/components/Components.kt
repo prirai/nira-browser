@@ -52,7 +52,7 @@ import mozilla.components.feature.app.links.AppLinksInterceptor
 import mozilla.components.feature.app.links.AppLinksUseCases
 import mozilla.components.feature.contextmenu.ContextMenuUseCases
 import mozilla.components.feature.customtabs.store.CustomTabsServiceStore
-import mozilla.components.feature.downloads.DefaultDateTimeProvider
+import mozilla.components.support.utils.DefaultDateTimeProvider
 import mozilla.components.feature.downloads.DefaultFileSizeFormatter
 import com.prirai.android.nira.downloads.DownloadConfirmationMiddleware
 import mozilla.components.feature.downloads.DownloadEstimator
@@ -185,7 +185,7 @@ open class Components(private val applicationContext: Context) {
     }
 
     val addonUpdater =
-            DefaultAddonUpdater(applicationContext, Frequency(1, TimeUnit.DAYS), notificationsDelegate)
+        DefaultAddonUpdater(applicationContext, Frequency(1, TimeUnit.DAYS), notificationsDelegate, Dispatchers.Main)
 
     // Engine
     open val engine: Engine by lazy {
@@ -232,7 +232,19 @@ open class Components(private val applicationContext: Context) {
         BrowserStore(
                 middleware = listOf(
                         downloadConfirmationMiddleware,
-                        DownloadMiddleware(applicationContext, DownloadService::class.java, { true }),
+                        DownloadMiddleware(
+                            applicationContext,
+                            DownloadService::class.java,
+                            { true },
+                            downloadFileUtils = mozilla.components.support.utils.DefaultDownloadFileUtils(
+                                context = applicationContext,
+                                downloadLocation = {
+                                    android.os.Environment.getExternalStoragePublicDirectory(
+                                        android.os.Environment.DIRECTORY_DOWNLOADS
+                                    ).path
+                                },
+                            ),
+                        ),
                         ReaderViewMiddleware(),
                         ThumbnailsMiddleware(thumbnailStorage),
                         FaviconMiddleware(faviconCache),
@@ -410,7 +422,19 @@ open class Components(private val applicationContext: Context) {
     val pwaSuggestionManager by lazy { com.prirai.android.nira.webapp.PwaSuggestionManager(applicationContext) }
 
     val tabsUseCases: TabsUseCases by lazy { TabsUseCases(store) }
-    val downloadsUseCases: DownloadsUseCases by lazy { DownloadsUseCases(store, applicationContext) }
+    val downloadsUseCases: DownloadsUseCases by lazy {
+        DownloadsUseCases(
+            store = store,
+            downloadFileUtils = mozilla.components.support.utils.DefaultDownloadFileUtils(
+                context = applicationContext,
+                downloadLocation = {
+                    android.os.Environment.getExternalStoragePublicDirectory(
+                        android.os.Environment.DIRECTORY_DOWNLOADS
+                    ).path
+                },
+            ),
+        )
+    }
     val contextMenuUseCases: ContextMenuUseCases by lazy { ContextMenuUseCases(store) }
     
     // Custom Tabs

@@ -13,6 +13,9 @@ import mozilla.components.compose.browser.awesomebar.AwesomeBar
 import mozilla.components.compose.browser.awesomebar.AwesomeBarDefaults
 import mozilla.components.compose.browser.awesomebar.AwesomeBarOrientation
 import mozilla.components.concept.awesomebar.AwesomeBar
+import mozilla.components.concept.awesomebar.AwesomeBar.GroupedSuggestion
+import mozilla.components.concept.awesomebar.AwesomeBar.Suggestion
+import mozilla.components.concept.awesomebar.AwesomeBar.SuggestionItem
 import mozilla.components.support.ktx.android.content.getColorFromAttr
 
 class AwesomeBarWrapper @JvmOverloads constructor(
@@ -24,6 +27,7 @@ class AwesomeBarWrapper @JvmOverloads constructor(
     private val text = mutableStateOf("")
     private var onEditSuggestionListener: ((String) -> Unit)? = null
     private var onStopListener: (() -> Unit)? = null
+    private var onRemoveSuggestionButtonClicked: ((GroupedSuggestion) -> Unit)? = null
 
     @Composable
     override fun Content() {
@@ -47,13 +51,9 @@ class AwesomeBarWrapper @JvmOverloads constructor(
                     description = Color(context.getColorFromAttr(android.R.attr.textColorSecondary)),
                     autocompleteIcon =  Color(context.getColorFromAttr(android.R.attr.textColorSecondary))
                 ),
-                onSuggestionClicked = { suggestion ->
-                    suggestion.onSuggestionClicked?.invoke()
-                    onStopListener?.invoke()
-                },
-                onAutoComplete = { suggestion ->
-                    onEditSuggestionListener?.invoke(suggestion.editSuggestion!!)
-                }
+                onSuggestionClicked = { },
+                onRemoveClicked = { },
+                onAutoComplete = { }
             )
         }
     }
@@ -88,5 +88,13 @@ class AwesomeBarWrapper @JvmOverloads constructor(
 
     override fun setOnStopListener(listener: () -> Unit) {
         onStopListener = listener
+    }
+
+    override fun updateHiddenSuggestions(hiddenSuggestions: Set<GroupedSuggestion>) {
+        // No-op: compose awesomebar handles its own hidden state.
+    }
+
+    override fun setOnRemoveSuggestionButtonClicked(listener: (GroupedSuggestion) -> Unit) {
+        onRemoveSuggestionButtonClicked = listener
     }
 }

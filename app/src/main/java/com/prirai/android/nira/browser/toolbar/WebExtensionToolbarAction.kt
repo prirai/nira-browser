@@ -72,9 +72,7 @@ open class WebExtensionToolbarAction(
                 }
             } catch (throwable: Throwable) {
                 MainScope().launch {
-                    imageView.setImageResource(
-                        R.drawable.mozac_ic_web_extension_default_icon,
-                    )
+                    imageView.setImageResource(android.R.drawable.sym_def_app_icon)
                 }
                 Log.log(
                     Log.Priority.ERROR,

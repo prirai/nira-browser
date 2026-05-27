@@ -24,6 +24,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.Dispatchers
 import com.prirai.android.nira.browser.tabs.compose.TabOrderManager
 import com.prirai.android.nira.browser.tabs.compose.UnifiedTabOrder
 import com.prirai.android.nira.ext.components
@@ -132,7 +133,7 @@ class ComposeTabGroupBar @JvmOverloads constructor(
     private fun SingleTabItem(tabId: String) {
         val store = context.components.store
         val tab by produceState<TabSessionState?>(initialValue = null) {
-            store.flowScoped(lifecycleOwner!!) { flow ->
+            store.flowScoped(lifecycleOwner!!, Dispatchers.Main) { flow ->
                 flow.map { it.tabs.find { tab -> tab.id == tabId } }
                     .distinctUntilChanged()
                     .collect { value = it }
@@ -250,7 +251,7 @@ class ComposeTabGroupBar @JvmOverloads constructor(
         val store = context.components.store
 
         lifecycleOwner.lifecycleScope.launch {
-            store.flowScoped(lifecycleOwner) { flow ->
+            store.flowScoped(lifecycleOwner, Dispatchers.Main) { flow ->
                 flow.collect { state ->
                     // Trigger recomposition when tabs change
                     setupComposeContent()

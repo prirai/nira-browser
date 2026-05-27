@@ -36,6 +36,7 @@ import com.prirai.android.nira.ext.components
 import com.prirai.android.nira.preferences.UserPreferences
 import com.prirai.android.nira.settings.HomepageBackgroundChoice
 import com.prirai.android.nira.ui.theme.NiraTheme
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import mozilla.components.browser.state.selector.getNormalOrPrivateTabs
@@ -457,7 +458,7 @@ class ComposeHomeFragment : Fragment() {
 
         // Observe tab state changes - only navigate when URL actually changes to non-homepage
         val store = components.store
-        store.flowScoped(viewLifecycleOwner) { flow ->
+        store.flowScoped(viewLifecycleOwner, Dispatchers.Main) { flow ->
             flow.map { state -> 
                 state.selectedTabId?.let { tabId ->
                     val tab = state.tabs.find { it.id == tabId }
@@ -487,7 +488,7 @@ class ComposeHomeFragment : Fragment() {
         }
         
         // Observe selected tab changes to update tab bar filtering
-        store.flowScoped(viewLifecycleOwner) { flow ->
+        store.flowScoped(viewLifecycleOwner, Dispatchers.Main) { flow ->
             flow.map { state -> state.selectedTabId }
                 .distinctUntilChanged()
                 .collect { _ ->

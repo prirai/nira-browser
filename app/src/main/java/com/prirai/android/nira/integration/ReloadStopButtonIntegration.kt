@@ -53,7 +53,7 @@ class ReloadStopButtonIntegration(
     }
 
     override fun start() {
-        scope = store.flowScoped { flow ->
+        scope = store.flowScoped(dispatcher = kotlinx.coroutines.Dispatchers.Main) { flow ->
             flow.mapNotNull { state -> state.selectedTab }
                 .ifAnyChanged { tab ->
                     arrayOf(tab.content.loading)

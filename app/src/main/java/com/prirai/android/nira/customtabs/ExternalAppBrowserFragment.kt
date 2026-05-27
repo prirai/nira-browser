@@ -19,6 +19,7 @@ import com.prirai.android.nira.databinding.FragmentBrowserBinding
 import com.prirai.android.nira.ext.components
 import com.prirai.android.nira.integration.ContextMenuIntegration
 import com.prirai.android.nira.integration.FindInPageIntegration
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.mapNotNull
 import mozilla.components.browser.state.selector.findCustomTab
 import mozilla.components.browser.state.state.SessionState
@@ -205,6 +206,14 @@ class ExternalAppBrowserFragment : Fragment(), UserInteractionHandler {
                 shouldForwardToThirdParties = { 
                     com.prirai.android.nira.preferences.UserPreferences(requireContext()).promptExternalDownloader 
                 },
+                downloadFileUtils = mozilla.components.support.utils.DefaultDownloadFileUtils(
+                    context = requireContext().applicationContext,
+                    downloadLocation = {
+                        android.os.Environment.getExternalStoragePublicDirectory(
+                            android.os.Environment.DIRECTORY_DOWNLOADS
+                        ).path
+                    }
+                ),
                 downloadManager = mozilla.components.feature.downloads.manager.FetchDownloadManager(
                     requireContext().applicationContext,
                     components.store,
@@ -327,7 +336,7 @@ class ExternalAppBrowserFragment : Fragment(), UserInteractionHandler {
     }
     
     private fun observeTabChanges(sessionId: String) {
-        requireContext().components.store.flowScoped(viewLifecycleOwner) { flow ->
+        requireContext().components.store.flowScoped(viewLifecycleOwner, Dispatchers.Main) { flow ->
             flow.mapNotNull { state -> state.findCustomTab(sessionId) }
                 .collect { tab ->
                     updateHeaderDisplay(tab)

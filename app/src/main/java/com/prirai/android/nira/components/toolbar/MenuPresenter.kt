@@ -22,7 +22,7 @@ class MenuPresenter(
 
     fun start() {
         menuToolbar.addOnAttachStateChangeListener(this)
-        scope = store.flowScoped { flow ->
+        scope = store.flowScoped(dispatcher = kotlinx.coroutines.Dispatchers.Main) { flow ->
             flow.mapNotNull { state -> state.findCustomTabOrSelectedTab(sessionId) }
                 .ifAnyChanged { tab ->
                     arrayOf(

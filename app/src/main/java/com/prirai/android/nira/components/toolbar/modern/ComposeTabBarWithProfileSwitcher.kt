@@ -129,7 +129,7 @@ class ComposeTabBarWithProfileSwitcher @JvmOverloads constructor(
 
         // Use produceState to observe store state changes reactively
         val browserState = produceState(initialValue = store.state, store) {
-            store.flowScoped(lifecycleOwner) { flow ->
+            store.flowScoped(lifecycleOwner, Dispatchers.Main) { flow ->
                 flow.collect { state ->
                     value = state
                 }

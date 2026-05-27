@@ -655,8 +655,8 @@ private fun GroupPill(
     Surface(
         modifier = modifier
             .then(
-                if (expanded) Modifier.wrapContentHeight().defaultMinSize(minHeight = 32.dp)
-                else Modifier.height(32.dp)
+                if (expanded) Modifier.wrapContentHeight().defaultMinSize(minHeight = 40.dp)
+                else Modifier.height(40.dp)
             )
             .wrapContentWidth()
             .then(

@@ -40,6 +40,7 @@ import com.prirai.android.nira.browser.tabs.compose.TabSheetListView
 import com.prirai.android.nira.browser.tabs.compose.TabSheetGridView
 import com.prirai.android.nira.databinding.FragmentTabsBottomSheetBinding
 import com.prirai.android.nira.ext.components
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import mozilla.components.browser.state.state.TabSessionState
 import mozilla.components.lib.state.ext.flowScoped
@@ -804,7 +805,7 @@ class TabsBottomSheetFragment : DialogFragment() {
 
             // Collect store updates
             launch {
-                store.flowScoped(viewLifecycleOwner) { flow ->
+                store.flowScoped(viewLifecycleOwner, Dispatchers.Main) { flow ->
                     flow.collect { state ->
                         val filteredTabs = filterTabs(state.tabs)
                         viewModel.loadTabsForProfile(profileId, filteredTabs, state.selectedTabId)
