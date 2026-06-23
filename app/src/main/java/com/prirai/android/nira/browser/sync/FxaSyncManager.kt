@@ -33,6 +33,8 @@ import mozilla.components.service.fxa.ServerConfig
 import mozilla.components.service.fxa.SyncConfig
 import mozilla.components.service.fxa.SyncEngine
 import mozilla.components.service.fxa.manager.FxaAccountManager
+import mozilla.components.concept.storage.BookmarkNodeType
+import mozilla.components.concept.storage.BookmarkNode
 import mozilla.components.service.fxa.sync.SyncReason
 import mozilla.components.service.fxa.toAuthType
 
@@ -45,9 +47,17 @@ class FxaSyncManager private constructor(private val context: Context) {
 
     companion object {
         const val CLIENT_ID = "a2270f727f45f648"
-        const val REDIRECT_URL = "https://accounts.firefox.com/oauth/success/$CLIENT_ID"
+        const val REDIRECT_URL = "urn:ietf:wg:oauth:2.0:oob:oauth-redirect-webchannel"
+        const val WEB_CHANNEL_MESSAGING_ID = "mozacWebchannel"
 
         @Volatile private var instance: FxaSyncManager? = null
+
+        /** The installed FxA WebChannel extension, set after successful installation. */
+        @Volatile var webChannelExtension: mozilla.components.concept.engine.webextension.WebExtension? = null
+
+        /** Debug info from the last finishAuthentication attempt. */
+        @Volatile var lastAuthDebugInfo: String? = null
+        @Volatile var lastAuthTimestamp: Long = 0L
 
         fun getInstance(context: Context): FxaSyncManager =
             instance ?: synchronized(this) {
@@ -118,6 +128,8 @@ class FxaSyncManager private constructor(private val context: Context) {
             if (authenticatedAccount != null) {
                 scope.launch {
                     _accountEmail.value = accountManager.accountProfile()?.email
+                    // Auto-sync on restart so previously synced data is available
+                    triggerSync()
                 }
             }
         }
@@ -129,6 +141,9 @@ class FxaSyncManager private constructor(private val context: Context) {
                 val profile = accountManager.accountProfile()
                 _accountEmail.value = profile?.email
                 _authSuccessEvent.emit(profile?.email)
+                // Trigger initial sync after successful authentication so data
+                // starts flowing immediately instead of waiting for manual "Sync Now".
+                triggerSync()
             }
         }
 
@@ -186,15 +201,34 @@ class FxaSyncManager private constructor(private val context: Context) {
     }
 
     suspend fun finishAuthentication(code: String, state: String, action: String?) {
+        val ts = System.currentTimeMillis()
         try {
             val authData = FxaAuthData(
                 authType = action.toAuthType(),
                 code = code,
                 state = state,
             )
-            accountManager.finishAuthentication(authData)
+            val result = accountManager.finishAuthentication(authData)
+            // Check account state RIGHT AFTER finishAuthentication returns
+            val hasAccountNow = accountManager.authenticatedAccount() != null
+            val emailNow = accountManager.accountProfile()?.email
+            lastAuthDebugInfo = "SUCCESS: result=$result immediate after: hasAccount=$hasAccountNow email=$emailNow (action=$action, code=${code.take(6)}..., state=${state.take(6)}...)"
+            lastAuthTimestamp = ts
+            android.util.Log.d("FxaAuth", "finishAuthentication returned $result, hasAccount=$hasAccountNow email=$emailNow")
+
+            // Re-check after a short delay to catch any tear-down
+            if (!hasAccountNow) {
+                kotlinx.coroutines.delay(2000)
+                val hasAccountDelayed = accountManager.authenticatedAccount() != null
+                val emailDelayed = accountManager.accountProfile()?.email
+                lastAuthDebugInfo += " | 2s later: hasAccount=$hasAccountDelayed email=$emailDelayed"
+                android.util.Log.d("FxaAuth", "2s later: hasAccount=$hasAccountDelayed email=$emailDelayed")
+            }
         } catch (e: Exception) {
+            lastAuthDebugInfo = "ERROR: finishAuthentication threw ${e::class.simpleName}: ${e.message}"
+            lastAuthTimestamp = ts
             android.util.Log.e("FxaAuth", "finishAuthentication failed: ${e.message}")
+            android.util.Log.e("FxaAuth", "stacktrace", e)
         }
     }
 
@@ -210,9 +244,71 @@ class FxaSyncManager private constructor(private val context: Context) {
         } finally {
             _isSyncing.value = false
         }
+        // After sync completes, copy synced bookmarks into local bookmark manager
+        syncBookmarksToLocal()
     }
 
-    fun isSignedIn(): Boolean = accountManager.authenticatedAccount() != null
+    private suspend fun syncBookmarksToLocal() {
+        try {
+            val app = context as com.prirai.android.nira.BrowserApp
+            val placesStorage = app.components.bookmarksStorage
+            val localManager = com.prirai.android.nira.browser.bookmark.repository.BookmarkManager.getInstance(context)
+            
+            // Try root guid, then fall back to empty string
+            val tree = placesStorage.getTree("root________", true).getOrNull()
+                ?: placesStorage.getTree("", true).getOrNull()
+            if (tree == null) {
+                android.util.Log.d("FxaAuth", "syncBookmarksToLocal: tree is null, no bookmarks found")
+                return
+            }
+            android.util.Log.d("FxaAuth", "syncBookmarksToLocal: root title='${tree.title}' children=${tree.children?.size}")
+            
+            val children = tree.children ?: return
+            var added = 0
+            fun walkNodes(nodes: List<mozilla.components.concept.storage.BookmarkNode>) {
+                for (node in nodes) {
+                    when (node.type) {
+                        BookmarkNodeType.FOLDER -> {
+                            node.children?.let { walkNodes(it) }
+                        }
+                        BookmarkNodeType.ITEM -> {
+                            val url = node.url ?: continue
+                            val title = node.title ?: url
+                            if (!localManager.isBookmarked(url)) {
+                                localManager.add(localManager.root,
+                                    com.prirai.android.nira.browser.bookmark.items.BookmarkSiteItem(
+                                        title, url, System.currentTimeMillis()
+                                    )
+                                )
+                                added++
+                            }
+                        }
+                        BookmarkNodeType.SEPARATOR -> { }
+                    }
+                }
+            }
+            walkNodes(children)
+            
+            if (added > 0) {
+                localManager.save()
+                android.util.Log.d("FxaAuth", "syncBookmarksToLocal: added $added bookmarks")
+            } else {
+                android.util.Log.d("FxaAuth", "syncBookmarksToLocal: no new bookmarks to add (${countBookmarks(tree)} total in sync)")
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("FxaAuth", "syncBookmarksToLocal error: ${e.message}")
+            android.util.Log.e("FxaAuth", "syncBookmarksToLocal stack:", e)
+        }
+    }
+
+    private fun countBookmarks(node: mozilla.components.concept.storage.BookmarkNode): Int {
+        var count = 0
+        if (node.type == BookmarkNodeType.ITEM) count++
+        node.children?.forEach { count += countBookmarks(it) }
+        return count
+    }
+
+        fun isSignedIn(): Boolean = accountManager.authenticatedAccount() != null
 
     fun getAccountEmail(): String? = accountManager.accountProfile()?.email
 

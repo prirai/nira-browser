@@ -561,6 +561,7 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
             view = view,
         )
 
+
         initializeEngineView(toolbarHeight)
         
         // Defer heavy feature initialization to visual completeness queue
@@ -1182,7 +1183,6 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
         _unifiedToolbar = null
         _binding = null
     }
-
     companion object {
         private const val KEY_CUSTOM_TAB_SESSION_ID = "custom_tab_session_id"
         private const val REQUEST_KEY_PROMPT_PERMISSIONS = "promptFeature"

@@ -229,6 +229,56 @@ class SyncSettingsFragment : Fragment() {
                                 } catch (_: Exception) { }
                             }
                         },
+                        onExportLogs = {
+                            val syncInfo = StringBuilder()
+                            syncInfo.appendLine("=== Nira Sync Diagnostics ===")
+                            syncInfo.appendLine("App: Nira 0.5.5 (debug)")
+                            syncInfo.appendLine("Time: ${java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.US).format(java.util.Date())}")
+                            syncInfo.appendLine()
+                            syncInfo.appendLine("--- Sync State ---")
+                            syncInfo.appendLine("isSignedIn: $isSignedIn")
+                            syncInfo.appendLine("accountEmail: ${accountEmail ?: "null"}")
+                            syncInfo.appendLine("isSyncing: $effectiveIsSyncing")
+                            val lastSyncStr = effectiveLastSyncTime?.let {
+                                java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.US).format(java.util.Date(it))
+                            } ?: "never"
+                            syncInfo.appendLine("lastSyncTime: $lastSyncStr")
+                            syncInfo.appendLine("syncError: ${syncError ?: "none"}")
+                            syncInfo.appendLine()
+                            syncInfo.appendLine("--- Account Manager ---")
+                            val am = syncManager.accountManager
+                            syncInfo.appendLine("accountManager.authenticatedAccount: ${am.authenticatedAccount() != null}")
+                            val profile = am.accountProfile()
+                            syncInfo.appendLine("profile email: ${profile?.email ?: "null"}")
+                            syncInfo.appendLine("profile avatar: ${profile?.avatar ?: "null"}")
+                            syncInfo.appendLine()
+                            syncInfo.appendLine("--- Last Auth Attempt ---")
+                            val lastDebug = com.prirai.android.nira.browser.sync.FxaSyncManager.lastAuthDebugInfo
+                            val lastTs = com.prirai.android.nira.browser.sync.FxaSyncManager.lastAuthTimestamp
+                            syncInfo.appendLine("lastAuthDebugInfo: ${lastDebug ?: "none (no attempt recorded)"}")
+                            if (lastTs > 0) {
+                                val lastTsStr = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.US).format(java.util.Date(lastTs))
+                                syncInfo.appendLine("lastAuthTimestamp: $lastTsStr")
+                            }
+                            syncInfo.appendLine()
+                            syncInfo.appendLine("--- WebChannel Extension ---")
+                            val ext = com.prirai.android.nira.browser.sync.FxaSyncManager.webChannelExtension
+                            syncInfo.appendLine("webChannelExtension: ${if (ext != null) "installed (${ext.id})" else "NOT INSTALLED"}")
+                            syncInfo.appendLine()
+                            syncInfo.appendLine("--- Device ---")
+                            syncInfo.appendLine("model: ${android.os.Build.MODEL}")
+                            syncInfo.appendLine("brand: ${android.os.Build.BRAND}")
+                            syncInfo.appendLine("sdk: ${android.os.Build.VERSION.SDK_INT}")
+                            val text = syncInfo.toString()
+                            android.util.Log.d("FxaAuth", "Exporting diagnostics:\n$text")
+                            val sendIntent = android.content.Intent().apply {
+                                action = android.content.Intent.ACTION_SEND
+                                putExtra(android.content.Intent.EXTRA_TEXT, text)
+                                type = "text/plain"
+                            }
+                            val shareIntent = android.content.Intent.createChooser(sendIntent, "Share Sync Diagnostics")
+                            context.startActivity(shareIntent)
+                        },
                         onEngineToggle = { engine, enabled ->
                             when (engine) {
                                 SyncEngine.History -> {
@@ -275,6 +325,7 @@ private fun SyncSettingsScreen(
     onSignOut: () -> Unit,
     onSyncNow: () -> Unit,
     onManageAccount: () -> Unit,
+    onExportLogs: () -> Unit,
     onEngineToggle: (SyncEngine, Boolean) -> Unit
 ) {
     Scaffold { innerPadding ->
@@ -321,6 +372,19 @@ private fun SyncSettingsScreen(
                 syncBookmarksEnabled = syncBookmarksEnabled,
                 onEngineToggle = onEngineToggle
             )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Diagnostics / export logs button
+            OutlinedButton(
+                onClick = onExportLogs,
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.outlinedButtonColors(
+                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            ) {
+                Text("📋 Export Diagnostics")
+            }
         }
     }
 }

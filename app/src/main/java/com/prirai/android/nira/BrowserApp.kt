@@ -95,6 +95,26 @@ class BrowserApp : LocaleAwareApplication() {
         applicationScope.launch(Dispatchers.Main) {
             initializeWebExtensions()
         }
+
+        // Install the FxA WebChannel extension and save a reference so
+        // BaseBrowserFragment can register a per-session content handler.
+        applicationScope.launch(Dispatchers.Main) {
+            try {
+                components.engine.installBuiltInWebExtension(
+                    url = "resource://android/assets/extensions/fxawebchannel/",
+                    id = "fxa@mozac.org",
+                    onSuccess = { ext ->
+                        com.prirai.android.nira.browser.sync.FxaSyncManager.webChannelExtension = ext
+                        android.util.Log.d("FxaAuth", "FxA extension install OK")
+                    },
+                    onError = { err ->
+                        android.util.Log.e("FxaAuth", "FxA extension install FAILED", err)
+                    }
+                )
+            } catch (e: Exception) {
+                android.util.Log.e("FxaAuth", "FxA extension install exception", e)
+            }
+        }
         
         // CRITICAL: Eagerly init fxaAuthFeature on the Main thread so that
         // appRequestInterceptor.fxaInterceptor is set before any FxA redirect URL
