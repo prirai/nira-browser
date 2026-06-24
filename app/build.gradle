@@ -200,6 +200,8 @@ dependencies {
     implementation "org.mozilla.components:lib-state:$mozComponentsVersion"
     implementation "org.mozilla.components:lib-publicsuffixlist:$mozComponentsVersion"
     implementation "org.mozilla.components:lib-fetch-httpurlconnection:$mozComponentsVersion"
+    implementation "org.mozilla.components:lib-dataprotect:$mozComponentsVersion"
+    implementation "org.mozilla.components:support-appservices:$mozComponentsVersion"
 
     implementation 'androidx.credentials:credentials:1.6.0'
     implementation 'androidx.credentials:credentials-play-services-auth:1.6.0'
