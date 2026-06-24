@@ -111,7 +111,8 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
 
     private var _browserInteractor: BrowserToolbarViewInteractor? = null
     protected val browserInteractor: BrowserToolbarViewInteractor
-        get() = _browserInteractor!!
+        get() = _browserInteractor
+            ?: throw IllegalStateException("browserInteractor accessed before initialization")
 
     // Unified Toolbar System
     @VisibleForTesting
@@ -392,18 +393,22 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
 
         searchFeature.set(
             feature = SearchFeature(store, customTabSessionId) { request, tabId ->
-                val parentSession = store.state.findTabOrCustomTab(tabId)
-                val useCase = if (request.isPrivate) {
-                    requireContext().components.searchUseCases.newPrivateTabSearch
-                } else {
-                    requireContext().components.searchUseCases.newTabSearch
-                }
+                context?.let { ctx ->
+                    activity?.let { act ->
+                        val parentSession = store.state.findTabOrCustomTab(tabId)
+                        val useCase = if (request.isPrivate) {
+                            ctx.components.searchUseCases.newPrivateTabSearch
+                        } else {
+                            ctx.components.searchUseCases.newTabSearch
+                        }
 
-                if (parentSession is CustomTabSessionState) {
-                    useCase.invoke(request.query)
-                    requireActivity().startActivity(openInFenixIntent)
-                } else {
-                    useCase.invoke(request.query, parentSessionId = parentSession?.id)
+                        if (parentSession is CustomTabSessionState) {
+                            useCase.invoke(request.query)
+                            act.startActivity(openInFenixIntent)
+                        } else {
+                            useCase.invoke(request.query, parentSessionId = parentSession?.id)
+                        }
+                    }
                 }
             },
             owner = this,
@@ -455,18 +460,10 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
                 store = components.store,
                 useCases = components.downloadsUseCases,
                 fragmentManager = null,
-                shouldForwardToThirdParties = { UserPreferences(requireContext()).promptExternalDownloader },
+                shouldForwardToThirdParties = { context?.let { UserPreferences(it).promptExternalDownloader } ?: false },
                 onDownloadStopped = { download, id, status ->
                     debug("Download ID#$id $download with status $status is done.")
                 },
-                downloadFileUtils = mozilla.components.support.utils.DefaultDownloadFileUtils(
-                    context = requireContext().applicationContext,
-                    downloadLocation = {
-                        android.os.Environment.getExternalStoragePublicDirectory(
-                            android.os.Environment.DIRECTORY_DOWNLOADS
-                        ).path
-                    }
-                ),
                 downloadManager = FetchDownloadManager(
                     requireContext().applicationContext,
                     components.store,
@@ -564,6 +561,7 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
             view = view,
         )
 
+
         initializeEngineView(toolbarHeight)
         
         // Defer heavy feature initialization to visual completeness queue
@@ -581,13 +579,11 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
                 sessionId = customTabSessionId,
                 stub = stub,
                 engineView = binding.engineView,
-                toolbarInfo = unifiedToolbar?.getBrowserToolbar()?.let { toolbar ->
-                    FindInPageIntegration.ToolbarInfo(
-                        toolbar = toolbar,
-                        isToolbarDynamic = true,
-                        isToolbarPlacedAtTop = true
-                    )
-                } ?: return,
+                toolbarInfo = FindInPageIntegration.ToolbarInfo(
+                    toolbar = unifiedToolbar?.getBrowserToolbar() ?: return,
+                    isToolbarDynamic = true,
+                    isToolbarPlacedAtTop = true
+                ),
                 prepareLayout = {
                     // Layout adjustments when find in page opens
                 },
@@ -662,10 +658,6 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
 
     @VisibleForTesting
     internal fun initializeEngineView(toolbarHeight: Int) {
-        // Return if fragment is detached or binding is null
-        if (context == null) return
-        if (_binding == null) return
-
         val context = requireContext()
         val prefs = UserPreferences(context)
 
@@ -675,9 +667,6 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
         // Get actual toolbar height (may differ from parameter if components are hidden)
         // Use post to ensure toolbar is measured
         unifiedToolbar?.post {
-            // Guard: view may have been destroyed while this was queued
-            if (_binding == null) return@post
-
             val actualToolbarHeight = unifiedToolbar?.height ?: toolbarHeight
             
             // Set padding on swipeRefresh to prevent content from appearing under toolbar
@@ -686,8 +675,8 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
             
             when (prefs.toolbarPosition) {
                 com.prirai.android.nira.components.toolbar.ToolbarPosition.BOTTOM.ordinal -> {
-                    // Bottom toolbar: no padding; rely on dynamic toolbar clipping
-                    binding.swipeRefresh.setPadding(0, 0, 0, 0)
+                    // Bottom toolbar: add bottom padding equal to actual toolbar height
+                    binding.swipeRefresh.setPadding(0, 0, 0, actualToolbarHeight)
                     swipeRefreshParams.bottomMargin = 0
                     swipeRefreshParams.topMargin = 0
                 }
@@ -712,9 +701,10 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
             flow.map { state -> state.restoreComplete }
                 .distinctUntilChanged()
                 .collect { restored ->
+                    val ctx = context ?: return@collect
                     if (restored) {
                         // Synchronize LRU manager with restored tabs
-                        val lruManager = com.prirai.android.nira.browser.tabs.TabLRUManager.getInstance(requireContext())
+                        val lruManager = com.prirai.android.nira.browser.tabs.TabLRUManager.getInstance(ctx)
                         val currentTabIds = store.state.tabs.map { it.id }
                         lruManager.synchronizeWithTabs(currentTabIds)
                         
@@ -733,7 +723,7 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
                             }
                             
                             // Then create a new tab based on homepage preference
-                            when (UserPreferences(requireContext()).homepageType) {
+                            when (UserPreferences(ctx).homepageType) {
                                 HomepageChoice.VIEW.ordinal -> {
                                     // Load about:homepage in BrowserFragment (HTML homepage)
                                     components.tabsUseCases.addTab.invoke(
@@ -786,6 +776,7 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
             }
             .distinctUntilChanged()
             .collect { tabCount ->
+                val ctx = context ?: return@collect
                 if (tabCount == 0 && isAdded && view != null) {
                     // All tabs closed, navigate to home and create a new tab
                     try {
@@ -795,7 +786,7 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
                         }
                         
                         // Create a new tab
-                        when (UserPreferences(requireContext()).homepageType) {
+                        when (UserPreferences(ctx).homepageType) {
                             HomepageChoice.VIEW.ordinal -> {
                                 components.tabsUseCases.addTab.invoke("about:homepage", selectTab = true)
                             }
@@ -1181,15 +1172,17 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
     override fun onDestroyView() {
         super.onDestroyView()
 
+        android.util.Log.d("TabBarDebug", "BaseBrowserFragment.onDestroyView: clearing _unifiedToolbar=$_unifiedToolbar")
+
         // Lifecycle-aware features cleaned up automatically
         webContentPositionManager?.destroy()
         webContentPositionManager = null
         binding.engineView.setActivityContext(null)
         _browserInteractor = null
+        _unifiedToolbar?.destroy()
         _unifiedToolbar = null
         _binding = null
     }
-
     companion object {
         private const val KEY_CUSTOM_TAB_SESSION_ID = "custom_tab_session_id"
         private const val REQUEST_KEY_PROMPT_PERMISSIONS = "promptFeature"
