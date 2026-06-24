@@ -308,7 +308,7 @@ class FxaSyncManager private constructor(private val context: Context) {
         return count
     }
 
-        fun isSignedIn(): Boolean = accountManager.authenticatedAccount() != null
+    fun isSignedIn(): Boolean = accountManager.authenticatedAccount() != null
 
     fun getAccountEmail(): String? = accountManager.accountProfile()?.email
 
