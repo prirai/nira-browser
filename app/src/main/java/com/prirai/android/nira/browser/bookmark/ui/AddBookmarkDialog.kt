@@ -1,5 +1,8 @@
 package com.prirai.android.nira.browser.bookmark.ui
 
+import com.prirai.android.nira.ext.components
+import kotlinx.coroutines.launch
+
 import android.content.Context
 import android.content.DialogInterface
 import android.text.TextUtils
@@ -128,7 +131,22 @@ abstract class AddBookmarkDialog<S : BookmarkItem, T>(
             }
 
             if (mManager.save()) {
-                Toast.makeText(mDialog.context, R.string.successful, Toast.LENGTH_SHORT).show()
+                val ctx = mDialog.context
+                Toast.makeText(ctx, R.string.successful, Toast.LENGTH_SHORT).show()
+                // Sync this bookmark to Firefox via PlacesBookmarksStorage
+                val savedItem = mItem ?: item
+                if (savedItem is com.prirai.android.nira.browser.bookmark.items.BookmarkSiteItem) {
+                    kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+                        try {
+                            ctx.components.bookmarksStorage.addItem(
+                                "toolbar_____",
+                                savedItem.url,
+                                savedItem.title ?: savedItem.url,
+                                kotlin.UInt.MAX_VALUE
+                            )
+                        } catch (_: Exception) { }
+                    }
+                }
                 mOnClickListener?.onClick(mDialog, DialogInterface.BUTTON_POSITIVE)
                 mDialog.dismiss()
             } else {

@@ -10,6 +10,7 @@ import mozilla.components.browser.state.action.SystemAction
 import mozilla.components.browser.state.selector.selectedTab
 import mozilla.components.feature.addons.update.GlobalAddonDependencyProvider
 import mozilla.components.support.base.facts.Facts
+import mozilla.components.lib.fetch.httpurlconnection.HttpURLConnectionClient
 import mozilla.components.support.base.facts.processor.LogFactProcessor
 import mozilla.components.support.base.log.logger.Logger
 import mozilla.components.support.ktx.android.content.isMainProcess
@@ -39,6 +40,28 @@ class BrowserApp : Application() {
         }
 
         Facts.registerProcessor(LogFactProcessor())
+
+        // CRITICAL: Load NSS native libraries so the Rust megazord can find
+        // them via dlopen(). The Rust fxaclient needs NSS for PKCE crypto.
+        try {
+            System.loadLibrary("mozglue");
+            System.loadLibrary("nss3");
+            System.loadLibrary("freebl3");
+            System.loadLibrary("softokn3");
+
+            // Initialize Rust component infrastructure (NSS, logging, etc.)
+            mozilla.components.support.AppServicesInitializer.init(
+                mozilla.components.support.AppServicesInitializer.Config(
+                    crashReporting = null,
+                    logLevel = mozilla.components.support.base.log.Log.Priority.DEBUG,
+                )
+            )
+            mozilla.components.support.rusthttp.RustHttpConfig.setClient(
+                lazy { mozilla.components.lib.fetch.httpurlconnection.HttpURLConnectionClient() }
+            )
+        } catch (e: Exception) {
+            android.util.Log.w("BrowserApp", "Rust/NSS init failed (sync may be unavailable)", e)
+        }
 
         // CRITICAL: Only warmUp the engine - don't trigger full initialization yet
         // This prepares GeckoView but doesn't block on heavy operations
@@ -71,18 +94,53 @@ class BrowserApp : Application() {
             initializeWebExtensions()
         }
         
+        // Install the FxA WebChannel extension for OOB redirect handling
+        applicationScope.launch(Dispatchers.Main) {
+            try {
+                components.engine.installBuiltInWebExtension(
+                    url = "resource://android/assets/extensions/fxawebchannel/",
+                    id = "fxa@mozac.org",
+                    onSuccess = { ext ->
+                        com.prirai.android.nira.browser.sync.FxaSyncManager.webChannelExtension = ext
+                    },
+                    onError = { err ->
+                        android.util.Log.e("FxaAuth", "FxA extension install FAILED", err)
+                    }
+                )
+            } catch (e: Exception) {
+                android.util.Log.e("FxaAuth", "FxA extension install exception", e)
+            }
+        }
+
         // CRITICAL: Eagerly init fxaAuthFeature on the Main thread so that
         // appRequestInterceptor.fxaInterceptor is set before any FxA redirect URL
         // can be processed. Doing this inside an IO coroutine causes a race condition
         // where the interceptor may not be ready when the OAuth callback arrives.
         try {
             components.fxaAuthFeature
+            logger.info("FxA auth feature initialized")
         } catch (_: Exception) { /* sync unavailable */ }
 
         // Initialize Firefox Sync (non-blocking — degrades gracefully if unavailable)
         applicationScope.launch(Dispatchers.IO) {
             try {
-                components.fxaSyncManager.initialize()
+                components.fxaSyncManager.start()
+                logger.info("FxA sync manager start() completed")
+            } catch (_: Exception) { /* sync unavailable */ }
+        }
+
+        // Collect incoming FxA tabs (e.g. Send Tab from another device)
+        applicationScope.launch(Dispatchers.Main) {
+            try {
+                components.fxaSyncManager.incomingTabs.collect { tabReceived ->
+                    val entries = tabReceived.entries
+                    entries.forEach { tab ->
+                        components.tabsUseCases.addTab(
+                            url = tab.url,
+                            selectTab = entries.size == 1,
+                        )
+                    }
+                }
             } catch (_: Exception) { /* sync unavailable */ }
         }
         
