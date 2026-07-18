@@ -854,4 +854,16 @@
     <!-- Firefox Sync -->
     <string name="settings_sync">Firefox Sync</string>
     <string name="settings_sync_explain">Sign in to sync history and tabs</string>
+
+    <!-- ETP Level picker -->
+    <string name="etp_level_title">Tracking Protection</string>
+    <string name="etp_strict_title">Strict Tracking Protection</string>
+    <string name="etp_strict_warning">Strict mode may cause some sites to break. You can switch back to Standard or Custom mode at any time.</string>
+    <string name="etp_none_title">None</string>
+    <string name="etp_none_desc">No protection. Your browsing data may be collected.</string>
+    <string name="etp_standard_title">Standard</string>
+    <string name="etp_standard_desc">Balanced protection. Blocks common trackers while keeping sites functional.</string>
+    <string name="etp_strict_desc">Maximum protection. Some sites may display or function differently.</string>
+    <string name="etp_custom_title">Custom</string>
+    <string name="etp_custom_desc">Choose which categories of trackers to block.</string>
 </resources>

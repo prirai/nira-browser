@@ -399,8 +399,27 @@ open class Components(private val applicationContext: Context) {
     }
 
     private val trackingPolicy by lazy{
-        if(UserPreferences(applicationContext).trackingProtection) EngineSession.TrackingProtectionPolicy.recommended()
-        else EngineSession.TrackingProtectionPolicy.none()
+        val prefs = UserPreferences(applicationContext)
+        when (prefs.etpLevel) {
+            0 -> EngineSession.TrackingProtectionPolicy.none()
+            2 -> EngineSession.TrackingProtectionPolicy.strict()
+            3 -> { // Custom
+                val categories = mutableListOf<EngineSession.TrackingProtectionPolicy.TrackingCategory>().apply {
+                    if (prefs.etpTrackingAds) add(EngineSession.TrackingProtectionPolicy.TrackingCategory.AD)
+                    if (prefs.etpTrackingContent) add(EngineSession.TrackingProtectionPolicy.TrackingCategory.ANALYTICS)
+                    if (prefs.etpCryptominers) add(EngineSession.TrackingProtectionPolicy.TrackingCategory.CRYPTOMINING)
+                    if (prefs.etpFingerprinters) add(EngineSession.TrackingProtectionPolicy.TrackingCategory.FINGERPRINTING)
+                    if (prefs.etpSocialTracking) {
+                        add(EngineSession.TrackingProtectionPolicy.TrackingCategory.SOCIAL)
+                        add(EngineSession.TrackingProtectionPolicy.TrackingCategory.MOZILLA_SOCIAL)
+                    }
+                    if (prefs.etpEmailTracking) add(EngineSession.TrackingProtectionPolicy.TrackingCategory.EMAIL)
+                }
+                if (categories.isEmpty()) EngineSession.TrackingProtectionPolicy.none()
+                else EngineSession.TrackingProtectionPolicy.select(trackingCategories = categories.toTypedArray())
+            }
+            else -> EngineSession.TrackingProtectionPolicy.recommended() // 1 = Standard
+        }
     }
 
     private val safeBrowsingPolicy by lazy{

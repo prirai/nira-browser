@@ -78,6 +78,16 @@ data class ProfileInfo(
     val color: Int = 0
 )
 
+data class JumpBackInItem(
+    val url: String,
+    val title: String
+)
+
+data class RecentlyClosedItem(
+    val url: String,
+    val title: String
+)
+
 @Composable
 fun HomeScreen(
     isPrivateMode: Boolean,
@@ -92,6 +102,10 @@ fun HomeScreen(
     onBookmarkClick: (BookmarkItem) -> Unit,
     onBookmarkToggle: () -> Unit,
     onSearchClick: () -> Unit,
+    jumpBackInItems: List<JumpBackInItem> = emptyList(),
+    recentlyClosedItems: List<RecentlyClosedItem> = emptyList(),
+    onJumpBackInClick: (JumpBackInItem) -> Unit = {},
+    onRecentlyClosedClick: (RecentlyClosedItem) -> Unit = {},
     backgroundImageUrl: String? = null,
     isToolbarAtTop: Boolean = false,
     homepageType: Int = 0,
@@ -167,8 +181,28 @@ fun HomeScreen(
                 }
             }
 
-            // Show shortcuts and bookmarks only for default VIEW mode and in normal mode
+            // Show shortcuts, bookmarks, and recents only for default VIEW mode and in normal mode
             if (!isPrivateMode && homepageType == HomepageChoice.VIEW.ordinal) {
+                // Jump Back In section
+                if (jumpBackInItems.isNotEmpty()) {
+                    item {
+                        JumpBackInSection(
+                            items = jumpBackInItems,
+                            onClick = onJumpBackInClick
+                        )
+                    }
+                }
+
+                // Recently Closed section
+                if (recentlyClosedItems.isNotEmpty()) {
+                    item {
+                        RecentlyClosedSection(
+                            items = recentlyClosedItems,
+                            onClick = onRecentlyClosedClick
+                        )
+                    }
+                }
+
                 // Shortcuts section
                 item {
                     ShortcutsSection(
@@ -578,6 +612,114 @@ fun BookmarkItem(
             textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.onBackground
         )
+    }
+}
+
+@Composable
+fun JumpBackInSection(
+    items: List<JumpBackInItem>,
+    onClick: (JumpBackInItem) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(modifier = modifier) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "Jump Back In",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onBackground
+            )
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        items.take(4).forEach { item ->
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onClick(item) },
+                shape = RoundedCornerShape(12.dp),
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    FaviconImageFromUrl(
+                        url = item.url,
+                        title = item.title,
+                        size = 24.dp,
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Text(
+                        text = item.title,
+                        style = MaterialTheme.typography.bodyMedium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.height(4.dp))
+        }
+    }
+}
+
+@Composable
+fun RecentlyClosedSection(
+    items: List<RecentlyClosedItem>,
+    onClick: (RecentlyClosedItem) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(modifier = modifier) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "Recently Closed",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onBackground
+            )
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        items.take(4).forEach { item ->
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onClick(item) },
+                shape = RoundedCornerShape(12.dp),
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    FaviconImageFromUrl(
+                        url = item.url,
+                        title = item.title,
+                        size = 24.dp,
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Text(
+                        text = item.title,
+                        style = MaterialTheme.typography.bodyMedium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.height(4.dp))
+        }
     }
 }
 

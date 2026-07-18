@@ -21,7 +21,7 @@ class ReaderModeIntegration(
     engine: Engine,
     store: BrowserStore,
     toolbar: BrowserToolbar,
-    view: ReaderViewControlsView,
+    val controlsView: ReaderViewControlsView,
     readerViewAppearanceButton: FloatingActionButton,
     private val fragmentManager: FragmentManager
 ) : LifecycleAwareFeature, UserInteractionHandler {
@@ -52,10 +52,15 @@ class ReaderModeIntegration(
 
     init {
         toolbar.addPageAction(readerViewButton)
-        readerViewAppearanceButton.setOnClickListener { feature.showControls() }
+        readerViewAppearanceButton.setOnClickListener {
+            val bottomSheet = com.prirai.android.nira.browser.ReaderAppearanceBottomSheet.newInstance(
+                feature, controlsView
+            )
+            bottomSheet.show(fragmentManager, com.prirai.android.nira.browser.ReaderAppearanceBottomSheet.TAG)
+        }
     }
 
-    private val feature = ReaderViewFeature(context, engine, store, view) { available, active ->
+    private val feature = ReaderViewFeature(context, engine, store, controlsView) { available, active ->
         readerViewButtonVisible = available
         readerViewButton.setSelected(active)
 

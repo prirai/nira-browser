@@ -1,19 +1,72 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Reorganized Privacy & Security Settings - Material 3 -->
+<!-- Privacy & Security Settings -->
 <PreferenceScreen
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <PreferenceCategory android:title="Enhanced Tracking Protection">
+
+        <Preference
+            app:key="etp_level"
+            app:title="Tracking Protection"
+            app:summary="Controls how Nira blocks trackers and scripts" />
+
+        <PreferenceCategory
+            app:key="etp_custom_categories"
+            app:title="Blocked Categories"
+            app:summary="Choose what to block in Custom mode"
+            app:initialExpandedChildrenCount="0">
+
+            <com.prirai.android.nira.settings.MaterialSwitchPreference
+                app:key="etp_tracking_ads"
+                app:title="Tracking Ads"
+                app:summary="Blocks ads that track your browsing"
+                app:defaultValue="true" />
+
+            <com.prirai.android.nira.settings.MaterialSwitchPreference
+                app:key="etp_tracking_content"
+                app:title="Tracking Content"
+                app:summary="Blocks content that tracks your browsing"
+                app:defaultValue="true" />
+
+            <com.prirai.android.nira.settings.MaterialSwitchPreference
+                app:key="etp_cryptominers"
+                app:title="Cryptominers"
+                app:summary="Blocks scripts that mine cryptocurrency"
+                app:defaultValue="true" />
+
+            <com.prirai.android.nira.settings.MaterialSwitchPreference
+                app:key="etp_fingerprinters"
+                app:title="Fingerprinters"
+                app:summary="Blocks scripts that fingerprint your device"
+                app:defaultValue="true" />
+
+            <com.prirai.android.nira.settings.MaterialSwitchPreference
+                app:key="etp_social_tracking"
+                app:title="Social Trackers"
+                app:summary="Blocks social media tracking"
+                app:defaultValue="true" />
+
+            <com.prirai.android.nira.settings.MaterialSwitchPreference
+                app:key="etp_email_tracking"
+                app:title="Email Tracking"
+                app:summary="Blocks email tracking pixels"
+                app:defaultValue="true" />
+
+        </PreferenceCategory>
+
+    </PreferenceCategory>
+
     <PreferenceCategory android:title="Clear Browsing Data">
-        
+
         <Preference
             app:key="@string/key_clear_history"
             app:title="@string/clear_history"/>
-            
+
         <Preference
             app:key="@string/key_clear_cookies"
             app:title="@string/clear_cookies"/>
-            
+
         <Preference
             app:key="@string/key_clear_cache"
             app:title="@string/clear_cache"/>
@@ -21,11 +74,11 @@
     </PreferenceCategory>
 
     <PreferenceCategory android:title="Tabs &amp; Permissions">
-        
+
         <Preference
             app:key="@string/key_clear_tabs"
             app:title="@string/clear_tabs"/>
-            
+
         <Preference
             app:key="@string/key_clear_permissions"
             app:title="@string/clear_permissions"/>
