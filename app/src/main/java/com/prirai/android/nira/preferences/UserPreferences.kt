@@ -65,13 +65,40 @@ class UserPreferences(appContext: Context) : mozilla.components.support.ktx.andr
     // SECURITY: Remote debugging disabled for production security
     // var remoteDebugging by booleanPreference(REMOTE_DEBUGGING, false)
     var promptExternalDownloader by booleanPreference(PROMPT_EXTERNAL_DOWNLOADER, false)
-    var addonSort by intPreference(WEB_THEME_CHOICE, AddonSortType.RATING.ordinal)
+    var addonSort by intPreference(ADDON_SORT, AddonSortType.RATING.ordinal)
     var showUrlProtocol by booleanPreference(SHOW_URL_PROTOCOL, false)
     var searchSuggestionsEnabled by booleanPreference(SEARCH_SUGGESTIONS, true)
     var safeBrowsing by booleanPreference(SAFE_BROWSING, true)
-    var trackingProtection by booleanPreference(TRACKING_PROTECTION, true)
+    var trackingProtection: Boolean
+        get() = etpLevel != 0
+        set(value) {
+            preferences.edit().putBoolean(TRACKING_PROTECTION, value).apply()
+            etpLevel = if (value) {
+                maxOf(etpLevel, 1)
+            } else {
+                0
+            }
+        }
     var showShortcuts by booleanPreference(SHOW_SHORTCUTS, true)
     var loadShortcutIcons by booleanPreference(LOAD_SHORTCUT_ICONS, true)
+
+    // ETP (Enhanced Tracking Protection) level: 0=None, 1=Standard(recommended), 2=Strict, 3=Custom
+    var etpLevel: Int
+        get() {
+            val value = preferences.all[ETP_LEVEL] ?: return if (preferences.getBoolean(TRACKING_PROTECTION, true)) 1 else 0
+            return when (value) {
+                is Int -> value
+                is String -> value.toIntOrNull() ?: 1
+                else -> 1
+            }
+        }
+        set(value) = preferences.edit().putInt(ETP_LEVEL, value).apply()
+    var etpCryptominers by booleanPreference(ETP_CRYPTOMINERS, true)
+    var etpFingerprinters by booleanPreference(ETP_FINGERPRINTERS, true)
+    var etpTrackingContent by booleanPreference(ETP_TRACKING_CONTENT, true)
+    var etpTrackingAds by booleanPreference(ETP_TRACKING_ADS, true)
+    var etpSocialTracking by booleanPreference(ETP_SOCIAL_TRACKING, true)
+    var etpEmailTracking by booleanPreference(ETP_EMAIL_TRACKING, true)
 
     // SECURITY: Third-party certificate trust disabled for security
     // var trustThirdPartyCerts by booleanPreference(TRUST_THIRD_PARTY_CERTS, false)
@@ -163,5 +190,13 @@ class UserPreferences(appContext: Context) : mozilla.components.support.ktx.andr
         const val SYNC_HISTORY_ENABLED = "sync_history_enabled"
         const val SYNC_TABS_ENABLED = "sync_tabs_enabled"
         const val SYNC_BOOKMARKS_ENABLED = "sync_bookmarks_enabled"
+        const val ADDON_SORT = "addon_sort"
+        const val ETP_LEVEL = "etp_level"
+        const val ETP_CRYPTOMINERS = "etp_cryptominers"
+        const val ETP_FINGERPRINTERS = "etp_fingerprinters"
+        const val ETP_TRACKING_CONTENT = "etp_tracking_content"
+        const val ETP_TRACKING_ADS = "etp_tracking_ads"
+        const val ETP_SOCIAL_TRACKING = "etp_social_tracking"
+        const val ETP_EMAIL_TRACKING = "etp_email_tracking"
     }
 }

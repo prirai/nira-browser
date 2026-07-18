@@ -237,6 +237,21 @@
         <item name="cornerSize">28dp</item>
     </style>
 
+    <!-- Shape appearances for connected card lists (top/bottom rounding only) -->
+    <style name="ShapeAppearance.Material3.Card.TopRounded" parent="ShapeAppearance.Material3.LargeComponent">
+        <item name="cornerSizeBottomLeft">0dp</item>
+        <item name="cornerSizeBottomRight">0dp</item>
+    </style>
+
+    <style name="ShapeAppearance.Material3.Card.BottomRounded" parent="ShapeAppearance.Material3.LargeComponent">
+        <item name="cornerSizeTopLeft">0dp</item>
+        <item name="cornerSizeTopRight">0dp</item>
+    </style>
+
+    <style name="ShapeAppearance.Material3.Card.NoRounding" parent="ShapeAppearance.Material3.LargeComponent">
+        <item name="cornerSize">0dp</item>
+    </style>
+
     <!-- Fullscreen Dialog Theme -->
     <style name="FullScreenDialogTheme" parent="Theme.Material3.DynamicColors.DayNight">
         <item name="android:windowIsFloating">false</item>

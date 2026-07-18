@@ -120,11 +120,15 @@
             style="@style/Widget.Material3.Button.OutlinedButton.Icon"
             android:layout_width="48dp"
             android:layout_height="48dp"
+            android:minWidth="0dp"
+            android:minHeight="0dp"
+            android:insetLeft="0dp"
+            android:insetTop="0dp"
+            android:insetRight="0dp"
+            android:insetBottom="0dp"
             android:text="-"
             android:textSize="20sp"
             android:textColor="@color/m3_on_surface"
-            android:insetTop="0dp"
-            android:insetBottom="0dp"
             android:contentDescription="Decrease font size" />
 
         <com.google.android.material.slider.Slider
@@ -145,11 +149,15 @@
             style="@style/Widget.Material3.Button.OutlinedButton.Icon"
             android:layout_width="48dp"
             android:layout_height="48dp"
+            android:minWidth="0dp"
+            android:minHeight="0dp"
+            android:insetLeft="0dp"
+            android:insetTop="0dp"
+            android:insetRight="0dp"
+            android:insetBottom="0dp"
             android:text="+"
             android:textSize="20sp"
             android:textColor="@color/m3_on_surface"
-            android:insetTop="0dp"
-            android:insetBottom="0dp"
             android:contentDescription="Increase font size" />
 
     </LinearLayout>

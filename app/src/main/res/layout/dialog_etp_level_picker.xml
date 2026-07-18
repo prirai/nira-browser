@@ -1,5 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- iOS-style Theme Picker Dialog Layout with Visual Previews -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
@@ -10,49 +9,30 @@
     android:paddingBottom="4dp">
 
     <com.google.android.material.card.MaterialCardView
-        android:id="@+id/lightThemeCard"
+        android:id="@+id/noneCard"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:checkable="true"
         android:clickable="true"
         android:focusable="true"
         app:cardCornerRadius="0dp"
         app:cardElevation="0dp"
         app:strokeWidth="0dp"
-        app:checkedIconTint="?attr/colorPrimary"
-        app:checkedIcon="@drawable/ic_check_circle"
-        app:checkedIconSize="24dp"
-        app:checkedIconMargin="16dp"
+        app:cardBackgroundColor="?attr/colorSurface"
         app:shapeAppearanceOverlay="@style/ShapeAppearance.Material3.Card.TopRounded">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            android:padding="16dp"
-            android:gravity="center_vertical">
+            android:gravity="center_vertical"
+            android:padding="16dp">
 
-            <!-- Visual Preview -->
             <FrameLayout
-                android:layout_width="56dp"
-                android:layout_height="56dp"
-                android:background="@android:color/white"
-                android:elevation="2dp">
-                
-                <View
-                    android:layout_width="match_parent"
-                    android:layout_height="4dp"
-                    android:background="#E0E0E0"/>
-                
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_gravity="center"
-                    android:text="Aa"
-                    android:textSize="20sp"
-                    android:textStyle="bold"
-                    android:textColor="#000000"/>
-            </FrameLayout>
+                android:id="@+id/noneIcon"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:background="@drawable/circle_icon_bg"
+                android:gravity="center" />
 
             <LinearLayout
                 android:layout_width="0dp"
@@ -64,7 +44,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="@string/light_mode"
+                    android:text="@string/etp_none_title"
                     android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
                     android:textColor="?attr/colorOnSurface" />
 
@@ -72,11 +52,20 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="2dp"
-                    android:text="@string/light_mode_description"
+                    android:text="@string/etp_none_desc"
                     android:textAppearance="@style/TextAppearance.Material3.BodySmall"
                     android:textColor="?attr/colorOnSurfaceVariant" />
 
             </LinearLayout>
+
+            <androidx.appcompat.widget.AppCompatImageView
+                android:id="@+id/noneCheck"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:layout_marginStart="12dp"
+                android:src="@drawable/ic_check_circle"
+                android:visibility="gone"
+                app:tint="?attr/colorPrimary" />
 
         </LinearLayout>
 
@@ -88,49 +77,30 @@
         android:background="?attr/colorOutlineVariant" />
 
     <com.google.android.material.card.MaterialCardView
-        android:id="@+id/darkThemeCard"
+        android:id="@+id/standardCard"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:checkable="true"
         android:clickable="true"
         android:focusable="true"
         app:cardCornerRadius="0dp"
         app:cardElevation="0dp"
         app:strokeWidth="0dp"
-        app:checkedIconTint="?attr/colorPrimary"
-        app:checkedIcon="@drawable/ic_check_circle"
-        app:checkedIconSize="24dp"
-        app:checkedIconMargin="16dp"
+        app:cardBackgroundColor="?attr/colorSurface"
         app:shapeAppearanceOverlay="@style/ShapeAppearance.Material3.Card.NoRounding">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            android:padding="16dp"
-            android:gravity="center_vertical">
+            android:gravity="center_vertical"
+            android:padding="16dp">
 
-            <!-- Visual Preview -->
             <FrameLayout
-                android:layout_width="56dp"
-                android:layout_height="56dp"
-                android:background="#1C1B1F"
-                android:elevation="2dp">
-                
-                <View
-                    android:layout_width="match_parent"
-                    android:layout_height="4dp"
-                    android:background="#2B2930"/>
-                
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_gravity="center"
-                    android:text="Aa"
-                    android:textSize="20sp"
-                    android:textStyle="bold"
-                    android:textColor="#E6E1E5"/>
-            </FrameLayout>
+                android:id="@+id/standardIcon"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:background="@drawable/circle_icon_bg"
+                android:gravity="center" />
 
             <LinearLayout
                 android:layout_width="0dp"
@@ -142,7 +112,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="@string/dark_mode"
+                    android:text="@string/etp_standard_title"
                     android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
                     android:textColor="?attr/colorOnSurface" />
 
@@ -150,11 +120,20 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="2dp"
-                    android:text="@string/dark_mode_description"
+                    android:text="@string/etp_standard_desc"
                     android:textAppearance="@style/TextAppearance.Material3.BodySmall"
                     android:textColor="?attr/colorOnSurfaceVariant" />
 
             </LinearLayout>
+
+            <androidx.appcompat.widget.AppCompatImageView
+                android:id="@+id/standardCheck"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:layout_marginStart="12dp"
+                android:src="@drawable/ic_check_circle"
+                android:visibility="gone"
+                app:tint="?attr/colorPrimary" />
 
         </LinearLayout>
 
@@ -166,74 +145,30 @@
         android:background="?attr/colorOutlineVariant" />
 
     <com.google.android.material.card.MaterialCardView
-        android:id="@+id/systemThemeCard"
+        android:id="@+id/strictCard"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:checkable="true"
         android:clickable="true"
         android:focusable="true"
         app:cardCornerRadius="0dp"
         app:cardElevation="0dp"
         app:strokeWidth="0dp"
-        app:checkedIconTint="?attr/colorPrimary"
-        app:checkedIcon="@drawable/ic_check_circle"
-        app:checkedIconSize="24dp"
-        app:checkedIconMargin="16dp"
-        app:shapeAppearanceOverlay="@style/ShapeAppearance.Material3.Card.BottomRounded">
+        app:cardBackgroundColor="?attr/colorSurface"
+        app:shapeAppearanceOverlay="@style/ShapeAppearance.Material3.Card.NoRounding">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            android:padding="16dp"
-            android:gravity="center_vertical">
+            android:gravity="center_vertical"
+            android:padding="16dp">
 
-            <!-- Visual Preview - Split Light/Dark -->
             <FrameLayout
-                android:layout_width="56dp"
-                android:layout_height="56dp"
-                android:elevation="2dp">
-                
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:orientation="horizontal">
-                    
-                    <!-- Light half -->
-                    <FrameLayout
-                        android:layout_width="0dp"
-                        android:layout_height="match_parent"
-                        android:layout_weight="1"
-                        android:background="@android:color/white">
-                        
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_gravity="center"
-                            android:text="A"
-                            android:textSize="18sp"
-                            android:textStyle="bold"
-                            android:textColor="#000000"/>
-                    </FrameLayout>
-                    
-                    <!-- Dark half -->
-                    <FrameLayout
-                        android:layout_width="0dp"
-                        android:layout_height="match_parent"
-                        android:layout_weight="1"
-                        android:background="#1C1B1F">
-                        
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_gravity="center"
-                            android:text="a"
-                            android:textSize="18sp"
-                            android:textStyle="bold"
-                            android:textColor="#E6E1E5"/>
-                    </FrameLayout>
-                </LinearLayout>
-            </FrameLayout>
+                android:id="@+id/strictIcon"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:background="@drawable/circle_icon_bg"
+                android:gravity="center" />
 
             <LinearLayout
                 android:layout_width="0dp"
@@ -245,7 +180,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="@string/system_default"
+                    android:text="@string/etp_strict_title"
                     android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
                     android:textColor="?attr/colorOnSurface" />
 
@@ -253,11 +188,88 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="2dp"
-                    android:text="@string/system_default_description"
+                    android:text="@string/etp_strict_desc"
                     android:textAppearance="@style/TextAppearance.Material3.BodySmall"
                     android:textColor="?attr/colorOnSurfaceVariant" />
 
             </LinearLayout>
+
+            <androidx.appcompat.widget.AppCompatImageView
+                android:id="@+id/strictCheck"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:layout_marginStart="12dp"
+                android:src="@drawable/ic_check_circle"
+                android:visibility="gone"
+                app:tint="?attr/colorPrimary" />
+
+        </LinearLayout>
+
+    </com.google.android.material.card.MaterialCardView>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="?attr/colorOutlineVariant" />
+
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/customCard"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:clickable="true"
+        android:focusable="true"
+        app:cardCornerRadius="0dp"
+        app:cardElevation="0dp"
+        app:strokeWidth="0dp"
+        app:cardBackgroundColor="?attr/colorSurface"
+        app:shapeAppearanceOverlay="@style/ShapeAppearance.Material3.Card.BottomRounded">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:padding="16dp">
+
+            <FrameLayout
+                android:id="@+id/customIcon"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:background="@drawable/circle_icon_bg"
+                android:gravity="center" />
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="16dp"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/etp_custom_title"
+                    android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
+                    android:textColor="?attr/colorOnSurface" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:text="@string/etp_custom_desc"
+                    android:textAppearance="@style/TextAppearance.Material3.BodySmall"
+                    android:textColor="?attr/colorOnSurfaceVariant" />
+
+            </LinearLayout>
+
+            <androidx.appcompat.widget.AppCompatImageView
+                android:id="@+id/customCheck"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:layout_marginStart="12dp"
+                android:src="@drawable/ic_check_circle"
+                android:visibility="gone"
+                app:tint="?attr/colorPrimary" />
 
         </LinearLayout>
 

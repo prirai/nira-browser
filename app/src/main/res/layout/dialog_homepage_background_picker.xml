@@ -5,24 +5,25 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:padding="24dp">
+    android:paddingHorizontal="24dp"
+    android:paddingTop="8dp"
+    android:paddingBottom="4dp">
 
     <com.google.android.material.card.MaterialCardView
         android:id="@+id/noneCard"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="12dp"
         android:checkable="true"
         android:clickable="true"
         android:focusable="true"
-        app:cardCornerRadius="16dp"
+        app:cardCornerRadius="0dp"
         app:cardElevation="0dp"
-        app:strokeColor="?attr/colorOutline"
-        app:strokeWidth="2dp"
+        app:strokeWidth="0dp"
         app:checkedIconTint="?attr/colorPrimary"
         app:checkedIcon="@drawable/ic_check_circle"
         app:checkedIconSize="24dp"
-        app:checkedIconMargin="16dp">
+        app:checkedIconMargin="16dp"
+        app:shapeAppearanceOverlay="@style/ShapeAppearance.Material3.Card.TopRounded">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -51,22 +52,26 @@
 
     </com.google.android.material.card.MaterialCardView>
 
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="?attr/colorOutlineVariant" />
+
     <com.google.android.material.card.MaterialCardView
         android:id="@+id/urlCard"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="12dp"
         android:checkable="true"
         android:clickable="true"
         android:focusable="true"
-        app:cardCornerRadius="16dp"
+        app:cardCornerRadius="0dp"
         app:cardElevation="0dp"
-        app:strokeColor="?attr/colorOutline"
-        app:strokeWidth="2dp"
+        app:strokeWidth="0dp"
         app:checkedIconTint="?attr/colorPrimary"
         app:checkedIcon="@drawable/ic_check_circle"
         app:checkedIconSize="24dp"
-        app:checkedIconMargin="16dp">
+        app:checkedIconMargin="16dp"
+        app:shapeAppearanceOverlay="@style/ShapeAppearance.Material3.Card.NoRounding">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -95,6 +100,11 @@
 
     </com.google.android.material.card.MaterialCardView>
 
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="?attr/colorOutlineVariant" />
+
     <com.google.android.material.card.MaterialCardView
         android:id="@+id/galleryCard"
         android:layout_width="match_parent"
@@ -102,14 +112,14 @@
         android:checkable="true"
         android:clickable="true"
         android:focusable="true"
-        app:cardCornerRadius="16dp"
+        app:cardCornerRadius="0dp"
         app:cardElevation="0dp"
-        app:strokeColor="?attr/colorOutline"
-        app:strokeWidth="2dp"
+        app:strokeWidth="0dp"
         app:checkedIconTint="?attr/colorPrimary"
         app:checkedIcon="@drawable/ic_check_circle"
         app:checkedIconSize="24dp"
-        app:checkedIconMargin="16dp">
+        app:checkedIconMargin="16dp"
+        app:shapeAppearanceOverlay="@style/ShapeAppearance.Material3.Card.BottomRounded">
 
         <LinearLayout
             android:layout_width="match_parent"
