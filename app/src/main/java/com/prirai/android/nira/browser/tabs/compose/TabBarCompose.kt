@@ -104,28 +104,30 @@ fun TabBarCompose(
     }
 
     // Scroll to selected tab once on initial composition (e.g. app open).
-    // Waits for order to finish loading, then scrolls instantly (no animation).
-    // Centers the selected tab in the viewport when possible.
+    // Grouped tabs only ensure the group is visible; the selected tab pill
+    // inside the group is aligned by its own BringIntoViewRequester.
+    // Ungrouped tabs are centered in the viewport when possible.
     var hasInitialScrolled by remember { mutableStateOf(false) }
     LaunchedEffect(order, selectedTabId, listState.layoutInfo.viewportSize) {
         if (!hasInitialScrolled && order != null && selectedTabId != null) {
-            val selectedIndex = order!!.primaryOrder.indexOfFirst { item ->
-                when (item) {
-                    is UnifiedTabOrder.OrderItem.SingleTab -> item.tabId == selectedTabId
-                    is UnifiedTabOrder.OrderItem.TabGroup -> selectedTabId in item.tabIds
-                }
-            }
-            if (selectedIndex >= 0) {
-                // Wait for layout to be ready
-                val viewportSize = listState.layoutInfo.viewportSize.width
-                if (viewportSize > 0) {
-                    // Calculate offset to center the selected tab
-                    // Negative offset moves the item towards the center
-                    val averageItemSize = 180 // Approximate tab width in pixels (150dp + spacing)
-                    val scrollOffset = -(viewportSize / 2 - averageItemSize / 2)
-                    
-                    listState.scrollToItem(selectedIndex, scrollOffset.coerceAtLeast(-viewportSize))
+            val selectedLocation = findSelectedTabLocation(order!!, selectedTabId)
+            if (selectedLocation != null) {
+                if (selectedLocation.isGrouped) {
+                    val isGroupVisible = listState.layoutInfo.visibleItemsInfo.any { it.index == selectedLocation.itemIndex }
+                    if (!isGroupVisible) {
+                        listState.scrollToItem(selectedLocation.itemIndex)
+                    }
                     hasInitialScrolled = true
+                } else {
+                    // Wait for layout to be ready
+                    val viewportSize = listState.layoutInfo.viewportSize.width
+                    if (viewportSize > 0) {
+                        // Negative offset moves the item towards the center
+                        val averageItemSize = 180 // Approximate tab width in pixels (150dp + spacing)
+                        val scrollOffset = -(viewportSize / 2 - averageItemSize / 2)
+                        listState.scrollToItem(selectedLocation.itemIndex, scrollOffset.coerceAtLeast(-viewportSize))
+                        hasInitialScrolled = true
+                    }
                 }
             }
         }
@@ -141,18 +143,20 @@ fun TabBarCompose(
         }
 
         if (!listState.isScrollInProgress) {
-            val selectedIndex = currentOrder.primaryOrder.indexOfFirst { item ->
-                when (item) {
-                    is UnifiedTabOrder.OrderItem.SingleTab -> item.tabId == currentTabId
-                    is UnifiedTabOrder.OrderItem.TabGroup -> currentTabId in item.tabIds
-                }
-            }
-            if (selectedIndex >= 0) {
-                val viewportSize = listState.layoutInfo.viewportSize.width
-                if (viewportSize > 0) {
-                    val averageItemSize = 180
-                    val scrollOffset = -(viewportSize / 2 - averageItemSize / 2)
-                    listState.scrollToItem(selectedIndex, scrollOffset.coerceAtLeast(-viewportSize))
+            val selectedLocation = findSelectedTabLocation(currentOrder, currentTabId)
+            if (selectedLocation != null) {
+                if (selectedLocation.isGrouped) {
+                    val isGroupVisible = listState.layoutInfo.visibleItemsInfo.any { it.index == selectedLocation.itemIndex }
+                    if (!isGroupVisible) {
+                        listState.scrollToItem(selectedLocation.itemIndex)
+                    }
+                } else {
+                    val viewportSize = listState.layoutInfo.viewportSize.width
+                    if (viewportSize > 0) {
+                        val averageItemSize = 180
+                        val scrollOffset = -(viewportSize / 2 - averageItemSize / 2)
+                        listState.scrollToItem(selectedLocation.itemIndex, scrollOffset.coerceAtLeast(-viewportSize))
+                    }
                 }
             }
         }
@@ -163,25 +167,25 @@ fun TabBarCompose(
     // Auto-scroll to selected tab when explicitly triggered (tab sheet dismissed,
     // new tab created, etc.). Only fires when autoScrollTrigger changes, so it
     // never interrupts the user while they are manually scrolling the tab bar.
-    // Centers the selected tab in the viewport when possible.
+    // Grouped tabs keep intra-group alignment handled by BringIntoViewRequester.
     LaunchedEffect(autoScrollTrigger, order) {
         if (autoScrollTrigger > 0L && System.currentTimeMillis() - autoScrollTrigger < 2000L) {
             val currentOrder = order ?: return@LaunchedEffect
             val currentTabId = selectedTabId ?: return@LaunchedEffect
-            val selectedIndex = currentOrder.primaryOrder.indexOfFirst { item ->
-                when (item) {
-                    is UnifiedTabOrder.OrderItem.SingleTab -> item.tabId == currentTabId
-                    is UnifiedTabOrder.OrderItem.TabGroup -> currentTabId in item.tabIds
-                }
-            }
-            if (selectedIndex >= 0) {
-                // Calculate offset to center the selected tab
-                val viewportSize = listState.layoutInfo.viewportSize.width
-                if (viewportSize > 0) {
-                    val averageItemSize = 180 // Approximate tab width in pixels
-                    val scrollOffset = -(viewportSize / 2 - averageItemSize / 2)
-                    
-                    listState.animateScrollToItem(selectedIndex, scrollOffset.coerceAtLeast(-viewportSize))
+            val selectedLocation = findSelectedTabLocation(currentOrder, currentTabId)
+            if (selectedLocation != null) {
+                if (selectedLocation.isGrouped) {
+                    val isGroupVisible = listState.layoutInfo.visibleItemsInfo.any { it.index == selectedLocation.itemIndex }
+                    if (!isGroupVisible) {
+                        listState.animateScrollToItem(selectedLocation.itemIndex)
+                    }
+                } else {
+                    val viewportSize = listState.layoutInfo.viewportSize.width
+                    if (viewportSize > 0) {
+                        val averageItemSize = 180 // Approximate tab width in pixels
+                        val scrollOffset = -(viewportSize / 2 - averageItemSize / 2)
+                        listState.animateScrollToItem(selectedLocation.itemIndex, scrollOffset.coerceAtLeast(-viewportSize))
+                    }
                 }
             }
         }
@@ -505,6 +509,25 @@ sealed class BarItem {
     ) : BarItem() {
         override val id = groupId
     }
+}
+
+private data class SelectedTabLocation(
+    val itemIndex: Int,
+    val isGrouped: Boolean
+)
+
+private fun findSelectedTabLocation(order: UnifiedTabOrder, tabId: String): SelectedTabLocation? {
+    val index = order.primaryOrder.indexOfFirst { item ->
+        when (item) {
+            is UnifiedTabOrder.OrderItem.SingleTab -> item.tabId == tabId
+            is UnifiedTabOrder.OrderItem.TabGroup -> tabId in item.tabIds
+        }
+    }
+    if (index < 0) return null
+    return SelectedTabLocation(
+        itemIndex = index,
+        isGrouped = order.primaryOrder.getOrNull(index) is UnifiedTabOrder.OrderItem.TabGroup
+    )
 }
 
 /**
