@@ -9,7 +9,7 @@ plugins {
 
 
 android {
-    compileSdkVersion = 36
+    compileSdkVersion = 37
     buildFeatures {
         buildConfig = true
         viewBinding = true
@@ -21,7 +21,7 @@ android {
     defaultConfig {
         applicationId = "com.prirai.android.nira"
         minSdkVersion 27
-        targetSdkVersion 36
+        targetSdkVersion 37
         // Increment by 4 with each update, by 1 with each fix
         versionCode = 46
         versionName = "0.5.5"
@@ -121,7 +121,7 @@ dependencies {
     ksp "androidx.room:room-compiler:2.8.4"
 
     // Mozilla Components : https://maven.mozilla.org/maven2/?prefix=maven2/org/mozilla/geckoview/
-    final def mozComponentsVersion = "154.0.20260718090721"
+    final def mozComponentsVersion = "153.0"
 
     // Mozilla compose components
     implementation "org.mozilla.components:compose-awesomebar:$mozComponentsVersion"

@@ -5,7 +5,18 @@ import android.util.AttributeSet
 import android.widget.LinearLayout
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -13,8 +24,16 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -24,11 +43,11 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.lifecycleScope
-import kotlinx.coroutines.Dispatchers
 import com.prirai.android.nira.browser.tabs.compose.TabOrderManager
 import com.prirai.android.nira.browser.tabs.compose.UnifiedTabOrder
 import com.prirai.android.nira.ext.components
 import com.prirai.android.nira.ui.theme.NiraTheme
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
@@ -59,10 +78,13 @@ class ComposeTabGroupBar @JvmOverloads constructor(
 
     init {
         orientation = HORIZONTAL
-        addView(composeView, LayoutParams(
-            LayoutParams.MATCH_PARENT,
-            LayoutParams.WRAP_CONTENT
-        ))
+        addView(
+            composeView,
+            LayoutParams(
+                LayoutParams.MATCH_PARENT,
+                LayoutParams.WRAP_CONTENT
+            )
+        )
     }
 
     fun setup(
@@ -74,20 +96,18 @@ class ComposeTabGroupBar @JvmOverloads constructor(
         this.listener = listener
         this.lifecycleOwner = lifecycleOwner
 
-        // Initialize tab order manager
         val unifiedManager = UnifiedTabGroupManager.getInstance(context)
         tabOrderManager = TabOrderManager.getInstance(context, unifiedManager)
 
+        // Compose content is created once and composes from TabOrderManager state.
         setupComposeContent()
-        setupStoreObserver()
     }
 
     private fun setupComposeContent() {
         composeView.setContent {
-            // Read AMOLED preference
             val prefs = com.prirai.android.nira.preferences.UserPreferences(context)
             val isAmoledActive = prefs.amoledMode
-            
+
             NiraTheme(amoledMode = isAmoledActive) {
                 TabGroupBarContent()
             }
@@ -117,12 +137,8 @@ class ComposeTabGroupBar @JvmOverloads constructor(
                     }
                 ) { item ->
                     when (item) {
-                        is UnifiedTabOrder.OrderItem.SingleTab -> {
-                            SingleTabItem(item.tabId)
-                        }
-                        is UnifiedTabOrder.OrderItem.TabGroup -> {
-                            TabGroupItem(item)
-                        }
+                        is UnifiedTabOrder.OrderItem.SingleTab -> SingleTabItem(item.tabId)
+                        is UnifiedTabOrder.OrderItem.TabGroup -> TabGroupItem(item)
                     }
                 }
             }
@@ -132,8 +148,9 @@ class ComposeTabGroupBar @JvmOverloads constructor(
     @Composable
     private fun SingleTabItem(tabId: String) {
         val store = context.components.store
+        val owner = lifecycleOwner ?: return
         val tab by produceState<TabSessionState?>(initialValue = null) {
-            store.flowScoped(lifecycleOwner!!, Dispatchers.Main) { flow ->
+            store.flowScoped(owner, Dispatchers.Main) { flow ->
                 flow.map { it.tabs.find { tab -> tab.id == tabId } }
                     .distinctUntilChanged()
                     .collect { value = it }
@@ -167,13 +184,11 @@ class ComposeTabGroupBar @JvmOverloads constructor(
                     )
 
                     IconButton(
-                        onClick = {
-                            context.components.tabsUseCases.removeTab(tabId)
-                        },
+                        onClick = { context.components.tabsUseCases.removeTab(tabId) },
                         modifier = Modifier.size(24.dp)
                     ) {
                         Icon(
-                            imageVector = androidx.compose.material.icons.Icons.Default.Close,
+                            imageVector = Icons.Default.Close,
                             contentDescription = "Close tab",
                             modifier = Modifier.size(16.dp)
                         )
@@ -237,24 +252,10 @@ class ComposeTabGroupBar @JvmOverloads constructor(
                     modifier = Modifier.size(24.dp)
                 ) {
                     Icon(
-                        imageVector = androidx.compose.material.icons.Icons.Default.Add,
+                        imageVector = Icons.Default.Add,
                         contentDescription = "Add tab to group",
                         modifier = Modifier.size(16.dp)
                     )
-                }
-            }
-        }
-    }
-
-    private fun setupStoreObserver() {
-        val lifecycleOwner = lifecycleOwner ?: return
-        val store = context.components.store
-
-        lifecycleOwner.lifecycleScope.launch {
-            store.flowScoped(lifecycleOwner, Dispatchers.Main) { flow ->
-                flow.collect { state ->
-                    // Trigger recomposition when tabs change
-                    setupComposeContent()
                 }
             }
         }
@@ -264,7 +265,7 @@ class ComposeTabGroupBar @JvmOverloads constructor(
      * Force refresh the current group display with updated selection state.
      */
     fun refreshSelection() {
-        setupComposeContent()
+        composeView.invalidate()
     }
 
     interface TabGroupBarListener {

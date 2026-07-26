@@ -74,7 +74,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import mozilla.components.concept.sync.FxAEntryPoint
-import mozilla.components.concept.sync.SyncEngine
+import mozilla.components.service.fxa.SyncEngine
 import mozilla.components.service.fxa.sync.SyncStatusObserver
 import java.text.DateFormat
 import java.util.Date

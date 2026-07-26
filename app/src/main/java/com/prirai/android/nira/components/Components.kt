@@ -79,7 +79,7 @@ import mozilla.components.feature.tabs.TabsUseCases
 import mozilla.components.feature.webcompat.WebCompatFeature
 import mozilla.components.feature.webnotifications.WebNotificationFeature
 import mozilla.components.lib.publicsuffixlist.PublicSuffixList
-import mozilla.components.concept.sync.SyncEngine
+import mozilla.components.service.fxa.SyncEngine
 import mozilla.components.service.fxa.sync.GlobalSyncableStoreProvider
 import mozilla.components.service.location.LocationService
 import mozilla.components.support.base.android.NotificationsDelegate

@@ -28,9 +28,9 @@ import mozilla.components.concept.sync.DeviceType
 import mozilla.components.concept.sync.OAuthAccount
 import mozilla.components.concept.sync.Profile
 import mozilla.components.service.fxa.FxaAuthData
-import mozilla.components.concept.sync.PeriodicSyncConfig
-import mozilla.components.concept.sync.SyncConfig
-import mozilla.components.concept.sync.SyncEngine
+import mozilla.components.service.fxa.PeriodicSyncConfig
+import mozilla.components.service.fxa.SyncConfig
+import mozilla.components.service.fxa.SyncEngine
 import mozilla.components.service.fxa.manager.FxaAccountManager
 import mozilla.components.concept.storage.BookmarkNodeType
 import mozilla.components.concept.storage.BookmarkNode

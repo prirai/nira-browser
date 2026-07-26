@@ -330,7 +330,7 @@ class TabOrderManager private constructor(
      */
     suspend fun removeTab(tabId: String) {
         val current = _currentOrder.value ?: return
-        
+
         val newOrder = current.primaryOrder.mapNotNull { item ->
             when (item) {
                 is UnifiedTabOrder.OrderItem.SingleTab -> {
@@ -345,8 +345,18 @@ class TabOrderManager private constructor(
                 }
             }
         }
-        
+
+        // Persist the updated order first
         saveOrder(current.copy(primaryOrder = newOrder))
+
+        // Ensure group membership is kept in sync after removing a tab. This prevents stale
+        // group state that can hide pills or cause UI inconsistencies when the store later
+        // emits updates. Run sync in a safe try/catch to avoid crashing callers.
+        try {
+            syncToGroupManager()
+        } catch (e: Exception) {
+            android.util.Log.e("TabOrderManager", "Failed to sync group manager after removeTab: ${e.message}", e)
+        }
     }
     
     /**
