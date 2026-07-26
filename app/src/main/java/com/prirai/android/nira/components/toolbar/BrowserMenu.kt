@@ -79,7 +79,7 @@ class BrowserMenu(
             isInPrimaryState = {
                 selectedSession?.content?.loading == false
             },
-            secondaryImageResource = mozilla.components.ui.icons.R.drawable.mozac_ic_stop,
+            secondaryImageResource = mozilla.components.ui.icons.R.drawable.mozac_ic_stop_8,
             secondaryContentDescription = context.getString(R.string.stop),
             secondaryImageTintResource = primaryTextColor(),
             disableInSecondaryState = false,

@@ -99,6 +99,11 @@ class CustomBookmarksStorage(context: Context): BookmarksStorage {
         return Result.failure(NotImplementedError("Not yet implemented"))
     }
 
+    override suspend fun insertTree(tree: mozilla.components.concept.storage.bookmarks.InsertableBookmarkTreeRoot): Result<String> {
+        // Minimal implementation: Not implemented yet
+        return Result.failure(NotImplementedError("Not yet implemented"))
+    }
+
     override suspend fun warmUp() {
         // Pre-load bookmark data by ensuring manager is initialized
         manager.initialize()

@@ -70,6 +70,10 @@ class WebExtensionPromptFeature(
                         handleBeforeInstallationRequest(promptRequest)
                         consumePromptRequest()
                     }
+
+                    else -> {
+                        // Ignore other prompt request types
+                    }
                 }
             }
         }

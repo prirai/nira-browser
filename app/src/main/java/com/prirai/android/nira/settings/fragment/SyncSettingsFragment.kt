@@ -74,8 +74,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import mozilla.components.concept.sync.FxAEntryPoint
-import mozilla.components.service.fxa.SyncEngine
-import mozilla.components.service.fxa.manager.SyncEnginesStorage
+import mozilla.components.concept.sync.SyncEngine
 import mozilla.components.service.fxa.sync.SyncStatusObserver
 import java.text.DateFormat
 import java.util.Date
@@ -297,7 +296,7 @@ class SyncSettingsFragment : Fragment() {
                             }
                             coroutineScope.launch {
                                 try {
-                                    SyncEnginesStorage(context).setStatus(engine, enabled)
+                                    syncManager.accountManager.setEngineEnabled(engine, enabled)
                                     syncManager.triggerSync()
                                 } catch (_: Exception) { }
                             }

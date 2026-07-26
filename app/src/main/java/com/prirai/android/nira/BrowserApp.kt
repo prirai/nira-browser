@@ -182,19 +182,16 @@ class BrowserApp : Application() {
                 onCrash = { logger.error("Addon dependency provider crashed", it) },
             )
             WebExtensionSupport.initialize(
-                components.engine,
-                components.store,
-                onNewTabOverride = { _, engineSession, url ->
-                    val shouldCreatePrivateSession =
-                        components.store.state.selectedTab?.content?.private ?: false
-
-                    components.tabsUseCases.addTab(
-                        url = url,
-                        selectTab = true,
-                        engineSession = engineSession,
-                        private = shouldCreatePrivateSession,
-                    )
-                },
+            components.engine,
+            components.store,
+            onNewTabOverride = { _, engineSession, url, isPrivate ->
+                components.tabsUseCases.addTab(
+                    url = url,
+                    selectTab = true,
+                    engineSession = engineSession,
+                    private = isPrivate,
+                )
+            },
                 onCloseTabOverride = { _, sessionId ->
                     components.tabsUseCases.removeTab(sessionId)
                 },
