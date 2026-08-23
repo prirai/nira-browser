@@ -22,14 +22,26 @@ object ProfileAddonPolicy {
     fun setEnabledForProfile(context: Context, profileId: String, addonId: String, enabled: Boolean) {
         val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         val key = KEY_PREFIX + profileId
-        val current = prefs.getStringSet(key, null)?.toMutableSet() ?: mutableSetOf(addonId)
+        val current = prefs.getStringSet(key, null)?.toMutableSet() ?: seedAllowlist(context)
         if (enabled) current.add(addonId) else current.remove(addonId)
         prefs.edit { putStringSet(key, current) }
     }
 
+    private fun seedAllowlist(context: Context): MutableSet<String> {
+        return context.components.store.state.extensions
+            .filterValues { !it.isBuiltIn && it.enabled }
+            .keys
+            .toMutableSet()
+    }
+
     suspend fun applyForProfile(context: Context, profileId: String) {
         val addons = withContext(Dispatchers.IO) {
-            runCatching { context.components.addonManager.getAddons() }.getOrDefault(emptyList())
+            runCatching {
+                context.components.addonManager.getAddons().filter { it.isInstalled() }
+            }.getOrNull()
+        } ?: return
+        if (addons.isEmpty()) {
+            return
         }
         val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         val key = KEY_PREFIX + profileId
