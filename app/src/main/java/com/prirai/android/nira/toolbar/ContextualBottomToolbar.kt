@@ -170,14 +170,14 @@ class ContextualBottomToolbar @JvmOverloads constructor(
         this.visibility = VISIBLE
         
         backButton.visibility = VISIBLE
-        backButton.setImageResource(R.drawable.ic_baseline_bookmark)
+        backButton.setImageResource(mozilla.components.ui.icons.R.drawable.mozac_ic_bookmark_24)
         backButton.isEnabled = true
         backButton.alpha = 1.0f
         
         isShowingBookmarkIcon = true
         
         forwardButton.visibility = VISIBLE
-        forwardButton.setImageResource(R.drawable.ic_ios_forward)
+        forwardButton.setImageResource(mozilla.components.ui.icons.R.drawable.mozac_ic_forward_24)
         forwardButton.isEnabled = canGoForward
         forwardButton.alpha = if (canGoForward) 1.0f else 0.4f
         
@@ -197,7 +197,7 @@ class ContextualBottomToolbar @JvmOverloads constructor(
 
     private fun showWebsiteContext(canGoBack: Boolean, tabCount: Int) {
         backButton.visibility = VISIBLE
-        backButton.setImageResource(R.drawable.ic_ios_back)
+        backButton.setImageResource(mozilla.components.ui.icons.R.drawable.mozac_ic_back_24)
         backButton.isEnabled = canGoBack
         backButton.alpha = if (canGoBack) 1.0f else 0.4f
         
@@ -223,14 +223,14 @@ class ContextualBottomToolbar @JvmOverloads constructor(
 
     private fun showFullNavigationContext(tabCount: Int) {
         backButton.visibility = VISIBLE
-        backButton.setImageResource(R.drawable.ic_ios_back)
+        backButton.setImageResource(mozilla.components.ui.icons.R.drawable.mozac_ic_back_24)
         backButton.isEnabled = true
         backButton.alpha = 1.0f
         
         isShowingBookmarkIcon = false
         
         forwardButton.visibility = VISIBLE
-        forwardButton.setImageResource(R.drawable.ic_ios_forward)
+        forwardButton.setImageResource(mozilla.components.ui.icons.R.drawable.mozac_ic_forward_24)
         forwardButton.isEnabled = true
         forwardButton.alpha = 1.0f
         
@@ -250,7 +250,7 @@ class ContextualBottomToolbar @JvmOverloads constructor(
 
     private fun showDefaultContext(tabCount: Int) {
         backButton.visibility = VISIBLE
-        backButton.setImageResource(R.drawable.ic_ios_back)
+        backButton.setImageResource(mozilla.components.ui.icons.R.drawable.mozac_ic_back_24)
         backButton.isEnabled = true
         backButton.alpha = 1.0f
         

@@ -765,7 +765,7 @@ class ComposeHomeFragment : Fragment() {
             com.prirai.android.nira.components.menu.Material3BrowserMenu.MenuItem.Action(
                 id = "new_private_tab",
                 title = getString(R.string.mozac_browser_menu_new_private_tab),
-                iconRes = R.drawable.ic_incognito,
+                iconRes = mozilla.components.ui.icons.R.drawable.mozac_ic_private_mode_24,
                 onClick = {
                     browsingModeManager.mode = BrowsingMode.Private
                     components.tabsUseCases.addTab(
@@ -780,7 +780,7 @@ class ComposeHomeFragment : Fragment() {
             com.prirai.android.nira.components.menu.Material3BrowserMenu.MenuItem.Action(
                 id = "history",
                 title = getString(R.string.action_history),
-                iconRes = R.drawable.ic_baseline_history,
+                iconRes = mozilla.components.ui.icons.R.drawable.mozac_ic_history_24,
                 onClick = {
                     startActivity(android.content.Intent(
                         requireContext(),
@@ -793,7 +793,7 @@ class ComposeHomeFragment : Fragment() {
             com.prirai.android.nira.components.menu.Material3BrowserMenu.MenuItem.Action(
                 id = "bookmarks",
                 title = getString(R.string.action_bookmarks),
-                iconRes = R.drawable.ic_baseline_bookmark,
+                iconRes = mozilla.components.ui.icons.R.drawable.mozac_ic_bookmark_24,
                 onClick = {
                     val bookmarksBottomSheet = BookmarksBottomSheetFragment.newInstance()
                     bookmarksBottomSheet.show(parentFragmentManager, "BookmarksBottomSheet")
@@ -803,7 +803,7 @@ class ComposeHomeFragment : Fragment() {
             com.prirai.android.nira.components.menu.Material3BrowserMenu.MenuItem.Action(
                 id = "settings",
                 title = getString(R.string.settings),
-                iconRes = R.drawable.ic_round_settings,
+                iconRes = mozilla.components.ui.icons.R.drawable.mozac_ic_settings_24,
                 onClick = {
                     startActivity(android.content.Intent(
                         requireContext(),

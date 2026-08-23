@@ -29,10 +29,10 @@ class ReaderModeIntegration(
     private var readerViewButtonVisible = false
 
     private val readerViewButton: BrowserToolbar.ToggleButton = BrowserToolbar.ToggleButton(
-        image = ContextCompat.getDrawable(context, R.drawable.ic_reader_mode)!!.mutate().apply {
+        image = ContextCompat.getDrawable(context, mozilla.components.ui.icons.R.drawable.mozac_ic_reader_view_24)!!.mutate().apply {
             setTint(context.getColorFromAttr(android.R.attr.textColorPrimary))
         },
-        imageSelected = ContextCompat.getDrawable(context, R.drawable.ic_reader_mode)!!.mutate().apply {
+        imageSelected = ContextCompat.getDrawable(context, mozilla.components.ui.icons.R.drawable.mozac_ic_reader_view_fill_24)!!.mutate().apply {
             setTint(ContextCompat.getColor(context, R.color.photonBlue40))
         },
         contentDescription = context.getString(R.string.mozac_reader_view_description),
