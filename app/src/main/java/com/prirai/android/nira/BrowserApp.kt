@@ -200,6 +200,12 @@ class BrowserApp : Application() {
                 },
                 onExtensionsLoaded = { extensions ->
                     components.addonUpdater.registerForFutureUpdates(extensions)
+                    applicationScope.launch(Dispatchers.IO) {
+                        val profileId = com.prirai.android.nira.browser.profile.ProfileManager
+                            .getInstance(this@BrowserApp).getActiveProfile().id
+                        com.prirai.android.nira.browser.profile.ProfileAddonPolicy
+                            .applyForProfile(this@BrowserApp, profileId)
+                    }
                 },
                 onUpdatePermissionRequest = components.addonUpdater::onUpdatePermissionRequest,
             )

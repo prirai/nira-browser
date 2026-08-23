@@ -13,7 +13,6 @@ import androidx.core.graphics.contains
 import androidx.core.graphics.toPoint
 import androidx.core.view.isVisible
 import androidx.interpolator.view.animation.LinearOutSlowInInterpolator
-import androidx.navigation.findNavController
 import com.prirai.android.nira.R
 import com.prirai.android.nira.browser.FakeTab
 import com.prirai.android.nira.browser.SwipeGestureListener
@@ -228,14 +227,6 @@ class ToolbarGestureHandler(
             doOnEnd {
                 contentLayout.translationX = 0f
 
-                val currentTab = store.state.selectedTab ?: return@doOnEnd
-                if(currentTab.content.url == "about:homepage" && tab.content.url != "about:homepage") {
-                    activity.findNavController(R.id.container).navigate(R.id.browserFragment)
-                } else if(tab.content.url == "about:homepage" && currentTab.content.url != "about:homepage") {
-                    activity.findNavController(R.id.container).navigate(R.id.homeFragment)
-                }
-
-                // Mark this as swipe navigation before selecting
                 lruManager.markAsSwipeNavigation(tab.id)
                 selectTabUseCase(tab.id)
 

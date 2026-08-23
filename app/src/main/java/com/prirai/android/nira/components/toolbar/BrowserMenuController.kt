@@ -14,6 +14,7 @@ import com.prirai.android.nira.ssl.showSslDialog
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
 import mozilla.components.browser.state.action.EngineAction
+import mozilla.components.browser.state.action.TranslationsAction
 import mozilla.components.browser.state.selector.findCustomTabOrSelectedTab
 import mozilla.components.browser.state.selector.selectedTab
 import mozilla.components.browser.state.store.BrowserStore
@@ -81,6 +82,27 @@ class DefaultBrowserToolbarMenuController(
                     sessionUseCases.requestDesktopSite.invoke(
                         item.isChecked,
                         it.id
+                    )
+                }
+            }
+
+            is ToolbarMenu.Item.Translate -> {
+                val tab = currentSession ?: return
+                val translations = tab.translationsState
+                if (translations.isTranslated) {
+                    store.dispatch(TranslationsAction.TranslateRestoreAction(tab.id))
+                } else {
+                    val detected = translations.translationEngineState?.detectedLanguages
+                    val from = detected?.documentLangTag
+                    val to = detected?.userPreferredLangTag
+                    if (from.isNullOrBlank() || to.isNullOrBlank()) return
+                    store.dispatch(
+                        TranslationsAction.TranslateAction(
+                            tabId = tab.id,
+                            fromLanguage = from,
+                            toLanguage = to,
+                            options = null,
+                        )
                     )
                 }
             }

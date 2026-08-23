@@ -6,11 +6,13 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.coordinatorlayout.widget.CoordinatorLayout
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import androidx.room.Room
 import androidx.room.migration.Migration
@@ -27,6 +29,8 @@ import com.prirai.android.nira.browser.home.compose.HomeScreen
 import com.prirai.android.nira.browser.home.compose.HomeViewModel
 import com.prirai.android.nira.browser.home.compose.HomeViewModelFactory
 import com.prirai.android.nira.browser.home.compose.ProfileInfo
+import com.prirai.android.nira.browser.home.compose.jumpBackInItems
+import com.prirai.android.nira.browser.home.compose.recentlyClosedItems
 import com.prirai.android.nira.browser.shortcuts.ShortcutDatabase
 import com.prirai.android.nira.components.toolbar.BrowserToolbarViewInteractor
 import com.prirai.android.nira.components.toolbar.ToolbarMenu
@@ -39,6 +43,7 @@ import com.prirai.android.nira.ui.theme.NiraTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
 import mozilla.components.browser.state.selector.getNormalOrPrivateTabs
 import mozilla.components.browser.state.selector.normalTabs
 import mozilla.components.browser.state.selector.privateTabs
@@ -90,7 +95,8 @@ class ComposeHomeFragment : Fragment() {
 
         val factory = HomeViewModelFactory(
             bookmarkManager = BookmarkManager.getInstance(requireContext()),
-            shortcutDao = database.shortcutDao()
+            shortcutDao = database.shortcutDao(),
+            historyStorage = requireContext().components.historyStorage,
         )
 
         viewModel = ViewModelProvider(this, factory)[HomeViewModel::class.java]
@@ -137,9 +143,21 @@ class ComposeHomeFragment : Fragment() {
                 val isPrivateMode = selectedTab?.content?.private ?: browsingModeManager.mode.isPrivate
 
                 val shortcuts by viewModel.shortcuts.collectAsState()
-                val bookmarks by viewModel.bookmarks.collectAsState()
                 val showAddDialog by viewModel.showAddShortcutDialog.collectAsState()
-                val isBookmarkExpanded by viewModel.isBookmarkSectionExpanded.collectAsState()
+                val jumpBackInHistory by viewModel.jumpBackInHistory.collectAsState()
+                val recentsKey by store.observeAsComposableState { state ->
+                    Triple(
+                        state.selectedTabId,
+                        state.tabs.map { it.id to it.lastAccess },
+                        state.closedTabs.map { it.id },
+                    )
+                }
+                val jumpBackInItems = androidx.compose.runtime.remember(recentsKey, jumpBackInHistory) {
+                    store.state.jumpBackInItems(jumpBackInHistory)
+                }
+                val recentlyClosedItems by store.observeAsComposableState { state ->
+                    state.recentlyClosedItems()
+                }
 
                 if (isPrivateMode) {
                     store.state.privateTabs.size
@@ -195,8 +213,6 @@ class ComposeHomeFragment : Fragment() {
                     HomeScreen(
                         isPrivateMode = isPrivateMode,
                         shortcuts = shortcuts,
-                        bookmarks = bookmarks,
-                        isBookmarkExpanded = isBookmarkExpanded,
                         currentProfile = currentProfile,
                         onProfileClick = {}, // Profile icon is now display-only
                         backgroundImageUrl = backgroundImageUrl,
@@ -223,23 +239,40 @@ class ComposeHomeFragment : Fragment() {
                                 .show()
                         },
                         onShortcutAdd = { viewModel.showAddShortcutDialog() },
-                        onBookmarkClick = { bookmark ->
-                            if (bookmark.isFolder) {
-                                val bookmarksBottomSheet = BookmarksBottomSheetFragment.newInstance(
-                                    folderId = bookmark.id.toLongOrNull() ?: -1L
+                        onHistoryClick = {
+                            startActivity(
+                                android.content.Intent(
+                                    requireContext(),
+                                    com.prirai.android.nira.history.HistoryActivity::class.java
                                 )
-                                bookmarksBottomSheet.show(parentFragmentManager, "BookmarksBottomSheet")
+                            )
+                        },
+                        onBookmarksClick = {
+                            BookmarksBottomSheetFragment.newInstance()
+                                .show(parentFragmentManager, "BookmarksBottomSheet")
+                        },
+                        jumpBackInItems = jumpBackInItems,
+                        recentlyClosedItems = recentlyClosedItems.orEmpty(),
+                        onJumpBackInClick = { item ->
+                            val tabId = item.tabId
+                            if (tabId != null) {
+                                components.tabsUseCases.selectTab(tabId)
                             } else {
-                                components.sessionUseCases.loadUrl(bookmark.url)
-                                // Navigate to browser to show the loaded page
-                                try {
-                                    findNavController().navigate(R.id.browserFragment)
-                                } catch (e: Exception) {
-                                    // Ignore navigation errors
-                                }
+                                components.sessionUseCases.loadUrl(item.url)
                             }
                         },
-                        onBookmarkToggle = { viewModel.toggleBookmarkSection() },
+                        onRecentlyClosedClick = { item ->
+                            val tab = store.state.closedTabs.find { it.id == item.id } ?: return@HomeScreen
+                            viewLifecycleOwner.lifecycleScope.launch {
+                                components.tabsUseCases.restore(
+                                    tab,
+                                    components.recentlyClosedTabsStorage.engineStateStorage(),
+                                )
+                                store.dispatch(
+                                    mozilla.components.browser.state.action.RecentlyClosedAction.RemoveClosedTabAction(tab)
+                                )
+                            }
+                        },
                         onSearchClick = {
                             // Pass current selected tab ID for proper context
                             val sessionId = components.store.state.selectedTabId
@@ -534,6 +567,7 @@ class ComposeHomeFragment : Fragment() {
         super.onResume()
         viewModel.loadShortcuts()
         viewModel.loadBookmarks()
+        viewModel.loadJumpBackInHistory()
         updateToolbarStyling()
     }
 
@@ -731,7 +765,7 @@ class ComposeHomeFragment : Fragment() {
             com.prirai.android.nira.components.menu.Material3BrowserMenu.MenuItem.Action(
                 id = "new_private_tab",
                 title = getString(R.string.mozac_browser_menu_new_private_tab),
-                iconRes = R.drawable.ic_incognito,
+                iconRes = mozilla.components.ui.icons.R.drawable.mozac_ic_private_mode_24,
                 onClick = {
                     browsingModeManager.mode = BrowsingMode.Private
                     components.tabsUseCases.addTab(
@@ -746,7 +780,7 @@ class ComposeHomeFragment : Fragment() {
             com.prirai.android.nira.components.menu.Material3BrowserMenu.MenuItem.Action(
                 id = "history",
                 title = getString(R.string.action_history),
-                iconRes = R.drawable.ic_baseline_history,
+                iconRes = mozilla.components.ui.icons.R.drawable.mozac_ic_history_24,
                 onClick = {
                     startActivity(android.content.Intent(
                         requireContext(),
@@ -759,7 +793,7 @@ class ComposeHomeFragment : Fragment() {
             com.prirai.android.nira.components.menu.Material3BrowserMenu.MenuItem.Action(
                 id = "bookmarks",
                 title = getString(R.string.action_bookmarks),
-                iconRes = R.drawable.ic_baseline_bookmark,
+                iconRes = mozilla.components.ui.icons.R.drawable.mozac_ic_bookmark_24,
                 onClick = {
                     val bookmarksBottomSheet = BookmarksBottomSheetFragment.newInstance()
                     bookmarksBottomSheet.show(parentFragmentManager, "BookmarksBottomSheet")
@@ -769,7 +803,7 @@ class ComposeHomeFragment : Fragment() {
             com.prirai.android.nira.components.menu.Material3BrowserMenu.MenuItem.Action(
                 id = "settings",
                 title = getString(R.string.settings),
-                iconRes = R.drawable.ic_round_settings,
+                iconRes = mozilla.components.ui.icons.R.drawable.mozac_ic_settings_24,
                 onClick = {
                     startActivity(android.content.Intent(
                         requireContext(),

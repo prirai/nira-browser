@@ -39,12 +39,12 @@ class HomeMenu(
 
         val newPrivateTabItem = ThemedBrowserMenuImageText(
             context.getString(R.string.mozac_browser_menu_new_private_tab),
-            R.drawable.ic_incognito
+            mozilla.components.ui.icons.R.drawable.mozac_ic_private_mode_24
         ) {
             onItemTapped.invoke(Item.NewPrivateTab)
         }
 
-        val bookmarksIcon = R.drawable.ic_baseline_bookmark
+        val bookmarksIcon = mozilla.components.ui.icons.R.drawable.mozac_ic_bookmark_24
 
         val bookmarksItem = ThemedBrowserMenuImageText(
             context.getString(R.string.action_bookmarks),
@@ -55,7 +55,7 @@ class HomeMenu(
 
         val historyItem = ThemedBrowserMenuImageText(
             context.getString(R.string.action_history),
-            R.drawable.ic_baseline_history
+            mozilla.components.ui.icons.R.drawable.mozac_ic_history_24
         ) {
             onItemTapped.invoke(Item.History)
         }
@@ -69,7 +69,7 @@ class HomeMenu(
 
         val settingsItem = ThemedBrowserMenuImageText(
             context.getString(R.string.settings),
-            R.drawable.ic_round_settings
+            mozilla.components.ui.icons.R.drawable.mozac_ic_settings_24
         ) {
             onItemTapped.invoke(Item.Settings)
         }

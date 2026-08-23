@@ -220,7 +220,7 @@ class UnifiedWebAppFragment : Fragment() {
         viewLifecycleOwner.lifecycleScope.launch {
             // Clear web app data - this would involve clearing service worker caches, localStorage, etc.
             // For now, just show confirmation
-            com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
+            com.google.android.material.dialog.MaterialAlertDialogBuilder(requireActivity())
                 .setTitle(R.string.success)
                 .setMessage(R.string.web_app_data_cleared)
                 .setPositiveButton(android.R.string.ok, null)
@@ -420,7 +420,7 @@ class UnifiedWebAppFragment : Fragment() {
                     Components(requireContext()).webAppManager.updateWebApp(
                         webApp.copy(profileId = profileId)
                     )
-                    com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
+            com.google.android.material.dialog.MaterialAlertDialogBuilder(requireActivity())
                         .setTitle(R.string.success)
                         .setMessage(R.string.profile_associated)
                         .setPositiveButton(android.R.string.ok, null)
@@ -455,13 +455,13 @@ class UnifiedWebAppFragment : Fragment() {
                     profileId = newProfileId
                 )
 
-                com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
+                com.google.android.material.dialog.MaterialAlertDialogBuilder(requireActivity())
                     .setTitle(R.string.success)
                     .setMessage(getString(R.string.web_app_cloned_success, newName))
                     .setPositiveButton(android.R.string.ok, null)
                     .show()
             } catch (e: Exception) {
-                com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
+                com.google.android.material.dialog.MaterialAlertDialogBuilder(requireActivity())
                     .setTitle(R.string.error)
                     .setMessage(e.message ?: getString(R.string.unknown_error))
                     .setPositiveButton(android.R.string.ok, null)

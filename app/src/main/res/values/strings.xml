@@ -15,6 +15,9 @@
   <string name="key_app_theme_type" translatable="false">app_theme_type</string>
   <string name="key_web_theme_type" translatable="false">web_theme_type</string>
   <string name="key_search_engine" translatable="false">search_engine</string>
+  <string name="key_private_search_engine" translatable="false">private_search_engine</string>
+  <string name="key_desktop_mode_default" translatable="false">desktop_mode_default</string>
+  <string name="key_translations_enabled" translatable="false">translations_enabled</string>
     <string
         name="key_bar_addon_list"
         translatable="false"
@@ -174,6 +177,12 @@
   <string name="new_tab">New tab</string>
     <string name="close_tab">Close tab</string>
   <string name="desktop_mode">Desktop site</string>
+  <string name="desktop_mode_default">Request desktop site by default</string>
+  <string name="desktop_mode_default_summary">New tabs open in desktop mode. Tablets and large windows use this unless you turn it off.</string>
+  <string name="translations_enabled">Page translations</string>
+  <string name="translations_enabled_summary">Offer to translate pages in another language</string>
+  <string name="translate_page">Translate page</string>
+  <string name="show_original_page">Show original</string>
     <string name="stop">Stop</string>
   <string name="install">Install</string>
   <string name="cancel">Cancel</string>
@@ -292,6 +301,9 @@
   <string name="failed">Failed</string>
 
   <string name="search_engine">Search engine</string>
+  <string name="private_search_engine">Private search engine</string>
+  <string name="private_search_engine_summary">Used only in private tabs. Same as the default engine if unset.</string>
+  <string name="use_default_search_engine">Same as default</string>
 
   <string name="fill_from_clipboard">Fill from clipboard</string>
 
@@ -453,10 +465,12 @@
   <string name="custom_search_engine">Custom search engine</string>
   <string
         name="custom_search_engine_details"
-    >Enter URL with \'{searchTerms}\' in place of the query</string>
+        formatted="false"
+    >Enter URL with %s in place of the query</string>
   <string
         name="custom_search_engine_error"
-    >Search URL does not contain \'{searchTerms}\'</string>
+        formatted="false"
+    >Search URL does not contain %s</string>
 
   <string name="clear">Clear</string>
   <string name="name">Name</string>
@@ -811,6 +825,8 @@
   <!-- Web App Installation Profile Selection -->
   <string name="select_profile">Select Profile</string>
   <string name="profile">Profile</string>
+  <string name="addon_enabled_for_profiles">Enabled for profiles</string>
+  <string name="addon_enabled_for_all_profiles">All profiles</string>
   <string
         name="install_web_app_profile_selection"
     >Select Profile for Web App</string>

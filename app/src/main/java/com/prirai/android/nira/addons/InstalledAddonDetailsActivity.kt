@@ -3,16 +3,15 @@ package com.prirai.android.nira.addons
 import android.content.Intent
 import android.os.Bundle
 import android.view.View
+import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.SwitchCompat
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowCompat
-import androidx.core.view.WindowInsetsCompat
-import androidx.core.view.updatePadding
-
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.prirai.android.nira.BrowserActivity
 import com.prirai.android.nira.R
+import com.prirai.android.nira.browser.profile.ProfileAddonPolicy
+import com.prirai.android.nira.browser.profile.ProfileManager
 import com.prirai.android.nira.ext.components
 import com.prirai.android.nira.ext.getParcelableExtraCompat
 import com.prirai.android.nira.theme.applyCompleteTheme
@@ -89,11 +88,14 @@ class InstalledAddonDetailsActivity : AppCompatActivity() {
         if(!addon.isSupported()){
             findViewById<SwitchCompat>(R.id.enable_switch).visibility = View.GONE
             findViewById<SwitchCompat>(R.id.allow_in_private_browsing_switch).visibility = View.GONE
+            findViewById<View>(R.id.profile_allowlist).visibility = View.GONE
             findViewById<View>(R.id.details).visibility = View.GONE
             findViewById<View>(R.id.permissions).visibility = View.GONE
         }
 
         bindEnableSwitch(addon)
+
+        bindProfileAllowlist(addon)
 
         bindSettings(addon)
 
@@ -110,10 +112,14 @@ class InstalledAddonDetailsActivity : AppCompatActivity() {
         val switch = findViewById<SwitchCompat>(R.id.enable_switch)
         switch.isChecked = addon.isEnabled()
         switch.setOnCheckedChangeListener { _, isChecked ->
+            val profileId = com.prirai.android.nira.browser.profile.ProfileManager
+                .getInstance(this).getActiveProfile().id
             if (isChecked) {
                 this.components.addonManager.enableAddon(
                         addon,
                         onSuccess = {
+                            com.prirai.android.nira.browser.profile.ProfileAddonPolicy
+                                .setEnabledForProfile(this, profileId, addon.id, true)
                             switch.isChecked = true
                             Toast.makeText(
                                     this,
@@ -133,6 +139,8 @@ class InstalledAddonDetailsActivity : AppCompatActivity() {
                 this.components.addonManager.disableAddon(
                         addon,
                         onSuccess = {
+                            com.prirai.android.nira.browser.profile.ProfileAddonPolicy
+                                .setEnabledForProfile(this, profileId, addon.id, false)
                             switch.isChecked = false
                             Toast.makeText(
                                     this,
@@ -150,6 +158,64 @@ class InstalledAddonDetailsActivity : AppCompatActivity() {
                 )
             }
         }
+    }
+
+    private fun bindProfileAllowlist(addon: Addon) {
+        val row = findViewById<View>(R.id.profile_allowlist)
+        val summary = findViewById<TextView>(R.id.profile_allowlist_summary)
+        updateProfileAllowlistSummary(addon.id, summary)
+        row.setOnClickListener {
+            showProfileAllowlistDialog(addon) {
+                updateProfileAllowlistSummary(addon.id, summary)
+            }
+        }
+    }
+
+    private fun updateProfileAllowlistSummary(addonId: String, summary: TextView) {
+        val profiles = ProfileManager.getInstance(this).getAllProfiles()
+        val enabledNames = profiles
+            .filter { ProfileAddonPolicy.isEnabledForProfile(this, it.id, addonId) }
+            .map { it.name }
+        summary.text = if (enabledNames.size == profiles.size) {
+            getString(R.string.addon_enabled_for_all_profiles)
+        } else {
+            enabledNames.joinToString().ifEmpty { getString(R.string.addon_enabled_for_profiles) }
+        }
+    }
+
+    private fun showProfileAllowlistDialog(addon: Addon, onChanged: () -> Unit) {
+        val profiles = ProfileManager.getInstance(this).getAllProfiles()
+        val names = profiles.map { it.name }.toTypedArray()
+        val checked = profiles.map {
+            ProfileAddonPolicy.isEnabledForProfile(this, it.id, addon.id)
+        }.toBooleanArray()
+
+        MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.addon_enabled_for_profiles)
+            .setMultiChoiceItems(names, checked) { _, which, isChecked ->
+                checked[which] = isChecked
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .setPositiveButton(R.string.mozac_feature_prompts_ok) { _, _ ->
+                val activeId = ProfileManager.getInstance(this).getActiveProfile().id
+                profiles.forEachIndexed { index, profile ->
+                    val enabled = checked[index]
+                    ProfileAddonPolicy.setEnabledForProfile(this, profile.id, addon.id, enabled)
+                    if (profile.id == activeId) {
+                        if (enabled) {
+                            components.addonManager.enableAddon(addon)
+                        } else {
+                            components.addonManager.disableAddon(addon)
+                        }
+                        val enableSwitch = findViewById<SwitchCompat>(R.id.enable_switch)
+                        enableSwitch.setOnCheckedChangeListener(null)
+                        enableSwitch.isChecked = enabled
+                        bindEnableSwitch(addon)
+                    }
+                }
+                onChanged()
+            }
+            .show()
     }
 
     private fun bindSettings(addon: Addon) {

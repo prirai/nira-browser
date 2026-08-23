@@ -89,7 +89,7 @@ class PrivacyAndSecuritySettingsFragment : BaseSettingsFragment() {
 
     private fun showHttpsOnlyPicker(prefs: UserPreferences) {
         val items = resources.getStringArray(R.array.https_only_mode_names)
-        MaterialAlertDialogBuilder(requireContext())
+        MaterialAlertDialogBuilder(requireActivity())
             .setTitle(R.string.https_only_title)
             .setSingleChoiceItems(items, prefs.httpsOnlyMode) { dialog, which ->
                 prefs.httpsOnlyMode = which
@@ -104,7 +104,7 @@ class PrivacyAndSecuritySettingsFragment : BaseSettingsFragment() {
 
     private fun showDohModePicker(prefs: UserPreferences) {
         val items = resources.getStringArray(R.array.doh_mode_names)
-        MaterialAlertDialogBuilder(requireContext())
+        MaterialAlertDialogBuilder(requireActivity())
             .setTitle(R.string.doh_title)
             .setSingleChoiceItems(items, prefs.dohMode) { dialog, which ->
                 prefs.dohMode = which
@@ -135,7 +135,7 @@ class PrivacyAndSecuritySettingsFragment : BaseSettingsFragment() {
             else -> 2
         }
 
-        MaterialAlertDialogBuilder(requireContext())
+        MaterialAlertDialogBuilder(requireActivity())
             .setTitle(R.string.doh_provider_title)
             .setSingleChoiceItems(labels, checked) { dialog, which ->
                 if (which == 2) {
@@ -164,7 +164,7 @@ class PrivacyAndSecuritySettingsFragment : BaseSettingsFragment() {
             )
         }
 
-        MaterialAlertDialogBuilder(requireContext())
+        MaterialAlertDialogBuilder(requireActivity())
             .setTitle(R.string.doh_provider_custom)
             .setView(input)
             .setPositiveButton(R.string.mozac_feature_prompts_ok) { _, _ ->
@@ -240,7 +240,7 @@ class PrivacyAndSecuritySettingsFragment : BaseSettingsFragment() {
     }
 
     private fun showEtpLevelPicker(prefs: UserPreferences, customCategories: PreferenceCategory?) {
-        val ctx = requireContext()
+        val ctx = requireActivity()
         val currentLevel = prefs.etpLevel
 
         // Resolve Material 3 theme colours
@@ -355,7 +355,7 @@ class PrivacyAndSecuritySettingsFragment : BaseSettingsFragment() {
     }
 
     private fun clearTabs(){
-        MaterialAlertDialogBuilder(requireContext())
+        MaterialAlertDialogBuilder(requireActivity())
             .setTitle(resources.getString(R.string.clear_tabs))
             .setNegativeButton(resources.getString(R.string.cancel)) { _, _ -> }
             .setPositiveButton(resources.getString(R.string.mozac_feature_prompts_ok)) { _, _ ->
@@ -391,7 +391,7 @@ class PrivacyAndSecuritySettingsFragment : BaseSettingsFragment() {
             spinner.adapter = adapter
         }
 
-        val historyDialog = MaterialAlertDialogBuilder(requireContext())
+        val historyDialog = MaterialAlertDialogBuilder(requireActivity())
             .setView(layout)
             .create()
 

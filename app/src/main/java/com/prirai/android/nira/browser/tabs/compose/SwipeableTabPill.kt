@@ -176,15 +176,17 @@ fun SwipeableTabPill(
             shape = RoundedCornerShape(12.dp),
             color = when {
                 isSelected && groupColor != null -> Color(groupColor).copy(alpha = 0.3f)
-                isSelected -> MaterialTheme.colorScheme.primaryContainer
+                isSelected -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.55f)
                 else -> Color.Transparent
             },
             border = if (isSelected) {
                 BorderStroke(
-                    1.5.dp,
+                    1.dp,
                     groupColor?.let { Color(it) } ?: MaterialTheme.colorScheme.primary
                 )
-            } else null
+            } else {
+                null
+            }
         ) {
             Row(
                 modifier = Modifier
