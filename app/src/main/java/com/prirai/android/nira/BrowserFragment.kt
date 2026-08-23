@@ -13,7 +13,6 @@ import androidx.lifecycle.lifecycleScope
 import com.prirai.android.nira.browser.home.compose.jumpBackInItems
 import com.prirai.android.nira.browser.home.compose.recentlyClosedItems
 import com.prirai.android.nira.browser.toolbar.ToolbarGestureHandler
-import com.prirai.android.nira.browser.toolbar.WebExtensionToolbarFeature
 import com.prirai.android.nira.components.toolbar.ToolbarMenu
 import com.prirai.android.nira.downloads.DownloadsBottomSheetFragment
 import com.prirai.android.nira.ext.components
@@ -44,7 +43,6 @@ import mozilla.components.support.ktx.kotlinx.coroutines.flow.ifAnyChanged
 class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
 
     private val windowFeature = ViewBoundFeatureWrapper<WindowFeature>()
-    private val webExtToolbarFeature = ViewBoundFeatureWrapper<WebExtensionToolbarFeature>()
 
     // Track last tab IDs for auto-grouping detection
     private var lastTabIds = setOf<String>()
@@ -88,25 +86,6 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
             owner = this,
             view = view
         )
-
-        // Setup web extension toolbar feature using unifiedToolbar's browser toolbar
-        unifiedToolbar?.getBrowserToolbar()?.let { toolbar ->
-            if (UserPreferences(requireContext()).barAddonsList.isNotEmpty()) {
-                webExtToolbarFeature.set(
-                    feature = WebExtensionToolbarFeature(
-                        toolbar,
-                        components.store,
-                        UserPreferences(requireContext()).barAddonsList.split(","),
-                    ), owner = this, view = view
-                )
-            } else if (UserPreferences(requireContext()).showAddonsInBar) {
-                webExtToolbarFeature.set(
-                    feature = WebExtensionToolbarFeature(
-                        toolbar, components.store, showAllExtensions = true
-                    ), owner = this, view = view
-                )
-            }
-        }
 
         windowFeature.set(
             feature = WindowFeature(

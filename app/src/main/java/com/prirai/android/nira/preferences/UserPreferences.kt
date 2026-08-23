@@ -30,7 +30,6 @@ class UserPreferences(appContext: Context) : mozilla.components.support.ktx.andr
 
     // Preferences
     var javaScriptEnabled by booleanPreference(JAVA_SCRIPT_ENABLED, true)
-    var showAddonsInBar by booleanPreference(SHOW_ADDONS_IN_BAR, false)
     var searchEngineChoice by intPreference(SEARCH_ENGINE, 0)
     var customSearchEngine by booleanPreference(CUSTOM_SEARCH_ENGINE, false)
     var customSearchEngineURL by stringPreference(CUSTOM_SEARCH_ENGINE_URL, "")
@@ -131,7 +130,6 @@ class UserPreferences(appContext: Context) : mozilla.components.support.ktx.andr
 
     // SECURITY: Third-party certificate trust disabled for security
     // var trustThirdPartyCerts by booleanPreference(TRUST_THIRD_PARTY_CERTS, false)
-    var barAddonsList by stringPreference(BAR_ADDONS_LIST, "")
     var bookmarkSortType by intPreference(BOOKMARK_SORT_TYPE, BookmarkSortType.MANUAL.ordinal)
     
     // Icon size preference (0.8 to 1.5 scale)
@@ -175,7 +173,6 @@ class UserPreferences(appContext: Context) : mozilla.components.support.ktx.andr
         const val SCW_PREFERENCES = "scw_preferences"
 
         const val JAVA_SCRIPT_ENABLED = "java_script_enabled"
-        const val SHOW_ADDONS_IN_BAR = "show_addons_in_bar"
         const val SEARCH_ENGINE = "search_engine"
         const val CUSTOM_SEARCH_ENGINE = "custom_search_engine"
         const val CUSTOM_SEARCH_ENGINE_URL = "custom_search_engine_url"
@@ -209,7 +206,6 @@ class UserPreferences(appContext: Context) : mozilla.components.support.ktx.andr
         const val HOMEPAGE_BACKGROUND_CHOICE = "homepage_background_choice"
         const val HOMEPAGE_BACKGROUND_URL = "homepage_background_url"
         const val LOAD_SHORTCUT_ICONS = "load_shortcut_icons"
-        const val BAR_ADDONS_LIST = "bar_addons_list"
         const val BOOKMARK_SORT_TYPE = "bookmark_sort_type"
         const val STATUS_BAR_BLUR = "status_bar_blur"
         const val TOOLBAR_ICON_SIZE = "toolbar_icon_size"
