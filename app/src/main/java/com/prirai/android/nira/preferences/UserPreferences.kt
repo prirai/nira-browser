@@ -9,6 +9,7 @@ import com.prirai.android.nira.settings.HomepageBackgroundChoice
 import com.prirai.android.nira.settings.HomepageChoice
 import com.prirai.android.nira.settings.ThemeChoice
 import com.prirai.android.nira.components.toolbar.ToolbarPosition
+import mozilla.components.concept.engine.Engine
 import mozilla.components.support.ktx.android.content.booleanPreference
 import mozilla.components.support.ktx.android.content.floatPreference
 import mozilla.components.support.ktx.android.content.intPreference
@@ -100,6 +101,28 @@ class UserPreferences(appContext: Context) : mozilla.components.support.ktx.andr
     var etpTrackingAds by booleanPreference(ETP_TRACKING_ADS, true)
     var etpSocialTracking by booleanPreference(ETP_SOCIAL_TRACKING, true)
     var etpEmailTracking by booleanPreference(ETP_EMAIL_TRACKING, true)
+
+    // HTTPS-Only: 0=Off, 1=Private tabs only, 2=All tabs
+    var httpsOnlyMode by intPreference(HTTPS_ONLY_MODE, HTTPS_ONLY_ALL)
+    // DNS over HTTPS: 0=Default, 1=Increased, 2=Max, 3=Off
+    var dohMode by intPreference(DOH_MODE, DOH_INCREASED)
+    var dohProviderUrl by stringPreference(DOH_PROVIDER_URL, CLOUDFLARE_DOH_URI)
+    var globalPrivacyControl by booleanPreference(GLOBAL_PRIVACY_CONTROL, true)
+
+    fun getHttpsOnlyMode(): Engine.HttpsOnlyMode = when (httpsOnlyMode) {
+        HTTPS_ONLY_PRIVATE -> Engine.HttpsOnlyMode.ENABLED_PRIVATE_ONLY
+        HTTPS_ONLY_ALL -> Engine.HttpsOnlyMode.ENABLED
+        else -> Engine.HttpsOnlyMode.DISABLED
+    }
+
+    fun getDohSettingsMode(): Engine.DohSettingsMode = when (dohMode) {
+        DOH_INCREASED -> Engine.DohSettingsMode.INCREASED
+        DOH_MAX -> Engine.DohSettingsMode.MAX
+        DOH_OFF -> Engine.DohSettingsMode.OFF
+        else -> Engine.DohSettingsMode.DEFAULT
+    }
+
+    fun isDohProviderSelectable(): Boolean = dohMode == DOH_INCREASED || dohMode == DOH_MAX
 
     // SECURITY: Third-party certificate trust disabled for security
     // var trustThirdPartyCerts by booleanPreference(TRUST_THIRD_PARTY_CERTS, false)
@@ -200,5 +223,21 @@ class UserPreferences(appContext: Context) : mozilla.components.support.ktx.andr
         const val ETP_TRACKING_ADS = "etp_tracking_ads"
         const val ETP_SOCIAL_TRACKING = "etp_social_tracking"
         const val ETP_EMAIL_TRACKING = "etp_email_tracking"
+        const val HTTPS_ONLY_MODE = "https_only_mode"
+        const val DOH_MODE = "doh_mode"
+        const val DOH_PROVIDER_URL = "doh_provider_url"
+        const val GLOBAL_PRIVACY_CONTROL = "global_privacy_control"
+
+        const val HTTPS_ONLY_OFF = 0
+        const val HTTPS_ONLY_PRIVATE = 1
+        const val HTTPS_ONLY_ALL = 2
+
+        const val DOH_DEFAULT = 0
+        const val DOH_INCREASED = 1
+        const val DOH_MAX = 2
+        const val DOH_OFF = 3
+
+        const val CLOUDFLARE_DOH_URI = "https://mozilla.cloudflare-dns.com/dns-query"
+        const val NEXTDNS_DOH_URI = "https://firefox.dns.nextdns.io/"
     }
 }
