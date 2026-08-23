@@ -17,6 +17,7 @@
   <string name="key_search_engine" translatable="false">search_engine</string>
   <string name="key_private_search_engine" translatable="false">private_search_engine</string>
   <string name="key_desktop_mode_default" translatable="false">desktop_mode_default</string>
+  <string name="key_translations_enabled" translatable="false">translations_enabled</string>
     <string
         name="key_bar_addon_list"
         translatable="false"
@@ -178,6 +179,10 @@
   <string name="desktop_mode">Desktop site</string>
   <string name="desktop_mode_default">Request desktop site by default</string>
   <string name="desktop_mode_default_summary">New tabs open in desktop mode. Tablets and large windows use this unless you turn it off.</string>
+  <string name="translations_enabled">Page translations</string>
+  <string name="translations_enabled_summary">Offer to translate pages in another language</string>
+  <string name="translate_page">Translate page</string>
+  <string name="show_original_page">Show original</string>
     <string name="stop">Stop</string>
   <string name="install">Install</string>
   <string name="cancel">Cancel</string>

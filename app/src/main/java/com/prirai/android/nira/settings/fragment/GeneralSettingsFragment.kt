@@ -59,6 +59,14 @@ class GeneralSettingsFragment : BaseSettingsFragment() {
         )
 
         switchPreference(
+            preference = resources.getString(R.string.key_translations_enabled),
+            isChecked = UserPreferences(requireContext()).translationsEnabled,
+            onCheckChange = {
+                UserPreferences(requireContext()).translationsEnabled = it
+            }
+        )
+
+        switchPreference(
             preference = requireContext().resources.getString(R.string.key_search_suggestions_enabled),
             isChecked = UserPreferences(requireContext()).searchSuggestionsEnabled,
             onCheckChange = {

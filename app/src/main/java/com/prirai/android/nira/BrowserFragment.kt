@@ -869,6 +869,24 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
             )
         )
 
+        if (UserPreferences(requireContext()).translationsEnabled &&
+            selectedTab?.content?.url?.startsWith("http") == true
+        ) {
+            val translated = selectedTab.translationsState.isTranslated
+            menuItems.add(
+                com.prirai.android.nira.components.menu.Material3BrowserMenu.MenuItem.Action(
+                    id = "translate",
+                    title = getString(
+                        if (translated) R.string.show_original_page else R.string.translate_page
+                    ),
+                    iconRes = R.drawable.ic_language,
+                    onClick = {
+                        browserInteractor.onBrowserToolbarMenuItemTapped(ToolbarMenu.Item.Translate)
+                    }
+                )
+            )
+        }
+
         menuItems.add(com.prirai.android.nira.components.menu.Material3BrowserMenu.MenuItem.Divider)
 
         // Add to Homescreen/Install (conditional)

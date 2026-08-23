@@ -72,6 +72,14 @@
             app:defaultValue="false"/>
 
         <com.prirai.android.nira.settings.MaterialSwitchPreference
+            app:key="@string/key_translations_enabled"
+            app:title="@string/translations_enabled"
+            app:summary="@string/translations_enabled_summary"
+            app:icon="@drawable/ic_language"
+            app:singleLineTitle="false"
+            app:defaultValue="true"/>
+
+        <com.prirai.android.nira.settings.MaterialSwitchPreference
             app:key="@string/key_javascript_enabled"
             app:title="@string/javascript_enabled"
             app:singleLineTitle="false"
