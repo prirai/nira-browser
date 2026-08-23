@@ -16,6 +16,7 @@
   <string name="key_web_theme_type" translatable="false">web_theme_type</string>
   <string name="key_search_engine" translatable="false">search_engine</string>
   <string name="key_private_search_engine" translatable="false">private_search_engine</string>
+  <string name="key_desktop_mode_default" translatable="false">desktop_mode_default</string>
     <string
         name="key_bar_addon_list"
         translatable="false"
@@ -175,6 +176,8 @@
   <string name="new_tab">New tab</string>
     <string name="close_tab">Close tab</string>
   <string name="desktop_mode">Desktop site</string>
+  <string name="desktop_mode_default">Request desktop site by default</string>
+  <string name="desktop_mode_default_summary">New tabs open in desktop mode. Tablets and large windows use this unless you turn it off.</string>
     <string name="stop">Stop</string>
   <string name="install">Install</string>
   <string name="cancel">Cancel</string>

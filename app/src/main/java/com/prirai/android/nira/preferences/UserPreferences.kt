@@ -35,6 +35,9 @@ class UserPreferences(appContext: Context) : mozilla.components.support.ktx.andr
     var customSearchEngine by booleanPreference(CUSTOM_SEARCH_ENGINE, false)
     var customSearchEngineURL by stringPreference(CUSTOM_SEARCH_ENGINE_URL, "")
     var privateSearchEngineChoice by intPreference(PRIVATE_SEARCH_ENGINE, -1)
+    var desktopModeDefault by booleanPreference(DESKTOP_MODE_DEFAULT, false)
+
+    fun hasDesktopModeDefault(): Boolean = preferences.contains(DESKTOP_MODE_DEFAULT)
     var toolbarPosition by intPreference(TOOLBAR_POSITION, ToolbarPosition.BOTTOM.ordinal)
     var homepageType by intPreference(HOMEPAGE_TYPE, HomepageChoice.VIEW.ordinal)
     var customHomepageUrl by stringPreference(HOMEPAGE_URL, "")
@@ -229,6 +232,7 @@ class UserPreferences(appContext: Context) : mozilla.components.support.ktx.andr
         const val DOH_PROVIDER_URL = "doh_provider_url"
         const val GLOBAL_PRIVACY_CONTROL = "global_privacy_control"
         const val PRIVATE_SEARCH_ENGINE = "private_search_engine"
+        const val DESKTOP_MODE_DEFAULT = "desktop_mode_default"
 
         const val HTTPS_ONLY_OFF = 0
         const val HTTPS_ONLY_PRIVATE = 1
