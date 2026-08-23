@@ -113,7 +113,7 @@ class GeneralSettingsFragment : BaseSettingsFragment() {
         val singleItems = resources.getStringArray(R.array.homepage_types).toMutableList()
         val checkedItem = UserPreferences(requireContext()).homepageType
 
-        MaterialAlertDialogBuilder(requireContext())
+        MaterialAlertDialogBuilder(requireActivity())
                 .setTitle(resources.getString(R.string.homepage_type))
                 .setNeutralButton(resources.getString(R.string.cancel)) { _, _ ->
                     UserPreferences(requireContext()).homepageType = startingChoice
@@ -145,7 +145,7 @@ class GeneralSettingsFragment : BaseSettingsFragment() {
             prefs.searchEngineChoice
         }
 
-        MaterialAlertDialogBuilder(requireContext())
+        MaterialAlertDialogBuilder(requireActivity())
             .setTitle(if (private) getString(R.string.private_search_engine) else getString(R.string.search_engine))
             .setNeutralButton(resources.getString(R.string.cancel), null)
             .setPositiveButton(resources.getString(R.string.mozac_feature_prompts_ok)) { _, _ ->
@@ -171,7 +171,7 @@ class GeneralSettingsFragment : BaseSettingsFragment() {
     }
 
     fun customSearchEngineDialog(){
-        val builder = AlertDialog.Builder(context)
+        val builder = MaterialAlertDialogBuilder(requireActivity())
         builder.setTitle(R.string.custom_search_engine)
         builder.setMessage(R.string.custom_search_engine_details)
 

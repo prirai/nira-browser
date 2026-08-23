@@ -67,6 +67,13 @@
         <!-- Material 3 Checkbox and Switch -->
         <item name="checkboxStyle">@style/Widget.Material3.CompoundButton.CheckBox</item>
         <item name="switchStyle">@style/Widget.Material3.CompoundButton.MaterialSwitch</item>
+        <item name="radioButtonStyle">@style/Widget.App.RadioButton</item>
+        <item name="seekBarStyle">@style/Widget.App.SeekBar</item>
+        <item name="sliderStyle">@style/Widget.Material3.Slider</item>
+        <item name="android:colorControlActivated">?attr/colorPrimary</item>
+        <item name="colorControlActivated">?attr/colorPrimary</item>
+        <item name="alertDialogTheme">@style/Theme.App.MaterialAlertDialog</item>
+        <item name="materialAlertDialogTheme">@style/ThemeOverlay.App.MaterialAlertDialog</item>
         
         <!-- Material 3 FAB -->
         <item name="floatingActionButtonStyle">@style/Widget.Material3.FloatingActionButton.Primary</item>
@@ -97,13 +104,50 @@
     </style>
 
     <style name="AppThemeAddons" parent="Theme.Material3.DayNight">
-        <item name="colorAccent">@color/colorAccent</item>
+        <item name="colorPrimary">@color/m3_primary</item>
+        <item name="colorOnPrimary">@color/m3_on_primary</item>
+        <item name="colorPrimaryContainer">@color/m3_primary_container</item>
+        <item name="colorOnPrimaryContainer">@color/m3_on_primary_container</item>
+        <item name="colorSecondary">@color/m3_secondary</item>
+        <item name="colorOnSecondary">@color/m3_on_secondary</item>
+        <item name="colorAccent">?attr/colorPrimary</item>
+        <item name="android:colorControlActivated">?attr/colorPrimary</item>
+        <item name="colorControlActivated">?attr/colorPrimary</item>
         <item name="actionBarTheme">@style/LightActionBar</item>
         <item name="android:statusBarColor">@color/statusbar_background</item>
+        <item name="radioButtonStyle">@style/Widget.App.RadioButton</item>
+        <item name="seekBarStyle">@style/Widget.App.SeekBar</item>
+        <item name="sliderStyle">@style/Widget.Material3.Slider</item>
+        <item name="alertDialogTheme">@style/Theme.App.MaterialAlertDialog</item>
+        <item name="materialAlertDialogTheme">@style/ThemeOverlay.App.MaterialAlertDialog</item>
 
         <item
             name="mozac_primary_text_color"
         >?android:attr/textColorPrimary</item>
+    </style>
+
+    <style name="Widget.App.RadioButton" parent="Widget.Material3.CompoundButton.RadioButton">
+        <item name="buttonTint">?attr/colorPrimary</item>
+    </style>
+
+    <style name="Widget.App.SeekBar" parent="Widget.AppCompat.SeekBar">
+        <item name="android:progressTint">?attr/colorPrimary</item>
+        <item name="android:thumbTint">?attr/colorPrimary</item>
+        <item name="android:progressBackgroundTint">?attr/colorOutlineVariant</item>
+    </style>
+
+    <style name="Theme.App.MaterialAlertDialog" parent="Theme.Material3.DayNight.Dialog.Alert">
+        <item name="colorAccent">?attr/colorPrimary</item>
+        <item name="android:colorControlActivated">?attr/colorPrimary</item>
+        <item name="radioButtonStyle">@style/Widget.App.RadioButton</item>
+        <item name="seekBarStyle">@style/Widget.App.SeekBar</item>
+    </style>
+
+    <style name="ThemeOverlay.App.MaterialAlertDialog" parent="ThemeOverlay.Material3.MaterialAlertDialog">
+        <item name="colorAccent">?attr/colorPrimary</item>
+        <item name="android:colorControlActivated">?attr/colorPrimary</item>
+        <item name="radioButtonStyle">@style/Widget.App.RadioButton</item>
+        <item name="seekBarStyle">@style/Widget.App.SeekBar</item>
     </style>
 
     <style name="SearchDialogStyle" parent="Theme.Material3.DayNight.NoActionBar">
@@ -166,6 +210,17 @@
         <item
             name="switchPreferenceCompatStyle"
         >@style/Preference.SwitchPreferenceCompat.Material3</item>
+        <item name="seekBarPreferenceStyle">@style/Preference.SeekBarPreference.Material3</item>
+        <item name="android:colorControlActivated">?attr/colorPrimary</item>
+        <item name="colorControlActivated">?attr/colorPrimary</item>
+        <item name="colorAccent">?attr/colorPrimary</item>
+        <item name="radioButtonStyle">@style/Widget.App.RadioButton</item>
+        <item name="seekBarStyle">@style/Widget.App.SeekBar</item>
+        <item name="sliderStyle">@style/Widget.Material3.Slider</item>
+    </style>
+
+    <style name="Preference.SeekBarPreference.Material3" parent="Preference.SeekBarPreference">
+        <item name="android:layout">@layout/preference_seekbar_material3</item>
     </style>
 
     <style name="Preference.Category.Material3" parent="Preference.Category">
