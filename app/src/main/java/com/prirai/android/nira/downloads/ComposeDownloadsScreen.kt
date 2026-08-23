@@ -24,13 +24,16 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AudioFile
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.FolderZip
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.InsertDriveFile
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PictureAsPdf
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.VideoFile
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
@@ -62,13 +65,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.core.content.ContextCompat
-import com.prirai.android.nira.downloads.DownloadService
 import com.prirai.android.nira.ext.components
 import mozilla.components.browser.state.action.DownloadAction
 import mozilla.components.browser.state.state.content.DownloadState
-import mozilla.components.feature.downloads.AbstractFetchDownloadService
-import mozilla.components.feature.downloads.INTENT_EXTRA_DOWNLOAD_ID
 import mozilla.components.lib.state.ext.observeAsComposableState
 import java.util.UUID
 
@@ -79,6 +78,7 @@ fun DownloadsScreen(onDismiss: () -> Unit) {
     val store = context.components.store
     val downloadsState by store.observeAsComposableState { it.downloads }
     val downloads = downloadsState ?: emptyMap()
+    var query by remember { mutableStateOf("") }
 
     val activeStatuses = setOf(
         DownloadState.Status.INITIATED,
@@ -86,12 +86,24 @@ fun DownloadsScreen(onDismiss: () -> Unit) {
         DownloadState.Status.PAUSED,
     )
 
+    val matchesQuery: (DownloadState) -> Boolean = { download ->
+        val needle = query.trim()
+        needle.isEmpty() ||
+            (download.fileName?.contains(needle, ignoreCase = true) == true) ||
+            download.url.contains(needle, ignoreCase = true)
+    }
+
     val activeDownloads = downloads.values
-        .filter { it.status in activeStatuses }
+        .filter { it.status in activeStatuses && matchesQuery(it) }
         .sortedByDescending { it.createdTime }
 
     val completedDownloads = downloads.values
-        .filter { it.status == DownloadState.Status.COMPLETED || it.status == DownloadState.Status.FAILED || it.status == DownloadState.Status.CANCELLED }
+        .filter {
+            (it.status == DownloadState.Status.COMPLETED ||
+                it.status == DownloadState.Status.FAILED ||
+                it.status == DownloadState.Status.CANCELLED) &&
+                matchesQuery(it)
+        }
         .sortedByDescending { it.createdTime }
 
     Surface(
@@ -137,6 +149,26 @@ fun DownloadsScreen(onDismiss: () -> Unit) {
                 )
             }
 
+            OutlinedTextField(
+                value = query,
+                onValueChange = { query = it },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 4.dp),
+                singleLine = true,
+                placeholder = { Text("Search downloads") },
+                leadingIcon = {
+                    Icon(imageVector = Icons.Default.Search, contentDescription = null)
+                },
+                trailingIcon = {
+                    if (query.isNotEmpty()) {
+                        IconButton(onClick = { query = "" }) {
+                            Icon(imageVector = Icons.Default.Close, contentDescription = "Clear search")
+                        }
+                    }
+                }
+            )
+
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
 
             if (downloads.isEmpty()) {
@@ -173,12 +205,7 @@ fun DownloadsScreen(onDismiss: () -> Unit) {
                                 downloads = activeDownloads,
                                 onItemClick = { /* active items don't open */ },
                                 onCancelClick = { dl ->
-                                    val intent = Intent(AbstractFetchDownloadService.ACTION_CANCEL).apply {
-                                        setPackage(context.packageName)
-                                        putExtra(INTENT_EXTRA_DOWNLOAD_ID, dl.id)
-                                    }
-                                    context.sendBroadcast(intent)
-                                    context.components.store.dispatch(DownloadAction.RemoveDownloadAction(dl.id))
+                                    DownloadController.cancel(context, dl)
                                 },
                                 onDelete = { id ->
                                     context.components.store.dispatch(DownloadAction.RemoveDownloadAction(id))
@@ -198,11 +225,7 @@ fun DownloadsScreen(onDismiss: () -> Unit) {
                                     when (dl.status) {
                                         DownloadState.Status.COMPLETED -> openDownloadedFile(context, dl)
                                         DownloadState.Status.FAILED -> {
-                                            val intent = Intent(AbstractFetchDownloadService.ACTION_TRY_AGAIN).apply {
-                                                setPackage(context.packageName)
-                                                putExtra(INTENT_EXTRA_DOWNLOAD_ID, dl.id)
-                                            }
-                                            context.sendBroadcast(intent)
+                                            DownloadController.start(context, dl)
                                             Toast.makeText(context, "Retrying download…", Toast.LENGTH_SHORT).show()
                                         }
                                         DownloadState.Status.CANCELLED -> {
@@ -360,17 +383,7 @@ fun DownloadListItem(
                         Spacer(Modifier.height(8.dp))
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             Button(
-                                onClick = {
-                                    ContextCompat.startForegroundService(
-                                        context,
-                                        Intent(context, DownloadService::class.java).apply {
-                                            putExtra(
-                                                android.app.DownloadManager.EXTRA_DOWNLOAD_ID,
-                                                download.id,
-                                            )
-                                        },
-                                    )
-                                },
+                                onClick = { DownloadController.start(context, download) },
                                 modifier = Modifier.weight(1f),
                             ) {
                                 Text("Download")
@@ -432,8 +445,15 @@ fun DownloadListItem(
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
+                    Spacer(Modifier.width(4.dp))
+                    IconButton(onClick = { DownloadController.pause(context, download.id) }) {
+                        Icon(
+                            imageVector = Icons.Default.Pause,
+                            contentDescription = "Pause",
+                            tint = MaterialTheme.colorScheme.primary,
+                        )
+                    }
                     if (onCancelClick != null) {
-                        Spacer(Modifier.width(8.dp))
                         TextButton(
                             onClick = onCancelClick,
                             colors = ButtonDefaults.textButtonColors(
@@ -506,14 +526,14 @@ fun DownloadListItem(
                             modifier = Modifier.size(20.dp)
                         )
                         DownloadState.Status.PAUSED -> {
-                            Icon(
-                                imageVector = Icons.Default.Pause,
-                                contentDescription = "Paused",
-                                tint = Color(0xFFFF9800),
-                                modifier = Modifier.size(20.dp)
-                            )
+                            IconButton(onClick = { DownloadController.resume(context, download) }) {
+                                Icon(
+                                    imageVector = Icons.Default.PlayArrow,
+                                    contentDescription = "Resume",
+                                    tint = MaterialTheme.colorScheme.primary,
+                                )
+                            }
                             if (onCancelClick != null) {
-                                Spacer(Modifier.width(4.dp))
                                 TextButton(
                                     onClick = onCancelClick,
                                     colors = ButtonDefaults.textButtonColors(

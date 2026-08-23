@@ -5,12 +5,14 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
+import com.prirai.android.nira.browser.home.compose.jumpBackInItems
+import com.prirai.android.nira.browser.home.compose.recentlyClosedItems
 import com.prirai.android.nira.browser.toolbar.ToolbarGestureHandler
-import com.prirai.android.nira.browser.toolbar.WebExtensionToolbarFeature
 import com.prirai.android.nira.components.toolbar.ToolbarMenu
 import com.prirai.android.nira.downloads.DownloadsBottomSheetFragment
 import com.prirai.android.nira.ext.components
@@ -41,7 +43,6 @@ import mozilla.components.support.ktx.kotlinx.coroutines.flow.ifAnyChanged
 class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
 
     private val windowFeature = ViewBoundFeatureWrapper<WindowFeature>()
-    private val webExtToolbarFeature = ViewBoundFeatureWrapper<WebExtensionToolbarFeature>()
 
     // Track last tab IDs for auto-grouping detection
     private var lastTabIds = setOf<String>()
@@ -85,25 +86,6 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
             owner = this,
             view = view
         )
-
-        // Setup web extension toolbar feature using unifiedToolbar's browser toolbar
-        unifiedToolbar?.getBrowserToolbar()?.let { toolbar ->
-            if (UserPreferences(requireContext()).barAddonsList.isNotEmpty()) {
-                webExtToolbarFeature.set(
-                    feature = WebExtensionToolbarFeature(
-                        toolbar,
-                        components.store,
-                        UserPreferences(requireContext()).barAddonsList.split(","),
-                    ), owner = this, view = view
-                )
-            } else if (UserPreferences(requireContext()).showAddonsInBar) {
-                webExtToolbarFeature.set(
-                    feature = WebExtensionToolbarFeature(
-                        toolbar, components.store, showAllExtensions = true
-                    ), owner = this, view = view
-                )
-            }
-        }
 
         windowFeature.set(
             feature = WindowFeature(
@@ -323,6 +305,7 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
             flow.mapNotNull { state -> state.selectedTabId }
                 .distinctUntilChanged()
                 .collect { tabId: String ->
+                    if (!isAdded) return@collect
                     val tab = components.store.state.tabs.find { it.id == tabId }
                     tab?.let {
                         updateContentVisibility(it.content.url)
@@ -337,6 +320,7 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
             }
             .distinctUntilChangedBy { it.content.url }
             .collect { tab ->
+                if (!isAdded) return@collect
                 updateContentVisibility(tab.content.url)
             }
         }
@@ -772,22 +756,22 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
         menuItems.add(
             com.prirai.android.nira.components.menu.Material3BrowserMenu.MenuItem.QuadRow(
                 title1 = getString(R.string.action_history),
-                icon1 = R.drawable.ic_baseline_history,
+                icon1 = mozilla.components.ui.icons.R.drawable.mozac_ic_history_24,
                 onClick1 = {
                     browserInteractor.onBrowserToolbarMenuItemTapped(ToolbarMenu.Item.History)
                 },
                 title2 = getString(R.string.action_bookmarks),
-                icon2 = R.drawable.ic_baseline_bookmark,
+                icon2 = mozilla.components.ui.icons.R.drawable.mozac_ic_bookmark_24,
                 onClick2 = {
                     browserInteractor.onBrowserToolbarMenuItemTapped(ToolbarMenu.Item.Bookmarks)
                 },
                 title3 = getString(R.string.action_print),
-                icon3 = R.drawable.ic_baseline_print,
+                icon3 = mozilla.components.ui.icons.R.drawable.mozac_ic_print_24,
                 onClick3 = {
                     browserInteractor.onBrowserToolbarMenuItemTapped(ToolbarMenu.Item.Print)
                 },
                 title4 = getString(R.string.save_as_pdf),
-                icon4 = R.drawable.ic_baseline_pdf,
+                icon4 = mozilla.components.ui.icons.R.drawable.mozac_ic_save_file_24,
                 onClick4 = {
                     browserInteractor.onBrowserToolbarMenuItemTapped(ToolbarMenu.Item.PDF)
                 }
@@ -809,7 +793,7 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
                     ),
                     com.prirai.android.nira.components.menu.Material3BrowserMenu.IconRowItem(
                         title = "Add Bookmark",
-                        iconRes = R.drawable.ic_baseline_bookmark_add,
+                        iconRes = mozilla.components.ui.icons.R.drawable.mozac_ic_bookmark_fill_24,
                         onClick = {
                             selectedTab?.let { tab ->
                                 val title = tab.content.title.ifEmpty { tab.content.url }
@@ -833,7 +817,7 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
                     ),
                     com.prirai.android.nira.components.menu.Material3BrowserMenu.IconRowItem(
                         title = "Favorites",
-                        iconRes = R.drawable.ic_baseline_star_24,
+                        iconRes = mozilla.components.ui.icons.R.drawable.mozac_ic_pin_fill_24,
                         onClick = {
                             selectedTab?.let { tab ->
                                 val title = tab.content.title.ifEmpty { tab.content.url }
@@ -854,7 +838,7 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
             com.prirai.android.nira.components.menu.Material3BrowserMenu.MenuItem.Toggle(
                 id = "desktop_mode",
                 title = getString(R.string.desktop_mode),
-                iconRes = R.drawable.ic_desktop,
+                iconRes = mozilla.components.ui.icons.R.drawable.mozac_ic_device_desktop_24,
                 isChecked = selectedTab?.content?.desktopMode ?: false,
                 onToggle = { checked ->
                     browserInteractor.onBrowserToolbarMenuItemTapped(
@@ -863,6 +847,24 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
                 }
             )
         )
+
+        if (UserPreferences(requireContext()).translationsEnabled &&
+            selectedTab?.content?.url?.startsWith("http") == true
+        ) {
+            val translated = selectedTab.translationsState.isTranslated
+            menuItems.add(
+                com.prirai.android.nira.components.menu.Material3BrowserMenu.MenuItem.Action(
+                    id = "translate",
+                    title = getString(
+                        if (translated) R.string.show_original_page else R.string.translate_page
+                    ),
+                    iconRes = mozilla.components.ui.icons.R.drawable.mozac_ic_translate_24,
+                    onClick = {
+                        browserInteractor.onBrowserToolbarMenuItemTapped(ToolbarMenu.Item.Translate)
+                    }
+                )
+            )
+        }
 
         menuItems.add(com.prirai.android.nira.components.menu.Material3BrowserMenu.MenuItem.Divider)
 
@@ -873,7 +875,7 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
                     com.prirai.android.nira.components.menu.Material3BrowserMenu.MenuItem.Action(
                         id = "install_webapp",
                         title = getString(R.string.install_web_app),
-                        iconRes = R.drawable.ic_round_smartphone,
+                        iconRes = mozilla.components.ui.icons.R.drawable.mozac_ic_device_mobile_24,
                         onClick = {
                             browserInteractor.onBrowserToolbarMenuItemTapped(ToolbarMenu.Item.InstallWebApp)
                         }
@@ -884,7 +886,7 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
                     com.prirai.android.nira.components.menu.Material3BrowserMenu.MenuItem.Action(
                         id = "add_to_homescreen",
                         title = getString(R.string.action_add_to_homescreen),
-                        iconRes = R.drawable.ic_round_smartphone,
+                        iconRes = mozilla.components.ui.icons.R.drawable.mozac_ic_device_mobile_24,
                         onClick = {
                             browserInteractor.onBrowserToolbarMenuItemTapped(ToolbarMenu.Item.AddToHomeScreen)
                         }
@@ -900,7 +902,7 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
                     com.prirai.android.nira.components.menu.Material3BrowserMenu.MenuItem.Action(
                         id = "open_in_app",
                         title = getString(R.string.mozac_feature_contextmenu_open_link_in_external_app),
-                        iconRes = R.drawable.ic_baseline_open_in_new,
+                        iconRes = mozilla.components.ui.icons.R.drawable.mozac_ic_external_link_24,
                         onClick = {
                             browserInteractor.onBrowserToolbarMenuItemTapped(ToolbarMenu.Item.OpenInApp)
                         }
@@ -927,7 +929,7 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
             com.prirai.android.nira.components.menu.Material3BrowserMenu.MenuItem.Action(
                 id = "downloads",
                 title = "Downloads",
-                iconRes = R.drawable.ic_baseline_download_24,
+                iconRes = mozilla.components.ui.icons.R.drawable.mozac_ic_download_24,
                 onClick = {
                     val downloadsBottomSheet = com.prirai.android.nira.downloads.DownloadsBottomSheetFragment.newInstance()
                     downloadsBottomSheet.show(parentFragmentManager, com.prirai.android.nira.downloads.DownloadsBottomSheetFragment.TAG)
@@ -940,7 +942,7 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
             com.prirai.android.nira.components.menu.Material3BrowserMenu.MenuItem.Action(
                 id = "settings",
                 title = getString(R.string.settings),
-                iconRes = R.drawable.ic_round_settings,
+                iconRes = mozilla.components.ui.icons.R.drawable.mozac_ic_settings_24,
                 onClick = {
                     browserInteractor.onBrowserToolbarMenuItemTapped(ToolbarMenu.Item.Settings)
                 }
@@ -965,7 +967,7 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
             com.prirai.android.nira.components.menu.Material3BrowserMenu.MenuItem.Action(
                 id = "new_private_tab",
                 title = getString(R.string.mozac_browser_menu_new_private_tab),
-                iconRes = R.drawable.ic_incognito,
+                iconRes = mozilla.components.ui.icons.R.drawable.mozac_ic_private_mode_24,
                 onClick = {
                     browserInteractor.onBrowserToolbarMenuItemTapped(ToolbarMenu.Item.NewPrivateTab)
                 }
@@ -1078,7 +1080,8 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
 
         val factory = com.prirai.android.nira.browser.home.compose.HomeViewModelFactory(
             bookmarkManager = com.prirai.android.nira.browser.bookmark.repository.BookmarkManager.getInstance(requireContext()),
-            shortcutDao = database.shortcutDao()
+            shortcutDao = database.shortcutDao(),
+            historyStorage = requireContext().components.historyStorage,
         )
 
         homeViewModel = androidx.lifecycle.ViewModelProvider(this, factory)[com.prirai.android.nira.browser.home.compose.HomeViewModel::class.java]
@@ -1111,9 +1114,21 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
             val isPrivateMode = selectedTab?.content?.private ?: browsingModeManager.mode.isPrivate
 
             val shortcuts by homeViewModel.shortcuts.collectAsState()
-            val bookmarks by homeViewModel.bookmarks.collectAsState()
             val showAddDialog by homeViewModel.showAddShortcutDialog.collectAsState()
-            val isBookmarkExpanded by homeViewModel.isBookmarkSectionExpanded.collectAsState()
+            val jumpBackInHistory by homeViewModel.jumpBackInHistory.collectAsState()
+            val recentsKey by store.observeAsComposableState { state ->
+                Triple(
+                    state.selectedTabId,
+                    state.tabs.map { it.id to it.lastAccess },
+                    state.closedTabs.map { it.id },
+                )
+            }
+            val jumpBackInItems = androidx.compose.runtime.remember(recentsKey, jumpBackInHistory) {
+                store.state.jumpBackInItems(jumpBackInHistory)
+            }
+            val recentlyClosedItems by store.observeAsComposableState { state ->
+                state.recentlyClosedItems()
+            }
 
             val profileManager =
                 com.prirai.android.nira.browser.profile.ProfileManager.getInstance(requireContext())
@@ -1158,8 +1173,6 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
                 com.prirai.android.nira.browser.home.compose.HomeScreen(
                     isPrivateMode = isPrivateMode,
                     shortcuts = shortcuts,
-                    bookmarks = bookmarks,
-                    isBookmarkExpanded = isBookmarkExpanded,
                     currentProfile = currentProfile,
                     onProfileClick = {}, // Profile icon is display-only
                     backgroundImageUrl = backgroundImageUrl,
@@ -1181,18 +1194,41 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
                             .show()
                     },
                     onShortcutAdd = { homeViewModel.showAddShortcutDialog() },
-                    onBookmarkClick = { bookmark ->
-                        if (bookmark.isFolder) {
-                            val bookmarksBottomSheet = com.prirai.android.nira.browser.bookmark.ui.BookmarksBottomSheetFragment.newInstance(
-                                folderId = bookmark.id.toLongOrNull() ?: -1L
+                    onHistoryClick = {
+                        startActivity(
+                            android.content.Intent(
+                                requireContext(),
+                                com.prirai.android.nira.history.HistoryActivity::class.java
                             )
-                            bookmarksBottomSheet.show(parentFragmentManager, "BookmarksBottomSheet")
+                        )
+                    },
+                    onBookmarksClick = {
+                        com.prirai.android.nira.browser.bookmark.ui.BookmarksBottomSheetFragment
+                            .newInstance()
+                            .show(parentFragmentManager, "BookmarksBottomSheet")
+                    },
+                    jumpBackInItems = jumpBackInItems,
+                    recentlyClosedItems = recentlyClosedItems.orEmpty(),
+                    onJumpBackInClick = { item ->
+                        val tabId = item.tabId
+                        if (tabId != null) {
+                            components.tabsUseCases.selectTab(tabId)
                         } else {
-                            components.sessionUseCases.loadUrl(bookmark.url)
-                            // URL will change, triggering visibility update automatically
+                            components.sessionUseCases.loadUrl(item.url)
                         }
                     },
-                    onBookmarkToggle = { homeViewModel.toggleBookmarkSection() },
+                    onRecentlyClosedClick = { item ->
+                        val tab = store.state.closedTabs.find { it.id == item.id } ?: return@HomeScreen
+                        viewLifecycleOwner.lifecycleScope.launch {
+                            components.tabsUseCases.restore(
+                                tab,
+                                components.recentlyClosedTabsStorage.engineStateStorage(),
+                            )
+                            store.dispatch(
+                                mozilla.components.browser.state.action.RecentlyClosedAction.RemoveClosedTabAction(tab)
+                            )
+                        }
+                    },
                     onSearchClick = {
                         // Open search dialog
                         val sessionId = components.store.state.selectedTabId
@@ -1222,22 +1258,21 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
      * Shows homepage ComposeView for "about:homepage", otherwise shows engineView
      */
     private fun updateContentVisibility(url: String) {
-        val isHomepage = url == "about:homepage" || url.isEmpty()
-        
+        val binding = bindingOrNull ?: return
+        val isHomepage = url == "about:homepage"
+
         val homePageView = binding.root.findViewById<androidx.compose.ui.platform.ComposeView>(
             R.id.homePageComposeView
         )
-        
-        if (isHomepage) {
-            // Show homepage, hide engine view
-            binding.swipeRefresh.visibility = View.GONE
-            binding.engineView.asView().visibility = View.GONE
-            homePageView?.visibility = View.VISIBLE
-        } else {
-            // Show engine view, hide homepage
-            homePageView?.visibility = View.GONE
-            binding.swipeRefresh.visibility = View.VISIBLE
-            binding.engineView.asView().visibility = View.VISIBLE
+
+        // Keep EngineView attached. GONE detaches Gecko's surface and later selectTab
+        // can leave the last frame stuck (AC#6664 / bug 1630775). Homepage sits on top.
+        binding.swipeRefresh.visibility = View.VISIBLE
+        binding.engineView.asView().visibility = View.VISIBLE
+        homePageView?.apply {
+            visibility = if (isHomepage) View.VISIBLE else View.GONE
+            isClickable = isHomepage
+            isFocusable = isHomepage
         }
     }
 }

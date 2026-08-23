@@ -16,28 +16,35 @@ import androidx.fragment.app.Fragment
 import com.prirai.android.nira.BrowserActivity
 import com.prirai.android.nira.R
 import com.prirai.android.nira.databinding.FragmentBrowserBinding
+import com.prirai.android.nira.downloads.DownloadService
 import com.prirai.android.nira.ext.components
 import com.prirai.android.nira.integration.ContextMenuIntegration
 import com.prirai.android.nira.integration.FindInPageIntegration
+import com.prirai.android.nira.preferences.UserPreferences
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.mapNotNull
 import mozilla.components.browser.state.selector.findCustomTab
 import mozilla.components.browser.state.state.SessionState
 import mozilla.components.concept.engine.EngineView
 import mozilla.components.feature.customtabs.CustomTabWindowFeature
+import mozilla.components.feature.downloads.DownloadsFeature
+import mozilla.components.feature.downloads.manager.FetchDownloadManager
+import mozilla.components.feature.media.fullscreen.MediaSessionFullscreenFeature
 import mozilla.components.feature.prompts.PromptFeature
 import mozilla.components.feature.session.SessionFeature
 import mozilla.components.feature.session.SwipeRefreshFeature
+import mozilla.components.feature.sitepermissions.SitePermissionsFeature
 import mozilla.components.lib.state.ext.flowScoped
-import mozilla.components.support.base.feature.ViewBoundFeatureWrapper
+import mozilla.components.support.base.feature.ActivityResultHandler
 import mozilla.components.support.base.feature.UserInteractionHandler
+import mozilla.components.support.base.feature.ViewBoundFeatureWrapper
 import kotlin.math.pow
 
 /**
  * Fragment for external app browsing with custom header UI but using Mozilla's core features.
  * Combines custom branding/UI with Mozilla's intent processing and session management.
  */
-class ExternalAppBrowserFragment : Fragment(), UserInteractionHandler {
+class ExternalAppBrowserFragment : Fragment(), UserInteractionHandler, ActivityResultHandler {
 
     private var _binding: FragmentBrowserBinding? = null
     private val binding get() = _binding!!
@@ -49,8 +56,10 @@ class ExternalAppBrowserFragment : Fragment(), UserInteractionHandler {
     private val swipeRefreshFeature = ViewBoundFeatureWrapper<SwipeRefreshFeature>()
     private val promptsFeature = ViewBoundFeatureWrapper<PromptFeature>()
     private val findInPageIntegration = ViewBoundFeatureWrapper<FindInPageIntegration>()
-    private val downloadsFeature = ViewBoundFeatureWrapper<mozilla.components.feature.downloads.DownloadsFeature>()
+    private val downloadsFeature = ViewBoundFeatureWrapper<DownloadsFeature>()
     private val contextMenuIntegration = ViewBoundFeatureWrapper<ContextMenuIntegration>()
+    private val sitePermissionsFeature = ViewBoundFeatureWrapper<SitePermissionsFeature>()
+    private val fullScreenMediaSessionFeature = ViewBoundFeatureWrapper<MediaSessionFullscreenFeature>()
     
     private var customTabHeader: LinearLayout? = null
     private var customTabTitle: TextView? = null
@@ -140,17 +149,43 @@ class ExternalAppBrowserFragment : Fragment(), UserInteractionHandler {
             view = binding.root
         )
 
-        // Prompt feature - required for select dropdowns, dialogs, and file pickers
         promptsFeature.set(
             feature = PromptFeature(
                 fragment = this,
                 store = components.store,
+                customTabId = sessionId,
                 tabsUseCases = components.tabsUseCases,
-                fragmentManager = parentFragmentManager,
+                fragmentManager = childFragmentManager,
                 fileUploadsDirCleaner = components.fileUploadsDirCleaner,
                 onNeedToRequestPermissions = { permissions ->
                     requestPermissions(permissions, REQUEST_CODE_PROMPT_PERMISSIONS)
                 }
+            ),
+            owner = this,
+            view = binding.root
+        )
+
+        sitePermissionsFeature.set(
+            feature = SitePermissionsFeature(
+                context = requireContext(),
+                storage = components.permissionStorage,
+                fragmentManager = childFragmentManager,
+                sessionId = sessionId,
+                onNeedToRequestPermissions = { permissions ->
+                    requestPermissions(permissions, REQUEST_CODE_APP_PERMISSIONS)
+                },
+                onShouldShowRequestPermissionRationale = { shouldShowRequestPermissionRationale(it) },
+                store = components.store
+            ),
+            owner = this,
+            view = binding.root
+        )
+
+        fullScreenMediaSessionFeature.set(
+            feature = MediaSessionFullscreenFeature(
+                requireActivity(),
+                components.store,
+                sessionId
             ),
             owner = this,
             view = binding.root
@@ -196,15 +231,14 @@ class ExternalAppBrowserFragment : Fragment(), UserInteractionHandler {
             view = binding.root
         )
         
-        // Downloads feature - CRITICAL for handling downloads
         downloadsFeature.set(
-            feature = mozilla.components.feature.downloads.DownloadsFeature(
+            feature = DownloadsFeature(
                 requireContext().applicationContext,
                 store = components.store,
                 useCases = components.downloadsUseCases,
                 fragmentManager = childFragmentManager,
-                shouldForwardToThirdParties = { 
-                    com.prirai.android.nira.preferences.UserPreferences(requireContext()).promptExternalDownloader 
+                shouldForwardToThirdParties = {
+                    UserPreferences(requireContext()).promptExternalDownloader
                 },
                 downloadFileUtils = mozilla.components.support.utils.DefaultDownloadFileUtils(
                     context = requireContext().applicationContext,
@@ -214,10 +248,10 @@ class ExternalAppBrowserFragment : Fragment(), UserInteractionHandler {
                         ).path
                     }
                 ),
-                downloadManager = mozilla.components.feature.downloads.manager.FetchDownloadManager(
+                downloadManager = FetchDownloadManager(
                     requireContext().applicationContext,
                     components.store,
-                    com.prirai.android.nira.downloads.DownloadService::class,
+                    DownloadService::class,
                     notificationsDelegate = components.notificationsDelegate
                 ),
                 tabId = sessionId,
@@ -320,10 +354,7 @@ class ExternalAppBrowserFragment : Fragment(), UserInteractionHandler {
         
         // Set up close button
         customTabCloseButton?.setOnClickListener {
-            customTabSessionId?.let { sessionId ->
-                requireContext().components.customTabsUseCases.remove(sessionId)
-            }
-            requireActivity().finish()
+            closeCustomTab()
         }
         
         // Set up menu button
@@ -476,7 +507,7 @@ class ExternalAppBrowserFragment : Fragment(), UserInteractionHandler {
                     mozilla.components.browser.state.action.TabListAction.AddTabAction(newTab, select = true)
                 )
                 
-                // Remove custom tab
+                pauseCustomTabMedia(sessionId)
                 requireContext().components.customTabsUseCases.remove(sessionId)
                 
                 // Launch main browser
@@ -491,20 +522,36 @@ class ExternalAppBrowserFragment : Fragment(), UserInteractionHandler {
         }
     }
 
+    private fun pauseCustomTabMedia(sessionId: String) {
+        val tab = requireContext().components.store.state.findCustomTab(sessionId) ?: return
+        tab.mediaSessionState?.controller?.pause()
+    }
+
+    private fun closeCustomTab() {
+        val sessionId = customTabSessionId
+        if (sessionId != null) {
+            pauseCustomTabMedia(sessionId)
+            requireContext().components.customTabsUseCases.remove(sessionId)
+        }
+        requireActivity().finish()
+    }
+
     override fun onBackPressed(): Boolean {
-        // Check if find in page is open
         if (findInPageIntegration.onBackPressed()) {
             return true
         }
-        
-        // Check if we can go back in history
+        if (promptsFeature.onBackPressed()) {
+            return true
+        }
         if (sessionFeature.onBackPressed()) {
             return true
         }
-        
-        // If nothing handled it, finish activity
-        requireActivity().finish()
+        closeCustomTab()
         return true
+    }
+
+    override fun onActivityResult(requestCode: Int, data: Intent?, resultCode: Int): Boolean {
+        return promptsFeature.onActivityResult(requestCode, data, resultCode)
     }
     
     override fun onRequestPermissionsResult(
@@ -519,6 +566,9 @@ class ExternalAppBrowserFragment : Fragment(), UserInteractionHandler {
             REQUEST_CODE_PROMPT_PERMISSIONS -> {
                 promptsFeature.get()?.onPermissionsResult(permissions, grantResults)
             }
+            REQUEST_CODE_APP_PERMISSIONS -> {
+                sitePermissionsFeature.get()?.onPermissionsResult(permissions, grantResults)
+            }
         }
     }
     
@@ -531,5 +581,6 @@ class ExternalAppBrowserFragment : Fragment(), UserInteractionHandler {
     companion object {
         private const val REQUEST_CODE_DOWNLOAD_PERMISSIONS = 1
         private const val REQUEST_CODE_PROMPT_PERMISSIONS = 2
+        private const val REQUEST_CODE_APP_PERMISSIONS = 3
     }
 }
