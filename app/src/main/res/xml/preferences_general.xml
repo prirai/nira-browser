@@ -64,6 +64,14 @@
             app:singleLineTitle="false"/>
 
         <com.prirai.android.nira.settings.MaterialSwitchPreference
+            app:key="@string/key_desktop_mode_default"
+            app:title="@string/desktop_mode_default"
+            app:summary="@string/desktop_mode_default_summary"
+            app:icon="@drawable/ic_desktop"
+            app:singleLineTitle="false"
+            app:defaultValue="false"/>
+
+        <com.prirai.android.nira.settings.MaterialSwitchPreference
             app:key="@string/key_javascript_enabled"
             app:title="@string/javascript_enabled"
             app:singleLineTitle="false"
