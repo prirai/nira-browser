@@ -95,10 +95,14 @@
         name="key_show_protocol"
         translatable="false"
     >show_url_protocol</string>
-  <string
+   <string
         name="key_search_suggestions_enabled"
         translatable="false"
     >search_suggestions_enabled</string>
+  <string
+        name="key_search_suggestion_count"
+        translatable="false"
+    >search_suggestion_count</string>
   <string name="key_safe_browsing" translatable="false">safe_browsing</string>
   <string
         name="key_shortcuts_visible"
@@ -406,6 +410,8 @@
     <string name="show_protocol_in_url">Show URL protocol in toolbar</string>
 
   <string name="search_suggestions">Search suggestions</string>
+  <string name="search_for_query">Search for \"%1$s\"</string>
+  <string name="search_suggestion_count">Number of search suggestions</string>
 
   <string name="safe_browsing">Safe browsing</string>
   <string name="tracking_protection">Tracking protection</string>

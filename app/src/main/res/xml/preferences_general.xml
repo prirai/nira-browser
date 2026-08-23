@@ -18,6 +18,16 @@
             app:singleLineTitle="false"
             app:defaultValue="true"/>
 
+        <SeekBarPreference
+            android:max="10"
+            app:min="1"
+            app:key="@string/key_search_suggestion_count"
+            app:title="@string/search_suggestion_count"
+            app:showSeekBarValue="true"
+            app:singleLineTitle="false"
+            app:defaultValue="5"
+            app:dependency="@string/key_search_suggestions_enabled"/>
+
     </PreferenceCategory>
 
     <PreferenceCategory android:title="Privacy &amp; Security">

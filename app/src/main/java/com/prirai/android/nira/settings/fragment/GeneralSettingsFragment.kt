@@ -40,6 +40,14 @@ class GeneralSettingsFragment : BaseSettingsFragment() {
             }
         )
 
+        seekbarPreference(
+            preference = requireContext().resources.getString(R.string.key_search_suggestion_count)
+        ) {
+            UserPreferences(requireContext()).searchSuggestionCount = it.coerceIn(1, 10)
+        }?.apply {
+            value = UserPreferences(requireContext()).searchSuggestionCount.coerceIn(1, 10)
+        }
+
         switchPreference(
             preference = requireContext().resources.getString(R.string.key_safe_browsing),
             isChecked = UserPreferences(requireContext()).safeBrowsing,

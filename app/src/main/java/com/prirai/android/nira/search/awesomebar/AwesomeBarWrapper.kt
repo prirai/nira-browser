@@ -4,19 +4,12 @@ import android.content.Context
 import android.util.AttributeSet
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.AbstractComposeView
-import com.prirai.android.nira.components.toolbar.ToolbarPosition
 import com.prirai.android.nira.preferences.UserPreferences
-import com.prirai.android.nira.theme.FirefoxTheme
-import mozilla.components.compose.browser.awesomebar.AwesomeBar
-import mozilla.components.compose.browser.awesomebar.AwesomeBarDefaults
-import mozilla.components.compose.browser.awesomebar.AwesomeBarOrientation
+import com.prirai.android.nira.ui.theme.NiraTheme
 import mozilla.components.concept.awesomebar.AwesomeBar
 import mozilla.components.concept.awesomebar.AwesomeBar.GroupedSuggestion
-import mozilla.components.concept.awesomebar.AwesomeBar.Suggestion
-import mozilla.components.concept.awesomebar.AwesomeBar.SuggestionItem
-import mozilla.components.support.ktx.android.content.getColorFromAttr
+import mozilla.components.support.ktx.android.view.hideKeyboard
 
 class AwesomeBarWrapper @JvmOverloads constructor(
     context: Context,
@@ -25,6 +18,7 @@ class AwesomeBarWrapper @JvmOverloads constructor(
 ) : AbstractComposeView(context, attrs, defStyleAttr), AwesomeBar {
     private val providers = mutableStateOf(emptyList<AwesomeBar.SuggestionProvider>())
     private val text = mutableStateOf("")
+    private val hiddenSuggestions = mutableStateOf(emptySet<GroupedSuggestion>())
     private var onEditSuggestionListener: ((String) -> Unit)? = null
     private var onStopListener: (() -> Unit)? = null
     private var onRemoveSuggestionButtonClicked: ((GroupedSuggestion) -> Unit)? = null
@@ -35,25 +29,24 @@ class AwesomeBarWrapper @JvmOverloads constructor(
             return
         }
 
-        if (UserPreferences(context).toolbarPosition == ToolbarPosition.TOP.ordinal) {
-            AwesomeBarOrientation.BOTTOM
-        } else {
-            AwesomeBarOrientation.TOP
-        }
-
-        FirefoxTheme {
-            AwesomeBar(
+        val prefs = UserPreferences(context)
+        NiraTheme(
+            amoledMode = prefs.amoledMode,
+            dynamicColor = prefs.dynamicColors
+        ) {
+            NiraAwesomeBar(
                 text = text.value,
                 providers = providers.value,
-                colors = AwesomeBarDefaults.colors(
-                    background = Color.Transparent,
-                    title = Color(context.getColorFromAttr(android.R.attr.textColorPrimary)),
-                    description = Color(context.getColorFromAttr(android.R.attr.textColorSecondary)),
-                    autocompleteIcon =  Color(context.getColorFromAttr(android.R.attr.textColorSecondary))
-                ),
-                onSuggestionClicked = { },
-                onRemoveClicked = { },
-                onAutoComplete = { }
+                hiddenSuggestions = hiddenSuggestions.value,
+                onSuggestionClicked = { suggestion ->
+                    suggestion.onSuggestionClicked?.invoke()
+                    onStopListener?.invoke()
+                },
+                onRemoveClicked = { grouped ->
+                    hiddenSuggestions.value += grouped
+                    onRemoveSuggestionButtonClicked?.invoke(grouped)
+                },
+                onScroll = { hideKeyboard() }
             )
         }
     }
@@ -69,6 +62,7 @@ class AwesomeBarWrapper @JvmOverloads constructor(
     }
 
     override fun onInputChanged(text: String) {
+        hiddenSuggestions.value = emptySet()
         this.text.value = text
     }
 
@@ -91,7 +85,7 @@ class AwesomeBarWrapper @JvmOverloads constructor(
     }
 
     override fun updateHiddenSuggestions(hiddenSuggestions: Set<GroupedSuggestion>) {
-        // No-op: compose awesomebar handles its own hidden state.
+        this.hiddenSuggestions.value = hiddenSuggestions
     }
 
     override fun setOnRemoveSuggestionButtonClicked(listener: (GroupedSuggestion) -> Unit) {

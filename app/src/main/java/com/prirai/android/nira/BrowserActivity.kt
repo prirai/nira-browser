@@ -41,6 +41,7 @@ import mozilla.components.browser.state.action.AppLifecycleAction
 import mozilla.components.browser.state.search.SearchEngine
 import mozilla.components.browser.state.state.SessionState
 import mozilla.components.browser.state.state.WebExtensionState
+import mozilla.components.browser.state.state.selectedOrDefaultSearchEngine
 import mozilla.components.concept.engine.EngineSession
 import mozilla.components.concept.engine.EngineView
 import mozilla.components.feature.contextmenu.ext.DefaultSelectionActionDelegate
@@ -505,10 +506,10 @@ open class BrowserActivity : LocaleAwareAppCompatActivity(), ComponentCallbacks2
             components.store.state.tabs.find { it.id == id }
         }
         val isPrivateMode = selectedTab?.content?.private ?: browsingModeManager.mode.isPrivate
+        val resolvedEngine = engine ?: resolveSearchEngine(isPrivateMode)
 
-        if ((!forceSearch && searchTermOrURL.isUrl()) || engine == null) {
+        if (resolvedEngine == null || (!forceSearch && searchTermOrURL.isUrl())) {
             if (newTab) {
-                // Determine contextId for proper tab grouping and visibility
                 val contextId = getContextIdForNewTab(isPrivateMode, selectedTab)
                 components.tabsUseCases.addTab.invoke(
                     searchTermOrURL.toNormalizedUrl(),
@@ -521,18 +522,25 @@ open class BrowserActivity : LocaleAwareAppCompatActivity(), ComponentCallbacks2
             }
         } else {
             if (newTab) {
-                // For search, use newTabSearch but set contextId via middleware after tab creation
-                // The ProfileMiddleware will set contextId based on private mode
                 components.searchUseCases.newTabSearch
                     .invoke(
                         searchTermOrURL,
                         SessionState.Source.Internal.UserEntered,
                         isPrivateMode,
-                        searchEngine = engine
+                        searchEngine = resolvedEngine
                     )
             } else {
-                components.searchUseCases.defaultSearch.invoke(searchTermOrURL, engine)
+                components.searchUseCases.defaultSearch.invoke(searchTermOrURL, resolvedEngine)
             }
+        }
+    }
+
+    private fun resolveSearchEngine(isPrivateMode: Boolean): SearchEngine? {
+        components.store.state.search.selectedOrDefaultSearchEngine(isPrivateMode)?.let { return it }
+        return try {
+            SearchEngineList(this).getSelectedEngine(UserPreferences(this))
+        } catch (_: Exception) {
+            null
         }
     }
 

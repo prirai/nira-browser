@@ -6,24 +6,20 @@ import android.view.ViewGroup
 import android.widget.Filter
 import android.widget.ImageView
 import android.widget.TextView
-import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.card.MaterialCardView
 import com.prirai.android.nira.R
-import com.prirai.android.nira.ext.components
+import com.prirai.android.nira.utils.FaviconLoader
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import mozilla.components.concept.storage.VisitInfo
 import mozilla.components.support.ktx.kotlin.tryGetHostFromUrl
-import java.text.DateFormat.getDateTimeInstance
-import java.util.ArrayList
-import java.util.Date
-import java.util.Locale
 
 open class HistoryItemRecyclerViewAdapter(
     private var values: List<VisitInfo>
-)
-    : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
+) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
     companion object {
         private const val TYPE_HEADER = 0
@@ -31,65 +27,48 @@ open class HistoryItemRecyclerViewAdapter(
     }
 
     private var historyItems: List<HistoryItem> = HistorySectionHelper.groupHistoryByDate(values)
-    lateinit var filtered: MutableList<VisitInfo>
-    lateinit var oldList: MutableList<VisitInfo>
+    private var oldList: List<VisitInfo> = values
 
-    open fun getFilter(): Filter? {
+    open fun getFilter(): Filter {
         return object : Filter() {
             override fun performFiltering(charSequence: CharSequence): FilterResults {
-                val charString = charSequence.toString()
-
-                filtered = if (charString.isEmpty()) {
+                val query = charSequence.toString()
+                val filtered = if (query.isEmpty()) {
                     oldList
                 } else {
-                    val filteredList: MutableList<VisitInfo> = ArrayList<VisitInfo>()
-                    for (row in oldList) {
-                        if (row.url.lowercase(Locale.getDefault()).contains(charString.lowercase(Locale.getDefault())) || row.title?.lowercase(
-                                Locale.getDefault()
-                            )
-                                ?.contains(
-                                charString.lowercase(Locale.getDefault())
-                            ) == true) {
-                            filteredList.add(row)
-                        }
+                    oldList.filter { row ->
+                        row.url.contains(query, ignoreCase = true) ||
+                            row.title?.contains(query, ignoreCase = true) == true
                     }
-                    filteredList
                 }
-                val filterResults = FilterResults()
-                filterResults.values = filtered
-                return filterResults
+                return FilterResults().apply { values = filtered }
             }
 
+            @Suppress("UNCHECKED_CAST")
             override fun publishResults(charSequence: CharSequence, filterResults: FilterResults) {
-                values = filterResults.values as MutableList<VisitInfo>
+                values = filterResults.values as List<VisitInfo>
                 historyItems = HistorySectionHelper.groupHistoryByDate(values)
                 notifyDataSetChanged()
             }
         }
     }
 
+    fun getVisitAt(position: Int): VisitInfo? {
+        return (historyItems.getOrNull(position) as? HistoryItem.Visit)?.visitInfo
+    }
+
     fun getItem(position: Int): VisitInfo {
-        return when (val item = historyItems[position]) {
-            is HistoryItem.Visit -> item.visitInfo
-            is HistoryItem.Header -> values[0]
-        }
+        return getVisitAt(position) ?: values.first()
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
-        oldList = values as MutableList<VisitInfo>
         return when (viewType) {
-            TYPE_HEADER -> {
-                val view = LayoutInflater.from(parent.context)
-                    .inflate(R.layout.history_section_header, parent, false)
-                HeaderViewHolder(view)
-            }
-            else -> {
-                val view = LayoutInflater.from(parent.context)
-                    .inflate(R.layout.history_list_item, parent, false)
-                view.alpha = 0f
-                view.animate().alpha(1f).setDuration(200).setStartDelay((Math.min(5, viewType) * 50).toLong()).start()
-                ViewHolder(view)
-            }
+            TYPE_HEADER -> HeaderViewHolder(
+                LayoutInflater.from(parent.context).inflate(R.layout.history_section_header, parent, false)
+            )
+            else -> ViewHolder(
+                LayoutInflater.from(parent.context).inflate(R.layout.history_list_item, parent, false)
+            )
         }
     }
 
@@ -101,32 +80,29 @@ open class HistoryItemRecyclerViewAdapter(
             is HistoryItem.Visit -> {
                 holder as ViewHolder
                 val visitInfo = item.visitInfo
-                val title = visitInfo.title ?.takeIf(String::isNotEmpty) ?: visitInfo.url.tryGetHostFromUrl()
-                val relativeTime = HistoryTimeFormatter.getRelativeTimeString(holder.itemView.context, visitInfo.visitTime)
-
-                holder.titleView.text = title
-                holder.urlView.text = visitInfo.url
-                holder.timeView.text = relativeTime
-                
-                // Load favicon from cache
-                CoroutineScope(Dispatchers.Main).launch {
-                    val context = holder.itemView.context
-                    val faviconCache = context.components.faviconCache
-                    val cachedIcon = faviconCache.loadFavicon(visitInfo.url)
-                    if (cachedIcon != null) {
-                        holder.faviconView.setImageBitmap(cachedIcon)
-                    } else {
-                        holder.faviconView.setImageDrawable(
-                            ContextCompat.getDrawable(context, R.drawable.ic_baseline_history)
-                        )
-                    }
-                }
+                holder.titleView.text = visitInfo.title?.takeIf(String::isNotEmpty)
+                    ?: visitInfo.url.tryGetHostFromUrl()
+                holder.timeView.text = HistoryTimeFormatter.getRelativeTimeString(
+                    holder.itemView.context,
+                    visitInfo.visitTime
+                )
+                applyCardShape(holder.cardView, position)
+                holder.divider.visibility = if (isLastInGroup(position)) View.GONE else View.VISIBLE
+                holder.bindFavicon(visitInfo.url)
             }
         }
     }
 
+    override fun onViewRecycled(holder: RecyclerView.ViewHolder) {
+        if (holder is ViewHolder) {
+            holder.faviconJob?.cancel()
+            holder.faviconView.setImageResource(R.drawable.ic_baseline_history)
+        }
+        super.onViewRecycled(holder)
+    }
+
     override fun getItemCount(): Int = historyItems.size
-    
+
     override fun getItemViewType(position: Int): Int {
         return when (historyItems[position]) {
             is HistoryItem.Header -> TYPE_HEADER
@@ -134,14 +110,49 @@ open class HistoryItemRecyclerViewAdapter(
         }
     }
 
+    private fun isFirstInGroup(position: Int): Boolean {
+        return historyItems.getOrNull(position - 1) is HistoryItem.Header
+    }
+
+    private fun isLastInGroup(position: Int): Boolean {
+        val next = historyItems.getOrNull(position + 1)
+        return next == null || next is HistoryItem.Header
+    }
+
+    private fun applyCardShape(cardView: MaterialCardView, position: Int) {
+        val radius = cardView.context.resources.getDimension(R.dimen.search_result_corner_radius)
+        val first = isFirstInGroup(position)
+        val last = isLastInGroup(position)
+        cardView.shapeAppearanceModel = cardView.shapeAppearanceModel.toBuilder()
+            .setTopLeftCornerSize(if (first) radius else 0f)
+            .setTopRightCornerSize(if (first) radius else 0f)
+            .setBottomLeftCornerSize(if (last) radius else 0f)
+            .setBottomRightCornerSize(if (last) radius else 0f)
+            .build()
+    }
+
     class HeaderViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         val titleView: TextView = view.findViewById(R.id.sectionTitle)
     }
 
     class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
+        val cardView: MaterialCardView = view as MaterialCardView
         val titleView: TextView = view.findViewById(R.id.historyTitle)
-        val urlView: TextView = view.findViewById(R.id.historyUrl)
         val timeView: TextView = view.findViewById(R.id.historyTime)
         val faviconView: ImageView = view.findViewById(R.id.historyFavicon)
+        val divider: View = view.findViewById(R.id.resultDivider)
+        var faviconJob: Job? = null
+
+        fun bindFavicon(url: String) {
+            faviconJob?.cancel()
+            faviconView.setImageResource(R.drawable.ic_baseline_history)
+            faviconJob = CoroutineScope(Dispatchers.Main).launch {
+                val icon = FaviconLoader.loadFavicon(itemView.context, url)
+                if (icon != null) {
+                    faviconView.setImageBitmap(icon)
+                    faviconView.clearColorFilter()
+                }
+            }
+        }
     }
 }
