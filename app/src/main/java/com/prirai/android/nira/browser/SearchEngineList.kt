@@ -30,12 +30,26 @@ class SearchEngineList(private val context: Context) {
                 name = "Custom Search",
                 icon = getIconBitmap(com.prirai.android.nira.R.drawable.ic_search),
                 type = SearchEngine.Type.CUSTOM,
-                resultUrls = listOf(preferences.customSearchEngineURL)
+                resultUrls = listOf(normalizeCustomSearchUrl(preferences.customSearchEngineURL))
             )
         }
         val engines = getEngines()
         val index = preferences.searchEngineChoice.coerceIn(engines.indices)
         return engines[index]
+    }
+
+    companion object {
+        fun normalizeCustomSearchUrl(url: String): String {
+            return url.replace("%s", "{searchTerms}")
+        }
+
+        fun toUserFacingSearchUrl(url: String): String {
+            return url.replace("{searchTerms}", "%s")
+        }
+
+        fun isValidCustomSearchUrl(url: String): Boolean {
+            return url.contains("%s") || url.contains("{searchTerms}")
+        }
     }
 
     fun getEngines(): List<SearchEngine> {

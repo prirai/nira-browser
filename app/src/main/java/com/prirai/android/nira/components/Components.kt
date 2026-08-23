@@ -18,6 +18,7 @@ import com.prirai.android.nira.settings.ThemeChoice
 import com.prirai.android.nira.share.SaveToPDFMiddleware
 import com.prirai.android.nira.utils.ClipboardHandler
 import com.prirai.android.nira.utils.FaviconCache
+import com.prirai.android.nira.utils.Utils
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -28,8 +29,10 @@ import mozilla.components.browser.engine.gecko.fetch.GeckoViewFetchClient
 import mozilla.components.browser.engine.gecko.permission.GeckoSitePermissionsStorage
 import mozilla.components.browser.icons.BrowserIcons
 import mozilla.components.browser.session.storage.SessionStorage
+import mozilla.components.browser.state.action.DefaultDesktopModeAction
 import mozilla.components.browser.state.engine.EngineMiddleware
 import mozilla.components.browser.state.engine.middleware.SessionPrioritizationMiddleware
+import mozilla.components.browser.state.engine.middleware.TranslationsMiddleware
 import mozilla.components.browser.state.store.BrowserStore
 import mozilla.components.browser.storage.sync.PlacesBookmarksStorage
 import mozilla.components.browser.storage.sync.PlacesHistoryStorage
@@ -67,9 +70,15 @@ import mozilla.components.feature.pwa.WebAppInterceptor
 import mozilla.components.feature.pwa.WebAppShortcutManager
 import mozilla.components.feature.pwa.WebAppUseCases
 import mozilla.components.feature.readerview.ReaderViewMiddleware
+import mozilla.components.feature.recentlyclosed.RecentlyClosedMiddleware
+import mozilla.components.feature.recentlyclosed.RecentlyClosedTabsStorage
+import mozilla.components.feature.search.SearchApplicationName
+import mozilla.components.feature.search.SearchDeviceType
+import mozilla.components.feature.search.SearchUpdateChannel
 import mozilla.components.feature.search.SearchUseCases
 import mozilla.components.feature.search.middleware.SearchMiddleware
 import mozilla.components.feature.search.region.RegionMiddleware
+import mozilla.components.feature.search.storage.SearchEngineSelectorConfig
 import mozilla.components.feature.session.HistoryDelegate
 import mozilla.components.feature.session.SessionUseCases
 import mozilla.components.feature.session.middleware.LastAccessMiddleware
@@ -84,6 +93,8 @@ import mozilla.components.service.fxa.sync.GlobalSyncableStoreProvider
 import mozilla.components.service.location.LocationService
 import mozilla.components.support.base.android.NotificationsDelegate
 import mozilla.components.support.base.worker.Frequency
+import mozilla.appservices.remotesettings.RemoteSettingsServer
+import mozilla.components.support.remotesettings.RemoteSettingsService
 import org.mozilla.geckoview.ContentBlocking
 import org.mozilla.geckoview.GeckoRuntime
 import org.mozilla.geckoview.GeckoRuntimeSettings
@@ -91,6 +102,7 @@ import java.util.concurrent.TimeUnit
 
 
 private const val DAY_IN_MINUTES = 24 * 60L
+private const val RECENTLY_CLOSED_MAX = 10
 
 /** No-op [CrashReporting] for components that require one but Nira has no crash service. */
 private val noOpCrashReporter = object : CrashReporting {
@@ -224,6 +236,10 @@ open class Components(private val applicationContext: Context) {
 
     val sessionStorage by lazy { SessionStorage(applicationContext, engine) }
 
+    val recentlyClosedTabsStorage by lazy {
+        RecentlyClosedTabsStorage(applicationContext, engine, noOpCrashReporter)
+    }
+
     val permissionStorage by lazy { GeckoSitePermissionsStorage(runtime, OnDiskSitePermissionsStorage(applicationContext)) }
 
     val thumbnailStorage by lazy { ThumbnailStorage(applicationContext) }
@@ -239,6 +255,15 @@ open class Components(private val applicationContext: Context) {
 
     val profileMiddleware by lazy {
         com.prirai.android.nira.browser.profile.ProfileMiddleware(profileManager)
+    }
+
+    val remoteSettingsService by lazy {
+        RemoteSettingsService(
+            applicationContext,
+            RemoteSettingsServer.Prod,
+            channel = "release",
+            isLargeScreenSize = Utils().isTablet(applicationContext),
+        )
     }
 
     val store by lazy {
@@ -266,14 +291,37 @@ open class Components(private val applicationContext: Context) {
                                 applicationContext,
                                 LocationService.default()
                         ),
-                        SearchMiddleware(applicationContext),
+                        SearchMiddleware(
+                            applicationContext,
+                            searchEngineSelectorConfig = SearchEngineSelectorConfig(
+                                appName = SearchApplicationName.FIREFOX_ANDROID,
+                                appVersion = com.prirai.android.nira.BuildConfig.VERSION_NAME,
+                                deviceType = if (Utils().isTablet(applicationContext)) {
+                                    SearchDeviceType.TABLET
+                                } else {
+                                    SearchDeviceType.SMARTPHONE
+                                },
+                                experiment = "",
+                                updateChannel = SearchUpdateChannel.RELEASE,
+                                service = remoteSettingsService,
+                            ),
+                        ),
                         RecordingDevicesMiddleware(applicationContext, notificationsDelegate),
                         PromptMiddleware(),
                         LastAccessMiddleware(),
+                        RecentlyClosedMiddleware(
+                            lazy<RecentlyClosedMiddleware.Storage> { recentlyClosedTabsStorage },
+                            RECENTLY_CLOSED_MAX,
+                        ),
                         SaveToPDFMiddleware(applicationContext),
                         com.prirai.android.nira.browser.tabgroups.TabGroupMiddleware(tabGroupManager),
                         profileMiddleware,  // Use the exposed instance
                         SessionPrioritizationMiddleware(),
+                        TranslationsMiddleware(
+                            engine = engine,
+                            scope = CoroutineScope(SupervisorJob() + Dispatchers.Main),
+                            isTranslationsEnabled = { UserPreferences(applicationContext).translationsEnabled },
+                        ),
                         EnhancedStateCaptureMiddleware(
                             scope = CoroutineScope(SupervisorJob() + Dispatchers.Main),
                             maxTabsToCapture = 3
@@ -292,6 +340,14 @@ open class Components(private val applicationContext: Context) {
             )
 
             MediaSessionFeature(applicationContext, MediaSessionService::class.java, this).start()
+
+            val prefs = UserPreferences(applicationContext)
+            val desktopDefault = if (prefs.hasDesktopModeDefault()) {
+                prefs.desktopModeDefault
+            } else {
+                Utils().isTablet(applicationContext)
+            }
+            dispatch(DefaultDesktopModeAction.DesktopModeUpdated(desktopDefault))
         }
     }
 

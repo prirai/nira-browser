@@ -29,10 +29,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.AlertDialog
@@ -69,6 +66,7 @@ import coil.request.ImageRequest
 import com.prirai.android.nira.R
 import com.prirai.android.nira.browser.tabs.compose.FaviconImageFromUrl
 import com.prirai.android.nira.settings.HomepageChoice
+import mozilla.components.browser.state.state.BrowserState
 
 data class ProfileInfo(
     val id: String,
@@ -79,28 +77,76 @@ data class ProfileInfo(
 )
 
 data class JumpBackInItem(
+    val id: String,
+    val url: String,
+    val title: String,
+    val tabId: String? = null,
+)
+
+data class RecentlyClosedItem(
+    val id: String,
     val url: String,
     val title: String
 )
 
-data class RecentlyClosedItem(
-    val url: String,
-    val title: String
-)
+private fun String.isHomepageCardUrl(): Boolean {
+    return isNotBlank() && !startsWith("about:") && !startsWith("chrome:")
+}
+
+fun BrowserState.jumpBackInItems(
+    historyItems: List<JumpBackInItem> = emptyList(),
+    limit: Int = 4,
+): List<JumpBackInItem> {
+    val openTabs = tabs
+        .filter { tab ->
+            !tab.content.private &&
+                tab.id != selectedTabId &&
+                tab.content.url.isHomepageCardUrl()
+        }
+        .sortedByDescending { it.lastAccess }
+        .map { tab ->
+            JumpBackInItem(
+                id = tab.id,
+                url = tab.content.url,
+                title = tab.content.title.ifBlank { tab.content.url },
+                tabId = tab.id,
+            )
+        }
+
+    val usedUrls = openTabs.map { it.url }.toMutableSet()
+    closedTabs.forEach { usedUrls.add(it.url) }
+
+    val fromHistory = historyItems.filter { item ->
+        item.url.isHomepageCardUrl() && usedUrls.add(item.url)
+    }
+
+    return (openTabs + fromHistory).take(limit)
+}
+
+fun BrowserState.recentlyClosedItems(limit: Int = 4): List<RecentlyClosedItem> {
+    return closedTabs
+        .filter { tab -> !tab.private && tab.url.isHomepageCardUrl() }
+        .take(limit)
+        .map { tab ->
+            RecentlyClosedItem(
+                id = tab.id,
+                url = tab.url,
+                title = tab.title.ifBlank { tab.url }
+            )
+        }
+}
 
 @Composable
 fun HomeScreen(
     isPrivateMode: Boolean,
     shortcuts: List<ShortcutItem>,
-    bookmarks: List<BookmarkItem>,
-    isBookmarkExpanded: Boolean,
     currentProfile: ProfileInfo,
     onProfileClick: () -> Unit,
     onShortcutClick: (ShortcutItem) -> Unit,
     onShortcutDelete: (ShortcutItem) -> Unit,
     onShortcutAdd: () -> Unit,
-    onBookmarkClick: (BookmarkItem) -> Unit,
-    onBookmarkToggle: () -> Unit,
+    onHistoryClick: () -> Unit,
+    onBookmarksClick: () -> Unit,
     onSearchClick: () -> Unit,
     jumpBackInItems: List<JumpBackInItem> = emptyList(),
     recentlyClosedItems: List<RecentlyClosedItem> = emptyList(),
@@ -213,13 +259,10 @@ fun HomeScreen(
                     )
                 }
 
-                // Bookmarks section
                 item {
-                    BookmarksSection(
-                        bookmarks = bookmarks,
-                        isExpanded = isBookmarkExpanded,
-                        onBookmarkClick = onBookmarkClick,
-                        onToggle = onBookmarkToggle
+                    LibraryLinksRow(
+                        onHistoryClick = onHistoryClick,
+                        onBookmarksClick = onBookmarksClick,
                     )
                 }
             } else if (isPrivateMode && homepageType != HomepageChoice.BLANK_PAGE.ordinal) {
@@ -478,140 +521,60 @@ fun ShortcutItem(
 }
 
 @Composable
-fun BookmarksSection(
-    bookmarks: List<BookmarkItem>,
-    isExpanded: Boolean,
-    onBookmarkClick: (BookmarkItem) -> Unit,
-    onToggle: () -> Unit,
+fun LibraryLinksRow(
+    onHistoryClick: () -> Unit,
+    onBookmarksClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Column(modifier = modifier) {
-        // Section header with expand/collapse
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable { onToggle() }
-                .padding(vertical = 8.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = "Bookmarks",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onBackground
-            )
-
-            Icon(
-                imageVector = if (isExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
-                contentDescription = if (isExpanded) "Collapse" else "Expand",
-                tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-            )
-        }
-
-        // Grid - only show when expanded
-        if (isExpanded) {
-            Spacer(modifier = Modifier.height(12.dp))
-
-            if (bookmarks.isEmpty()) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 32.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "No bookmarks yet. Add bookmarks while browsing, from the menu or import them in settings.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-                        textAlign = TextAlign.Center
-                    )
-                }
-            } else {
-                // Use a FlowRow or simple grid layout for non-scrollable bookmarks
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    // Group bookmarks into rows of 4
-                    bookmarks.chunked(4).forEach { rowBookmarks ->
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            rowBookmarks.forEach { bookmark ->
-                                Box(modifier = Modifier.weight(1f)) {
-                                    BookmarkItem(
-                                        bookmark = bookmark,
-                                        onClick = { onBookmarkClick(bookmark) }
-                                    )
-                                }
-                            }
-                            // Add empty boxes to fill the row if needed
-                            repeat(4 - rowBookmarks.size) {
-                                Spacer(modifier = Modifier.weight(1f))
-                            }
-                        }
-                    }
-                }
-            }
-        }
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        LibraryLinkButton(
+            label = "History",
+            icon = mozilla.components.ui.icons.R.drawable.mozac_ic_history_24,
+            onClick = onHistoryClick,
+            modifier = Modifier.weight(1f)
+        )
+        LibraryLinkButton(
+            label = "Bookmarks",
+            icon = mozilla.components.ui.icons.R.drawable.mozac_ic_bookmark_24,
+            onClick = onBookmarksClick,
+            modifier = Modifier.weight(1f)
+        )
     }
 }
 
 @Composable
-fun BookmarkItem(
-    bookmark: BookmarkItem,
+private fun LibraryLinkButton(
+    label: String,
+    icon: Int,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Column(
-        modifier = modifier
-            .clickable(onClick = onClick)
-            .padding(8.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+    Surface(
+        modifier = modifier.clickable(onClick = onClick),
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f)
     ) {
-        // Icon for folder or site
-        Surface(
-            shape = if (bookmark.isFolder) RoundedCornerShape(12.dp) else CircleShape,
-            color = if (bookmark.isFolder)
-                MaterialTheme.colorScheme.tertiaryContainer
-            else
-                MaterialTheme.colorScheme.primaryContainer,
-            modifier = Modifier.size(56.dp)
+        Row(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                if (bookmark.isFolder) {
-                    Icon(
-                        imageVector = Icons.Default.Folder,
-                        contentDescription = "Folder",
-                        tint = MaterialTheme.colorScheme.onTertiaryContainer,
-                        modifier = Modifier.size(32.dp)
-                    )
-                } else {
-                    // Use FaviconImageFromUrl for loading favicons
-                    FaviconImageFromUrl(
-                        url = bookmark.url,
-                        title = bookmark.title,
-                        size = 32.dp,
-                        modifier = Modifier.size(32.dp)
-                    )
-                }
-            }
+            Icon(
+                painter = painterResource(id = icon),
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(22.dp)
+            )
+            Text(
+                text = label,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
         }
-
-        Text(
-            text = bookmark.title,
-            style = MaterialTheme.typography.bodySmall,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis,
-            textAlign = TextAlign.Center,
-            color = MaterialTheme.colorScheme.onBackground
-        )
     }
 }
 

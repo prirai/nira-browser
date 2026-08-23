@@ -9,7 +9,7 @@
             app:key="@string/key_app_theme_type"
             app:title="@string/theme"
             app:summary="@string/theme_explain"
-            app:icon="@drawable/ic_palette"
+            app:icon="@drawable/mozac_ic_themes_24"
             app:singleLineTitle="false"/>
 
         <com.prirai.android.nira.settings.MaterialSwitchPreference
@@ -68,11 +68,6 @@
             app:key="toolbar_icon_size"
             app:title="@string/toolbar_icon_size"
             app:summary="@string/toolbar_icon_size_desc"
-            app:singleLineTitle="false" />
-
-        <Preference
-            app:key="@string/key_bar_addon_list"
-            app:title="@string/bar_addon_list"
             app:singleLineTitle="false" />
 
     </PreferenceCategory>

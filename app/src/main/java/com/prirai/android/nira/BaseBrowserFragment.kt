@@ -57,7 +57,6 @@ import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.withContext
 import mozilla.components.browser.state.action.ContentAction
 import mozilla.components.browser.state.selector.findCustomTab
-import mozilla.components.browser.state.selector.findCustomTabOrSelectedTab
 import mozilla.components.browser.state.selector.findTabOrCustomTab
 import mozilla.components.browser.state.selector.findTabOrCustomTabOrSelectedTab
 import mozilla.components.browser.state.selector.getNormalOrPrivateTabs
@@ -156,6 +155,7 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
 
     private var _binding: FragmentBrowserBinding? = null
     protected val binding get() = _binding!!
+    protected val bindingOrNull: FragmentBrowserBinding? get() = _binding
 
     @CallSuper
     override fun onCreateView(
@@ -163,9 +163,12 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
-        // For custom tabs: read EXTRA_SESSION_ID (used by external apps)
-        // For normal browsing: customTabSessionId should be null so SessionFeature follows selected tab
-        customTabSessionId = requireArguments().getString(EXTRA_SESSION_ID)
+        // Only pin SessionFeature for a real custom tab. A normal tab id in this arg
+        // freezes EngineView on that session after later selectTab() calls.
+        val argSessionId = requireArguments().getString(EXTRA_SESSION_ID)
+        customTabSessionId = argSessionId?.takeIf {
+            requireContext().components.store.state.findCustomTab(it) != null
+        }
 
         _binding = FragmentBrowserBinding.inflate(inflater, container, false)
         val view = binding.root
@@ -611,7 +614,7 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
     internal fun expandToolbarOnNavigation(store: BrowserStore) {
         consumeFlow(store) { flow ->
             flow.mapNotNull { state ->
-                state.findCustomTabOrSelectedTab(customTabSessionId)
+                state.findTabOrCustomTabOrSelectedTab(customTabSessionId)
             }
                 .ifAnyChanged { tab ->
                     arrayOf(tab.content.url, tab.content.loadRequest)
@@ -979,7 +982,7 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
 
     @VisibleForTesting
     internal fun getCurrentTab(): SessionState? {
-        return requireContext().components.store.state.findCustomTabOrSelectedTab(customTabSessionId)
+        return requireContext().components.store.state.findTabOrCustomTabOrSelectedTab(customTabSessionId)
     }
 
     override fun onHomePressed() = pipFeature?.onHomePressed() ?: false
@@ -1184,7 +1187,7 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
         // Lifecycle-aware features cleaned up automatically
         webContentPositionManager?.destroy()
         webContentPositionManager = null
-        binding.engineView.setActivityContext(null)
+        _binding?.engineView?.setActivityContext(null)
         _browserInteractor = null
         _unifiedToolbar = null
         _binding = null
