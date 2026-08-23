@@ -8,6 +8,7 @@ import androidx.lifecycle.LifecycleOwner
 import com.prirai.android.nira.R
 import com.prirai.android.nira.addons.AddonsActivity
 import com.prirai.android.nira.ext.components
+import com.prirai.android.nira.preferences.UserPreferences
 import mozilla.components.browser.menu.WebExtensionBrowserMenuBuilder
 import mozilla.components.browser.menu.item.BrowserMenuDivider
 import mozilla.components.browser.menu.item.BrowserMenuItemToolbar
@@ -135,6 +136,7 @@ class BrowserMenu(
             externalAppItem,
             sendTabItem,
             desktopMode,
+            translateItem,
             BrowserMenuDivider(),
             newPrivateTabItem,
             newTabItem,
@@ -164,6 +166,18 @@ class BrowserMenu(
         }
     ) { checked ->
         onItemTapped.invoke(ToolbarMenu.Item.RequestDesktop(checked))
+    }
+
+    private val translateItem = ThemedBrowserMenuImageText(
+        label = context.getString(R.string.translate_page),
+        imageResource = R.drawable.ic_language
+    ) {
+        onItemTapped.invoke(ToolbarMenu.Item.Translate)
+    }.apply {
+        visible = {
+            UserPreferences(context).translationsEnabled &&
+                selectedSession?.content?.url?.startsWith("http") == true
+        }
     }
 
     private val installWebApp = ThemedBrowserMenuImageText(

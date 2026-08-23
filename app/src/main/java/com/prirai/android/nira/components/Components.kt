@@ -32,6 +32,7 @@ import mozilla.components.browser.session.storage.SessionStorage
 import mozilla.components.browser.state.action.DefaultDesktopModeAction
 import mozilla.components.browser.state.engine.EngineMiddleware
 import mozilla.components.browser.state.engine.middleware.SessionPrioritizationMiddleware
+import mozilla.components.browser.state.engine.middleware.TranslationsMiddleware
 import mozilla.components.browser.state.store.BrowserStore
 import mozilla.components.browser.storage.sync.PlacesBookmarksStorage
 import mozilla.components.browser.storage.sync.PlacesHistoryStorage
@@ -316,6 +317,11 @@ open class Components(private val applicationContext: Context) {
                         com.prirai.android.nira.browser.tabgroups.TabGroupMiddleware(tabGroupManager),
                         profileMiddleware,  // Use the exposed instance
                         SessionPrioritizationMiddleware(),
+                        TranslationsMiddleware(
+                            engine = engine,
+                            scope = CoroutineScope(SupervisorJob() + Dispatchers.Main),
+                            isTranslationsEnabled = { UserPreferences(applicationContext).translationsEnabled },
+                        ),
                         EnhancedStateCaptureMiddleware(
                             scope = CoroutineScope(SupervisorJob() + Dispatchers.Main),
                             maxTabsToCapture = 3
