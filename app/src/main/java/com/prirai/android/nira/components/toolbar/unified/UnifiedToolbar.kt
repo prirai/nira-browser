@@ -535,7 +535,7 @@ class UnifiedToolbar @JvmOverloads constructor(
         
         // Add menu button first
         val menuAction = BrowserToolbar.Button(
-            imageDrawable = ContextCompat.getDrawable(context, com.prirai.android.nira.R.drawable.ic_more_vert)!!,
+            imageDrawable = ContextCompat.getDrawable(context, mozilla.components.ui.icons.R.drawable.mozac_ic_ellipsis_vertical_24)!!,
             contentDescription = "Menu",
             listener = {
                 contextualToolbarListener?.onMenuClicked()

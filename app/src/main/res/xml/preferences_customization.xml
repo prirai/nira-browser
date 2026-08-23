@@ -9,7 +9,7 @@
             app:key="@string/key_app_theme_type"
             app:title="@string/theme"
             app:summary="@string/theme_explain"
-            app:icon="@drawable/ic_palette"
+            app:icon="@drawable/mozac_ic_themes_24"
             app:singleLineTitle="false"/>
 
         <com.prirai.android.nira.settings.MaterialSwitchPreference

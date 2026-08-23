@@ -532,13 +532,13 @@ fun LibraryLinksRow(
     ) {
         LibraryLinkButton(
             label = "History",
-            icon = R.drawable.ic_baseline_history,
+            icon = mozilla.components.ui.icons.R.drawable.mozac_ic_history_24,
             onClick = onHistoryClick,
             modifier = Modifier.weight(1f)
         )
         LibraryLinkButton(
             label = "Bookmarks",
-            icon = R.drawable.ic_baseline_bookmark,
+            icon = mozilla.components.ui.icons.R.drawable.mozac_ic_bookmark_24,
             onClick = onBookmarksClick,
             modifier = Modifier.weight(1f)
         )
