@@ -110,10 +110,14 @@ class InstalledAddonDetailsActivity : AppCompatActivity() {
         val switch = findViewById<SwitchCompat>(R.id.enable_switch)
         switch.isChecked = addon.isEnabled()
         switch.setOnCheckedChangeListener { _, isChecked ->
+            val profileId = com.prirai.android.nira.browser.profile.ProfileManager
+                .getInstance(this).getActiveProfile().id
             if (isChecked) {
                 this.components.addonManager.enableAddon(
                         addon,
                         onSuccess = {
+                            com.prirai.android.nira.browser.profile.ProfileAddonPolicy
+                                .setEnabledForProfile(this, profileId, addon.id, true)
                             switch.isChecked = true
                             Toast.makeText(
                                     this,
@@ -133,6 +137,8 @@ class InstalledAddonDetailsActivity : AppCompatActivity() {
                 this.components.addonManager.disableAddon(
                         addon,
                         onSuccess = {
+                            com.prirai.android.nira.browser.profile.ProfileAddonPolicy
+                                .setEnabledForProfile(this, profileId, addon.id, false)
                             switch.isChecked = false
                             Toast.makeText(
                                     this,
