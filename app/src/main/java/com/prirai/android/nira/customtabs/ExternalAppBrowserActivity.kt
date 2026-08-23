@@ -93,22 +93,20 @@ open class ExternalAppBrowserActivity : BrowserActivity() {
     private var hasCalledOnCreate = false
 
     override fun onDestroy() {
-        // Clean up custom tab session before calling super
         if (isFinishing) {
-            // When this activity finishes, the process is staying around and the session still
-            // exists then remove it now to free all its resources. Once this activity is finished
-            // then there's no way to get back to it other than relaunching it.
             val tabId = getExternalTabId()
             val customTab = tabId?.let { components.store.state.findCustomTab(it) }
             if (tabId != null && customTab != null) {
-                components.tabsUseCases.removeTab(tabId)
+                customTab.mediaSessionState?.controller?.pause()
+                components.customTabsUseCases.remove(tabId)
             }
-            
-            // Remove from recents when custom tab is closed
             finishAndRemoveTask()
         }
-        
         super.onDestroy()
+    }
+
+    override fun getIntentSessionId(intent: SafeIntent): String? {
+        return com.prirai.android.nira.ext.getIntentSessionId(intent)
     }
 
     @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
