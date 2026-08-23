@@ -18,6 +18,7 @@ import com.prirai.android.nira.settings.ThemeChoice
 import com.prirai.android.nira.share.SaveToPDFMiddleware
 import com.prirai.android.nira.utils.ClipboardHandler
 import com.prirai.android.nira.utils.FaviconCache
+import com.prirai.android.nira.utils.Utils
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -69,9 +70,13 @@ import mozilla.components.feature.pwa.WebAppUseCases
 import mozilla.components.feature.readerview.ReaderViewMiddleware
 import mozilla.components.feature.recentlyclosed.RecentlyClosedMiddleware
 import mozilla.components.feature.recentlyclosed.RecentlyClosedTabsStorage
+import mozilla.components.feature.search.SearchApplicationName
+import mozilla.components.feature.search.SearchDeviceType
+import mozilla.components.feature.search.SearchUpdateChannel
 import mozilla.components.feature.search.SearchUseCases
 import mozilla.components.feature.search.middleware.SearchMiddleware
 import mozilla.components.feature.search.region.RegionMiddleware
+import mozilla.components.feature.search.storage.SearchEngineSelectorConfig
 import mozilla.components.feature.session.HistoryDelegate
 import mozilla.components.feature.session.SessionUseCases
 import mozilla.components.feature.session.middleware.LastAccessMiddleware
@@ -86,6 +91,8 @@ import mozilla.components.service.fxa.sync.GlobalSyncableStoreProvider
 import mozilla.components.service.location.LocationService
 import mozilla.components.support.base.android.NotificationsDelegate
 import mozilla.components.support.base.worker.Frequency
+import mozilla.appservices.remotesettings.RemoteSettingsServer
+import mozilla.components.support.remotesettings.RemoteSettingsService
 import org.mozilla.geckoview.ContentBlocking
 import org.mozilla.geckoview.GeckoRuntime
 import org.mozilla.geckoview.GeckoRuntimeSettings
@@ -248,6 +255,15 @@ open class Components(private val applicationContext: Context) {
         com.prirai.android.nira.browser.profile.ProfileMiddleware(profileManager)
     }
 
+    val remoteSettingsService by lazy {
+        RemoteSettingsService(
+            applicationContext,
+            RemoteSettingsServer.Prod,
+            channel = "release",
+            isLargeScreenSize = Utils().isTablet(applicationContext),
+        )
+    }
+
     val store by lazy {
         BrowserStore(
                 middleware = listOf(
@@ -273,7 +289,21 @@ open class Components(private val applicationContext: Context) {
                                 applicationContext,
                                 LocationService.default()
                         ),
-                        SearchMiddleware(applicationContext),
+                        SearchMiddleware(
+                            applicationContext,
+                            searchEngineSelectorConfig = SearchEngineSelectorConfig(
+                                appName = SearchApplicationName.FIREFOX_ANDROID,
+                                appVersion = com.prirai.android.nira.BuildConfig.VERSION_NAME,
+                                deviceType = if (Utils().isTablet(applicationContext)) {
+                                    SearchDeviceType.TABLET
+                                } else {
+                                    SearchDeviceType.SMARTPHONE
+                                },
+                                experiment = "",
+                                updateChannel = SearchUpdateChannel.RELEASE,
+                                service = remoteSettingsService,
+                            ),
+                        ),
                         RecordingDevicesMiddleware(applicationContext, notificationsDelegate),
                         PromptMiddleware(),
                         LastAccessMiddleware(),
