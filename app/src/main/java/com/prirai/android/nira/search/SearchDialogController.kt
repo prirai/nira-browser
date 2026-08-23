@@ -64,7 +64,7 @@ class SearchDialogController(
     private fun resolveSearchEngine(): SearchEngine? {
         fragmentStore.state.searchEngineSource.searchEngine?.let { return it }
         fragmentStore.state.defaultEngine?.let { return it }
-        store.state.search.selectedOrDefaultSearchEngine?.let { return it }
+        store.state.search.selectedOrDefaultSearchEngine(activity.browsingModeManager.mode.isPrivate)?.let { return it }
         return try {
             SearchEngineList(activity).getSelectedEngine(UserPreferences(activity))
         } catch (_: Exception) {

@@ -26,6 +26,7 @@ import com.prirai.android.nira.browser.BrowsingMode
 import com.prirai.android.nira.browser.BrowsingModeManager
 import com.prirai.android.nira.browser.DefaultBrowsingModeManager
 import com.prirai.android.nira.browser.SearchEngineList
+import com.prirai.android.nira.browser.SearchEnginePreferences
 import com.prirai.android.nira.databinding.ActivityMainBinding
 import com.prirai.android.nira.ext.alreadyOnDestination
 import com.prirai.android.nira.ext.components
@@ -36,7 +37,6 @@ import com.prirai.android.nira.search.SearchDialogFragmentDirections
 import com.prirai.android.nira.theme.applyAppTheme
 import com.prirai.android.nira.utils.Utils
 import kotlinx.coroutines.launch
-import mozilla.components.browser.icons.IconRequest
 import mozilla.components.browser.state.action.AppLifecycleAction
 import mozilla.components.browser.state.search.SearchEngine
 import mozilla.components.browser.state.state.SessionState
@@ -45,7 +45,6 @@ import mozilla.components.browser.state.state.selectedOrDefaultSearchEngine
 import mozilla.components.concept.engine.EngineSession
 import mozilla.components.concept.engine.EngineView
 import mozilla.components.feature.contextmenu.ext.DefaultSelectionActionDelegate
-import mozilla.components.feature.search.ext.createSearchEngine
 import mozilla.components.support.base.feature.ActivityResultHandler
 import mozilla.components.support.base.feature.UserInteractionHandler
 import mozilla.components.support.ktx.kotlin.isUrl
@@ -149,8 +148,12 @@ open class BrowserActivity : LocaleAwareAppCompatActivity(), ComponentCallbacks2
         // OPTIMIZATION: Defer search engine setup to after first frame
         // This was accessing components.store.state which triggers heavy initialization
         view.post {
-            setupSearchEngines()
-            // Also prefetch publicSuffixList after UI is ready
+            lifecycleScope.launch {
+                SearchEnginePreferences.apply(this@BrowserActivity, private = false)
+                if (UserPreferences(this@BrowserActivity).privateSearchEngineChoice >= 0) {
+                    SearchEnginePreferences.apply(this@BrowserActivity, private = true)
+                }
+            }
             components.publicSuffixList.prefetch()
         }
 
@@ -568,54 +571,6 @@ open class BrowserActivity : LocaleAwareAppCompatActivity(), ComponentCallbacks2
     override fun attachBaseContext(base: Context) {
         this.originalContext = base
         super.attachBaseContext(base)
-    }
-
-    /**
-     * Setup search engines - extracted to separate method for deferred initialization
-     */
-    private fun setupSearchEngines() {
-        //TODO: Move to settings page so app restart no longer required
-        //TODO: Differentiate between using search engine / adding to list - the code below removes all from list as I don't support adding to list, only setting as default
-        for (i in components.store.state.search.customSearchEngines) {
-            components.searchUseCases.removeSearchEngine(i)
-        }
-
-        if (UserPreferences(this).customSearchEngine) {
-            // SECURITY: Use lifecycle-aware coroutine scope
-            lifecycleScope.launch {
-                val customSearch =
-                    createSearchEngine(
-                        name = "Custom Search",
-                        url = UserPreferences(this@BrowserActivity).customSearchEngineURL,
-                        icon = components.icons.loadIcon(IconRequest(UserPreferences(this@BrowserActivity).customSearchEngineURL))
-                            .await().bitmap
-                    )
-
-                runOnUiThread {
-                    components.searchUseCases.addSearchEngine(
-                        customSearch
-                    )
-                    components.searchUseCases.selectSearchEngine(
-                        customSearch
-                    )
-                }
-            }
-        } else {
-            if (SearchEngineList(this).getEngines()[UserPreferences(this).searchEngineChoice].type == SearchEngine.Type.BUNDLED) {
-                components.searchUseCases.selectSearchEngine(
-                    SearchEngineList(this).getEngines()[UserPreferences(this).searchEngineChoice]
-                )
-            } else {
-                components.searchUseCases.addSearchEngine(
-                    SearchEngineList(this).getEngines()[UserPreferences(
-                        this
-                    ).searchEngineChoice]
-                )
-                components.searchUseCases.selectSearchEngine(
-                    SearchEngineList(this).getEngines()[UserPreferences(this).searchEngineChoice]
-                )
-            }
-        }
     }
 
     private fun updateToolbarAndStatusBarTheme() {
