@@ -1,10 +1,10 @@
 plugins {
-    id 'com.android.application'
+    alias(libs.plugins.android.application)
     id 'kotlin-parcelize'
-    id 'com.google.devtools.ksp'
-    id 'androidx.navigation.safeargs.kotlin'
-    id 'org.jetbrains.kotlin.plugin.compose'
-    id 'org.jetbrains.kotlin.plugin.serialization' version '2.3.21'
+    alias(libs.plugins.google.devtools.ksp)
+    alias(libs.plugins.navigation.safeargs.kotlin)
+    alias(libs.plugins.jetbrains.kotlin.plugin.compose)
+    alias(libs.plugins.jetbrains.kotlin.plugin.serialization)
 }
 
 
@@ -99,145 +99,145 @@ androidComponents {
 
 dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar'])
-    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:2.3.21"
-    implementation 'androidx.constraintlayout:constraintlayout:2.2.1'
-    implementation 'com.google.android.material:material:1.14.0'
+    implementation libs.kotlin.stdlib.jdk7
+    implementation libs.androidx.constraintlayout
+    implementation libs.material
 
     // Support libraries
-    implementation "androidx.recyclerview:recyclerview:1.4.0"
-    implementation 'androidx.core:core-ktx:1.18.0'
-    implementation "androidx.constraintlayout:constraintlayout:2.2.1"
-    implementation "androidx.drawerlayout:drawerlayout:1.2.0"
-    implementation "androidx.preference:preference-ktx:1.2.1"
-    implementation "androidx.palette:palette-ktx:1.0.0"
-    implementation "androidx.annotation:annotation:1.10.0"
-    implementation "androidx.appcompat:appcompat:1.7.1"
-    implementation 'androidx.legacy:legacy-support-v4:1.0.0'
-    implementation 'androidx.navigation:navigation-fragment-ktx:2.9.8'
-    implementation 'androidx.navigation:navigation-ui-ktx:2.9.8'
+    implementation libs.androidx.recyclerview
+    implementation libs.androidx.core.ktx
+    implementation libs.androidx.constraintlayout
+    implementation libs.androidx.drawerlayout
+    implementation libs.androidx.preference.ktx
+    implementation libs.androidx.palette.ktx
+    implementation libs.androidx.annotation
+    implementation libs.androidx.appcompat
+    implementation libs.androidx.legacy.support.v4
+    implementation libs.androidx.navigation.fragment.ktx
+    implementation libs.androidx.navigation.ui.ktx
 
     // Room
-    implementation "androidx.room:room-runtime:2.8.4"
-    ksp "androidx.room:room-compiler:2.8.4"
+    implementation libs.androidx.room.runtime
+    ksp libs.androidx.room.compiler
 
     // Mozilla Components : https://maven.mozilla.org/maven2/?prefix=maven2/org/mozilla/geckoview/
     final def mozComponentsVersion = "153.0"
 
     // Mozilla compose components
-    implementation "org.mozilla.components:compose-awesomebar:$mozComponentsVersion"
+    implementation libs.compose.awesomebar
 
     // Mozilla concept components
-    implementation "org.mozilla.components:concept-storage:$mozComponentsVersion"
-    implementation "org.mozilla.components:concept-engine:$mozComponentsVersion"
-    implementation "org.mozilla.components:concept-menu:$mozComponentsVersion"
+    implementation libs.concept.storage
+    implementation libs.concept.engine
+    implementation libs.concept.menu
     // Kept: required by browser-menu
-    implementation "org.mozilla.components:concept-toolbar:$mozComponentsVersion"
-    implementation "org.mozilla.components:concept-base:$mozComponentsVersion"
-    implementation "org.mozilla.components:concept-fetch:$mozComponentsVersion"
-    implementation "org.mozilla.components:concept-awesomebar:$mozComponentsVersion"
+    implementation libs.concept.toolbar
+    implementation libs.concept.base
+    implementation libs.concept.fetch
+    implementation libs.concept.awesomebar
 
     // Mozilla browser components
-    implementation "org.mozilla.components:browser-engine-gecko:$mozComponentsVersion"
-    implementation "org.mozilla.components:browser-icons:$mozComponentsVersion"
-    implementation "org.mozilla.components:browser-thumbnails:$mozComponentsVersion"
-    implementation "org.mozilla.components:browser-state:$mozComponentsVersion"
-    implementation "org.mozilla.components:browser-toolbar:$mozComponentsVersion"
-    implementation "org.mozilla.components:browser-session-storage:$mozComponentsVersion"
-    implementation "org.mozilla.components:browser-tabstray:$mozComponentsVersion"
-    implementation "org.mozilla.components:browser-menu:$mozComponentsVersion"
-    implementation "org.mozilla.components:browser-storage-sync:$mozComponentsVersion"
-    implementation "org.mozilla.components:browser-errorpages:$mozComponentsVersion"
+    implementation libs.browser.engine.gecko
+    implementation libs.browser.icons
+    implementation libs.browser.thumbnails
+    implementation libs.browser.state
+    implementation libs.browser.toolbar
+    implementation libs.browser.session.storage
+    implementation libs.browser.tabstray
+    implementation libs.browser.menu
+    implementation libs.browser.storage.sync
+    implementation libs.browser.errorpages
 
     // Mozilla feature components
-    implementation "org.mozilla.components:feature-awesomebar:$mozComponentsVersion"
-    implementation "org.mozilla.components:feature-readerview:$mozComponentsVersion"
-    implementation "org.mozilla.components:feature-media:$mozComponentsVersion"
-    implementation "org.mozilla.components:feature-search:$mozComponentsVersion"
+    implementation libs.feature.awesomebar
+    implementation libs.feature.readerview
+    implementation libs.feature.media
+    implementation libs.feature.search
 
-    implementation "org.mozilla.components:feature-tabs:$mozComponentsVersion"
-    implementation "org.mozilla.components:feature-session:$mozComponentsVersion"
-    implementation "org.mozilla.components:feature-toolbar:$mozComponentsVersion"
-    implementation "org.mozilla.components:feature-intent:$mozComponentsVersion"
-    implementation "org.mozilla.components:feature-contextmenu:$mozComponentsVersion"
-    implementation "org.mozilla.components:feature-app-links:$mozComponentsVersion"
-    implementation "org.mozilla.components:feature-downloads:$mozComponentsVersion"
-    implementation "org.mozilla.components:feature-privatemode:$mozComponentsVersion"
+    implementation libs.feature.tabs
+    implementation libs.feature.session
+    implementation libs.feature.toolbar
+    implementation libs.feature.intent
+    implementation libs.feature.contextmenu
+    implementation libs.feature.app.links
+    implementation libs.feature.downloads
+    implementation libs.feature.privatemode
     // Kept: adds screenshot protection & privacy features
-    implementation "org.mozilla.components:feature-customtabs:$mozComponentsVersion"
-    implementation "org.mozilla.components:feature-pwa:$mozComponentsVersion"
-    implementation "org.mozilla.components:feature-prompts:$mozComponentsVersion"
-    implementation "org.mozilla.components:feature-sitepermissions:$mozComponentsVersion"
+    implementation libs.feature.customtabs
+    implementation libs.feature.pwa
+    implementation libs.feature.prompts
+    implementation libs.feature.sitepermissions
     // Removed: feature-webauthn - replaced with androidx.credentials Credential Manager API
-    implementation "org.mozilla.components:feature-webcompat:$mozComponentsVersion"
-    implementation "org.mozilla.components:feature-webnotifications:$mozComponentsVersion"
-    implementation "org.mozilla.components:feature-addons:$mozComponentsVersion"
-    implementation "org.mozilla.components:feature-findinpage:$mozComponentsVersion"
-    implementation "org.mozilla.components:feature-accounts:$mozComponentsVersion"
-    implementation "org.mozilla.components:service-firefox-accounts:$mozComponentsVersion"
-    implementation "org.mozilla.components:feature-qr:$mozComponentsVersion"
-    implementation "org.mozilla.components:feature-recentlyclosed:$mozComponentsVersion"
+    implementation libs.feature.webcompat
+    implementation libs.feature.webnotifications
+    implementation libs.feature.addons
+    implementation libs.feature.findinpage
+    implementation libs.feature.accounts
+    implementation libs.service.firefox.accounts
+    implementation libs.feature.qr
+    implementation libs.feature.recentlyclosed
     // Added: for Firefox Account sync (bookmarks/history/tabs)
 
     // Mozilla service components
-    implementation "org.mozilla.components:service-location:$mozComponentsVersion"
-    implementation "org.mozilla.components:service-digitalassetlinks:$mozComponentsVersion"
+    implementation libs.service.location
+    implementation libs.service.digitalassetlinks
 
     // Mozilla support components
-    implementation "org.mozilla.components:support-base:$mozComponentsVersion"
-    implementation "org.mozilla.components:support-utils:$mozComponentsVersion"
-    implementation "org.mozilla.components:support-webextensions:$mozComponentsVersion"
-    implementation "org.mozilla.components:support-ktx:$mozComponentsVersion"
-    implementation "org.mozilla.components:support-locale:$mozComponentsVersion"
-    implementation "org.mozilla.components:support-remotesettings:$mozComponentsVersion"
-    implementation "org.mozilla.appservices:remotesettings:153.0"
+    implementation libs.support.base
+    implementation libs.support.utils
+    implementation libs.support.webextensions
+    implementation libs.support.ktx
+    implementation libs.support.locale
+    implementation libs.support.remotesettings
+    implementation libs.remotesettings
 
     // Mozilla UI components
-    implementation "org.mozilla.components:ui-autocomplete:$mozComponentsVersion"
-    implementation "org.mozilla.components:ui-tabcounter:$mozComponentsVersion"
-    implementation "org.mozilla.components:ui-icons:$mozComponentsVersion"
-    implementation "org.mozilla.components:ui-colors:$mozComponentsVersion"
-    implementation "org.mozilla.components:ui-widgets:$mozComponentsVersion"
+    implementation libs.ui.autocomplete
+    implementation libs.ui.tabcounter
+    implementation libs.ui.icons
+    implementation libs.ui.colors
+    implementation libs.ui.widgets
 
     // Mozilla lib components
-    implementation "org.mozilla.components:lib-state:$mozComponentsVersion"
-    implementation "org.mozilla.components:lib-publicsuffixlist:$mozComponentsVersion"
-    implementation "org.mozilla.components:lib-fetch-httpurlconnection:$mozComponentsVersion"
-    implementation "org.mozilla.components:lib-dataprotect:$mozComponentsVersion"
-    implementation "org.mozilla.components:support-appservices:$mozComponentsVersion"
+    implementation libs.lib.state
+    implementation libs.lib.publicsuffixlist
+    implementation libs.lib.fetch.httpurlconnection
+    implementation libs.lib.dataprotect
+    implementation libs.support.appservices
 
-    implementation 'androidx.credentials:credentials:1.6.0'
-    implementation 'androidx.credentials:credentials-play-services-auth:1.6.0'
-    implementation 'com.google.android.gms:play-services-auth:21.5.1'
+    implementation libs.androidx.credentials
+    implementation libs.androidx.credentials.play.services.auth
+    implementation libs.play.services.auth
 
-    testImplementation 'junit:junit:4.13.2'
-    androidTestImplementation 'androidx.test.ext:junit:1.3.0'
-    androidTestImplementation 'androidx.test.espresso:espresso-core:3.7.0'
+    testImplementation libs.junit
+    androidTestImplementation libs.androidx.junit
+    androidTestImplementation libs.androidx.espresso.core
 
     // JSON parsing
-    implementation "com.squareup.moshi:moshi:1.15.2"
-    implementation "com.squareup.moshi:moshi-kotlin:1.15.2"
+    implementation libs.moshi
+    implementation libs.moshi.kotlin
 
     // OkHTTP
-    implementation "com.squareup.okhttp3:okhttp:5.3.2"
+    implementation libs.okhttp
 
-    implementation "androidx.compose.ui:ui:1.11.2"
-    implementation "androidx.compose.foundation:foundation:1.11.2"
-    implementation "androidx.compose.material:material:1.11.2"
-    implementation "androidx.compose.material:material-icons-extended:1.7.8"
-    implementation "androidx.compose.material3:material3:1.4.0"
-    implementation "androidx.compose.runtime:runtime:1.11.2"
-    implementation "androidx.compose.ui:ui-tooling-preview:1.11.2"
-    implementation "androidx.activity:activity-compose:1.13.0"
-    implementation "androidx.lifecycle:lifecycle-viewmodel-compose:2.10.0"
-    implementation "io.coil-kt:coil-compose:2.7.0"
+    implementation libs.androidx.ui
+    implementation libs.androidx.foundation
+    implementation libs.androidx.material
+    implementation libs.androidx.material.icons.extended
+    implementation libs.androidx.material3
+    implementation libs.androidx.runtime
+    implementation libs.androidx.ui.tooling.preview
+    implementation libs.androidx.activity.compose
+    implementation libs.androidx.lifecycle.viewmodel.compose
+    implementation libs.coil.compose
 
     // DataStore for preferences
-    implementation "androidx.datastore:datastore-preferences:1.2.1"
+    implementation libs.androidx.datastore.preferences
 
     // Kotlinx Serialization
-    implementation "org.jetbrains.kotlinx:kotlinx-serialization-json:1.11.0"
+    implementation libs.kotlinx.serialization.json
 
-    implementation 'org.jsoup:jsoup:1.22.2'
+    implementation libs.jsoup
 }
 
 project.configurations.configureEach {
