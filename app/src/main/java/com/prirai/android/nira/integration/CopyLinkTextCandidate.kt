@@ -2,10 +2,8 @@ package com.prirai.android.nira.integration
 
 import android.content.Context
 import android.view.View
-import mozilla.components.browser.state.state.content.DownloadState
 import mozilla.components.concept.engine.HitResult
 import mozilla.components.feature.contextmenu.ContextMenuCandidate
-import mozilla.components.support.base.log.logger.Logger
 import mozilla.components.ui.widgets.SnackbarDelegate
 
 /**
@@ -20,7 +18,7 @@ fun createCopyLinkTextCandidate(
     return ContextMenuCandidate(
         id = "copy-link-text",
         label = "Copy link",
-        showFor = { hitResult, _ ->
+        showFor = { _, hitResult ->
             // Show for images and links
             when (hitResult) {
                 is HitResult.IMAGE_SRC -> true
@@ -28,7 +26,7 @@ fun createCopyLinkTextCandidate(
                 else -> false
             }
         },
-        action = { hitResult, _ ->
+        action = { _, hitResult ->
             val linkText = when (hitResult) {
                 is HitResult.IMAGE_SRC -> hitResult.uri
                 is HitResult.IMAGE -> hitResult.src
