@@ -1,28 +1,11 @@
-buildscript {
-    repositories {
-        maven {
-            name = "Mozilla Nightly"
-            url = "https://nightly.maven.mozilla.org/maven2"
-        }
-        maven {
-            name = "Mozilla"
-            url = "https://maven.mozilla.org/maven2"
-        }
-        google()
-        mavenCentral()
-    }
-    dependencies {
-        classpath 'com.android.tools.build:gradle:9.2.1'
-        classpath 'org.jetbrains.kotlin:kotlin-gradle-plugin:2.3.21'
-        classpath "androidx.navigation:navigation-safe-args-gradle-plugin:2.9.8"
-
-        classpath "org.mozilla.components:tooling-glean-gradle:95.0.5"
-    }
-}
+// Removed buildscript block in favor of plugins block
 
 plugins {
-    id("com.google.devtools.ksp") version '2.3.8' apply false
-    id 'org.jetbrains.kotlin.plugin.compose' version '2.3.21' apply false
+    alias libs.plugins.android.application apply false
+    alias libs.plugins.google.devtools.ksp apply false
+    alias libs.plugins.navigation.safeargs.kotlin apply false
+    alias libs.plugins.jetbrains.kotlin.plugin.compose apply false
+    alias libs.plugins.jetbrains.kotlin.plugin.serialization apply false
 }
 
 allprojects {
@@ -43,6 +26,7 @@ allprojects {
         maven { url = "https://jitpack.io" }
     }
 }
+
 
 tasks.register('clean', Delete) {
     delete rootProject.layout.buildDirectory
