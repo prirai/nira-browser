@@ -155,6 +155,7 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
 
     private var _binding: FragmentBrowserBinding? = null
     protected val binding get() = _binding!!
+    protected val bindingOrNull: FragmentBrowserBinding? get() = _binding
 
     @CallSuper
     override fun onCreateView(
