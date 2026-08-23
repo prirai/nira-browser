@@ -188,6 +188,8 @@ dependencies {
     implementation "org.mozilla.components:support-webextensions:$mozComponentsVersion"
     implementation "org.mozilla.components:support-ktx:$mozComponentsVersion"
     implementation "org.mozilla.components:support-locale:$mozComponentsVersion"
+    implementation "org.mozilla.components:support-remotesettings:$mozComponentsVersion"
+    implementation "org.mozilla.appservices:remotesettings:153.0"
 
     // Mozilla UI components
     implementation "org.mozilla.components:ui-autocomplete:$mozComponentsVersion"
