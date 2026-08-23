@@ -174,7 +174,20 @@ open class Components(private val applicationContext: Context) {
             }
             preferredColorScheme = darkEnabled()
             javascriptEnabled = UserPreferences(applicationContext).javaScriptEnabled
+            val prefs = UserPreferences(applicationContext)
+            httpsOnlyMode = prefs.getHttpsOnlyMode()
+            dohSettingsMode = prefs.getDohSettingsMode()
+            dohProviderUrl = prefs.dohProviderUrl
+            globalPrivacyControlEnabled = prefs.globalPrivacyControl
         }
+
+    fun applyPrivacyEngineSettings() {
+        val prefs = UserPreferences(applicationContext)
+        engine.settings.httpsOnlyMode = prefs.getHttpsOnlyMode()
+        engine.settings.dohSettingsMode = prefs.getDohSettingsMode()
+        engine.settings.dohProviderUrl = prefs.dohProviderUrl
+        engine.settings.globalPrivacyControlEnabled = prefs.globalPrivacyControl
+    }
 
     private val notificationManagerCompat = NotificationManagerCompat.from(applicationContext)
 

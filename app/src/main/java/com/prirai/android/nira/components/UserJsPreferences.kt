@@ -72,8 +72,6 @@ object UserJsPreferences {
     private val securityPrefs = mapOf<String, Any>(
         // HTTPS-first: try HTTPS before falling back to HTTP
         "dom.security.https_first" to true,
-        // HTTPS-only: block all plain HTTP requests
-        "dom.security.https_only_mode" to true,
         // Do not probe HTTP while in HTTPS-only mode
         "dom.security.https_only_mode_send_http_background_request" to false,
         // Block pop-up windows opened while a page is loading
@@ -146,8 +144,6 @@ object UserJsPreferences {
      * they set the live runtime preference value directly, not just the Gecko default.
      */
     fun applyTypedSettings(settings: GeckoRuntimeSettings) {
-        // Global Privacy Control (privacy.globalprivacycontrol.enabled)
-        settings.setGlobalPrivacyControl(true)
         // Enhanced fingerprinting protection for both normal and private browsing
         settings.setFingerprintingProtection(true)
         settings.setFingerprintingProtectionPrivateBrowsing(true)

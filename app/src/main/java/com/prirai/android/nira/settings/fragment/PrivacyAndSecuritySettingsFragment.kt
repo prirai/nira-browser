@@ -3,10 +3,12 @@ package com.prirai.android.nira.settings.fragment
 import android.content.Context.LAYOUT_INFLATER_SERVICE
 import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
+import android.text.InputType
 import android.view.LayoutInflater
 import android.view.View
 import android.widget.ArrayAdapter
 import android.widget.Button
+import android.widget.EditText
 import android.widget.Spinner
 import android.widget.Toast
 import androidx.lifecycle.lifecycleScope
@@ -51,6 +53,152 @@ class PrivacyAndSecuritySettingsFragment : BaseSettingsFragment() {
         )
 
         setupETP()
+        setupConnectionPrivacy()
+    }
+
+    private fun setupConnectionPrivacy() {
+        val prefs = UserPreferences(requireContext())
+
+        clickablePreference(
+            preference = resources.getString(R.string.key_https_only),
+            summary = httpsOnlySummary(prefs.httpsOnlyMode),
+            onClick = { showHttpsOnlyPicker(prefs) }
+        )
+
+        clickablePreference(
+            preference = resources.getString(R.string.key_doh),
+            summary = dohModeSummary(prefs.dohMode),
+            onClick = { showDohModePicker(prefs) }
+        )
+
+        clickablePreference(
+            preference = resources.getString(R.string.key_doh_provider),
+            isEnabled = prefs.isDohProviderSelectable(),
+            summary = dohProviderSummary(prefs.dohProviderUrl),
+            onClick = { showDohProviderPicker(prefs) }
+        )
+
+        switchPreference(
+            preference = resources.getString(R.string.key_global_privacy_control),
+            isChecked = prefs.globalPrivacyControl,
+        ) {
+            prefs.globalPrivacyControl = it
+            requireContext().components.applyPrivacyEngineSettings()
+        }
+    }
+
+    private fun showHttpsOnlyPicker(prefs: UserPreferences) {
+        val items = resources.getStringArray(R.array.https_only_mode_names)
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle(R.string.https_only_title)
+            .setSingleChoiceItems(items, prefs.httpsOnlyMode) { dialog, which ->
+                prefs.httpsOnlyMode = which
+                requireContext().components.applyPrivacyEngineSettings()
+                findPreference<Preference>(resources.getString(R.string.key_https_only))
+                    ?.summary = httpsOnlySummary(which)
+                dialog.dismiss()
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
+    }
+
+    private fun showDohModePicker(prefs: UserPreferences) {
+        val items = resources.getStringArray(R.array.doh_mode_names)
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle(R.string.doh_title)
+            .setSingleChoiceItems(items, prefs.dohMode) { dialog, which ->
+                prefs.dohMode = which
+                requireContext().components.applyPrivacyEngineSettings()
+                findPreference<Preference>(resources.getString(R.string.key_doh))
+                    ?.summary = dohModeSummary(which)
+                findPreference<Preference>(resources.getString(R.string.key_doh_provider))
+                    ?.isEnabled = prefs.isDohProviderSelectable()
+                dialog.dismiss()
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
+    }
+
+    private fun showDohProviderPicker(prefs: UserPreferences) {
+        val labels = arrayOf(
+            getString(R.string.doh_provider_cloudflare),
+            getString(R.string.doh_provider_nextdns),
+            getString(R.string.doh_provider_custom),
+        )
+        val urls = arrayOf(
+            UserPreferences.CLOUDFLARE_DOH_URI,
+            UserPreferences.NEXTDNS_DOH_URI,
+        )
+        val checked = when (prefs.dohProviderUrl) {
+            UserPreferences.CLOUDFLARE_DOH_URI -> 0
+            UserPreferences.NEXTDNS_DOH_URI -> 1
+            else -> 2
+        }
+
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle(R.string.doh_provider_title)
+            .setSingleChoiceItems(labels, checked) { dialog, which ->
+                if (which == 2) {
+                    dialog.dismiss()
+                    showCustomDohProviderDialog(prefs)
+                } else {
+                    prefs.dohProviderUrl = urls[which]
+                    requireContext().components.applyPrivacyEngineSettings()
+                    findPreference<Preference>(resources.getString(R.string.key_doh_provider))
+                        ?.summary = dohProviderSummary(prefs.dohProviderUrl)
+                    dialog.dismiss()
+                }
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
+    }
+
+    private fun showCustomDohProviderDialog(prefs: UserPreferences) {
+        val input = EditText(requireContext()).apply {
+            hint = getString(R.string.doh_provider_custom_hint)
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_URI
+            setText(
+                prefs.dohProviderUrl.takeUnless {
+                    it == UserPreferences.CLOUDFLARE_DOH_URI || it == UserPreferences.NEXTDNS_DOH_URI
+                }.orEmpty()
+            )
+        }
+
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle(R.string.doh_provider_custom)
+            .setView(input)
+            .setPositiveButton(R.string.mozac_feature_prompts_ok) { _, _ ->
+                val url = input.text.toString().trim()
+                if (url.startsWith("https://")) {
+                    prefs.dohProviderUrl = url
+                    requireContext().components.applyPrivacyEngineSettings()
+                    findPreference<Preference>(resources.getString(R.string.key_doh_provider))
+                        ?.summary = dohProviderSummary(url)
+                } else {
+                    Toast.makeText(context, R.string.doh_provider_custom_error, Toast.LENGTH_LONG).show()
+                }
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
+    }
+
+    private fun httpsOnlySummary(mode: Int): String = when (mode) {
+        UserPreferences.HTTPS_ONLY_PRIVATE -> getString(R.string.https_only_private)
+        UserPreferences.HTTPS_ONLY_ALL -> getString(R.string.https_only_all)
+        else -> getString(R.string.https_only_off)
+    }
+
+    private fun dohModeSummary(mode: Int): String = when (mode) {
+        UserPreferences.DOH_INCREASED -> getString(R.string.doh_increased_summary)
+        UserPreferences.DOH_MAX -> getString(R.string.doh_max_summary)
+        UserPreferences.DOH_OFF -> getString(R.string.doh_off_summary)
+        else -> getString(R.string.doh_default_summary)
+    }
+
+    private fun dohProviderSummary(url: String): String = when (url) {
+        UserPreferences.CLOUDFLARE_DOH_URI -> getString(R.string.doh_provider_cloudflare)
+        UserPreferences.NEXTDNS_DOH_URI -> getString(R.string.doh_provider_nextdns)
+        else -> url.ifBlank { getString(R.string.doh_provider_custom) }
     }
 
     private fun setupETP() {
