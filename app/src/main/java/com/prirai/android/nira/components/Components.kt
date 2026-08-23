@@ -67,6 +67,8 @@ import mozilla.components.feature.pwa.WebAppInterceptor
 import mozilla.components.feature.pwa.WebAppShortcutManager
 import mozilla.components.feature.pwa.WebAppUseCases
 import mozilla.components.feature.readerview.ReaderViewMiddleware
+import mozilla.components.feature.recentlyclosed.RecentlyClosedMiddleware
+import mozilla.components.feature.recentlyclosed.RecentlyClosedTabsStorage
 import mozilla.components.feature.search.SearchUseCases
 import mozilla.components.feature.search.middleware.SearchMiddleware
 import mozilla.components.feature.search.region.RegionMiddleware
@@ -91,6 +93,7 @@ import java.util.concurrent.TimeUnit
 
 
 private const val DAY_IN_MINUTES = 24 * 60L
+private const val RECENTLY_CLOSED_MAX = 10
 
 /** No-op [CrashReporting] for components that require one but Nira has no crash service. */
 private val noOpCrashReporter = object : CrashReporting {
@@ -224,6 +227,10 @@ open class Components(private val applicationContext: Context) {
 
     val sessionStorage by lazy { SessionStorage(applicationContext, engine) }
 
+    val recentlyClosedTabsStorage by lazy {
+        RecentlyClosedTabsStorage(applicationContext, engine, noOpCrashReporter)
+    }
+
     val permissionStorage by lazy { GeckoSitePermissionsStorage(runtime, OnDiskSitePermissionsStorage(applicationContext)) }
 
     val thumbnailStorage by lazy { ThumbnailStorage(applicationContext) }
@@ -270,6 +277,10 @@ open class Components(private val applicationContext: Context) {
                         RecordingDevicesMiddleware(applicationContext, notificationsDelegate),
                         PromptMiddleware(),
                         LastAccessMiddleware(),
+                        RecentlyClosedMiddleware(
+                            lazy<RecentlyClosedMiddleware.Storage> { recentlyClosedTabsStorage },
+                            RECENTLY_CLOSED_MAX,
+                        ),
                         SaveToPDFMiddleware(applicationContext),
                         com.prirai.android.nira.browser.tabgroups.TabGroupMiddleware(tabGroupManager),
                         profileMiddleware,  // Use the exposed instance
