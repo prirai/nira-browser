@@ -12,8 +12,10 @@ import com.prirai.android.nira.browser.SearchEnginePreferences
 import com.prirai.android.nira.ext.components
 import com.prirai.android.nira.preferences.UserPreferences
 import com.prirai.android.nira.settings.HomepageChoice
+import com.prirai.android.nira.utils.Utils
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlinx.coroutines.launch
+import mozilla.components.browser.state.action.DefaultDesktopModeAction
 
 
 class GeneralSettingsFragment : BaseSettingsFragment() {
@@ -38,6 +40,22 @@ class GeneralSettingsFragment : BaseSettingsFragment() {
         clickablePreference(
                 preference = resources.getString(R.string.key_private_search_engine),
                 onClick = { pickSearchEngine(private = true) }
+        )
+
+        val desktopDefault = if (UserPreferences(requireContext()).hasDesktopModeDefault()) {
+            UserPreferences(requireContext()).desktopModeDefault
+        } else {
+            Utils().isTablet(requireContext())
+        }
+        switchPreference(
+            preference = resources.getString(R.string.key_desktop_mode_default),
+            isChecked = desktopDefault,
+            onCheckChange = {
+                UserPreferences(requireContext()).desktopModeDefault = it
+                requireContext().components.store.dispatch(
+                    DefaultDesktopModeAction.DesktopModeUpdated(it)
+                )
+            }
         )
 
         switchPreference(

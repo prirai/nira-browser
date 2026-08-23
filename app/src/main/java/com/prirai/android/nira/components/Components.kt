@@ -29,6 +29,7 @@ import mozilla.components.browser.engine.gecko.fetch.GeckoViewFetchClient
 import mozilla.components.browser.engine.gecko.permission.GeckoSitePermissionsStorage
 import mozilla.components.browser.icons.BrowserIcons
 import mozilla.components.browser.session.storage.SessionStorage
+import mozilla.components.browser.state.action.DefaultDesktopModeAction
 import mozilla.components.browser.state.engine.EngineMiddleware
 import mozilla.components.browser.state.engine.middleware.SessionPrioritizationMiddleware
 import mozilla.components.browser.state.store.BrowserStore
@@ -333,6 +334,14 @@ open class Components(private val applicationContext: Context) {
             )
 
             MediaSessionFeature(applicationContext, MediaSessionService::class.java, this).start()
+
+            val prefs = UserPreferences(applicationContext)
+            val desktopDefault = if (prefs.hasDesktopModeDefault()) {
+                prefs.desktopModeDefault
+            } else {
+                Utils().isTablet(applicationContext)
+            }
+            dispatch(DefaultDesktopModeAction.DesktopModeUpdated(desktopDefault))
         }
     }
 
