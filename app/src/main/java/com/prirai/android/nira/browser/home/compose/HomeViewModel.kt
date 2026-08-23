@@ -14,10 +14,13 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import mozilla.components.concept.storage.HistoryStorage
+import mozilla.components.concept.storage.VisitType
 
 class HomeViewModel(
     private val bookmarkManager: BookmarkManager,
-    private val shortcutDao: ShortcutDao
+    private val shortcutDao: ShortcutDao,
+    private val historyStorage: HistoryStorage,
 ) : ViewModel() {
     
     private val _shortcuts = MutableStateFlow<List<ShortcutItem>>(emptyList())
@@ -31,10 +34,43 @@ class HomeViewModel(
     
     private val _isBookmarkSectionExpanded = MutableStateFlow(true)
     val isBookmarkSectionExpanded: StateFlow<Boolean> = _isBookmarkSectionExpanded.asStateFlow()
+
+    private val _jumpBackInHistory = MutableStateFlow<List<JumpBackInItem>>(emptyList())
+    val jumpBackInHistory: StateFlow<List<JumpBackInItem>> = _jumpBackInHistory.asStateFlow()
     
     init {
         loadShortcuts()
         loadBookmarks()
+        loadJumpBackInHistory()
+    }
+
+    fun loadJumpBackInHistory() {
+        viewModelScope.launch {
+            try {
+                val visits = withContext(Dispatchers.IO) {
+                    historyStorage.getVisitsPaginated(
+                        offset = 0,
+                        count = HISTORY_PAGE_SIZE,
+                        excludeTypes = EXCLUDED_VISIT_TYPES,
+                    )
+                }
+                val seen = linkedSetOf<String>()
+                _jumpBackInHistory.value = visits.mapNotNull { visit ->
+                    val url = visit.url
+                    if (!url.startsWith("http") || !seen.add(url)) {
+                        null
+                    } else {
+                        JumpBackInItem(
+                            id = "history:$url",
+                            url = url,
+                            title = visit.title?.ifBlank { url } ?: url,
+                        )
+                    }
+                }
+            } catch (e: Exception) {
+                _jumpBackInHistory.value = emptyList()
+            }
+        }
     }
     
     fun loadShortcuts() {
@@ -146,12 +182,24 @@ class HomeViewModel(
 
 class HomeViewModelFactory(
     private val bookmarkManager: BookmarkManager,
-    private val shortcutDao: ShortcutDao
+    private val shortcutDao: ShortcutDao,
+    private val historyStorage: HistoryStorage,
 ) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(HomeViewModel::class.java)) {
-            return HomeViewModel(bookmarkManager, shortcutDao) as T
+            return HomeViewModel(bookmarkManager, shortcutDao, historyStorage) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }
 }
+
+private const val HISTORY_PAGE_SIZE = 40L
+
+private val EXCLUDED_VISIT_TYPES = listOf(
+    VisitType.DOWNLOAD,
+    VisitType.REDIRECT_PERMANENT,
+    VisitType.REDIRECT_TEMPORARY,
+    VisitType.RELOAD,
+    VisitType.EMBED,
+    VisitType.FRAMED_LINK,
+)

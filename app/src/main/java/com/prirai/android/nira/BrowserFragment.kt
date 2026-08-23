@@ -5,10 +5,13 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
+import com.prirai.android.nira.browser.home.compose.jumpBackInItems
+import com.prirai.android.nira.browser.home.compose.recentlyClosedItems
 import com.prirai.android.nira.browser.toolbar.ToolbarGestureHandler
 import com.prirai.android.nira.browser.toolbar.WebExtensionToolbarFeature
 import com.prirai.android.nira.components.toolbar.ToolbarMenu
@@ -1078,7 +1081,8 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
 
         val factory = com.prirai.android.nira.browser.home.compose.HomeViewModelFactory(
             bookmarkManager = com.prirai.android.nira.browser.bookmark.repository.BookmarkManager.getInstance(requireContext()),
-            shortcutDao = database.shortcutDao()
+            shortcutDao = database.shortcutDao(),
+            historyStorage = requireContext().components.historyStorage,
         )
 
         homeViewModel = androidx.lifecycle.ViewModelProvider(this, factory)[com.prirai.android.nira.browser.home.compose.HomeViewModel::class.java]
@@ -1111,9 +1115,21 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
             val isPrivateMode = selectedTab?.content?.private ?: browsingModeManager.mode.isPrivate
 
             val shortcuts by homeViewModel.shortcuts.collectAsState()
-            val bookmarks by homeViewModel.bookmarks.collectAsState()
             val showAddDialog by homeViewModel.showAddShortcutDialog.collectAsState()
-            val isBookmarkExpanded by homeViewModel.isBookmarkSectionExpanded.collectAsState()
+            val jumpBackInHistory by homeViewModel.jumpBackInHistory.collectAsState()
+            val recentsKey by store.observeAsComposableState { state ->
+                Triple(
+                    state.selectedTabId,
+                    state.tabs.map { it.id to it.lastAccess },
+                    state.closedTabs.map { it.id },
+                )
+            }
+            val jumpBackInItems = androidx.compose.runtime.remember(recentsKey, jumpBackInHistory) {
+                store.state.jumpBackInItems(jumpBackInHistory)
+            }
+            val recentlyClosedItems by store.observeAsComposableState { state ->
+                state.recentlyClosedItems()
+            }
 
             val profileManager =
                 com.prirai.android.nira.browser.profile.ProfileManager.getInstance(requireContext())
@@ -1158,8 +1174,6 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
                 com.prirai.android.nira.browser.home.compose.HomeScreen(
                     isPrivateMode = isPrivateMode,
                     shortcuts = shortcuts,
-                    bookmarks = bookmarks,
-                    isBookmarkExpanded = isBookmarkExpanded,
                     currentProfile = currentProfile,
                     onProfileClick = {}, // Profile icon is display-only
                     backgroundImageUrl = backgroundImageUrl,
@@ -1181,18 +1195,41 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
                             .show()
                     },
                     onShortcutAdd = { homeViewModel.showAddShortcutDialog() },
-                    onBookmarkClick = { bookmark ->
-                        if (bookmark.isFolder) {
-                            val bookmarksBottomSheet = com.prirai.android.nira.browser.bookmark.ui.BookmarksBottomSheetFragment.newInstance(
-                                folderId = bookmark.id.toLongOrNull() ?: -1L
+                    onHistoryClick = {
+                        startActivity(
+                            android.content.Intent(
+                                requireContext(),
+                                com.prirai.android.nira.history.HistoryActivity::class.java
                             )
-                            bookmarksBottomSheet.show(parentFragmentManager, "BookmarksBottomSheet")
+                        )
+                    },
+                    onBookmarksClick = {
+                        com.prirai.android.nira.browser.bookmark.ui.BookmarksBottomSheetFragment
+                            .newInstance()
+                            .show(parentFragmentManager, "BookmarksBottomSheet")
+                    },
+                    jumpBackInItems = jumpBackInItems,
+                    recentlyClosedItems = recentlyClosedItems.orEmpty(),
+                    onJumpBackInClick = { item ->
+                        val tabId = item.tabId
+                        if (tabId != null) {
+                            components.tabsUseCases.selectTab(tabId)
                         } else {
-                            components.sessionUseCases.loadUrl(bookmark.url)
-                            // URL will change, triggering visibility update automatically
+                            components.sessionUseCases.loadUrl(item.url)
                         }
                     },
-                    onBookmarkToggle = { homeViewModel.toggleBookmarkSection() },
+                    onRecentlyClosedClick = { item ->
+                        val tab = store.state.closedTabs.find { it.id == item.id } ?: return@HomeScreen
+                        viewLifecycleOwner.lifecycleScope.launch {
+                            components.tabsUseCases.restore(
+                                tab,
+                                components.recentlyClosedTabsStorage.engineStateStorage(),
+                            )
+                            store.dispatch(
+                                mozilla.components.browser.state.action.RecentlyClosedAction.RemoveClosedTabAction(tab)
+                            )
+                        }
+                    },
                     onSearchClick = {
                         // Open search dialog
                         val sessionId = components.store.state.selectedTabId
@@ -1229,12 +1266,10 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
         )
         
         if (isHomepage) {
-            // Show homepage, hide engine view
             binding.swipeRefresh.visibility = View.GONE
             binding.engineView.asView().visibility = View.GONE
             homePageView?.visibility = View.VISIBLE
         } else {
-            // Show engine view, hide homepage
             homePageView?.visibility = View.GONE
             binding.swipeRefresh.visibility = View.VISIBLE
             binding.engineView.asView().visibility = View.VISIBLE
