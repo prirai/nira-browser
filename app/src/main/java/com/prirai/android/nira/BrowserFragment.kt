@@ -777,22 +777,22 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
         menuItems.add(
             com.prirai.android.nira.components.menu.Material3BrowserMenu.MenuItem.QuadRow(
                 title1 = getString(R.string.action_history),
-                icon1 = R.drawable.ic_baseline_history,
+                icon1 = mozilla.components.ui.icons.R.drawable.mozac_ic_history_24,
                 onClick1 = {
                     browserInteractor.onBrowserToolbarMenuItemTapped(ToolbarMenu.Item.History)
                 },
                 title2 = getString(R.string.action_bookmarks),
-                icon2 = R.drawable.ic_baseline_bookmark,
+                icon2 = mozilla.components.ui.icons.R.drawable.mozac_ic_bookmark_24,
                 onClick2 = {
                     browserInteractor.onBrowserToolbarMenuItemTapped(ToolbarMenu.Item.Bookmarks)
                 },
                 title3 = getString(R.string.action_print),
-                icon3 = R.drawable.ic_baseline_print,
+                icon3 = mozilla.components.ui.icons.R.drawable.mozac_ic_print_24,
                 onClick3 = {
                     browserInteractor.onBrowserToolbarMenuItemTapped(ToolbarMenu.Item.Print)
                 },
                 title4 = getString(R.string.save_as_pdf),
-                icon4 = R.drawable.ic_baseline_pdf,
+                icon4 = mozilla.components.ui.icons.R.drawable.mozac_ic_save_file_24,
                 onClick4 = {
                     browserInteractor.onBrowserToolbarMenuItemTapped(ToolbarMenu.Item.PDF)
                 }
@@ -814,7 +814,7 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
                     ),
                     com.prirai.android.nira.components.menu.Material3BrowserMenu.IconRowItem(
                         title = "Add Bookmark",
-                        iconRes = R.drawable.ic_baseline_bookmark_add,
+                        iconRes = mozilla.components.ui.icons.R.drawable.mozac_ic_bookmark_fill_24,
                         onClick = {
                             selectedTab?.let { tab ->
                                 val title = tab.content.title.ifEmpty { tab.content.url }
@@ -838,7 +838,7 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
                     ),
                     com.prirai.android.nira.components.menu.Material3BrowserMenu.IconRowItem(
                         title = "Favorites",
-                        iconRes = R.drawable.ic_baseline_star_24,
+                        iconRes = mozilla.components.ui.icons.R.drawable.mozac_ic_pin_fill_24,
                         onClick = {
                             selectedTab?.let { tab ->
                                 val title = tab.content.title.ifEmpty { tab.content.url }
@@ -859,7 +859,7 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
             com.prirai.android.nira.components.menu.Material3BrowserMenu.MenuItem.Toggle(
                 id = "desktop_mode",
                 title = getString(R.string.desktop_mode),
-                iconRes = R.drawable.ic_desktop,
+                iconRes = mozilla.components.ui.icons.R.drawable.mozac_ic_device_desktop_24,
                 isChecked = selectedTab?.content?.desktopMode ?: false,
                 onToggle = { checked ->
                     browserInteractor.onBrowserToolbarMenuItemTapped(
@@ -879,7 +879,7 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
                     title = getString(
                         if (translated) R.string.show_original_page else R.string.translate_page
                     ),
-                    iconRes = R.drawable.ic_language,
+                    iconRes = mozilla.components.ui.icons.R.drawable.mozac_ic_translate_24,
                     onClick = {
                         browserInteractor.onBrowserToolbarMenuItemTapped(ToolbarMenu.Item.Translate)
                     }
@@ -896,7 +896,7 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
                     com.prirai.android.nira.components.menu.Material3BrowserMenu.MenuItem.Action(
                         id = "install_webapp",
                         title = getString(R.string.install_web_app),
-                        iconRes = R.drawable.ic_round_smartphone,
+                        iconRes = mozilla.components.ui.icons.R.drawable.mozac_ic_device_mobile_24,
                         onClick = {
                             browserInteractor.onBrowserToolbarMenuItemTapped(ToolbarMenu.Item.InstallWebApp)
                         }
@@ -907,7 +907,7 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
                     com.prirai.android.nira.components.menu.Material3BrowserMenu.MenuItem.Action(
                         id = "add_to_homescreen",
                         title = getString(R.string.action_add_to_homescreen),
-                        iconRes = R.drawable.ic_round_smartphone,
+                        iconRes = mozilla.components.ui.icons.R.drawable.mozac_ic_device_mobile_24,
                         onClick = {
                             browserInteractor.onBrowserToolbarMenuItemTapped(ToolbarMenu.Item.AddToHomeScreen)
                         }
@@ -923,7 +923,7 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
                     com.prirai.android.nira.components.menu.Material3BrowserMenu.MenuItem.Action(
                         id = "open_in_app",
                         title = getString(R.string.mozac_feature_contextmenu_open_link_in_external_app),
-                        iconRes = R.drawable.ic_baseline_open_in_new,
+                        iconRes = mozilla.components.ui.icons.R.drawable.mozac_ic_external_link_24,
                         onClick = {
                             browserInteractor.onBrowserToolbarMenuItemTapped(ToolbarMenu.Item.OpenInApp)
                         }
@@ -950,7 +950,7 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
             com.prirai.android.nira.components.menu.Material3BrowserMenu.MenuItem.Action(
                 id = "downloads",
                 title = "Downloads",
-                iconRes = R.drawable.ic_baseline_download_24,
+                iconRes = mozilla.components.ui.icons.R.drawable.mozac_ic_download_24,
                 onClick = {
                     val downloadsBottomSheet = com.prirai.android.nira.downloads.DownloadsBottomSheetFragment.newInstance()
                     downloadsBottomSheet.show(parentFragmentManager, com.prirai.android.nira.downloads.DownloadsBottomSheetFragment.TAG)
@@ -963,7 +963,7 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
             com.prirai.android.nira.components.menu.Material3BrowserMenu.MenuItem.Action(
                 id = "settings",
                 title = getString(R.string.settings),
-                iconRes = R.drawable.ic_round_settings,
+                iconRes = mozilla.components.ui.icons.R.drawable.mozac_ic_settings_24,
                 onClick = {
                     browserInteractor.onBrowserToolbarMenuItemTapped(ToolbarMenu.Item.Settings)
                 }
@@ -988,7 +988,7 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
             com.prirai.android.nira.components.menu.Material3BrowserMenu.MenuItem.Action(
                 id = "new_private_tab",
                 title = getString(R.string.mozac_browser_menu_new_private_tab),
-                iconRes = R.drawable.ic_incognito,
+                iconRes = mozilla.components.ui.icons.R.drawable.mozac_ic_private_mode_24,
                 onClick = {
                     browserInteractor.onBrowserToolbarMenuItemTapped(ToolbarMenu.Item.NewPrivateTab)
                 }

@@ -46,7 +46,7 @@ class BrowserMenu(
 
     override val menuToolbar by lazy {
         val back = BrowserMenuItemToolbar.TwoStateButton(
-            primaryImageResource = R.drawable.ic_ios_back,
+            primaryImageResource = mozilla.components.ui.icons.R.drawable.mozac_ic_back_24,
             primaryContentDescription = null.toString(),
             primaryImageTintResource = primaryTextColor(),
             isInPrimaryState = {
@@ -60,7 +60,7 @@ class BrowserMenu(
         }
 
         val forward = BrowserMenuItemToolbar.TwoStateButton(
-            primaryImageResource = R.drawable.ic_ios_forward,
+            primaryImageResource = mozilla.components.ui.icons.R.drawable.mozac_ic_forward_24,
             primaryContentDescription = context.getString(R.string.forward),
             primaryImageTintResource = primaryTextColor(),
             isInPrimaryState = {
@@ -94,7 +94,7 @@ class BrowserMenu(
         }
 
         val share = BrowserMenuItemToolbar.Button(
-            imageResource = R.drawable.ios_share_24,
+            imageResource = mozilla.components.ui.icons.R.drawable.mozac_ic_share_android_24,
             contentDescription = context.getString(R.string.mozac_selection_context_menu_share),
             iconTintColorResource = primaryTextColor(),
             listener = {
@@ -107,7 +107,7 @@ class BrowserMenu(
 
     val externalAppItem = ThemedBrowserMenuImageText(
         context.getString(R.string.mozac_feature_contextmenu_open_link_in_external_app),
-        R.drawable.ic_baseline_open_in_new
+        mozilla.components.ui.icons.R.drawable.mozac_ic_external_link_24
     ) {
         onItemTapped.invoke(ToolbarMenu.Item.OpenInApp)
     }.apply {
@@ -153,13 +153,13 @@ class BrowserMenu(
 
     private val settings = ThemedBrowserMenuImageText(
         label = context.getString(R.string.settings),
-        imageResource = R.drawable.ic_round_settings
+        imageResource = mozilla.components.ui.icons.R.drawable.mozac_ic_settings_24
     ) {
         onItemTapped.invoke(ToolbarMenu.Item.Settings)
     }
 
     private val desktopMode = BrowserMenuImageCheckbox(
-        imageResource = R.drawable.ic_desktop,
+        imageResource = mozilla.components.ui.icons.R.drawable.mozac_ic_device_desktop_24,
         label = context.getString(R.string.desktop_mode),
         initialState = {
             selectedSession?.content?.desktopMode ?: false
@@ -170,7 +170,7 @@ class BrowserMenu(
 
     private val translateItem = ThemedBrowserMenuImageText(
         label = context.getString(R.string.translate_page),
-        imageResource = R.drawable.ic_language
+        imageResource = mozilla.components.ui.icons.R.drawable.mozac_ic_translate_24
     ) {
         onItemTapped.invoke(ToolbarMenu.Item.Translate)
     }.apply {
@@ -182,7 +182,7 @@ class BrowserMenu(
 
     private val installWebApp = ThemedBrowserMenuImageText(
         label = context.getString(R.string.install_web_app),
-        imageResource = R.drawable.ic_round_smartphone
+        imageResource = mozilla.components.ui.icons.R.drawable.mozac_ic_device_mobile_24
     ) {
         onItemTapped.invoke(ToolbarMenu.Item.InstallWebApp)
     }.apply {
@@ -193,7 +193,7 @@ class BrowserMenu(
 
     private val addToHomescreen = ThemedBrowserMenuImageText(
         label = context.getString(R.string.action_add_to_homescreen),
-        imageResource = R.drawable.ic_round_smartphone
+        imageResource = mozilla.components.ui.icons.R.drawable.mozac_ic_add_to_homescreen_24
     ) {
         onItemTapped.invoke(ToolbarMenu.Item.AddToHomeScreen)
     }
@@ -207,21 +207,21 @@ class BrowserMenu(
 
     val historyItem = ThemedBrowserMenuImageText(
         context.getString(R.string.action_history),
-        R.drawable.ic_baseline_history
+        mozilla.components.ui.icons.R.drawable.mozac_ic_history_24
     ) {
         onItemTapped.invoke(ToolbarMenu.Item.History)
     }
 
     val printItem = ThemedBrowserMenuImageText(
         context.getString(R.string.action_print),
-        R.drawable.ic_baseline_print
+        mozilla.components.ui.icons.R.drawable.mozac_ic_print_24
     ) {
         onItemTapped.invoke(ToolbarMenu.Item.Print)
     }
 
     val saveAsPdfItem = ThemedBrowserMenuImageText(
         context.getString(R.string.save_as_pdf),
-        R.drawable.ic_baseline_pdf
+        mozilla.components.ui.icons.R.drawable.mozac_ic_save_file_24
     ) {
         onItemTapped.invoke(ToolbarMenu.Item.PDF)
     }
@@ -235,28 +235,28 @@ class BrowserMenu(
 
     val newPrivateTabItem = ThemedBrowserMenuImageText(
         context.getString(R.string.mozac_browser_menu_new_private_tab),
-        R.drawable.ic_incognito
+        mozilla.components.ui.icons.R.drawable.mozac_ic_private_mode_24
     ) {
         onItemTapped.invoke(ToolbarMenu.Item.NewPrivateTab)
     }
 
     val bookmarksItem = ThemedBrowserMenuImageText(
         context.getString(R.string.action_bookmarks),
-        R.drawable.ic_baseline_bookmark
+        mozilla.components.ui.icons.R.drawable.mozac_ic_bookmark_24
     ) {
         onItemTapped.invoke(ToolbarMenu.Item.Bookmarks)
     }
 
     val securityItem = ThemedBrowserMenuImageText(
         label = "Security",
-        imageResource = R.drawable.ic_baseline_lock
+        imageResource = mozilla.components.ui.icons.R.drawable.mozac_ic_lock_24
     ) {
         onItemTapped.invoke(ToolbarMenu.Item.Security)
     }
 
     val sendTabItem = ThemedBrowserMenuImageText(
         label = context.getString(R.string.send_tab_to_device),
-        imageResource = R.drawable.ios_share_24
+        imageResource = mozilla.components.ui.icons.R.drawable.mozac_ic_device_desktop_send_24
     ) {
         onItemTapped.invoke(ToolbarMenu.Item.SendTabToDevice)
     }.apply {

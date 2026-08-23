@@ -30,11 +30,11 @@ class ReloadStopButtonIntegration(
     private var scope: CoroutineScope? = null
 
     private val reloadStopButton = BrowserToolbar.TwoStateButton(
-        primaryImage = ContextCompat.getDrawable(context, R.drawable.ic_refresh)!!.mutate().apply {
+        primaryImage = ContextCompat.getDrawable(context, mozilla.components.ui.icons.R.drawable.mozac_ic_arrow_clockwise_24)!!.mutate().apply {
             setTint(context.getColorFromAttr(android.R.attr.textColorPrimary))
         },
         primaryContentDescription = context.getString(R.string.reload),
-        secondaryImage = ContextCompat.getDrawable(context, R.drawable.ic_round_close)!!.mutate().apply {
+        secondaryImage = ContextCompat.getDrawable(context, mozilla.components.ui.icons.R.drawable.mozac_ic_cross_24)!!.mutate().apply {
             setTint(context.getColorFromAttr(android.R.attr.textColorPrimary))
         },
         secondaryContentDescription = context.getString(R.string.stop),
