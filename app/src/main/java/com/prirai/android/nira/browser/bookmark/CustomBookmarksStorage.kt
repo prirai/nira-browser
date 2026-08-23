@@ -173,7 +173,7 @@ class CustomBookmarksStorage(context: Context): BookmarksStorage {
 
                 if (url != null && url.isNotBlank()) {
                     val id = com.prirai.android.nira.utils.BookmarkUtils.getNewId()
-                    val site = com.prirai.android.nira.browser.bookmark.items.BookmarkSiteItem(if (title.isNotBlank()) title else url, url, id)
+                    val site = BookmarkSiteItem(if (title.isNotBlank()) title else url, url, id)
                     manager.add(parent, site)
                 } else {
                     // Treat as folder
@@ -188,11 +188,7 @@ class CustomBookmarksStorage(context: Context): BookmarksStorage {
             }
 
             // Top-level: the incoming 'tree' may itself be a collection or wrapper
-            val topNodes: List<Any> = when {
-                tree is Collection<*> -> (tree as Collection<*>).filterNotNull() as List<Any>
-                tree.javaClass.isArray -> (tree as Array<*>).filterNotNull() as List<Any>
-                else -> extractChildren(tree)
-            }
+            val topNodes: List<Any> = extractChildren(tree)
 
             // Create a container folder under root
             val rootId = com.prirai.android.nira.utils.BookmarkUtils.getNewId()
