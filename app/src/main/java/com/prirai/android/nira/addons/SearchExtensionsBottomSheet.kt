@@ -93,13 +93,14 @@ fun SearchExtensionsContent(
         }
     }
 
-    val filteredAddons = remember(searchQuery.value, allAddons.value) {
-        if (searchQuery.value.isEmpty()) {
-            allAddons.value
+    val query = searchQuery.value.trim()
+    val filteredAddons = remember(query, allAddons.value) {
+        if (query.length < 2) {
+            emptyList()
         } else {
             allAddons.value.filter { addon ->
-                addon.translateName(context).contains(searchQuery.value, ignoreCase = true) ||
-                addon.translatableSummary.values.any { it.contains(searchQuery.value, ignoreCase = true) }
+                addon.translateName(context).contains(query, ignoreCase = true) ||
+                    addon.translatableSummary.values.any { it.contains(query, ignoreCase = true) }
             }
         }
     }
@@ -197,7 +198,22 @@ fun SearchExtensionsContent(
                         .heightIn(max = 400.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    if (filteredAddons.isEmpty()) {
+                    if (query.length < 2) {
+                        item {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(32.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = "Type at least 2 characters to search",
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    } else if (filteredAddons.isEmpty()) {
                         item {
                             Box(
                                 modifier = Modifier
