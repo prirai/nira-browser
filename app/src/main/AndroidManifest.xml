@@ -221,6 +221,12 @@
             android:exported="false"
         />
 
+    <service
+            android:name=".downloads.ParallelDownloadService"
+            android:foregroundServiceType="dataSync"
+            android:exported="false"
+        />
+
     <!-- Custom Tabs Service -->
     <service
             android:name=".customtabs.CustomTabsService"
