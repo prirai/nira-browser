@@ -201,6 +201,7 @@ fun TabBarCompose(
                 state = listState,
                 contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth()
             ) {
                 itemsIndexed(
@@ -549,11 +550,19 @@ private fun TabPill(
 ) {
     Surface(
         modifier = modifier
-            .height(40.dp)
+            .height(32.dp)
             .width(100.dp),
         shape = RoundedCornerShape(12.dp),
-        color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
-        border = if (isSelected) BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary) else null
+        color = if (isSelected) {
+            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.55f)
+        } else {
+            Color.Transparent
+        },
+        border = if (isSelected) {
+            BorderStroke(1.dp, MaterialTheme.colorScheme.primary)
+        } else {
+            null
+        }
     ) {
         Row(
             modifier = Modifier
