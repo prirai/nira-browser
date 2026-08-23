@@ -39,12 +39,14 @@ object ProfileAddonPolicy {
             return
         }
         val allowed = prefs.getStringSet(key, emptySet()).orEmpty()
-        addons.forEach { addon ->
-            val shouldEnable = allowed.contains(addon.id)
-            if (shouldEnable && !addon.isEnabled()) {
-                context.components.addonManager.enableAddon(addon)
-            } else if (!shouldEnable && addon.isEnabled()) {
-                context.components.addonManager.disableAddon(addon)
+        withContext(Dispatchers.Main) {
+            addons.forEach { addon ->
+                val shouldEnable = allowed.contains(addon.id)
+                if (shouldEnable && !addon.isEnabled()) {
+                    context.components.addonManager.enableAddon(addon)
+                } else if (!shouldEnable && addon.isEnabled()) {
+                    context.components.addonManager.disableAddon(addon)
+                }
             }
         }
     }
