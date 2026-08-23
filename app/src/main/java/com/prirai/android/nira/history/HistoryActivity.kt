@@ -68,15 +68,15 @@ class HistoryActivity : AppCompatActivity(), SearchView.OnQueryTextListener {
                 recyclerView,
                 object : HistoryRecyclerViewItemTouchListener.OnItemClickListener {
                     override fun onItemClick(view: View?, position: Int) {
+                        val visit = (recyclerView.adapter as HistoryItemRecyclerViewAdapter).getVisitAt(position)
+                            ?: return
                         onBackPressedDispatcher.onBackPressed()
-                        components.sessionUseCases.loadUrl(
-                            (recyclerView.adapter as HistoryItemRecyclerViewAdapter).getItem(
-                                position
-                            ).url
-                        )
+                        components.sessionUseCases.loadUrl(visit.url)
                     }
 
                     override fun onLongItemClick(view: View?, position: Int) {
+                        val adapter = recyclerView.adapter as HistoryItemRecyclerViewAdapter
+                        if (adapter.getVisitAt(position) == null) return
                         val items = arrayOf(
                             resources.getString(R.string.open_new),
                             resources.getString(R.string.open_new_private),

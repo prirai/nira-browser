@@ -68,6 +68,7 @@ class UserPreferences(appContext: Context) : mozilla.components.support.ktx.andr
     var addonSort by intPreference(ADDON_SORT, AddonSortType.RATING.ordinal)
     var showUrlProtocol by booleanPreference(SHOW_URL_PROTOCOL, false)
     var searchSuggestionsEnabled by booleanPreference(SEARCH_SUGGESTIONS, true)
+    var searchSuggestionCount by intPreference(SEARCH_SUGGESTION_COUNT, 5)
     var safeBrowsing by booleanPreference(SAFE_BROWSING, true)
     var trackingProtection: Boolean
         get() = etpLevel != 0
@@ -172,6 +173,7 @@ class UserPreferences(appContext: Context) : mozilla.components.support.ktx.andr
         const val PROMPT_EXTERNAL_DOWNLOADER = "prompt_external_downloader"
         const val SHOW_URL_PROTOCOL = "show_url_protocol"
         const val SEARCH_SUGGESTIONS = "search_suggestions"
+        const val SEARCH_SUGGESTION_COUNT = "search_suggestion_count"
         const val SAFE_BROWSING = "safe_browsing"
         const val TRACKING_PROTECTION = "tracking_protection"
         const val SHOW_SHORTCUTS = "show_shortcuts"
