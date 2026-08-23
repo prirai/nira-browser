@@ -131,7 +131,7 @@ class AdvancedSettingsFragment : BaseSettingsFragment() {
     }
 
     private fun sideloadXpiLink() {
-        val builder = MaterialAlertDialogBuilder(requireContext())
+        val builder = MaterialAlertDialogBuilder(requireActivity())
         builder.setTitle(resources.getString(R.string.load_xpi_link))
 
         val input = EditText(requireContext())
@@ -152,7 +152,7 @@ class AdvancedSettingsFragment : BaseSettingsFragment() {
                         for (i in addons) {
                             if (i.id == it.id) {
                                 runOnUiThread {
-                                    MaterialAlertDialogBuilder(requireContext())
+                                    MaterialAlertDialogBuilder(requireActivity())
                                         .setTitle(resources.getString(R.string.error))
                                         .setMessage(resources.getString(R.string.already_available))
                                         .setNeutralButton(resources.getString(R.string.mozac_feature_prompts_ok)) { dialog, _ ->
@@ -230,7 +230,7 @@ class AdvancedSettingsFragment : BaseSettingsFragment() {
                         for (addon in addons) {
                             if (addon.id == extension.id) {
                                 runOnUiThread {
-                                    MaterialAlertDialogBuilder(requireContext())
+                                    MaterialAlertDialogBuilder(requireActivity())
                                         .setTitle(resources.getString(R.string.error))
                                         .setMessage(resources.getString(R.string.already_available))
                                         .setNeutralButton(resources.getString(R.string.mozac_feature_prompts_ok)) { dialog, _ ->
@@ -281,7 +281,7 @@ class AdvancedSettingsFragment : BaseSettingsFragment() {
     }
 
     private fun pickCollectionUser() {
-        val builder = MaterialAlertDialogBuilder(requireContext())
+        val builder = MaterialAlertDialogBuilder(requireActivity())
         builder.setTitle(resources.getString(R.string.collection_user))
 
         val input = EditText(requireContext())
@@ -305,7 +305,7 @@ class AdvancedSettingsFragment : BaseSettingsFragment() {
     }
 
     private fun pickCollectionName() {
-        val builder = MaterialAlertDialogBuilder(requireContext())
+        val builder = MaterialAlertDialogBuilder(requireActivity())
         builder.setTitle(resources.getString(R.string.collection_name))
 
         val input = EditText(requireContext())

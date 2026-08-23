@@ -261,7 +261,7 @@ class CustomizationSettingsFragment : BaseSettingsFragment() {
         val addonNames = allAddons.map { it.value.name }
         val checkedItems = allAddons.map { allowedAddonIds.contains(it.value.id) }.toBooleanArray()
 
-        MaterialAlertDialogBuilder(context)
+        MaterialAlertDialogBuilder(requireActivity())
             .setTitle(R.string.bar_addon_list)
             .setMultiChoiceItems(addonNames.toTypedArray(), checkedItems) { _, _, _ ->
                 // We'll handle the selection when the user clicks OK
@@ -300,7 +300,7 @@ class CustomizationSettingsFragment : BaseSettingsFragment() {
             getString(R.string.homepage_background_url)
         )
         
-        MaterialAlertDialogBuilder(requireContext())
+        MaterialAlertDialogBuilder(requireActivity())
             .setTitle(resources.getString(R.string.homepage_background_image))
             .setItems(items) { _, which ->
                 when (which) {
@@ -351,7 +351,7 @@ class CustomizationSettingsFragment : BaseSettingsFragment() {
         inputLayout.hint = resources.getString(R.string.url)
         editText.setText(UserPreferences(requireContext()).homepageBackgroundUrl)
         
-        MaterialAlertDialogBuilder(requireContext())
+        MaterialAlertDialogBuilder(requireActivity())
             .setTitle(resources.getString(R.string.homepage_background_image))
             .setView(dialogView)
             .setPositiveButton(resources.getString(R.string.mozac_feature_prompts_ok)) { _, _ ->
@@ -379,50 +379,15 @@ class CustomizationSettingsFragment : BaseSettingsFragment() {
     }
 
     private fun pickAppTheme() {
-        val startingChoice = UserPreferences(requireContext()).appThemeChoice
-        val checkedItem = UserPreferences(requireContext()).appThemeChoice
+        val items = resources.getStringArray(R.array.theme_types)
+        var selectedChoice = UserPreferences(requireContext()).appThemeChoice
 
-        val dialogView = layoutInflater.inflate(R.layout.dialog_theme_picker, null)
-        val lightCard = dialogView.findViewById<com.google.android.material.card.MaterialCardView>(R.id.lightThemeCard)
-        val darkCard = dialogView.findViewById<com.google.android.material.card.MaterialCardView>(R.id.darkThemeCard)
-        val systemCard = dialogView.findViewById<com.google.android.material.card.MaterialCardView>(R.id.systemThemeCard)
-        
-        // Set initial checked state
-        when (checkedItem) {
-            0 -> lightCard.isChecked = true
-            1 -> darkCard.isChecked = true
-            2 -> systemCard.isChecked = true
-        }
-        
-        var selectedChoice = checkedItem
-        
-        lightCard.setOnClickListener {
-            lightCard.isChecked = true
-            darkCard.isChecked = false
-            systemCard.isChecked = false
-            selectedChoice = 0
-        }
-        
-        darkCard.setOnClickListener {
-            lightCard.isChecked = false
-            darkCard.isChecked = true
-            systemCard.isChecked = false
-            selectedChoice = 1
-        }
-        
-        systemCard.setOnClickListener {
-            lightCard.isChecked = false
-            darkCard.isChecked = false
-            systemCard.isChecked = true
-            selectedChoice = 2
-        }
-
-        MaterialAlertDialogBuilder(requireContext())
+        MaterialAlertDialogBuilder(requireActivity())
             .setTitle(resources.getString(R.string.theme))
-            .setView(dialogView)
-            .setNegativeButton(resources.getString(R.string.cancel)) { _, _ ->
-                UserPreferences(requireContext()).appThemeChoice = startingChoice
+            .setSingleChoiceItems(items, selectedChoice) { _, which ->
+                selectedChoice = which
             }
+            .setNegativeButton(resources.getString(R.string.cancel), null)
             .setPositiveButton(resources.getString(R.string.mozac_feature_prompts_ok)) { _, _ ->
                 UserPreferences(requireContext()).appThemeChoice = selectedChoice
                 applyAppTheme(selectedChoice)
@@ -450,7 +415,7 @@ class CustomizationSettingsFragment : BaseSettingsFragment() {
             updateIconPreview(previewIcon, value)
         }
         
-        MaterialAlertDialogBuilder(requireContext())
+        MaterialAlertDialogBuilder(requireActivity())
             .setTitle(R.string.toolbar_icon_size)
             .setView(dialogView)
             .setPositiveButton(R.string.mozac_feature_prompts_ok) { _, _ ->
@@ -485,7 +450,7 @@ class CustomizationSettingsFragment : BaseSettingsFragment() {
             updateFontPreview(previewText, value)
         }
         
-        MaterialAlertDialogBuilder(requireContext())
+        MaterialAlertDialogBuilder(requireActivity())
             .setTitle(R.string.interface_font_scale)
             .setView(dialogView)
             .setPositiveButton(R.string.mozac_feature_prompts_ok) { _, _ ->
@@ -515,50 +480,15 @@ class CustomizationSettingsFragment : BaseSettingsFragment() {
     }
 
     private fun pickWebTheme() {
-        val startingChoice = UserPreferences(requireContext()).webThemeChoice
-        val checkedItem = UserPreferences(requireContext()).webThemeChoice
+        val items = resources.getStringArray(R.array.theme_types)
+        var selectedChoice = UserPreferences(requireContext()).webThemeChoice
 
-        val dialogView = layoutInflater.inflate(R.layout.dialog_web_theme_picker, null)
-        val lightCard = dialogView.findViewById<com.google.android.material.card.MaterialCardView>(R.id.lightThemeCard)
-        val darkCard = dialogView.findViewById<com.google.android.material.card.MaterialCardView>(R.id.darkThemeCard)
-        val systemCard = dialogView.findViewById<com.google.android.material.card.MaterialCardView>(R.id.systemThemeCard)
-        
-        // Set initial checked state
-        when (checkedItem) {
-            0 -> lightCard.isChecked = true
-            1 -> darkCard.isChecked = true
-            2 -> systemCard.isChecked = true
-        }
-        
-        var selectedChoice = checkedItem
-        
-        lightCard.setOnClickListener {
-            lightCard.isChecked = true
-            darkCard.isChecked = false
-            systemCard.isChecked = false
-            selectedChoice = 0
-        }
-        
-        darkCard.setOnClickListener {
-            lightCard.isChecked = false
-            darkCard.isChecked = true
-            systemCard.isChecked = false
-            selectedChoice = 1
-        }
-        
-        systemCard.setOnClickListener {
-            lightCard.isChecked = false
-            darkCard.isChecked = false
-            systemCard.isChecked = true
-            selectedChoice = 2
-        }
-
-        MaterialAlertDialogBuilder(requireContext())
+        MaterialAlertDialogBuilder(requireActivity())
             .setTitle(resources.getString(R.string.web_theme))
-            .setView(dialogView)
-            .setNegativeButton(resources.getString(R.string.cancel)) { _, _ ->
-                UserPreferences(requireContext()).webThemeChoice = startingChoice
+            .setSingleChoiceItems(items, selectedChoice) { _, which ->
+                selectedChoice = which
             }
+            .setNegativeButton(resources.getString(R.string.cancel), null)
             .setPositiveButton(resources.getString(R.string.mozac_feature_prompts_ok)) { _, _ ->
                 UserPreferences(requireContext()).webThemeChoice = selectedChoice
             }
