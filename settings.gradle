@@ -1,11 +1,13 @@
 pluginManagement {
     repositories {
+        gradlePluginPortal()
         google()
         mavenCentral()
-        gradlePluginPortal()
     }
 }
 plugins {
+    // Note: Using direct ID instead of alias(libs.plugins.foojay.resolver) 
+    // to avoid Groovy DSL resolution issues in Gradle 9.x
     id 'org.gradle.toolchains.foojay-resolver-convention' version '1.0.0'
 }
 rootProject.name = "nira-browser"
