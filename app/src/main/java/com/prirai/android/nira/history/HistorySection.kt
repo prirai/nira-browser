@@ -32,10 +32,9 @@ object HistorySectionHelper {
         return when {
             days == 0L -> "Today"
             days == 1L -> "Yesterday"
-            days < 7 -> "This Week"
-            days < 30 -> "This Month"
-            days < 365 -> "Older"
-            else -> "Long Time Ago"
+            days < 7 -> "This week"
+            days < 30 -> "This month"
+            else -> "Older"
         }
     }
 }

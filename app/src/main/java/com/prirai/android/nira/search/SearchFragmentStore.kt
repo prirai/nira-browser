@@ -1,6 +1,9 @@
 package com.prirai.android.nira.search
 
+import android.content.Context
+import com.prirai.android.nira.browser.SearchEngineList
 import com.prirai.android.nira.components.Components
+import com.prirai.android.nira.preferences.UserPreferences
 import mozilla.components.browser.state.search.SearchEngine
 import mozilla.components.browser.state.selector.findTab
 import mozilla.components.browser.state.state.SearchState
@@ -77,10 +80,19 @@ data class SearchFragmentState(
 fun createInitialSearchFragmentState(
     components: Components,
     tabId: String?,
-    pastedText: String?
+    pastedText: String?,
+    context: Context? = null
 ): SearchFragmentState {
     val tab = tabId?.let { components.store.state.findTab(it) }
     val url = tab?.content?.url.orEmpty()
+    val defaultEngine = components.store.state.search.selectedOrDefaultSearchEngine
+        ?: context?.let {
+            try {
+                SearchEngineList(it).getSelectedEngine(UserPreferences(it))
+            } catch (_: Exception) {
+                null
+            }
+        }
 
     val shouldShowSearchSuggestions = true
 
@@ -88,8 +100,9 @@ fun createInitialSearchFragmentState(
         query = url,
         url = url,
         searchTerms = tab?.content?.searchTerms.orEmpty(),
-        searchEngineSource = SearchEngineSource.None,
-        defaultEngine = null,
+        searchEngineSource = defaultEngine?.let { SearchEngineSource.Default(it) }
+            ?: SearchEngineSource.None,
+        defaultEngine = defaultEngine,
         showSearchSuggestions = shouldShowSearchSuggestions,
         showSearchSuggestionsHint = false,
         showSearchShortcuts = false,
@@ -139,18 +152,15 @@ private fun searchStateReducer(state: SearchFragmentState, action: SearchFragmen
         is SearchFragmentAction.SetShowSearchSuggestions ->
             state.copy(showSearchSuggestions = action.show)
         is SearchFragmentAction.UpdateSearchState -> {
+            val resolvedEngine = action.search.selectedOrDefaultSearchEngine ?: state.defaultEngine
             state.copy(
-                defaultEngine = action.search.selectedOrDefaultSearchEngine,
+                defaultEngine = resolvedEngine,
                 areShortcutsAvailable = action.search.searchEngines.size > 1,
                 showSearchShortcuts = state.url.isEmpty() &&
                     state.showSearchShortcutsSetting &&
                     action.search.searchEngines.size > 1,
                 searchEngineSource = (state.searchEngineSource as? SearchEngineSource.Shortcut)
-                    ?: (action.search.selectedOrDefaultSearchEngine?.let {
-                        SearchEngineSource.Default(
-                            it
-                        )
-                    }
+                    ?: (resolvedEngine?.let { SearchEngineSource.Default(it) }
                         ?: SearchEngineSource.None)
             )
         }
