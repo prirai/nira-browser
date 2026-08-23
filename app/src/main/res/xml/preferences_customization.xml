@@ -70,11 +70,6 @@
             app:summary="@string/toolbar_icon_size_desc"
             app:singleLineTitle="false" />
 
-        <Preference
-            app:key="@string/key_bar_addon_list"
-            app:title="@string/bar_addon_list"
-            app:singleLineTitle="false" />
-
     </PreferenceCategory>
 
     <PreferenceCategory android:title="Tabs &amp; Layout">

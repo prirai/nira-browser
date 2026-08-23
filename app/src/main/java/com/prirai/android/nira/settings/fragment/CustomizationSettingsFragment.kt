@@ -10,7 +10,6 @@ import androidx.preference.Preference
 import androidx.preference.SeekBarPreference
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.prirai.android.nira.R
-import com.prirai.android.nira.ext.components
 import com.prirai.android.nira.preferences.UserPreferences
 import com.prirai.android.nira.settings.HomepageBackgroundChoice
 import com.prirai.android.nira.theme.applyAppTheme
@@ -147,11 +146,6 @@ class CustomizationSettingsFragment : BaseSettingsFragment() {
             }
         )
 
-        clickablePreference(
-            preference = requireContext().resources.getString(R.string.key_bar_addon_list),
-            onClick = { pickBarAddonList() }
-        )
-
         switchPreference(
             preference = requireContext().resources.getString(R.string.key_load_shortcut_icons),
             isChecked = UserPreferences(requireContext()).loadShortcutIcons,
@@ -241,54 +235,6 @@ class CustomizationSettingsFragment : BaseSettingsFragment() {
                 ).show()
             }
         )
-
-    }
-
-    private fun pickBarAddonList() {
-        val context = requireContext()
-        val userPreferences = UserPreferences(context)
-
-        val allAddons = context.components.store.state.extensions.filter { it.value.enabled }
-            .filter { it.value.browserAction != null || it.value.pageAction != null }
-
-        // Get currently allowed add-on IDs
-        val allowedAddonIds =
-            if (UserPreferences(requireContext()).showAddonsInBar) {
-                allAddons.map { it.value.id }
-            } else userPreferences.barAddonsList.split(",").filter { it.isNotEmpty() }
-
-        // Prepare the list for the dialog
-        val addonNames = allAddons.map { it.value.name }
-        val checkedItems = allAddons.map { allowedAddonIds.contains(it.value.id) }.toBooleanArray()
-
-        MaterialAlertDialogBuilder(requireActivity())
-            .setTitle(R.string.bar_addon_list)
-            .setMultiChoiceItems(addonNames.toTypedArray(), checkedItems) { _, _, _ ->
-                // We'll handle the selection when the user clicks OK
-            }
-            .setPositiveButton(R.string.mozac_feature_prompts_ok) { _, _ ->
-                if (UserPreferences(requireContext()).showAddonsInBar) {
-                    UserPreferences(requireContext()).showAddonsInBar = false
-                }
-
-                // Save the selected add-ons
-                val selectedAddonIds =
-                    allAddons
-                        .map { it.value }
-                        .filterIndexed { index, _ -> checkedItems[index] }
-                        .joinToString(",") { it.id }
-
-                userPreferences.barAddonsList = selectedAddonIds
-
-                Toast.makeText(
-                    context,
-                    R.string.app_restart,
-                    Toast.LENGTH_SHORT
-                ).show()
-            }
-            .setNegativeButton(R.string.cancel, null)
-            .show()
-
 
     }
 
