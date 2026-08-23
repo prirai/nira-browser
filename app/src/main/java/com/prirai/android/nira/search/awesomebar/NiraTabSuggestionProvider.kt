@@ -1,10 +1,10 @@
 package com.prirai.android.nira.search.awesomebar
 
 import android.content.Context
+import com.prirai.android.nira.browser.tabgroups.UnifiedTabGroupManager
 import mozilla.components.browser.state.store.BrowserStore
 import mozilla.components.concept.awesomebar.AwesomeBar
 import mozilla.components.feature.tabs.TabsUseCases
-import com.prirai.android.nira.browser.tabgroups.UnifiedTabGroupManager
 import java.util.UUID
 
 class NiraTabSuggestionProvider(
@@ -13,9 +13,12 @@ class NiraTabSuggestionProvider(
     private val selectTabUseCase: TabsUseCases.SelectTabUseCase,
     private val removeTabUseCase: TabsUseCases.RemoveTabUseCase,
     private val switchToTabDescription: String = "Switch to tab",
+    private val suggestionsHeader: String? = null,
 ) : AwesomeBar.SuggestionProvider {
 
     override val id: String = UUID.randomUUID().toString()
+
+    override fun groupTitle(): String? = suggestionsHeader
 
     private val groupManager by lazy { UnifiedTabGroupManager.getInstance(context) }
 
@@ -26,9 +29,9 @@ class NiraTabSuggestionProvider(
         return state.tabs
             .filter { tab ->
                 tab.id != selectedTabId && !tab.content.private &&
-                (text.isBlank() ||
-                 tab.content.title.contains(text, ignoreCase = true) ||
-                 tab.content.url.contains(text, ignoreCase = true))
+                    (text.isBlank() ||
+                        tab.content.title.contains(text, ignoreCase = true) ||
+                        tab.content.url.contains(text, ignoreCase = true))
             }
             .mapIndexed { index, tab ->
                 val group = groupManager.getGroupForTab(tab.id)
@@ -40,7 +43,7 @@ class NiraTabSuggestionProvider(
                     provider = this,
                     id = tab.id,
                     title = tab.content.title.ifBlank { tab.content.url },
-                    description = switchToTabDescription,
+                    description = null,
                     icon = null,
                     chips = chips,
                     score = Int.MAX_VALUE - index,

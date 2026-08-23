@@ -29,8 +29,12 @@ import com.prirai.android.nira.ext.components
 import com.prirai.android.nira.preferences.UserPreferences
 import com.prirai.android.nira.search.awesomebar.AwesomeBarView
 import com.prirai.android.nira.search.toolbar.ToolbarView
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
+import androidx.lifecycle.lifecycleScope
+import mozilla.components.concept.awesomebar.AwesomeBar
 import mozilla.components.concept.storage.HistoryStorage
 import mozilla.components.lib.state.ext.consumeFlow
 import mozilla.components.lib.state.ext.consumeFrom
@@ -158,7 +162,8 @@ class SearchDialogFragment : AppCompatDialogFragment(), UserInteractionHandler {
             createInitialSearchFragmentState(
                 components,
                 tabId = args.sessionId,
-                pastedText = args.pastedText
+                pastedText = args.pastedText,
+                context = requireContext()
             )
         )
 
@@ -207,6 +212,17 @@ class SearchDialogFragment : AppCompatDialogFragment(), UserInteractionHandler {
         }
 
         awesomeBarView.view.setOnEditSuggestionListener(toolbarView.view::setSearchTerms)
+        awesomeBarView.view.setOnStopListener {
+            dialogHandledAction = true
+            dismissAllowingStateLoss()
+        }
+        awesomeBarView.view.setOnRemoveSuggestionButtonClicked { grouped ->
+            val suggestion = grouped.suggestion as? AwesomeBar.Suggestion ?: return@setOnRemoveSuggestionButtonClicked
+            val url = suggestion.description ?: suggestion.editSuggestion ?: return@setOnRemoveSuggestionButtonClicked
+            viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
+                components.historyStorage.deleteVisitsFor(url)
+            }
+        }
 
         val urlView = toolbarView.view
             .findViewById<InlineAutocompleteEditText>(R.id.mozac_browser_toolbar_edit_url_view)
@@ -269,6 +285,7 @@ class SearchDialogFragment : AppCompatDialogFragment(), UserInteractionHandler {
                         newTab = store.state.tabId == null,
                         from = BrowserDirection.FromSearchDialog,
                         engine = store.state.searchEngineSource.searchEngine
+                            ?: store.state.defaultEngine
                     )
                     
                     dismiss()

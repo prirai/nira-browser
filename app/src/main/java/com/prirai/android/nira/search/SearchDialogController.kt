@@ -3,7 +3,10 @@ package com.prirai.android.nira.search
 import androidx.navigation.NavController
 import com.prirai.android.nira.BrowserActivity
 import com.prirai.android.nira.BrowserDirection
+import com.prirai.android.nira.browser.SearchEngineList
+import com.prirai.android.nira.preferences.UserPreferences
 import mozilla.components.browser.state.search.SearchEngine
+import mozilla.components.browser.state.state.selectedOrDefaultSearchEngine
 import mozilla.components.browser.state.store.BrowserStore
 import mozilla.components.feature.tabs.TabsUseCases
 
@@ -47,9 +50,7 @@ class SearchDialogController(
     private fun openSearchOrUrl(url: String) {
         clearToolbarFocus()
 
-        val searchEngine = fragmentStore.state.searchEngineSource.searchEngine
-        
-        // Determine if we need a new tab based on current tab state
+        val searchEngine = resolveSearchEngine()
         val shouldCreateNewTab = shouldCreateNewTabForSearch()
 
         activity.openToBrowserAndLoad(
@@ -59,16 +60,21 @@ class SearchDialogController(
             engine = searchEngine
         )
     }
-    
+
+    private fun resolveSearchEngine(): SearchEngine? {
+        fragmentStore.state.searchEngineSource.searchEngine?.let { return it }
+        fragmentStore.state.defaultEngine?.let { return it }
+        store.state.search.selectedOrDefaultSearchEngine?.let { return it }
+        return try {
+            SearchEngineList(activity).getSelectedEngine(UserPreferences(activity))
+        } catch (_: Exception) {
+            null
+        }
+    }
+
     /**
-     * Determines if a new tab should be created for the search.
      * Creates a new tab ONLY when no tab is selected.
      * Otherwise, reuses the current tab (including homepage tabs).
-     * 
-     * This ensures:
-     * - Searching from home page navigates that tab (replaces homepage)
-     * - Searching from an existing content tab reuses that tab
-     * - Only creates new tab when there's no tab at all
      */
     private fun shouldCreateNewTabForSearch(): Boolean {
         val tabId = fragmentStore.state.tabId
@@ -115,7 +121,7 @@ class SearchDialogController(
     override fun handleSearchTermsTapped(searchTerms: String) {
         clearToolbarFocus()
 
-        val searchEngine = fragmentStore.state.searchEngineSource.searchEngine
+        val searchEngine = resolveSearchEngine()
         val shouldCreateNewTab = shouldCreateNewTabForSearch()
 
         activity.openToBrowserAndLoad(

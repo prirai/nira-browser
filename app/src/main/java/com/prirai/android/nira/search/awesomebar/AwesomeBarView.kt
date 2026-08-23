@@ -8,17 +8,17 @@ import androidx.core.graphics.drawable.toBitmap
 import com.prirai.android.nira.BrowserActivity
 import com.prirai.android.nira.R
 import com.prirai.android.nira.browser.BrowsingMode
+import com.prirai.android.nira.browser.SearchEngineList
 import com.prirai.android.nira.browser.bookmark.CustomBookmarksStorage
 import com.prirai.android.nira.ext.components
 import com.prirai.android.nira.preferences.UserPreferences
 import com.prirai.android.nira.search.SearchEngineSource
 import com.prirai.android.nira.search.SearchFragmentState
 import mozilla.components.browser.state.search.SearchEngine
+import mozilla.components.browser.state.state.selectedOrDefaultSearchEngine
 import mozilla.components.concept.awesomebar.AwesomeBar
 import mozilla.components.concept.engine.EngineSession
 import mozilla.components.feature.awesomebar.provider.BookmarksStorageSuggestionProvider
-import mozilla.components.feature.awesomebar.provider.HistoryStorageSuggestionProvider
-import mozilla.components.feature.awesomebar.provider.SearchActionProvider
 import mozilla.components.feature.awesomebar.provider.SearchSuggestionProvider
 import mozilla.components.feature.search.SearchUseCases
 import mozilla.components.feature.session.SessionUseCases
@@ -35,11 +35,11 @@ class AwesomeBarView(
     val view: AwesomeBarWrapper,
 ) {
     private val sessionProvider: NiraTabSuggestionProvider
-    private val historyStorageProvider: HistoryStorageSuggestionProvider
+    private val historyStorageProvider: NiraHistorySuggestionProvider
     private val bookmarksStorageSuggestionProvider: BookmarksStorageSuggestionProvider
     private val shortcutsEnginePickerProvider: ShortcutsSuggestionProvider
     private val defaultSearchSuggestionProvider: SearchSuggestionProvider
-    private val defaultSearchActionProvider: SearchActionProvider
+    private val defaultSearchActionProvider: SearchForQueryProvider
     private val searchSuggestionProviderMap: MutableMap<SearchEngine, List<AwesomeBar.SuggestionProvider>>
     private var providersInUse = mutableSetOf<AwesomeBar.SuggestionProvider>()
 
@@ -94,15 +94,17 @@ class AwesomeBarView(
                 store = components.store,
                 selectTabUseCase = selectTabUseCase,
                 removeTabUseCase = components.tabsUseCases.removeTab,
-                switchToTabDescription = activity.resources.getString(R.string.switch_to_tab)
+                switchToTabDescription = activity.resources.getString(R.string.switch_to_tab),
+                suggestionsHeader = activity.getString(R.string.tabs)
             )
 
         historyStorageProvider =
-            HistoryStorageSuggestionProvider(
-                components.historyStorage,
-                loadUrlUseCase,
-                components.icons,
-                engineForSpeculativeConnects
+            NiraHistorySuggestionProvider(
+                historyStorage = components.historyStorage,
+                loadUrlUseCase = loadUrlUseCase,
+                icons = components.icons,
+                engine = engineForSpeculativeConnects,
+                suggestionsHeader = activity.getString(R.string.action_history)
             )
 
         bookmarksStorageSuggestionProvider =
@@ -110,18 +112,25 @@ class AwesomeBarView(
                 bookmarksStorage = CustomBookmarksStorage(activity),
                 loadUrlUseCase = loadUrlUseCase,
                 icons = components.icons,
-                engine = engineForSpeculativeConnects
+                engine = engineForSpeculativeConnects,
+                showEditSuggestion = false,
+                suggestionsHeader = activity.getString(R.string.action_bookmarks)
             )
 
         val searchBitmap = getDrawable(activity, R.drawable.ic_ios_search)!!.apply {
             colorFilter = createBlendModeColorFilterCompat(primaryTextColor, SRC_IN)
         }.toBitmap()
 
+        val selectedEngine = components.store.state.search.selectedOrDefaultSearchEngine
+            ?: SearchEngineList(activity).getSelectedEngine(UserPreferences(activity))
+        val suggestionLimit = UserPreferences(activity).searchSuggestionCount.coerceIn(1, 10)
+
         defaultSearchSuggestionProvider =
             SearchSuggestionProvider(
-                store = components.store,
+                searchEngine = selectedEngine,
                 searchUseCase = searchUseCase,
                 fetchClient = components.client,
+                limit = suggestionLimit,
                 mode = SearchSuggestionProvider.Mode.MULTIPLE_SUGGESTIONS,
                 icon = searchBitmap,
                 showDescription = false,
@@ -134,11 +143,10 @@ class AwesomeBarView(
             )
 
         defaultSearchActionProvider =
-            SearchActionProvider(
-                store = components.store,
+            SearchForQueryProvider(
                 searchUseCase = searchUseCase,
                 icon = searchBitmap,
-                showDescription = false
+                titleFor = { query -> activity.getString(R.string.search_for_query, query) }
             )
 
         shortcutsEnginePickerProvider =
@@ -178,16 +186,17 @@ class AwesomeBarView(
         providersToRemove: MutableSet<AwesomeBar.SuggestionProvider>
     ) {
         for (provider in providersToAdd) {
-            if (providersInUse.find { it.id == provider.id } == null) {
+            if (providersInUse.none { it.id == provider.id }) {
                 providersInUse.add(provider)
                 view.addProviders(provider)
             }
         }
 
         for (provider in providersToRemove) {
-            if (providersInUse.find { it.id == provider.id } != null) {
-                providersInUse.remove(provider)
-                view.removeProviders(provider)
+            val existing = providersInUse.filter { it.id == provider.id }
+            if (existing.isNotEmpty()) {
+                providersInUse.removeAll(existing.toSet())
+                view.removeProviders(*existing.toTypedArray())
             }
         }
     }
@@ -204,7 +213,9 @@ class AwesomeBarView(
         }
 
         if (state.showSearchSuggestions) {
-            providersToAdd.addAll(getSelectedSearchSuggestionProvider(context, state))
+            getSelectedSearchSuggestionProvider(context, state).forEach { provider ->
+                providersToAdd.add(provider)
+            }
         }
 
         if (!activity.browsingModeManager.mode.isPrivate) {
@@ -238,14 +249,27 @@ class AwesomeBarView(
         //TODO: Clean this up when switching to search suggestion provider option
         return when (state.searchEngineSource) {
             is SearchEngineSource.Default -> {
-                if(UserPreferences(context).searchSuggestionsEnabled){
+                if (UserPreferences(context).searchSuggestionsEnabled) {
                     listOf(
-                        defaultSearchActionProvider,
-                        defaultSearchSuggestionProvider
+                        HeaderedSuggestionProvider(
+                            defaultSearchActionProvider,
+                            header = "",
+                            priority = 50
+                        ),
+                        HeaderedSuggestionProvider(
+                            defaultSearchSuggestionProvider,
+                            header = context.getString(R.string.search_suggestions),
+                            priority = 40
+                        )
                     )
-                }
-                else{
-                    emptyList()
+                } else {
+                    listOf(
+                        HeaderedSuggestionProvider(
+                            defaultSearchActionProvider,
+                            header = "",
+                            priority = 50
+                        )
+                    )
                 }
             }
             is SearchEngineSource.Shortcut -> getSuggestionProviderForEngine(
@@ -277,25 +301,32 @@ class AwesomeBarView(
             }
 
             listOf(
-                SearchActionProvider(
-                    searchEngine = engine,
-                    store = components.store,
-                    searchUseCase = shortcutSearchUseCase,
-                    icon = searchBitmap
+                HeaderedSuggestionProvider(
+                    SearchForQueryProvider(
+                        searchUseCase = shortcutSearchUseCase,
+                        icon = searchBitmap,
+                        titleFor = { query -> activity.getString(R.string.search_for_query, query) }
+                    ),
+                    header = "",
+                    priority = 50
                 ),
-                SearchSuggestionProvider(
-                    store = components.store,
-                    searchUseCase = shortcutSearchUseCase,
-                    fetchClient = components.client,
-                    limit = 3,
-                    mode = SearchSuggestionProvider.Mode.MULTIPLE_SUGGESTIONS,
-                    icon = searchBitmap,
-                    engine = engineForSpeculativeConnects,
-                    filterExactMatch = true,
-                    private = when (activity.browsingModeManager.mode) {
-                        BrowsingMode.Normal -> false
-                        BrowsingMode.Private -> true
-                    }
+                HeaderedSuggestionProvider(
+                    SearchSuggestionProvider(
+                        searchEngine = engine,
+                        searchUseCase = shortcutSearchUseCase,
+                        fetchClient = components.client,
+                        limit = UserPreferences(activity).searchSuggestionCount.coerceIn(1, 10),
+                        mode = SearchSuggestionProvider.Mode.MULTIPLE_SUGGESTIONS,
+                        icon = searchBitmap,
+                        engine = engineForSpeculativeConnects,
+                        filterExactMatch = true,
+                        private = when (activity.browsingModeManager.mode) {
+                            BrowsingMode.Normal -> false
+                            BrowsingMode.Private -> true
+                        }
+                    ),
+                    header = activity.getString(R.string.search_suggestions),
+                    priority = 40
                 )
             )
         }

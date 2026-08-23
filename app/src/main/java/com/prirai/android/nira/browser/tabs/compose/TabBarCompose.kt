@@ -93,13 +93,12 @@ fun TabBarCompose(
         buildBarItems(order, tabs)
     }
     
-    // Track initial load to prevent animated transitions showing both states
-    var isInitialLoad by remember { mutableStateOf(true) }
-    LaunchedEffect(order) {
-        if (order != null && isInitialLoad) {
-            // Small delay to ensure order is fully processed
-            kotlinx.coroutines.delay(50)
-            isInitialLoad = false
+    val uniqueItems = remember(items) {
+        items.distinctBy { item ->
+            when (item) {
+                is BarItem.SingleTab -> "tab-${item.id}"
+                is BarItem.Group -> "group-${item.id}"
+            }
         }
     }
 
@@ -204,7 +203,15 @@ fun TabBarCompose(
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
-                itemsIndexed(items, key = { _, item -> item.id }) { index, item ->
+                itemsIndexed(
+                    uniqueItems,
+                    key = { _, item ->
+                        when (item) {
+                            is BarItem.SingleTab -> "tab-${item.id}"
+                            is BarItem.Group -> "group-${item.id}"
+                        }
+                    }
+                ) { index, item ->
                     when (item) {
                         is BarItem.SingleTab -> {
                             var offsetY by remember { mutableStateOf(0f) }
@@ -212,7 +219,6 @@ fun TabBarCompose(
 
                             Box(
                                 modifier = Modifier
-                                    .then(if (!isInitialLoad) Modifier.animateItem() else Modifier)
                                     .draggableItem(
                                         itemType = DraggableItemType.Tab(item.tab.id),
                                         coordinator = coordinator
@@ -302,7 +308,6 @@ fun TabBarCompose(
 
                             Box(
                                 modifier = Modifier
-                                    .then(if (!isInitialLoad) Modifier.animateItem() else Modifier)
                                     .draggableItem(
                                         itemType = DraggableItemType.Group(item.groupId),
                                         coordinator = coordinator
@@ -393,12 +398,11 @@ fun TabBarCompose(
                     }
 
                     // Add invisible divider after each item for drag-and-drop (except the last one)
-                    if (index < items.size - 1) {
+                    if (index < uniqueItems.size - 1) {
                         TabDivider(
                             id = "divider_${index + 1}",
                             coordinator = coordinator,
-                            position = index + 1,
-                            modifier = if (!isInitialLoad) Modifier.animateItem() else Modifier
+                            position = index + 1
                         )
                     }
                 }
