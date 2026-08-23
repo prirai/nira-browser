@@ -3,10 +3,12 @@ package com.prirai.android.nira.browser.profile
 import android.content.Context
 import android.content.SharedPreferences
 import androidx.core.content.edit
+import com.prirai.android.nira.browser.SearchEnginePreferences
 import com.prirai.android.nira.ext.components
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.Types
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
+import kotlinx.coroutines.launch
 
 /**
  * Manages browser profiles - creation, deletion, and persistence
@@ -71,6 +73,9 @@ class ProfileManager(private val context: Context) {
      */
     fun setActiveProfile(profile: BrowserProfile) {
         prefs.edit { putString(KEY_ACTIVE_PROFILE_ID, profile.id)}
+        kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+            SearchEnginePreferences.apply(context, private = false)
+        }
     }
     
     /**

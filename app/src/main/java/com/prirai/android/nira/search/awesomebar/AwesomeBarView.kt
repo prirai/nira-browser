@@ -121,8 +121,9 @@ class AwesomeBarView(
             colorFilter = createBlendModeColorFilterCompat(primaryTextColor, SRC_IN)
         }.toBitmap()
 
-        val selectedEngine = components.store.state.search.selectedOrDefaultSearchEngine
-            ?: SearchEngineList(activity).getSelectedEngine(UserPreferences(activity))
+        val selectedEngine = components.store.state.search.selectedOrDefaultSearchEngine(
+            activity.browsingModeManager.mode.isPrivate
+        ) ?: SearchEngineList(activity).getSelectedEngine(UserPreferences(activity))
         val suggestionLimit = UserPreferences(activity).searchSuggestionCount.coerceIn(1, 10)
 
         defaultSearchSuggestionProvider =
