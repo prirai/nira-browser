@@ -2,11 +2,13 @@ package com.prirai.android.nira.addons
 
 import android.content.Context
 import android.content.Intent
+import android.graphics.Bitmap
 import android.graphics.Color
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -38,31 +40,30 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import coil.compose.AsyncImage
-import coil.request.ImageRequest
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import com.prirai.android.nira.R
 import com.prirai.android.nira.ext.components
 import com.prirai.android.nira.preferences.UserPreferences
 import com.prirai.android.nira.theme.ThemeManager
 import com.prirai.android.nira.ui.theme.NiraTheme
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import mozilla.components.browser.state.selector.selectedTab
 import mozilla.components.feature.addons.Addon
 import mozilla.components.feature.addons.ui.translateName
-import androidx.compose.ui.res.stringResource
+import mozilla.components.lib.state.ext.observeAsComposableState
 
 private fun Context.getColorFromAttr(attr: Int): Int {
     val typedValue = android.util.TypedValue()
@@ -72,19 +73,12 @@ private fun Context.getColorFromAttr(attr: Int): Int {
 
 class ExtensionsBottomSheetFragment : BottomSheetDialogFragment() {
 
-    private var installedAddons: List<Addon> = emptyList()
-
     companion object {
         const val TAG = "ExtensionsBottomSheet"
-        private var cachedAddons: List<Addon>? = null
-        private var lastCacheTime: Long = 0
-        private const val CACHE_DURATION = 5000L // 5 seconds
-        
+
         fun newInstance() = ExtensionsBottomSheetFragment()
-        
-        fun clearCache() {
-            cachedAddons = null
-        }
+
+        fun clearCache() = Unit
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -101,35 +95,13 @@ class ExtensionsBottomSheetFragment : BottomSheetDialogFragment() {
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
             setContent {
                 val context = androidx.compose.ui.platform.LocalContext.current
-                val addons = remember { mutableStateOf<List<Addon>>(emptyList()) }
-                val isLoading = remember { mutableStateOf(cachedAddons == null) }
-
-                LaunchedEffect(Unit) {
-                    val currentTime = System.currentTimeMillis()
-                    
-                    // Use cache if available and not expired
-                    if (cachedAddons != null && (currentTime - lastCacheTime) < CACHE_DURATION) {
-                        addons.value = cachedAddons!!
-                        installedAddons = cachedAddons!!
-                        isLoading.value = false
-                    } else {
-                        withContext(Dispatchers.IO) {
-                            try {
-                                // Get all addons (this loads icons properly)
-                                val allAddons = context.components.addonManager.getAddons()
-                                // Filter for installed and enabled ones
-                                installedAddons = allAddons.filter { it.isInstalled() && it.isEnabled() }
-                                addons.value = installedAddons
-                                // Update cache
-                                cachedAddons = installedAddons
-                                lastCacheTime = currentTime
-                            } catch (e: Exception) {
-                                addons.value = emptyList()
-                            } finally {
-                                isLoading.value = false
-                            }
-                        }
-                    }
+                val store = context.components.store
+                val extensions by store.observeAsComposableState { it.extensions }
+                val selectedTab by store.observeAsComposableState { it.selectedTab }
+                val addons = remember(extensions, selectedTab) {
+                    (extensions ?: emptyMap()).installedUserAddons(
+                        privateBrowsing = selectedTab?.content?.private == true,
+                    )
                 }
 
                 val prefs = UserPreferences(context)
@@ -139,8 +111,8 @@ class ExtensionsBottomSheetFragment : BottomSheetDialogFragment() {
                     dynamicColor = prefs.dynamicColors
                 ) {
                     ExtensionsBottomSheetContent(
-                        addons = addons.value,
-                        isLoading = isLoading.value,
+                        addons = addons,
+                        isLoading = false,
                         onAddonClick = { addon ->
                             handleAddonClick(context, addon)
                         },
@@ -340,20 +312,27 @@ fun ExtensionsBottomSheetContent(
     }
 }
 
+private const val EXTENSION_ICON_SIZE = 48
+
 @Composable
 fun ExtensionItem(
     addon: Addon,
     onClick: () -> Unit
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
-    val prefs = UserPreferences(context)
-    
-    // Get currently pinned extensions
-    val pinnedExtensions = remember { 
-        mutableStateOf(prefs.barAddonsList.split(",").filter { it.isNotEmpty() }.toSet())
+    var icon by remember(addon.id) { mutableStateOf<Bitmap?>(null) }
+
+    LaunchedEffect(addon.id) {
+        val store = context.components.store
+        val extension = store.state.extensions[addon.id] ?: return@LaunchedEffect
+        val tabActionState = store.state.selectedTab?.extensionState?.get(addon.id)
+        val action = extension.browserAction?.copyWithOverride(tabActionState?.browserAction)
+            ?: extension.pageAction?.copyWithOverride(tabActionState?.pageAction)
+        icon = action?.loadIcon?.invoke(EXTENSION_ICON_SIZE)
+            ?: addon.installedState?.icon
+            ?: addon.icon
     }
-    val isPinned = pinnedExtensions.value.contains(addon.id)
-    
+
     Surface(
         modifier = Modifier
             .fillMaxWidth()
@@ -366,53 +345,32 @@ fun ExtensionItem(
                 .padding(horizontal = 16.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Extension icon
             Surface(
                 modifier = Modifier
                     .size(48.dp)
                     .clip(RoundedCornerShape(12.dp)),
                 color = MaterialTheme.colorScheme.surfaceVariant
             ) {
-                val iconToUse = addon.installedState?.icon ?: addon.icon
-                val iconUrlToUse = if (addon.installedState != null) "" else addon.iconUrl
-                
-                when {
-                    iconToUse != null -> {
-                        AsyncImage(
-                            model = ImageRequest.Builder(context)
-                                .data(iconToUse)
-                                .crossfade(true)
-                                .build(),
+                val bitmap = icon
+                if (bitmap != null) {
+                    Image(
+                        bitmap = bitmap.asImageBitmap(),
+                        contentDescription = null,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(8.dp)
+                    )
+                } else {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Extension,
                             contentDescription = null,
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(8.dp)
+                            modifier = Modifier.size(28.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
-                    }
-                    iconUrlToUse.isNotEmpty() -> {
-                        AsyncImage(
-                            model = ImageRequest.Builder(context)
-                                .data(iconUrlToUse)
-                                .crossfade(true)
-                                .build(),
-                            contentDescription = null,
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(8.dp)
-                        )
-                    }
-                    else -> {
-                        Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Extension,
-                                contentDescription = null,
-                                modifier = Modifier.size(28.dp),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
                     }
                 }
             }
@@ -439,47 +397,6 @@ fun ExtensionItem(
                         maxLines = 1
                     )
                 }
-            }
-            
-            // Pin/Unpin button
-            androidx.compose.material3.IconButton(
-                onClick = {
-                    val currentPinned = prefs.barAddonsList.split(",").filter { it.isNotEmpty() }.toMutableSet()
-                    if (isPinned) {
-                        // Unpin
-                        currentPinned.remove(addon.id)
-                    } else {
-                        // Pin
-                        currentPinned.add(addon.id)
-                    }
-                    prefs.barAddonsList = currentPinned.joinToString(",")
-                    pinnedExtensions.value = currentPinned
-                    
-                    // Show toast notification
-                    android.widget.Toast.makeText(
-                        context,
-                        context.getString(R.string.app_restart),
-                        android.widget.Toast.LENGTH_LONG
-                    ).show()
-                },
-                modifier = Modifier.size(40.dp)
-            ) {
-                Icon(
-                    painter = painterResource(
-                        id = if (isPinned) {
-                            R.drawable.ic_pin_filled
-                        } else {
-                            R.drawable.ic_pin_outline
-                        }
-                    ),
-                    contentDescription = if (isPinned) "Unpin extension" else "Pin extension",
-                    tint = if (isPinned) {
-                        MaterialTheme.colorScheme.primary
-                    } else {
-                        MaterialTheme.colorScheme.onSurfaceVariant
-                    },
-                    modifier = Modifier.size(24.dp)
-                )
             }
 
             Spacer(modifier = Modifier.width(8.dp))
