@@ -104,6 +104,10 @@
         translatable="false"
     >search_suggestion_count</string>
   <string name="key_safe_browsing" translatable="false">safe_browsing</string>
+  <string name="key_https_only" translatable="false">https_only_mode</string>
+  <string name="key_doh" translatable="false">doh_mode</string>
+  <string name="key_doh_provider" translatable="false">doh_provider_url</string>
+  <string name="key_global_privacy_control" translatable="false">global_privacy_control</string>
   <string
         name="key_shortcuts_visible"
         translatable="false"
@@ -415,6 +419,30 @@
 
   <string name="safe_browsing">Safe browsing</string>
   <string name="tracking_protection">Tracking protection</string>
+  <string name="https_only_title">HTTPS-Only Mode</string>
+  <string name="https_only_summary">Upgrade connections to HTTPS and block insecure HTTP</string>
+  <string name="https_only_off">Off</string>
+  <string name="https_only_private">Private tabs only</string>
+  <string name="https_only_all">Enabled in all tabs</string>
+  <string name="doh_title">DNS over HTTPS</string>
+  <string name="doh_summary">Encrypt DNS lookups so your ISP cannot see which sites you visit</string>
+  <string name="doh_default">Default</string>
+  <string name="doh_default_summary">Use the system DNS resolver</string>
+  <string name="doh_increased">Increased</string>
+  <string name="doh_increased_summary">Use DoH when possible, fall back to system DNS</string>
+  <string name="doh_max">Max Protection</string>
+  <string name="doh_max_summary">Only use DoH. Sites may fail if the resolver is unreachable</string>
+  <string name="doh_off">Off</string>
+  <string name="doh_off_summary">Never use DoH</string>
+  <string name="doh_provider_title">DoH provider</string>
+  <string name="doh_provider_cloudflare">Cloudflare</string>
+  <string name="doh_provider_nextdns">NextDNS</string>
+  <string name="doh_provider_custom">Custom</string>
+  <string name="doh_provider_custom_hint">https://dns.example/dns-query</string>
+  <string name="doh_provider_custom_error">Enter a valid HTTPS URL</string>
+  <string name="gpc_title">Global Privacy Control</string>
+  <string name="gpc_summary">Tell websites not to sell or share your data</string>
+  <string name="security_connections">Connections</string>
 
     <string name="show_shortcuts">Show shortcuts</string>
 

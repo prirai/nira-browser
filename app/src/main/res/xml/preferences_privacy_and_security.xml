@@ -57,6 +57,30 @@
 
     </PreferenceCategory>
 
+    <PreferenceCategory android:title="@string/security_connections">
+
+        <Preference
+            app:key="@string/key_https_only"
+            app:title="@string/https_only_title"
+            app:summary="@string/https_only_summary" />
+
+        <Preference
+            app:key="@string/key_doh"
+            app:title="@string/doh_title"
+            app:summary="@string/doh_summary" />
+
+        <Preference
+            app:key="@string/key_doh_provider"
+            app:title="@string/doh_provider_title" />
+
+        <com.prirai.android.nira.settings.MaterialSwitchPreference
+            app:key="@string/key_global_privacy_control"
+            app:title="@string/gpc_title"
+            app:summary="@string/gpc_summary"
+            app:defaultValue="true" />
+
+    </PreferenceCategory>
+
     <PreferenceCategory android:title="Clear Browsing Data">
 
         <Preference

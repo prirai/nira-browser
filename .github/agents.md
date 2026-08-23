@@ -8,8 +8,9 @@ This document provides guidance for AI assistants and LLM models working on the 
 
 - **License**: Mozilla Public License 2.0 (MPL-2.0)
 - **Language**: Kotlin (Android)
-- **Minimum SDK**: 24 (Android 7.0)
-- **Target SDK**: 34 (Android 14)
+- **Minimum SDK**: 27 (Android 8.1)
+- **Target SDK**: 37
+- **Mozilla Components**: 153.0 (`mozComponentsVersion` in `app/build.gradle`)
 - **Architecture**: MVVM with Android Components and Jetpack Compose
 
 ## Related Mozilla Projects
@@ -49,8 +50,9 @@ nira-browser/
 │   │   │   ├── UnifiedTabGroupManager.kt    # Group management
 │   │   │   ├── TabGroup.kt                   # Database entities
 │   │   │   └── TabGroupDatabase.kt           # Room database
-│   │   ├── profiles/        # Multi-profile system
+│   │   ├── profile/         # Multi-profile system (ProfileManager, BrowserProfile)
 │   │   └── ...
+│   ├── search/              # Address-bar search dialog + AwesomeBar
 │   ├── components/          # UI components
 │   │   ├── toolbar/         # Browser toolbar (modern/classic)
 │   │   │   └── modern/      # Modern Compose toolbar (PRIMARY)
@@ -88,9 +90,30 @@ nira-browser/
   - `browser/tabs/modern/` - Old tab management system
 
 ### Multi-Profile System
-- `browser/profiles/ProfileManager.kt` - Profile CRUD
-- `browser/profiles/Profile.kt` - Database entities
+- `browser/profile/ProfileManager.kt` - Profile CRUD
+- `browser/profile/BrowserProfile.kt` - Profile model (`id = "default"` for the built-in profile)
 - `components/toolbar/modern/ComposeTabBarWithProfileSwitcher.kt` - Profile UI
+
+### Search (address bar vs unified search)
+These are **two different UIs**. Do not merge them unless asked.
+
+| UI | Entry | Role |
+|----|--------|------|
+| Address-bar search | `search/SearchDialogFragment.kt` | URL / search-engine suggestions while typing in the toolbar |
+| Unified search | `browser/tabs/TabSearchFragment.kt` + `TabSearchAdapter.kt` | Grouped cards for tabs / bookmarks / history (profile + date chips) |
+
+Address-bar stack:
+- `BrowserActivity.load()` / `openToBrowserAndLoad()` — URL vs search decision
+- `search/SearchDialogController.kt` — commit / suggestion tap
+- `search/SearchFragmentStore.kt` — selected engine for the dialog
+- `search/awesomebar/AwesomeBarView.kt` — provider wiring
+- `search/awesomebar/AwesomeBarWrapper.kt` — Compose host; **must invoke** click / remove callbacks
+- `search/awesomebar/NiraAwesomeBar.kt` — grouped rounded-card list (title only, no edit arrow)
+- `search/awesomebar/SearchForQueryProvider.kt` — standalone `Search for "query"` row
+- `search/awesomebar/NiraHistorySuggestionProvider.kt` — history rows + favicons
+- `browser/SearchEngineList.kt` — Nira's default engines and `{searchTerms}` templates
+
+History page (separate from suggestions): `history/HistoryActivity.kt` + `HistoryItemRecyclerViewAdapter.kt`. Use `FaviconLoader.loadFavicon()`, not cache-only.
 
 ### Progressive Web Apps (PWAs)
 - `webapp/WebAppManager.kt` - PWA management
@@ -127,9 +150,19 @@ nira-browser/
 - Look for color/theme issues in `theme/ColorConstants.kt`
 
 ### Profile-Related Issues
-- `browser/profiles/ProfileManager.kt` - Profile management
+- `browser/profile/ProfileManager.kt` - Profile management
 - `components/toolbar/modern/` - Profile switching UI
 - Check for contextId filtering in tab/group queries
+
+### Search / "everything became a URL"
+1. `BrowserActivity.load()`: if `engine == null`, input is treated as a URL (`toNormalizedUrl()`). Always resolve an engine first (`store.selectedOrDefaultSearchEngine` or `SearchEngineList.getSelectedEngine()`).
+2. `String.isUrl()` is Mozilla's **lenient** `URLStringUtils.isURLLike` (no spaces + `.` / `:` / `://` counts as a URL). Do not replace it unless asked.
+3. `SearchMiddleware` + `RegionMiddleware` load bundled engines **asynchronously**. `selectedOrDefaultSearchEngine` is often null on first search. Seed from `UserPreferences` / `SearchEngineList`.
+4. `setupSearchEngines()` is deferred with `view.post` — do not assume engines are selected at Activity `onCreate`.
+5. Engine `suggestUrl` must be a real OpenSearch template containing `{searchTerms}` (e.g. Google `complete/search?client=firefox&q={searchTerms}`). Homepage URLs produce zero suggestions.
+6. `SearchSuggestionProvider` with `filterExactMatch = true` excludes the typed query. The typed query belongs in `SearchForQueryProvider` (`Search for "%s"`), **above** the suggestions group, not inside it.
+7. Address-bar history/tab grouping by profile or date is **slow** (`getDetailedVisits`). Keep that only in unified search (`TabSearchFragment`).
+8. History X-delete: `historyStorage.deleteVisitsFor(url)` using `suggestion.description` (URL). Hide the row via `hiddenSuggestions`.
 
 ### PWA Issues
 - `webapp/WebAppManager.kt` - Installation, uninstallation
@@ -208,6 +241,14 @@ suspend fun getData() = withContext(Dispatchers.IO) {
 - Prefer Compose for new features
 - `modern/` packages indicate Compose implementations
 - Legacy code often in root package or `modern/` may indicate old implementation
+- **Never toggle `Modifier.animateItem()` after first composition** (e.g. after a delay). That crashes with `ArrayIndexOutOfBoundsException` in `LazyLayoutItemAnimator`. Keep the modifier stable or omit it.
+- Lazy list keys must be unique across types: prefix `"tab-"` / `"group-"` / section id. Duplicate `item.id` values crash the same animator.
+- `NiraTheme` must **not** cast `view.context as Activity`. Search dialogs wrap context in `ContextThemeWrapper`. Unwrap with a `ContextWrapper` loop (`findActivity()`).
+- `AwesomeBarWrapper` used to pass empty `{ }` click lambdas — Compose AwesomeBar does not call `Suggestion.onSuggestionClicked` unless the wrapper does.
+
+### Favicons
+- Suggestions / history page: `FaviconLoader.loadFavicon(context, url)` (memory → disk → `BrowserIcons`).
+- `FaviconCache.loadFavicon()` is cache-only and will miss most history icons.
 
 ## Testing
 
@@ -274,13 +315,16 @@ Ask the user for guidance when:
 - `UnifiedTabGroupManager.kt` - Single source of truth for groups
 - `TabViewModel.kt` - Tab UI state management
 - `TabOrderManager.kt` - Tab/group ordering persistence
-- `ProfileManager.kt` - Profile lifecycle management
+- `ProfileManager.kt` - Profile lifecycle management (`browser/profile/`)
 - `WebAppManager.kt` - PWA lifecycle management
 - `ColorConstants.kt` - Color definitions and conversions
+- `BrowserActivity.load()` - URL vs search; never treat missing engine as URL
+- `SearchEngineList.kt` - Default engines + suggest URL templates
+- `AwesomeBarWrapper.kt` / `NiraAwesomeBar.kt` - Address-bar suggestion UI
 
 ### Data Models
 - `TabGroup.kt` - Room entity for groups
-- `Profile.kt` - Room entity for profiles
+- `BrowserProfile.kt` - Profile model (`browser/profile/`)
 - `InstalledWebApp.kt` - Room entity for PWAs
 - `UnifiedTabOrder.kt` - DataStore model for tab order
 
@@ -312,6 +356,6 @@ Common Mozilla components used:
 
 ---
 
-**Last Updated**: March 2026
+**Last Updated**: August 2026
 
 For questions or updates to this guide, please open an issue or discussion on GitHub.

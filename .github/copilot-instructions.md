@@ -47,6 +47,9 @@ Database (Room) + DataStore
 | `Components.kt` | Manual DI container — initializes all managers |
 | `ColorConstants.kt` | Color palette definitions and string→Int conversion |
 | `BrowserFragment.kt` | Main browser screen entry point |
+| `BrowserActivity.load()` | URL vs search. `engine == null` must **not** fall through to `toNormalizedUrl()` |
+| `SearchEngineList.kt` | Nira default engines; `suggestUrl` must include `{searchTerms}` |
+| `AwesomeBarWrapper.kt` / `NiraAwesomeBar.kt` | Address-bar suggestion UI; wrapper must invoke click/remove callbacks |
 
 ### Package layout
 
@@ -56,12 +59,14 @@ app/src/main/java/com/prirai/android/nira/
 │   ├── tabs/compose/      ← PRIMARY tab UI (Compose)
 │   ├── tabs/modern/       ← LEGACY tab system (avoid modifying)
 │   ├── tabgroups/         ← Group CRUD + Room DB
-│   └── profiles/          ← Multi-profile system
+│   └── profile/           ← Multi-profile (ProfileManager, BrowserProfile)
+├── search/                ← Address-bar search dialog + AwesomeBar
 ├── components/
 │   └── toolbar/modern/    ← PRIMARY toolbar (Compose)
 ├── settings/              ← Settings screens
 ├── webapp/                ← PWA support
-├── theme/                 ← Material 3 + color constants
+├── history/               ← Full history page (not the AwesomeBar)
+├── theme/                 ← Material 3 + color constants (`ui/theme/Theme.kt` = NiraTheme)
 ├── addons/                ← WebExtension support
 └── ext/                   ← Kotlin extension functions
 ```
@@ -116,10 +121,26 @@ Every data entity (tab, group, PWA) is scoped to a `contextId`:
 
 Always filter queries by `contextId`. The default profile must accept both `null` and `"profile_default"` for backward compatibility.
 
+### Search vs URL
+- Address-bar search (`SearchDialogFragment`) ≠ unified search (`TabSearchFragment`). Different UIs.
+- `String.isUrl()` is Mozilla's **lenient** `isURLLike` (spaces absent + `.` / `:` / `://` ⇒ URL).
+- `SearchMiddleware` loads engines asynchronously. `selectedOrDefaultSearchEngine` is often null at first type. Fall back to `SearchEngineList.getSelectedEngine(UserPreferences)`.
+- `setupSearchEngines()` is deferred (`view.post`). Do not assume a selected engine in `onCreate`.
+- Typed query belongs in `SearchForQueryProvider` (`Search for "term"`), **not** inside the suggestions group. `SearchSuggestionProvider(filterExactMatch = true)` already excludes the exact query.
+- Do **not** group address-bar history/tabs by profile or date — `getDetailedVisits` is too slow. That grouping lives only in unified search.
+- History delete from suggestions: `historyStorage.deleteVisitsFor(url)` using `suggestion.description`.
+
 ### UI: Compose vs Views
 - `modern/` subdirectories → Compose implementations (prefer these)
 - Legacy XML Views exist in some places — migrate to Compose for new work
 - `TabSheetStateManager` is a singleton `object` that signals tab sheet dismissal events to the tab bar via a `StateFlow<Long>` timestamp; call `notifyTabSheetDismissed()` after closing the sheet
+- Never toggle `Modifier.animateItem()` after first composition. Causes `ArrayIndexOutOfBoundsException` in `LazyLayoutItemAnimator`.
+- Lazy keys must be unique across item types (`"tab-$id"` vs `"group-$id"`).
+- `NiraTheme` must unwrap `ContextThemeWrapper` to find the Activity. `view.context as Activity` crashes in the search dialog.
+- `AwesomeBarWrapper` must call `suggestion.onSuggestionClicked` / remove listeners itself.
+
+### Favicons
+- Use `FaviconLoader.loadFavicon(context, url)` (cache + BrowserIcons). `FaviconCache.loadFavicon()` is cache-only and misses most history icons.
 
 ### Database schema changes
 Room migrations are required for any schema change. Ask before modifying entity classes.
@@ -141,4 +162,4 @@ For GeckoView and Mozilla Android Components questions, refer to:
 - [Reference Browser](https://github.com/mozilla-mobile/reference-browser) — simpler implementation examples
 - [GeckoView Docs](https://mozilla.github.io/geckoview/)
 
-Current Mozilla Components version: **148.0** (defined in `build.gradle`).
+Current Mozilla Components version: **153.0** (`mozComponentsVersion` in `app/build.gradle`). After AC bumps, re-check `SearchEngine` constructors, `SearchSuggestionProvider` headers, and `compose-awesomebar` click APIs — they change between 148 and 153.
