@@ -74,7 +74,8 @@ data class SearchFragmentState(
     val showBookmarkSuggestions: Boolean,
     val showSyncedTabsSuggestions: Boolean,
     val tabId: String?,
-    val pastedText: String? = null
+    val pastedText: String? = null,
+    val isPrivate: Boolean = false,
 ) : State
 
 fun createInitialSearchFragmentState(
@@ -85,7 +86,8 @@ fun createInitialSearchFragmentState(
 ): SearchFragmentState {
     val tab = tabId?.let { components.store.state.findTab(it) }
     val url = tab?.content?.url.orEmpty()
-    val defaultEngine = components.store.state.search.selectedOrDefaultSearchEngine
+    val isPrivate = tab?.content?.private == true
+    val defaultEngine = components.store.state.search.selectedOrDefaultSearchEngine(isPrivate)
         ?: context?.let {
             try {
                 SearchEngineList(it).getSelectedEngine(UserPreferences(it))
@@ -113,7 +115,8 @@ fun createInitialSearchFragmentState(
         showBookmarkSuggestions = true,
         showSyncedTabsSuggestions = true,
         tabId = tabId,
-        pastedText = pastedText
+        pastedText = pastedText,
+        isPrivate = isPrivate,
     )
 }
 
@@ -152,7 +155,7 @@ private fun searchStateReducer(state: SearchFragmentState, action: SearchFragmen
         is SearchFragmentAction.SetShowSearchSuggestions ->
             state.copy(showSearchSuggestions = action.show)
         is SearchFragmentAction.UpdateSearchState -> {
-            val resolvedEngine = action.search.selectedOrDefaultSearchEngine ?: state.defaultEngine
+            val resolvedEngine = action.search.selectedOrDefaultSearchEngine(state.isPrivate) ?: state.defaultEngine
             state.copy(
                 defaultEngine = resolvedEngine,
                 areShortcutsAvailable = action.search.searchEngines.size > 1,

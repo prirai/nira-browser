@@ -12,6 +12,13 @@
             app:icon="@drawable/ic_search"
             app:singleLineTitle="false"/>
 
+        <Preference
+            app:key="@string/key_private_search_engine"
+            app:title="@string/private_search_engine"
+            app:summary="@string/private_search_engine_summary"
+            app:icon="@drawable/ic_incognito"
+            app:singleLineTitle="false"/>
+
         <com.prirai.android.nira.settings.MaterialSwitchPreference
             app:key="@string/key_search_suggestions_enabled"
             app:title="@string/search_suggestions"
