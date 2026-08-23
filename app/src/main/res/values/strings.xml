@@ -825,6 +825,8 @@
   <!-- Web App Installation Profile Selection -->
   <string name="select_profile">Select Profile</string>
   <string name="profile">Profile</string>
+  <string name="addon_enabled_for_profiles">Enabled for profiles</string>
+  <string name="addon_enabled_for_all_profiles">All profiles</string>
   <string
         name="install_web_app_profile_selection"
     >Select Profile for Web App</string>
