@@ -74,6 +74,7 @@ class ProfileManager(private val context: Context) {
     fun setActiveProfile(profile: BrowserProfile) {
         prefs.edit { putString(KEY_ACTIVE_PROFILE_ID, profile.id)}
         kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+            ProfileAddonPolicy.applyForProfile(context, profile.id)
             SearchEnginePreferences.apply(context, private = false)
         }
     }
