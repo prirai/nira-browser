@@ -326,6 +326,7 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
             flow.mapNotNull { state -> state.selectedTabId }
                 .distinctUntilChanged()
                 .collect { tabId: String ->
+                    if (!isAdded) return@collect
                     val tab = components.store.state.tabs.find { it.id == tabId }
                     tab?.let {
                         updateContentVisibility(it.content.url)
@@ -340,6 +341,7 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
             }
             .distinctUntilChangedBy { it.content.url }
             .collect { tab ->
+                if (!isAdded) return@collect
                 updateContentVisibility(tab.content.url)
             }
         }
@@ -1259,20 +1261,21 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
      * Shows homepage ComposeView for "about:homepage", otherwise shows engineView
      */
     private fun updateContentVisibility(url: String) {
-        val isHomepage = url == "about:homepage" || url.isEmpty()
-        
+        val binding = bindingOrNull ?: return
+        val isHomepage = url == "about:homepage"
+
         val homePageView = binding.root.findViewById<androidx.compose.ui.platform.ComposeView>(
             R.id.homePageComposeView
         )
-        
-        if (isHomepage) {
-            binding.swipeRefresh.visibility = View.GONE
-            binding.engineView.asView().visibility = View.GONE
-            homePageView?.visibility = View.VISIBLE
-        } else {
-            homePageView?.visibility = View.GONE
-            binding.swipeRefresh.visibility = View.VISIBLE
-            binding.engineView.asView().visibility = View.VISIBLE
+
+        // Keep EngineView attached. GONE detaches Gecko's surface and later selectTab
+        // can leave the last frame stuck (AC#6664 / bug 1630775). Homepage sits on top.
+        binding.swipeRefresh.visibility = View.VISIBLE
+        binding.engineView.asView().visibility = View.VISIBLE
+        homePageView?.apply {
+            visibility = if (isHomepage) View.VISIBLE else View.GONE
+            isClickable = isHomepage
+            isFocusable = isHomepage
         }
     }
 }
