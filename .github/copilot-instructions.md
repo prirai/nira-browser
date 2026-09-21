@@ -162,4 +162,4 @@ For GeckoView and Mozilla Android Components questions, refer to:
 - [Reference Browser](https://github.com/mozilla-mobile/reference-browser) — simpler implementation examples
 - [GeckoView Docs](https://mozilla.github.io/geckoview/)
 
-Current Mozilla Components version: **153.0** (`mozComponentsVersion` in `app/build.gradle`). After AC bumps, re-check `SearchEngine` constructors, `SearchSuggestionProvider` headers, and `compose-awesomebar` click APIs — they change between 148 and 153.
+Current Mozilla Components version: **153.0** (`components` version in `gradle/libs.versions.toml`). After AC bumps, re-check `SearchEngine` constructors, `SearchSuggestionProvider` headers, and `compose-awesomebar` click APIs — they change between 148 and 153.
