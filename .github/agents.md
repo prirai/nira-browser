@@ -10,7 +10,7 @@ This document provides guidance for AI assistants and LLM models working on the 
 - **Language**: Kotlin (Android)
 - **Minimum SDK**: 27 (Android 8.1)
 - **Target SDK**: 37
-- **Mozilla Components**: 153.0 (`mozComponentsVersion` in `app/build.gradle`)
+- **Mozilla Components**: 153.0 (`components` version in `gradle/libs.versions.toml`)
 - **Architecture**: MVVM with Android Components and Jetpack Compose
 
 ## Related Mozilla Projects
