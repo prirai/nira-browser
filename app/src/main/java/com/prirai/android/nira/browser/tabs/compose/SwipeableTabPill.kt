@@ -78,14 +78,11 @@ fun SwipeableTabPill(
     modifier: Modifier = Modifier,
     swipeThreshold: Float = 40f
 ) {
-    var offsetY by remember { mutableStateOf(0f) }
-    var isDeleted by remember { mutableStateOf(false) }
+    // Reset offset when the tab id changes so the state does not leak between
+    // adjacent slots when Compose reuses this call site for a different tab
+    // (e.g. after a neighbouring pill is closed).
+    var offsetY by remember(tab.id) { mutableStateOf(0f) }
     val maxOffset = 80f
-
-    // If deleted, don't render anything
-    if (isDeleted) {
-        return
-    }
 
     Box(
         modifier = modifier
@@ -157,8 +154,11 @@ fun SwipeableTabPill(
                         if (totalVerticalDrag > totalHorizontalDrag && totalVerticalDrag > 10f) {
                             when {
                                 offsetY < -swipeThreshold -> {
-                                    // Swipe up - close tab
-                                    isDeleted = true
+                                    // Swipe up - close tab. Do NOT hide the pill locally;
+                                    // the tab list flowing down from the store will remove
+                                    // it on the next recomposition. Hiding it locally used
+                                    // to leak state to the adjacent pill when Compose
+                                    // reused the slot.
                                     onTabClose()
                                 }
 
