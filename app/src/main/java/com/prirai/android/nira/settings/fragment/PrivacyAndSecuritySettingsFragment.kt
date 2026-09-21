@@ -54,6 +54,38 @@ class PrivacyAndSecuritySettingsFragment : BaseSettingsFragment() {
 
         setupETP()
         setupConnectionPrivacy()
+        setupSleepingTabs()
+    }
+
+    private fun setupSleepingTabs() {
+        val prefs = UserPreferences(requireContext())
+        clickablePreference(
+            preference = resources.getString(R.string.key_sleeping_tabs),
+            summary = sleepingTabsSummary(prefs.sleepingTabsMode),
+            onClick = { showSleepingTabsPicker(prefs) }
+        )
+    }
+
+    private fun showSleepingTabsPicker(prefs: UserPreferences) {
+        val items = resources.getStringArray(R.array.sleeping_tabs_mode_names)
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle(R.string.sleeping_tabs_title)
+            .setSingleChoiceItems(items, prefs.sleepingTabsMode) { dialog, which ->
+                prefs.sleepingTabsMode = which
+                requireContext().components.sleepingTabsManager
+                    .onPreferencesChanged(requireContext().components.store)
+                findPreference<Preference>(resources.getString(R.string.key_sleeping_tabs))
+                    ?.summary = sleepingTabsSummary(which)
+                dialog.dismiss()
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
+    }
+
+    private fun sleepingTabsSummary(mode: Int): String = when (mode) {
+        UserPreferences.SLEEPING_TABS_OFF -> getString(R.string.sleeping_tabs_off_summary)
+        UserPreferences.SLEEPING_TABS_AGGRESSIVE -> getString(R.string.sleeping_tabs_aggressive_summary)
+        else -> getString(R.string.sleeping_tabs_balanced_summary)
     }
 
     private fun setupConnectionPrivacy() {

@@ -348,7 +348,15 @@ open class Components(private val applicationContext: Context) {
                 Utils().isTablet(applicationContext)
             }
             dispatch(DefaultDesktopModeAction.DesktopModeUpdated(desktopDefault))
+
+            // Start the sleeping-tabs manager. It observes tab selection and
+            // periodically suspends idle non-selected tabs.
+            sleepingTabsManager.start(this)
         }
+    }
+
+    val sleepingTabsManager by lazy {
+        com.prirai.android.nira.browser.tabs.sleep.SleepingTabsManager.getInstance(applicationContext)
     }
 
     val sessionUseCases by lazy { SessionUseCases(store) }

@@ -231,6 +231,7 @@ class BrowserApp : Application() {
         runOnlyInMainProcess {
             components.icons.onTrimMemory(level)
             components.store.dispatch(SystemAction.LowMemoryAction(level))
+            components.sleepingTabsManager.onTrimMemory(components.store, level)
         }
     }
 }

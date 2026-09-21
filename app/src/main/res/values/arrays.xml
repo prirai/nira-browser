@@ -40,4 +40,10 @@
         <item>@string/doh_max</item>
         <item>@string/doh_off</item>
     </string-array>
+
+    <string-array name="sleeping_tabs_mode_names">
+        <item>@string/sleeping_tabs_off</item>
+        <item>@string/sleeping_tabs_balanced</item>
+        <item>@string/sleeping_tabs_aggressive</item>
+    </string-array>
 </resources>
