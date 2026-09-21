@@ -175,6 +175,8 @@ open class BrowserActivity : LocaleAwareAppCompatActivity(), ComponentCallbacks2
             override fun onPause(owner: LifecycleOwner) {
                 // App going to background - trigger state capture
                 components.store.dispatch(AppLifecycleAction.PauseAction)
+                // Aggressive sleeping tabs: suspend everything except the selected tab.
+                components.sleepingTabsManager.onAppBackgrounded(components.store)
             }
 
             override fun onResume(owner: LifecycleOwner) {
@@ -242,27 +244,20 @@ open class BrowserActivity : LocaleAwareAppCompatActivity(), ComponentCallbacks2
     override fun onTrimMemory(level: Int) {
         super.onTrimMemory(level)
 
+        // Delegate engine-session suspension to SleepingTabsManager, which
+        // dispatches SuspendEngineSessionAction (saves state, unlinks, closes).
+        // The previous implementation called engineSession.close() directly,
+        // which left dangling references in the store and caused tab ghosting
+        // (see fix for tab ghosting bug on release builds).
+        components.sleepingTabsManager.onTrimMemory(components.store, level)
+
         when {
-            level >= ComponentCallbacks2.TRIM_MEMORY_RUNNING_CRITICAL -> {
-                // Critical: Close non-selected engine sessions to free memory
-                components.store.state.tabs
-                    .filter { it.id != components.store.state.selectedTabId }
-                    .forEach { tab ->
-                        tab.engineState.engineSession?.close()
-                    }
-                // Request thumbnail cleanup
-                lifecycleScope.launch(kotlinx.coroutines.Dispatchers.IO) {
-                    cleanupOrphanedThumbnails()
-                }
-            }
             level >= ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW -> {
-                // Low: Clean up disk space
                 lifecycleScope.launch(kotlinx.coroutines.Dispatchers.IO) {
                     cleanupOrphanedThumbnails()
                 }
             }
             level >= ComponentCallbacks2.TRIM_MEMORY_BACKGROUND -> {
-                // Background: Trim icons memory
                 components.icons.onTrimMemory(level)
             }
         }

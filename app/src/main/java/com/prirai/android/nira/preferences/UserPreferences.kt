@@ -113,6 +113,16 @@ class UserPreferences(appContext: Context) : mozilla.components.support.ktx.andr
     var dohProviderUrl by stringPreference(DOH_PROVIDER_URL, CLOUDFLARE_DOH_URI)
     var globalPrivacyControl by booleanPreference(GLOBAL_PRIVACY_CONTROL, true)
 
+    // Sleeping tabs: 0=Off, 1=Balanced (default), 2=Aggressive
+    var sleepingTabsMode by intPreference(SLEEPING_TABS_MODE, SLEEPING_TABS_BALANCED)
+
+    fun getSleepingTabsMode(): com.prirai.android.nira.browser.tabs.sleep.SleepingTabsMode =
+        when (sleepingTabsMode) {
+            SLEEPING_TABS_AGGRESSIVE -> com.prirai.android.nira.browser.tabs.sleep.SleepingTabsMode.Aggressive
+            SLEEPING_TABS_OFF -> com.prirai.android.nira.browser.tabs.sleep.SleepingTabsMode.Off
+            else -> com.prirai.android.nira.browser.tabs.sleep.SleepingTabsMode.Balanced
+        }
+
     fun getHttpsOnlyMode(): Engine.HttpsOnlyMode = when (httpsOnlyMode) {
         HTTPS_ONLY_PRIVATE -> Engine.HttpsOnlyMode.ENABLED_PRIVATE_ONLY
         HTTPS_ONLY_ALL -> Engine.HttpsOnlyMode.ENABLED
@@ -228,7 +238,13 @@ class UserPreferences(appContext: Context) : mozilla.components.support.ktx.andr
         const val DOH_MODE = "doh_mode"
         const val DOH_PROVIDER_URL = "doh_provider_url"
         const val GLOBAL_PRIVACY_CONTROL = "global_privacy_control"
+        const val SLEEPING_TABS_MODE = "sleeping_tabs_mode"
         const val PRIVATE_SEARCH_ENGINE = "private_search_engine"
+
+        const val SLEEPING_TABS_OFF = 0
+        const val SLEEPING_TABS_BALANCED = 1
+        const val SLEEPING_TABS_AGGRESSIVE = 2
+
         const val DESKTOP_MODE_DEFAULT = "desktop_mode_default"
         const val TRANSLATIONS_ENABLED = "translations_enabled"
 

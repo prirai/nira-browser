@@ -111,6 +111,7 @@
   <string name="key_doh" translatable="false">doh_mode</string>
   <string name="key_doh_provider" translatable="false">doh_provider_url</string>
   <string name="key_global_privacy_control" translatable="false">global_privacy_control</string>
+  <string name="key_sleeping_tabs" translatable="false">sleeping_tabs_mode</string>
   <string
         name="key_shortcuts_visible"
         translatable="false"
@@ -455,6 +456,15 @@
   <string name="gpc_title">Global Privacy Control</string>
   <string name="gpc_summary">Tell websites not to sell or share your data</string>
   <string name="security_connections">Connections</string>
+  <string name="performance_title">Performance</string>
+  <string name="sleeping_tabs_title">Sleeping tabs</string>
+  <string name="sleeping_tabs_summary">Save memory by suspending tabs you are not using</string>
+  <string name="sleeping_tabs_off">Off</string>
+  <string name="sleeping_tabs_off_summary">Keep all tabs alive</string>
+  <string name="sleeping_tabs_balanced">Balanced</string>
+  <string name="sleeping_tabs_balanced_summary">Sleep tabs idle for 30 min. Keep up to 8 live. Sleep in background.</string>
+  <string name="sleeping_tabs_aggressive">Aggressive</string>
+  <string name="sleeping_tabs_aggressive_summary">Sleep tabs idle for 5 min. Keep up to 3 live. Sleep on low memory.</string>
 
     <string name="show_shortcuts">Show shortcuts</string>
 
