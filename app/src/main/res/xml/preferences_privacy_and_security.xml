@@ -81,6 +81,15 @@
 
     </PreferenceCategory>
 
+    <PreferenceCategory android:title="@string/performance_title">
+
+        <Preference
+            app:key="@string/key_sleeping_tabs"
+            app:title="@string/sleeping_tabs_title"
+            app:summary="@string/sleeping_tabs_summary" />
+
+    </PreferenceCategory>
+
     <PreferenceCategory android:title="Clear Browsing Data">
 
         <Preference
