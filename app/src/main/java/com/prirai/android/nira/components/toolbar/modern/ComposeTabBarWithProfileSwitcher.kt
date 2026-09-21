@@ -191,27 +191,29 @@ class ComposeTabBarWithProfileSwitcher @JvmOverloads constructor(
         // Observe duplicate tab events
         LaunchedEffect(viewModel) {
             viewModel.duplicateTabEvent.collect { request ->
-                android.util.Log.d(
-                    "TabBar",
-                    "Received duplicate tab request: ${request.url}, group: ${request.groupId}"
-                )
-                // Create the new tab
+                // Create the new tab WITHOUT selecting it. Selecting during creation
+                // triggers the tab bar's auto-scroll while the order is still stale
+                // (the new tab is briefly an ungrouped singleton before the group
+                // membership is applied). We select once, after the order is stable.
                 val components = context.components
                 val newTabId = components.tabsUseCases.addTab(
                     url = request.url,
                     private = isPrivateMode,
-                    contextId = if (isPrivateMode) "private" else "profile_${currentProfile.id}"
+                    contextId = if (isPrivateMode) "private" else "profile_${currentProfile.id}",
+                    selectTab = false,
                 )
-                android.util.Log.d("TabBar", "Created new tab: $newTabId")
 
-                // If original tab was in a group, add the new tab to the same group
+                // If the original tab was in a group, put the duplicate in the same
+                // group before selecting it. For an ungrouped source tab,
+                // TabGroupMiddleware will auto-group the pair using the parent link
+                // when the new tab is added from the currently selected tab.
                 if (request.groupId != null) {
-                    kotlinx.coroutines.delay(100) // Small delay to ensure tab is in store
                     val groupManager =
                         com.prirai.android.nira.browser.tabgroups.UnifiedTabGroupManager.getInstance(context)
                     groupManager.addTabToGroup(request.groupId, newTabId)
-                    android.util.Log.d("TabBar", "Added tab to group: ${request.groupId}")
                 }
+
+                components.tabsUseCases.selectTab(newTabId)
             }
         }
 
