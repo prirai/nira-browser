@@ -1,10 +1,15 @@
 <?xml version="1.0" encoding="utf-8" ?>
-<!-- Material 3 URL field background - expressive private container -->
-<ripple xmlns:android="http://schemas.android.com/apk/res/android"
-    android:color="?attr/colorControlHighlight">
-    <item>
-        <shape android:shape="rectangle">
-            <solid android:color="?attr/colorSurfaceContainerHighest" />
-        </shape>
-    </item>
-</ripple>
+<!--
+  Inner URL-pill background for PRIVATE mode. Same shape as
+  toolbar_background.xml but slightly more elevated tone so it separates
+  from BrowserActivity.updateToolbarBackground()'s purple wash on the outer
+  BrowserToolbar. Applied by ToolbarIntegration when the active tab is
+  private.
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+
+    <solid android:color="?attr/colorSurfaceContainerHighest" />
+
+    <corners android:radius="8dp" />
+</shape>
