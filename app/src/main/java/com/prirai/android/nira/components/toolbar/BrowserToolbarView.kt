@@ -84,6 +84,14 @@ class BrowserToolbarView(
 
     val toolbarIntegration: ToolbarIntegration
 
+    /**
+     * Optional pre-click interceptor. Returning true consumes the URL tap
+     * before it reaches the interactor, so the search dialog is not opened.
+     * Used by BrowserFragment to make the first tap in minimal-state re-expand
+     * the tab bar and contextual toolbar instead of jumping to search.
+     */
+    var onUrlClickIntercept: (() -> Boolean)? = null
+
     @VisibleForTesting
     internal val isPwaTabOrTwaTab: Boolean
         get() = false
@@ -110,7 +118,14 @@ class BrowserToolbarView(
                 outlineProvider = null
 
                 display.onUrlClicked = {
-                    interactor.onBrowserToolbarClicked()
+                    // Give the fragment a chance to intercept (e.g. exit
+                    // minimal state on the first tap). If it consumes the
+                    // click we do NOT invoke the interactor and no search
+                    // dialog opens.
+                    val consumed = onUrlClickIntercept?.invoke() == true
+                    if (!consumed) {
+                        interactor.onBrowserToolbarClicked()
+                    }
                     false
                 }
 
