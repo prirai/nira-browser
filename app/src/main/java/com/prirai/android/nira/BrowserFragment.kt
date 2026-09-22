@@ -326,6 +326,56 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
         }
     }
 
+    /**
+     * Auto-collapse tab bar + contextual toolbar to a minimal address-bar-only
+     * state once the currently selected tab finishes loading. Any of the
+     * following exits minimal state without a URL tap:
+     *  - a new load starts on the selected tab,
+     *  - the user switches to a different tab,
+     *  - the selected tab shows an in-app page (about:homepage, about:blank).
+     *
+     * The URL tap interceptor installed in [initializeUnifiedToolbar] handles
+     * the "first tap = expand, second tap = search dialog" flow.
+     */
+    private fun observeMinimalStateForLoading() {
+        if (!isAdded) return
+        val store = requireContext().components.store
+        viewLifecycleOwner.lifecycleScope.launch {
+            store.flowScoped(viewLifecycleOwner, Dispatchers.Main) { flow ->
+                var pendingJob: kotlinx.coroutines.Job? = null
+                flow.mapNotNull { state ->
+                    state.tabs.find { it.id == state.selectedTabId }
+                }.ifAnyChanged { tab ->
+                    arrayOf(tab.id, tab.content.loading, tab.content.url)
+                }.collect { tab ->
+                    val toolbar = unifiedToolbar ?: return@collect
+                    val url = tab.content.url
+                    val isInAppPage = url.isEmpty() ||
+                        url == "about:homepage" ||
+                        url == "about:blank" ||
+                        url == "about:privatebrowsing"
+
+                    if (tab.content.loading || isInAppPage) {
+                        // Cancel any pending collapse and make sure the bars
+                        // are visible while the page is still loading or the
+                        // user is looking at an in-app page.
+                        pendingJob?.cancel()
+                        pendingJob = null
+                        toolbar.exitMinimalState()
+                    } else {
+                        // Page finished loading. Give the user a moment before
+                        // collapsing so the transition doesn't feel abrupt.
+                        pendingJob?.cancel()
+                        pendingJob = viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
+                            kotlinx.coroutines.delay(400)
+                            unifiedToolbar?.enterMinimalState()
+                        }
+                    }
+                }
+            }
+        }
+    }
+
 
     override fun initializeUnifiedToolbar(view: View, tab: SessionState) {
         val prefs = UserPreferences(requireContext())
@@ -410,9 +460,30 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
             unifiedToolbar?.setOnTabSelectedListener { tabId ->
                 requireContext().components.tabsUseCases.selectTab(tabId)
             }
-            
+
+            // Minimal state: when a page finishes loading we collapse the tab
+            // bar and contextual toolbar so only the address bar remains. The
+            // first tap on the address bar re-expands them; the second tap
+            // opens the search dialog (via the interceptor below).
+            unifiedToolbar?.getBrowserToolbarView()?.onUrlClickIntercept = {
+                val toolbar = unifiedToolbar
+                if (toolbar != null && toolbar.isMinimal()) {
+                    toolbar.exitMinimalState()
+                    true
+                } else {
+                    false
+                }
+            }
+            observeMinimalStateForLoading()
+
             // Set expansion state listener to update web content positioning
             unifiedToolbar?.setOnExpansionStateChangedListener { expanded ->
+                requestWebContentPositionUpdate()
+            }
+
+            // Recompute web content positioning when the minimal-state
+            // transition removes/adds the auxiliary bars.
+            unifiedToolbar?.setOnMinimalStateChangedListener {
                 requestWebContentPositionUpdate()
             }
             

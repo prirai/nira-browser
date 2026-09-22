@@ -661,7 +661,14 @@ class TabViewModel(
     }
 
     /**
-     * Remove tab from its group
+     * Remove tab from its group.
+     *
+     * When the removed tab was the last one in the group, the group is deleted
+     * by [UnifiedTabGroupManager] and the tab becomes a standalone pill. That
+     * shifts the LazyRow layout and can leave the viewport pointing at empty
+     * space. Nudging [TabSheetStateManager.notifyTabSheetDismissed] tells the
+     * tab bar to animate back to whichever tab is currently selected so the
+     * user is never left staring at a blank strip.
      */
     fun removeTabFromGroup(tabId: String) {
         viewModelScope.launch {
@@ -669,6 +676,8 @@ class TabViewModel(
                 groupManager.removeTabFromGroup(tabId)
 
                 saveCurrentOrder(profileId)
+
+                TabSheetStateManager.notifyTabSheetDismissed()
 
                 // Note: Group events observer will trigger the UI refresh
             }

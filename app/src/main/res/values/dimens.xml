@@ -2,7 +2,12 @@
 <resources>
     <dimen name="icon_width">24dp</dimen>
     <dimen name="item_height">64dp</dimen>
-    <dimen name="browser_toolbar_height">60dp</dimen>
+    <!--
+      56dp matches Fenix's browser_toolbar_height and AC's default
+      mozac_browser_toolbar_displaytoolbar.xml root height. Any other value
+      forces us to fight the AC-baked 8dp top / 4dp action margins.
+    -->
+    <dimen name="browser_toolbar_height">56dp</dimen>
     <dimen name="browser_fragment_gesture_preview_offset">48dp</dimen>
     <dimen name="context_menu_height">48dp</dimen>
     <dimen name="context_menu_x_offset">8dp</dimen>

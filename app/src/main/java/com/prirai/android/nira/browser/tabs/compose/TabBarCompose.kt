@@ -44,6 +44,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -758,55 +759,62 @@ private fun GroupPill(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     group.tabs.forEachIndexed { index, tab ->
-                        if (index > 0) {
-                            // Divider between tabs
+                        // Key each pill by tab id so its remembered state (drag offset,
+                        // BringIntoViewRequester) travels with the tab across insertions
+                        // and removals instead of being reused by whichever tab now sits
+                        // in the same slot. Without this, closing a tab caused the next
+                        // pill to inherit the closed pill's transient state and disappear.
+                        key(tab.id) {
+                            if (index > 0) {
+                                // Divider between tabs
+                                Box(
+                                    modifier = Modifier
+                                        .width(1.dp)
+                                        .height(24.dp)
+                                        .background(Color(group.color).copy(alpha = 0.3f))
+                                )
+                            }
+
+                            // Wrap SwipeableTabPill with draggable and drop target for individual tab reordering
+                            val isTabSelected = selectedTabId == tab.id
+                            val bringIntoViewRequester = remember { BringIntoViewRequester() }
+                            LaunchedEffect(isTabSelected) {
+                                if (isTabSelected) {
+                                    bringIntoViewRequester.bringIntoView()
+                                }
+                            }
                             Box(
                                 modifier = Modifier
-                                    .width(1.dp)
-                                    .height(24.dp)
-                                    .background(Color(group.color).copy(alpha = 0.3f))
-                            )
-                        }
-
-                        // Wrap SwipeableTabPill with draggable and drop target for individual tab reordering
-                        val isTabSelected = selectedTabId == tab.id
-                        val bringIntoViewRequester = remember(tab.id) { BringIntoViewRequester() }
-                        LaunchedEffect(isTabSelected) {
-                            if (isTabSelected) {
-                                bringIntoViewRequester.bringIntoView()
-                            }
-                        }
-                        Box(
-                            modifier = Modifier
-                                .draggableItem(
-                                    itemType = DraggableItemType.Tab(tab.id),
-                                    coordinator = coordinator
-                                )
-                                .bringIntoViewRequester(bringIntoViewRequester)
-                                .dropTarget(
-                                    id = tab.id,
-                                    type = DropTargetType.TAB,
-                                    coordinator = coordinator,
-                                    metadata = mapOf(
-                                        "tabId" to tab.id,
-                                        "groupId" to group.groupId,
-                                        "isInGroup" to true
+                                    .draggableItem(
+                                        itemType = DraggableItemType.Tab(tab.id),
+                                        coordinator = coordinator
                                     )
+                                    .bringIntoViewRequester(bringIntoViewRequester)
+                                    .dropTarget(
+                                        id = tab.id,
+                                        type = DropTargetType.TAB,
+                                        coordinator = coordinator,
+                                        metadata = mapOf(
+                                            "tabId" to tab.id,
+                                            "groupId" to group.groupId,
+                                            "isInGroup" to true
+                                        )
+                                    )
+                            ) {
+                                SwipeableTabPill(
+                                    tab = tab,
+                                    isSelected = isTabSelected,
+                                    groupColor = group.color,
+                                    onTabClick = { onTabClick(tab.id) },
+                                    onTabClose = { onTabClose(tab.id) },
+                                    onShowMenu = {
+                                        menuTab = tab
+                                        showTabMenu = true
+                                    },
+                                    modifier = Modifier,
+                                    swipeThreshold = 40f
                                 )
-                        ) {
-                            SwipeableTabPill(
-                                tab = tab,
-                                isSelected = isTabSelected,
-                                groupColor = group.color,
-                                onTabClick = { onTabClick(tab.id) },
-                                onTabClose = { onTabClose(tab.id) },
-                                onShowMenu = {
-                                    menuTab = tab
-                                    showTabMenu = true
-                                },
-                                modifier = Modifier,
-                                swipeThreshold = 40f
-                            )
+                            }
                         }
                     }
 

@@ -123,10 +123,10 @@ sealed class TabMenuType {
  * Shows different options based on whether the tab is in a group.
  *
  * Options for ungrouped tabs:
- * - New Tab, Duplicate, Add to Island, Pin, Share, Select, Close, Close Others
+ * - Duplicate, Close
  *
  * Options for grouped tabs:
- * - New Tab, Duplicate, Remove from Island, Pin, Share, Select, Close, Close Others
+ * - Duplicate, Remove from Island, Close
  *
  * @param tab The tab to show menu for
  * @param isInGroup Whether this tab is currently in a group
@@ -158,17 +158,6 @@ fun TabContextMenu(
             HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
             TabMenuItem(
-                icon = { Icon(painterResource(R.drawable.mozac_ic_tab_new_24), "New Tab") },
-                text = "New Tab",
-                onClick = {
-                    scope.launch {
-                        viewModel.createNewTab()
-                        onDismiss()
-                    }
-                }
-            )
-
-            TabMenuItem(
                 icon = { Icon(painterResource(R.drawable.control_point_duplicate_24px), "Duplicate") },
                 text = "Duplicate Tab",
                 onClick = {
@@ -179,9 +168,9 @@ fun TabContextMenu(
                 }
             )
 
-            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-
             if (isInGroup) {
+                HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+
                 TabMenuItem(
                     icon = { Icon(painterResource(R.drawable.ungroup_24px), "Remove from Island") },
                     text = "Remove from Island",
@@ -193,39 +182,6 @@ fun TabContextMenu(
                     }
                 )
             }
-
-            TabMenuItem(
-                icon = { Icon(painterResource(R.drawable.ic_pin_outline), "Pin Tab") },
-                text = "Pin Tab",
-                onClick = {
-                    scope.launch {
-                        viewModel.togglePinTab(tab.id)
-                        onDismiss()
-                    }
-                }
-            )
-
-            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-
-            TabMenuItem(
-                icon = { Icon(painterResource(R.drawable.ios_share_24), "Share") },
-                text = "Share Tab",
-                onClick = {
-                    onDismiss()
-                    // Share functionality will be handled by the caller
-                }
-            )
-
-            TabMenuItem(
-                icon = { Icon(painterResource(R.drawable.ic_select_all_24), "Select Tabs") },
-                text = "Select Tabs",
-                onClick = {
-                    scope.launch {
-                        viewModel.enterMultiSelectMode()
-                        onDismiss()
-                    }
-                }
-            )
 
             HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
 

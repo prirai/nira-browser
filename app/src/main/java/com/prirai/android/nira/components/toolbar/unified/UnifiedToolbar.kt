@@ -79,7 +79,15 @@ class UnifiedToolbar @JvmOverloads constructor(
     
     // Toolbar offset callback for smooth margin adjustment
     private var onToolbarOffsetChanged: ((Int, Int) -> Unit)? = null
-    
+
+    // Minimal state (address bar only). Set by BrowserFragment when a page has
+    // finished loading. First tap on the address bar exits this state (see the
+    // interceptor wiring in BrowserFragment); a second tap opens the search
+    // dialog. Swipe gestures on the tab bar remain unaffected because the tab
+    // bar is fully detached from touch input while GONE.
+    private var minimalState: Boolean = false
+    private var onMinimalStateChanged: ((Boolean) -> Unit)? = null
+
     // Reload/Stop button integration
     private var reloadStopIntegration: com.prirai.android.nira.integration.ReloadStopButtonIntegration? = null
     
@@ -731,6 +739,12 @@ class UnifiedToolbar @JvmOverloads constructor(
     fun getBrowserToolbar(): BrowserToolbar? = browserToolbar
 
     /**
+     * Get the browser toolbar view (wraps the AC BrowserToolbar and lets
+     * callers install a URL click interceptor).
+     */
+    fun getBrowserToolbarView(): BrowserToolbarView? = browserToolbarView
+
+    /**
      * Get the contextual toolbar component
      */
     fun getContextualToolbar(): ContextualBottomToolbar? = contextualToolbar
@@ -792,6 +806,76 @@ class UnifiedToolbar @JvmOverloads constructor(
 
         tabGroupBar?.visibility = if (showTabBar) VISIBLE else GONE
         contextualToolbar?.visibility = if (showContextual) VISIBLE else GONE
+    }
+
+    /** True while the toolbar is in the minimal (address-bar-only) state. */
+    fun isMinimal(): Boolean = minimalState
+
+    /**
+     * Enter the minimal state: hide the tab bar and contextual toolbar so only
+     * the address bar remains visible. Idempotent.
+     */
+    fun enterMinimalState() {
+        if (minimalState) return
+        minimalState = true
+        animateAuxiliaryComponents(show = false)
+        onMinimalStateChanged?.invoke(true)
+    }
+
+    /**
+     * Exit the minimal state: re-show whichever auxiliary components the user
+     * has enabled in preferences. Idempotent.
+     */
+    fun exitMinimalState() {
+        if (!minimalState) return
+        minimalState = false
+        animateAuxiliaryComponents(show = true)
+        onMinimalStateChanged?.invoke(false)
+    }
+
+    /**
+     * Smoothly animate the tab bar and contextual toolbar in/out. The address
+     * bar is left alone. When hiding, we use View.GONE at the end so the layout
+     * pass drops the space; when showing, we set VISIBLE first and animate the
+     * translation/alpha back to 0/1.
+     */
+    private fun animateAuxiliaryComponents(show: Boolean) {
+        val auxiliaries = listOfNotNull(
+            tabGroupBar?.takeIf { showTabGroupBar },
+            contextualToolbar?.takeIf { showContextualToolbar },
+        )
+        if (auxiliaries.isEmpty()) return
+
+        val duration = 200L
+        for (view in auxiliaries) {
+            view.animate().cancel()
+            if (show) {
+                view.visibility = VISIBLE
+                view.animate()
+                    .alpha(1f)
+                    .translationY(0f)
+                    .setDuration(duration)
+                    .withEndAction { view.alpha = 1f }
+                    .start()
+            } else {
+                val offset = view.height.toFloat()
+                view.animate()
+                    .alpha(0f)
+                    .translationY(offset)
+                    .setDuration(duration)
+                    .withEndAction {
+                        view.visibility = GONE
+                        // Reset so the next show animation starts from a clean baseline.
+                        view.translationY = 0f
+                    }
+                    .start()
+            }
+        }
+    }
+
+    /** Observe minimal-state transitions. */
+    fun setOnMinimalStateChangedListener(listener: (Boolean) -> Unit) {
+        onMinimalStateChanged = listener
     }
 
     /**
