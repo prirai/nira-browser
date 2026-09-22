@@ -84,6 +84,14 @@ class BrowserToolbarView(
 
     val toolbarIntegration: ToolbarIntegration
 
+    /**
+     * Optional pre-click interceptor. Returning true consumes the URL tap
+     * before it reaches the interactor, so the search dialog is not opened.
+     * Used by BrowserFragment to make the first tap in minimal-state re-expand
+     * the tab bar and contextual toolbar instead of jumping to search.
+     */
+    var onUrlClickIntercept: (() -> Boolean)? = null
+
     @VisibleForTesting
     internal val isPwaTabOrTwaTab: Boolean
         get() = false
@@ -105,12 +113,53 @@ class BrowserToolbarView(
             view.apply {
                 setToolbarBehavior()
 
-                // Remove elevation to prevent shadow bleeding onto contextual toolbar
-                elevation = 0f
-                outlineProvider = null
+                // Match Fenix's BrowserToolbarView: elevate the toolbar by
+                // browser_fragment_toolbar_elevation (16dp) so it casts a
+                // shadow over the EngineView, and let the AC display toolbar
+                // draw the inner URL pill via display.setUrlBackground(...)
+                // pointing at the same rounded ?attr/colorSurfaceContainerHigh
+                // shape Fenix uses (search_url_background). This is the single
+                // frictionless integration point the upstream toolbar exposes;
+                // any custom padding/margin overrides in the layout XML fight
+                // AC's baked mozac_browser_toolbar_displaytoolbar.xml.
+                elevation = resources.getDimension(R.dimen.browser_fragment_toolbar_elevation)
+
+                display.setUrlBackground(
+                    androidx.appcompat.content.res.AppCompatResources.getDrawable(
+                        container.context,
+                        R.drawable.toolbar_background
+                    )
+                )
+
+                // Inset the URL pill 8dp on each side. Nira does not populate
+                // the navigation-actions or browser-actions containers on the
+                // address bar, so AC's ActionContainer collapses each of them
+                // to View.GONE, and the URL background ImageView pins flush
+                // against the parent edges (rounded corners invisible).
+                // setUrlBackgroundMargins is AC's first-class API for exactly
+                // this case: it applies layout_goneMarginStart / goneMarginEnd
+                // to the URL background, so ConstraintLayout inserts the
+                // requested inset only when the neighbouring action containers
+                // are GONE. The progress bar keeps its own edge-to-edge
+                // constraint (constraintStart/End="parent"), so this does not
+                // shorten the loading indicator.
+                val pillInsetPx = (8f * resources.displayMetrics.density).toInt()
+                display.setUrlBackgroundMargins(
+                    mozilla.components.browser.toolbar.display.DisplayToolbar.DisplayMargins(
+                        goneStartMargin = pillInsetPx,
+                        goneEndMargin = pillInsetPx,
+                    )
+                )
 
                 display.onUrlClicked = {
-                    interactor.onBrowserToolbarClicked()
+                    // Give the fragment a chance to intercept (e.g. exit
+                    // minimal state on the first tap). If it consumes the
+                    // click we do NOT invoke the interactor and no search
+                    // dialog opens.
+                    val consumed = onUrlClickIntercept?.invoke() == true
+                    if (!consumed) {
+                        interactor.onBrowserToolbarClicked()
+                    }
                     false
                 }
 
