@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!--
+  Outer background for the BOTTOM address-bar layout, mirrored from Fenix's
+  toolbar_background.xml (fenix/app/src/main/res/drawable/toolbar_background.xml):
+  a solid layer1 fill plus a 1dp hairline divider on the top edge that
+  separates the toolbar from web content above it.
+
+  On our Material 3 palette we use ?attr/colorSurface for the fill (the same
+  layer the rest of the app uses for chrome) and ?attr/colorOutlineVariant
+  for the divider. Fenix drives its fill via ?toolbarStartGradient/etc but
+  in normal mode those all resolve to a single solid, so a straight solid
+  fill is behaviourally identical.
+
+  Applied via android:background on the BrowserToolbar in
+  component_bottom_browser_toolbar.xml.
+-->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="?attr/colorSurface" />
+        </shape>
+    </item>
+    <item android:gravity="top">
+        <shape android:shape="rectangle">
+            <size android:height="1dp" />
+            <solid android:color="?attr/colorOutlineVariant" />
+        </shape>
+    </item>
+</layer-list>

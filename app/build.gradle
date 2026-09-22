@@ -120,8 +120,8 @@ dependencies {
     implementation libs.androidx.room.runtime
     ksp libs.androidx.room.compiler
 
-    // Mozilla Components : https://maven.mozilla.org/maven2/?prefix=maven2/org/mozilla/geckoview/
-    final def mozComponentsVersion = "153.0"
+    // Mozilla Components version is defined in gradle/libs.versions.toml (components, remotesettings).
+    // See https://maven.mozilla.org/maven2/?prefix=maven2/org/mozilla/geckoview/ for available versions.
 
     // Mozilla compose components
     implementation libs.compose.awesomebar
