@@ -220,20 +220,35 @@ object ThemeManager {
     fun applySystemBarsTheme(activity: android.app.Activity, isPrivateMode: Boolean = false) {
         val context = activity as Context
         val window = activity.window
-        
+
+        // Mirror Fenix's ThemeManager.updateNavigationBar: paint the nav bar
+        // with the same layer1/colorSurface tone the BrowserToolbar uses so
+        // the gesture-nav strip visually blends with the toolbar when it is
+        // pinned at the bottom. When the toolbar is at the top the nav bar
+        // sits below web content and stays transparent so the page shows
+        // through. On target SDK 35+ the platform ignores navigationBarColor
+        // altogether, but we keep the assignment for the pre-15 code path.
+        val prefs = com.prirai.android.nira.preferences.UserPreferences(context)
+        val toolbarAtBottom = prefs.toolbarPosition ==
+            com.prirai.android.nira.components.toolbar.ToolbarPosition.BOTTOM.ordinal
+
         if (isPrivateMode) {
             // Purple theme for private mode
             val purpleColor = ColorConstants.PrivateMode.PURPLE
             window.statusBarColor = purpleColor
-            window.navigationBarColor = android.graphics.Color.TRANSPARENT
+            window.navigationBarColor = if (toolbarAtBottom) purpleColor
+                else android.graphics.Color.TRANSPARENT
         } else if (isAmoledActive(context)) {
             // Pure black for AMOLED
             window.statusBarColor = android.graphics.Color.BLACK
-            window.navigationBarColor = android.graphics.Color.TRANSPARENT
+            window.navigationBarColor = if (toolbarAtBottom) android.graphics.Color.BLACK
+                else android.graphics.Color.TRANSPARENT
         } else {
             // Surface color for normal mode
-            window.statusBarColor = getSurfaceColor(context)
-            window.navigationBarColor = android.graphics.Color.TRANSPARENT
+            val surfaceColor = getSurfaceColor(context)
+            window.statusBarColor = surfaceColor
+            window.navigationBarColor = if (toolbarAtBottom) surfaceColor
+                else android.graphics.Color.TRANSPARENT
         }
         
         // Set light/dark status bar icons

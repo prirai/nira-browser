@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!--
+  Outer background for the TOP address-bar layout, mirrored from Fenix's
+  toolbar_background_top.xml. Same as browser_toolbar_background.xml but the
+  1dp hairline divider is on the bottom edge, separating the toolbar from
+  web content below it.
+
+  Applied via android:background on the BrowserToolbar in
+  component_browser_top_toolbar.xml.
+-->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="?attr/colorSurface" />
+        </shape>
+    </item>
+    <item android:gravity="bottom">
+        <shape android:shape="rectangle">
+            <size android:height="1dp" />
+            <solid android:color="?attr/colorOutlineVariant" />
+        </shape>
+    </item>
+</layer-list>
