@@ -25,10 +25,26 @@
     android:orientation="vertical"
 >
 
+    <!--
+      8dp horizontal padding is a deliberate delta from Fenix. Fenix has a
+      navigation-actions button (back arrow) on the left of its toolbar
+      which naturally offsets the URL pill's left edge inwards; we do not
+      show navigation actions here, so without any horizontal inset the pill
+      sits flush at x=0 and its left rounded corner is invisible.
+
+      Padding (not margin) is used deliberately: the outer background
+      drawable (@drawable/browser_toolbar_background) with its 1dp divider
+      still paints edge-to-edge across the full screen width, and only the
+      internal children (URL pill ImageView, indicators, action containers)
+      get shifted inwards by 8dp. This preserves the surround-fills-screen
+      look Fenix has while producing the same visible pill inset.
+    -->
     <mozilla.components.browser.toolbar.BrowserToolbar
         android:id="@+id/toolbar"
         android:layout_width="match_parent"
         android:layout_height="@dimen/browser_toolbar_height"
+        android:paddingStart="8dp"
+        android:paddingEnd="8dp"
         android:background="@drawable/browser_toolbar_background"
         android:clickable="true"
         android:focusable="true"
