@@ -113,9 +113,23 @@ class BrowserToolbarView(
             view.apply {
                 setToolbarBehavior()
 
-                // Remove elevation to prevent shadow bleeding onto contextual toolbar
-                elevation = 0f
-                outlineProvider = null
+                // Match Fenix's BrowserToolbarView: elevate the toolbar by
+                // browser_fragment_toolbar_elevation (16dp) so it casts a
+                // shadow over the EngineView, and let the AC display toolbar
+                // draw the inner URL pill via display.setUrlBackground(...)
+                // pointing at the same rounded ?attr/colorSurfaceContainerHigh
+                // shape Fenix uses (search_url_background). This is the single
+                // frictionless integration point the upstream toolbar exposes;
+                // any custom padding/margin overrides in the layout XML fight
+                // AC's baked mozac_browser_toolbar_displaytoolbar.xml.
+                elevation = resources.getDimension(R.dimen.browser_fragment_toolbar_elevation)
+
+                display.setUrlBackground(
+                    androidx.appcompat.content.res.AppCompatResources.getDrawable(
+                        container.context,
+                        R.drawable.toolbar_background
+                    )
+                )
 
                 display.onUrlClicked = {
                     // Give the fragment a chance to intercept (e.g. exit

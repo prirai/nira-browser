@@ -1,4 +1,20 @@
 <?xml version="1.0" encoding="utf-8" ?>
+<!--
+  Bottom address-bar layout. Mirrored from Fenix's
+  component_bottom_browser_toolbar.xml — the BrowserToolbar is added directly
+  with match_parent width, @dimen/browser_toolbar_height, and gravity=bottom.
+  No paddings, no margins, no elevation override in XML. Elevation and the
+  inner URL pill drawable are applied at runtime in BrowserToolbarView.kt so
+  we do not diverge from the upstream integration surface.
+
+  The outer BrowserToolbar node is wrapped in BottomToolbarContainerView so
+  the ContextualToolbar / Modern integrations that expect a container view
+  still have somewhere to attach — this wrapper does not exist in Fenix but
+  it is orthogonal to the address bar visual.
+
+  clickable/focusable are set so the toolbar (not just the URL view) absorbs
+  ripples and passes accessibility focus, matching Fenix's XML.
+-->
 <com.prirai.android.nira.components.toolbar.BottomToolbarContainerView
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
@@ -9,16 +25,11 @@
     android:orientation="vertical"
 >
 
-    <!-- Address Bar -->
     <mozilla.components.browser.toolbar.BrowserToolbar
         android:id="@+id/toolbar"
         android:layout_width="match_parent"
         android:layout_height="@dimen/browser_toolbar_height"
-        android:layout_marginStart="0dp"
-        android:layout_marginEnd="0dp"
-        android:paddingStart="0dp"
-        android:paddingEnd="0dp"
-        android:background="@drawable/address_bar_background"
+        android:background="@drawable/browser_toolbar_background"
         android:clickable="true"
         android:focusable="true"
         android:focusableInTouchMode="true"
@@ -29,7 +40,5 @@
         app:browserToolbarSecureColor="?android:attr/textColorPrimary"
         app:browserToolbarTrackingProtectionAndSecurityIndicatorSeparatorColor="?android:attr/textColorSecondary"
     />
-
-    <!-- Legacy ContextualBottomToolbar removed - now using ModernContextualToolbar in UnifiedToolbar -->
 
 </com.prirai.android.nira.components.toolbar.BottomToolbarContainerView>

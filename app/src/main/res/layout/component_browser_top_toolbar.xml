@@ -1,4 +1,15 @@
 <?xml version="1.0" encoding="utf-8" ?>
+<!--
+  Top address-bar layout. Mirrored from Fenix's
+  component_browser_top_toolbar.xml — BrowserToolbar with match_parent width,
+  @dimen/browser_toolbar_height, gravity=top, no paddings or margins. The
+  outer background carries a 1dp hairline divider on the bottom edge (see
+  browser_toolbar_background_top.xml). Elevation and the inner URL pill drawable are
+  applied at runtime in BrowserToolbarView.kt.
+
+  clickable/focusable are set so the toolbar (not just the URL view) absorbs
+  ripples and passes accessibility focus, matching Fenix's XML.
+-->
 <mozilla.components.browser.toolbar.BrowserToolbar
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
@@ -6,14 +17,7 @@
     android:layout_width="match_parent"
     android:layout_height="@dimen/browser_toolbar_height"
     android:layout_gravity="top"
-    android:layout_marginStart="0dp"
-    android:layout_marginEnd="0dp"
-    android:layout_marginTop="10dp"
-    android:layout_marginBottom="6dp"
-    android:paddingStart="0dp"
-    android:paddingEnd="0dp"
-    android:elevation="0dp"
-    android:background="@drawable/address_bar_background"
+    android:background="@drawable/browser_toolbar_background_top"
     android:clickable="true"
     android:focusable="true"
     android:focusableInTouchMode="true"
@@ -22,4 +26,5 @@
     app:browserToolbarMenuColor="?android:attr/textColorPrimary"
     app:browserToolbarProgressBarGravity="bottom"
     app:browserToolbarSecureColor="?android:attr/textColorPrimary"
+    app:browserToolbarTrackingProtectionAndSecurityIndicatorSeparatorColor="?android:attr/textColorSecondary"
 />
