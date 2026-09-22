@@ -131,6 +131,26 @@ class BrowserToolbarView(
                     )
                 )
 
+                // Inset the URL pill 8dp on each side. Nira does not populate
+                // the navigation-actions or browser-actions containers on the
+                // address bar, so AC's ActionContainer collapses each of them
+                // to View.GONE, and the URL background ImageView pins flush
+                // against the parent edges (rounded corners invisible).
+                // setUrlBackgroundMargins is AC's first-class API for exactly
+                // this case: it applies layout_goneMarginStart / goneMarginEnd
+                // to the URL background, so ConstraintLayout inserts the
+                // requested inset only when the neighbouring action containers
+                // are GONE. The progress bar keeps its own edge-to-edge
+                // constraint (constraintStart/End="parent"), so this does not
+                // shorten the loading indicator.
+                val pillInsetPx = (8f * resources.displayMetrics.density).toInt()
+                display.setUrlBackgroundMargins(
+                    mozilla.components.browser.toolbar.display.DisplayToolbar.DisplayMargins(
+                        goneStartMargin = pillInsetPx,
+                        goneEndMargin = pillInsetPx,
+                    )
+                )
+
                 display.onUrlClicked = {
                     // Give the fragment a chance to intercept (e.g. exit
                     // minimal state on the first tap). If it consumes the

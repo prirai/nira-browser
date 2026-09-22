@@ -11,10 +11,10 @@
   ripples and passes accessibility focus, matching Fenix's XML.
 -->
 <!--
-  8dp horizontal padding is a deliberate delta from Fenix (see the matching
-  comment in component_bottom_browser_toolbar.xml). Padding not margin: the
-  outer background layer-list still paints edge-to-edge; only the inner
-  children shift inwards so the URL pill's rounded corners become visible.
+  URL pill horizontal inset is applied at runtime via
+  display.setUrlBackgroundMargins(...) in BrowserToolbarView.kt. AC's
+  first-class API for insetting the pill; leaves the ProgressBar
+  edge-to-edge. No margin or padding overrides on the outer BrowserToolbar.
 -->
 <mozilla.components.browser.toolbar.BrowserToolbar
     xmlns:android="http://schemas.android.com/apk/res/android"
@@ -23,8 +23,6 @@
     android:layout_width="match_parent"
     android:layout_height="@dimen/browser_toolbar_height"
     android:layout_gravity="top"
-    android:paddingStart="8dp"
-    android:paddingEnd="8dp"
     android:background="@drawable/browser_toolbar_background_top"
     android:clickable="true"
     android:focusable="true"
