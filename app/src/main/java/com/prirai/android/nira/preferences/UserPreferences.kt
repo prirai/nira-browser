@@ -74,8 +74,15 @@ class UserPreferences(appContext: Context) : mozilla.components.support.ktx.andr
     var showTabGroupBar by booleanPreference(SHOW_TAB_GROUP_BAR, true)
     var swipeToRefresh by booleanPreference(SWIPE_TO_REFRESH, true)
 
-    // SECURITY: Remote debugging disabled for production security
-    // var remoteDebugging by booleanPreference(REMOTE_DEBUGGING, false)
+    /**
+     * Enables GeckoView remote debugging so a desktop Firefox can inspect
+     * pages in this app via about:debugging.
+     *
+     * Off by default: only turn on while actively debugging over USB, because
+     * a debugger connection has full read/write access to any page loaded
+     * in the browser.
+     */
+    var remoteDebugging by booleanPreference(REMOTE_DEBUGGING, false)
     var promptExternalDownloader by booleanPreference(PROMPT_EXTERNAL_DOWNLOADER, false)
     var addonSort by intPreference(ADDON_SORT, AddonSortType.RATING.ordinal)
     var showUrlProtocol by booleanPreference(SHOW_URL_PROTOCOL, false)
