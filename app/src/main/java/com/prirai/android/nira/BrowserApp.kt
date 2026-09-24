@@ -112,6 +112,29 @@ class BrowserApp : Application() {
             }
         }
 
+        // Optional: install the Nira background-playback content script that
+        // neutralises YouTube's Page Visibility handler so audio keeps playing
+        // when the tab is deselected or the app is backgrounded. Off by default.
+        applicationScope.launch(Dispatchers.Main) {
+            try {
+                val prefs = com.prirai.android.nira.preferences.UserPreferences(this@BrowserApp)
+                if (prefs.backgroundPlaybackYoutube) {
+                    components.engine.installBuiltInWebExtension(
+                        url = "resource://android/assets/extensions/nira-bg-play/",
+                        id = "nira-bg-play@prirai.android.nira",
+                        onSuccess = { _ ->
+                            logger.info("nira-bg-play extension installed")
+                        },
+                        onError = { err ->
+                            android.util.Log.w("NiraBgPlay", "install FAILED", err)
+                        }
+                    )
+                }
+            } catch (e: Exception) {
+                android.util.Log.w("NiraBgPlay", "install exception", e)
+            }
+        }
+
         // CRITICAL: Eagerly init fxaAuthFeature on the Main thread so that
         // appRequestInterceptor.fxaInterceptor is set before any FxA redirect URL
         // can be processed. Doing this inside an IO coroutine causes a race condition

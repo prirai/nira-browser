@@ -67,6 +67,19 @@ class GeneralSettingsFragment : BaseSettingsFragment() {
         )
 
         switchPreference(
+            preference = resources.getString(R.string.key_background_playback_youtube),
+            isChecked = UserPreferences(requireContext()).backgroundPlaybackYoutube,
+            onCheckChange = {
+                UserPreferences(requireContext()).backgroundPlaybackYoutube = it
+                Toast.makeText(
+                    context,
+                    requireContext().resources.getText(R.string.app_restart),
+                    Toast.LENGTH_LONG,
+                ).show()
+            }
+        )
+
+        switchPreference(
             preference = requireContext().resources.getString(R.string.key_search_suggestions_enabled),
             isChecked = UserPreferences(requireContext()).searchSuggestionsEnabled,
             onCheckChange = {

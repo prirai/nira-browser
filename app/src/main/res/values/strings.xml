@@ -18,6 +18,9 @@
   <string name="key_private_search_engine" translatable="false">private_search_engine</string>
   <string name="key_desktop_mode_default" translatable="false">desktop_mode_default</string>
   <string name="key_translations_enabled" translatable="false">translations_enabled</string>
+  <string name="key_background_playback_youtube" translatable="false">background_playback_youtube</string>
+  <string name="background_playback_youtube">Background audio on YouTube</string>
+  <string name="background_playback_youtube_summary">Keep YouTube playing when the tab or app is in the background (installs a content script on youtube.com). Requires app restart.</string>
     <string
         name="key_bar_addon_list"
         translatable="false"
