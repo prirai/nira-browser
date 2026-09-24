@@ -307,6 +307,11 @@ open class Components(private val applicationContext: Context) {
                             ),
                         ),
                         RecordingDevicesMiddleware(applicationContext, notificationsDelegate),
+                        // NIRA: Throttle high-frequency media-session churn from YouTube
+                        // et al. that would otherwise cause AC's AudioFocus.request() to
+                        // fire multiple times in quick succession and trigger an
+                        // AUDIOFOCUS_REQUEST_DELAYED -> controller.pause() cycle.
+                        com.prirai.android.nira.middleware.MediaSessionThrottleMiddleware(),
                         PromptMiddleware(),
                         LastAccessMiddleware(),
                         RecentlyClosedMiddleware(
