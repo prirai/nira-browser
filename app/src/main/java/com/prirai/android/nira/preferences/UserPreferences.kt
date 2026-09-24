@@ -37,6 +37,13 @@ class UserPreferences(appContext: Context) : mozilla.components.support.ktx.andr
     var desktopModeDefault by booleanPreference(DESKTOP_MODE_DEFAULT, false)
     var translationsEnabled by booleanPreference(TRANSLATIONS_ENABLED, true)
 
+    /**
+     * Inject a small built-in WebExtension into youtube.com pages that neutralises the
+     * Page Visibility API so that audio keeps playing when the tab is backgrounded.
+     * Off by default because it changes site behaviour.
+     */
+    var backgroundPlaybackYoutube by booleanPreference(BACKGROUND_PLAYBACK_YOUTUBE, false)
+
     fun hasDesktopModeDefault(): Boolean = preferences.contains(DESKTOP_MODE_DEFAULT)
     var toolbarPosition by intPreference(TOOLBAR_POSITION, ToolbarPosition.BOTTOM.ordinal)
     var homepageType by intPreference(HOMEPAGE_TYPE, HomepageChoice.VIEW.ordinal)
@@ -247,6 +254,7 @@ class UserPreferences(appContext: Context) : mozilla.components.support.ktx.andr
 
         const val DESKTOP_MODE_DEFAULT = "desktop_mode_default"
         const val TRANSLATIONS_ENABLED = "translations_enabled"
+        const val BACKGROUND_PLAYBACK_YOUTUBE = "background_playback_youtube"
 
         const val HTTPS_ONLY_OFF = 0
         const val HTTPS_ONLY_PRIVATE = 1

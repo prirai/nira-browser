@@ -87,4 +87,15 @@
 
     </PreferenceCategory>
 
+    <PreferenceCategory android:title="Media">
+
+        <com.prirai.android.nira.settings.MaterialSwitchPreference
+            app:key="@string/key_background_playback_youtube"
+            app:title="@string/background_playback_youtube"
+            app:summary="@string/background_playback_youtube_summary"
+            app:singleLineTitle="false"
+            app:defaultValue="false"/>
+
+    </PreferenceCategory>
+
 </PreferenceScreen>
