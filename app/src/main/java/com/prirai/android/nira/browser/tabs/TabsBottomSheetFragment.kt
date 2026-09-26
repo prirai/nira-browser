@@ -33,7 +33,6 @@ import com.prirai.android.nira.BrowserActivity
 import com.prirai.android.nira.R
 import com.prirai.android.nira.browser.BrowsingMode
 import com.prirai.android.nira.browser.BrowsingModeManager
-import com.prirai.android.nira.browser.tabgroups.TabGroupManager
 import com.prirai.android.nira.browser.tabgroups.UnifiedTabGroupManager
 import com.prirai.android.nira.browser.tabs.compose.TabViewModel
 import com.prirai.android.nira.browser.tabs.compose.TabSheetListView
@@ -70,7 +69,6 @@ class TabsBottomSheetFragment : DialogFragment() {
     private val binding get() = _binding!!
 
     private lateinit var browsingModeManager: BrowsingModeManager
-    private lateinit var tabGroupManager: TabGroupManager
     private lateinit var unifiedGroupManager: UnifiedTabGroupManager
 
     private var composeOrderManager: com.prirai.android.nira.browser.tabs.compose.TabOrderManager? = null
@@ -136,7 +134,6 @@ class TabsBottomSheetFragment : DialogFragment() {
 
         val activity = (activity as BrowserActivity)
         browsingModeManager = activity.browsingModeManager
-        tabGroupManager = activity.tabGroupManager
         unifiedGroupManager = UnifiedTabGroupManager.getInstance(requireContext())
 
         // Switch to the correct profile based on the selected tab's context
@@ -739,30 +736,12 @@ class TabsBottomSheetFragment : DialogFragment() {
             binding.profileButtonContainer.visibility = if (showMenu) View.GONE else View.VISIBLE
         }
 
-        // Create ViewModel once and store it
+        // Create ViewModel once and store it. TabViewModel.closeTab() now
+        // performs removal + undo via TabsUseCases + UndoMiddleware directly,
+        // so onTabRemove / onTabRestore glue is no longer needed here.
         val viewModel = remember {
             TabViewModel(requireContext(), unifiedGroupManager).also {
                 tabViewModel = it
-                // Set up callbacks for tab operations
-                it.onTabRemove = { tabId ->
-                    // Immediately remove tab from store
-                    requireContext().components.tabsUseCases.removeTab(tabId)
-                }
-                it.onTabRestore = { tab, position, groupId ->
-                    // Restore tab at original position
-                    val components = requireContext().components
-                    val newTabId = components.tabsUseCases.addTab(
-                        url = tab.content.url,
-                        private = tab.content.private,
-                        contextId = tab.contextId,
-                        selectTab = false
-                    )
-                    if (groupId != null) {
-                        lifecycleScope.launch {
-                            unifiedGroupManager.addTabToGroup(newTabId, groupId)
-                        }
-                    }
-                }
             }
         }
 

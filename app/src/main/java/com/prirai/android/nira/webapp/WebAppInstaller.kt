@@ -6,6 +6,7 @@ import android.graphics.Bitmap
 import androidx.core.content.pm.ShortcutInfoCompat
 import androidx.core.content.pm.ShortcutManagerCompat
 import androidx.core.graphics.drawable.IconCompat
+import com.prirai.android.nira.ext.components
 import mozilla.components.browser.state.state.SessionState
 import mozilla.components.concept.engine.manifest.WebAppManifest
 import androidx.core.net.toUri
@@ -13,12 +14,22 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 /**
- * Helper for installing PWAs as shortcuts that launch in WebAppActivity
+ * Helper for installing PWAs as shortcuts that launch in [WebAppActivity].
+ *
+ * Nira keeps its own profile-scoped Room list of installed PWAs in
+ * [WebAppManager] because upstream `feature-pwa`'s `WebAppUseCases` has no
+ * concept of Nira's per-profile isolation and always pins shortcuts pointing
+ * at upstream's `WebAppLauncherActivity` (not Nira's fullscreen
+ * [WebAppActivity]). We do, however, hand the manifest to
+ * `context.components.webAppManifestStorage` so that upstream's
+ * [mozilla.components.feature.pwa.intent.WebAppInterceptor] (wired in
+ * `Components.kt`) can recognise the PWA scope and route matching URLs into
+ * the standalone launcher.
  */
 object WebAppInstaller {
 
     /**
-     * Install a PWA that opens in fullscreen WebAppActivity
+     * Install a PWA that opens in fullscreen [WebAppActivity].
      * @param profileId Profile to associate with this web app
      * @return true if installed successfully, false if duplicate detected
      */
@@ -34,7 +45,11 @@ object WebAppInstaller {
         val title = (manifest?.name ?: manifest?.shortName ?: session.content.title).takeIf { it.isNotBlank() }
             ?: baseUrl
 
-        val webAppManager = com.prirai.android.nira.components.Components(context).webAppManager
+        // Use the process-wide WebAppManager via `context.components`. The old
+        // `Components(context).webAppManager` idiom would spin up a fresh
+        // Components graph on every install call, leaking a duplicate Room
+        // instance and bypassing the `by lazy` singleton semantics.
+        val webAppManager = context.components.webAppManager
 
         // Check if already installed with same URL and profile
         if (webAppManager.webAppExists(baseUrl, profileId)) {
@@ -51,6 +66,21 @@ object WebAppInstaller {
             backgroundColor = manifest?.backgroundColor?.toString(),
             profileId = profileId
         )
+
+        // Hand the manifest to upstream ManifestStorage so `WebAppInterceptor`
+        // (installed in Components.kt) can match subsequent navigations that
+        // fall inside this PWA's scope and hand them to the standalone
+        // launcher. This is the single upstream integration point we retain -
+        // everything else (per-profile list, settings UI, uninstall flow)
+        // stays in Nira's Room DB.
+        if (manifest != null) {
+            try {
+                context.components.webAppManifestStorage.saveManifest(manifest)
+            } catch (t: Throwable) {
+                // Non-fatal: the PWA still works via our WebAppActivity even if
+                // the upstream manifest cache write fails.
+            }
+        }
 
         // Create shortcut intent
         withContext(Dispatchers.Main) {

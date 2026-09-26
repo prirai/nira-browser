@@ -11,7 +11,7 @@ import com.google.android.material.tabs.TabLayout
 import com.prirai.android.nira.R
 import com.prirai.android.nira.databinding.FragmentUnifiedWebappBinding
 import com.prirai.android.nira.webapp.*
-import com.prirai.android.nira.components.Components
+import com.prirai.android.nira.ext.components
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Dispatchers
@@ -42,7 +42,7 @@ class UnifiedWebAppFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        suggestionManager = Components(requireContext()).pwaSuggestionManager
+        suggestionManager = requireContext().components.pwaSuggestionManager
         setupUI()
         setupTabs()
         setupRecyclerViews()
@@ -106,7 +106,7 @@ class UnifiedWebAppFragment : Fragment() {
     private fun setupObservers() {
         // Observe installed apps - always collecting
         viewLifecycleOwner.lifecycleScope.launch {
-            Components(requireContext()).webAppManager.getAllWebApps()
+            requireContext().components.webAppManager.getAllWebApps()
                 .collectLatest { webApps ->
                     // Update list regardless of tab position
                     // but only show if on installed tab
@@ -180,7 +180,7 @@ class UnifiedWebAppFragment : Fragment() {
     // Installed Apps Actions
     private fun launchWebApp(webApp: WebAppEntity) {
         viewLifecycleOwner.lifecycleScope.launch {
-            Components(requireContext()).webAppManager.updateWebAppUsage(webApp.id)
+            requireContext().components.webAppManager.updateWebAppUsage(webApp.id)
             val intent = Intent(requireContext(), WebAppActivity::class.java).apply {
                 putExtra(WebAppActivity.EXTRA_WEB_APP_URL, webApp.url)
             }
@@ -198,13 +198,13 @@ class UnifiedWebAppFragment : Fragment() {
 
     private fun uninstallWebApp(webApp: WebAppEntity) {
         viewLifecycleOwner.lifecycleScope.launch {
-            Components(requireContext()).webAppManager.uninstallWebApp(webApp.id)
+            requireContext().components.webAppManager.uninstallWebApp(webApp.id)
         }
     }
 
     private fun toggleWebAppEnabled(webApp: WebAppEntity, enabled: Boolean) {
         viewLifecycleOwner.lifecycleScope.launch {
-            Components(requireContext()).webAppManager.setWebAppEnabled(webApp.id, enabled)
+            requireContext().components.webAppManager.setWebAppEnabled(webApp.id, enabled)
         }
     }
 
@@ -230,7 +230,7 @@ class UnifiedWebAppFragment : Fragment() {
 
     private fun updatePwaCache(webApp: WebAppEntity) {
         viewLifecycleOwner.lifecycleScope.launch {
-            Components(requireContext()).webAppManager.updatePwaCache(webApp.id)
+            requireContext().components.webAppManager.updatePwaCache(webApp.id)
             androidx.appcompat.app.AlertDialog.Builder(requireContext())
                 .setMessage(getString(R.string.pwa_cache_updated, webApp.name))
                 .setPositiveButton(android.R.string.ok, null)
@@ -243,7 +243,7 @@ class UnifiedWebAppFragment : Fragment() {
             try {
                 // Load icon with comprehensive fallback strategy
                 val icon = withContext(Dispatchers.IO) {
-                    Components(requireContext()).webAppManager.loadIconFromFile(webApp.iconUrl)
+                    requireContext().components.webAppManager.loadIconFromFile(webApp.iconUrl)
                         ?:
                         com.prirai.android.nira.utils.FaviconLoader.loadFavicon(requireContext(), webApp.url)
                 }
@@ -312,7 +312,7 @@ class UnifiedWebAppFragment : Fragment() {
     private fun startInstallation(pwa: PwaSuggestionManager.PwaSuggestion, profileId: String) {
         viewLifecycleOwner.lifecycleScope.launch {
             try {
-                val webAppManager = Components(requireContext()).webAppManager
+                val webAppManager = requireContext().components.webAppManager
 
                 // Check if already installed with same profile
                 if (webAppManager.webAppExists(pwa.url, profileId)) {
@@ -417,7 +417,7 @@ class UnifiedWebAppFragment : Fragment() {
             webApp = webApp,
             onAssociate = { profileId ->
                 viewLifecycleOwner.lifecycleScope.launch {
-                    Components(requireContext()).webAppManager.updateWebApp(
+                    requireContext().components.webAppManager.updateWebApp(
                         webApp.copy(profileId = profileId)
                     )
             com.google.android.material.dialog.MaterialAlertDialogBuilder(requireActivity())
@@ -444,7 +444,7 @@ class UnifiedWebAppFragment : Fragment() {
     private fun cloneWebApp(webApp: WebAppEntity, newName: String, newProfileId: String) {
         viewLifecycleOwner.lifecycleScope.launch {
             try {
-                val webAppManager = Components(requireContext()).webAppManager
+                val webAppManager = requireContext().components.webAppManager
                 webAppManager.installWebApp(
                     url = webApp.url,
                     name = newName,

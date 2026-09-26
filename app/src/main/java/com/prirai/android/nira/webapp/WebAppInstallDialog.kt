@@ -12,6 +12,7 @@ import com.prirai.android.nira.R
 import com.prirai.android.nira.browser.profile.BrowserProfile
 import com.prirai.android.nira.browser.profile.ProfileManager
 import com.prirai.android.nira.databinding.DialogWebappInstallBinding
+import com.prirai.android.nira.ext.components
 import com.prirai.android.nira.theme.ThemeManager
 import com.prirai.android.nira.preferences.UserPreferences
 import kotlinx.coroutines.launch
@@ -147,7 +148,7 @@ class WebAppInstallDialog(
                         )
                     )
                 )
-                val icon = com.prirai.android.nira.components.Components(context).icons.loadIcon(iconRequest).await()
+                val icon = context.components.icons.loadIcon(iconRequest).await()
                 if (icon.bitmap != null) {
                     // Save to cache for future use
                     com.prirai.android.nira.utils.FaviconCache.getInstance(context).saveFavicon(url, icon.bitmap)

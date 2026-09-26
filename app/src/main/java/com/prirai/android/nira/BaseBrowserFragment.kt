@@ -44,7 +44,6 @@ import com.prirai.android.nira.ext.components
 import com.prirai.android.nira.integration.ContextMenuIntegration
 import com.prirai.android.nira.integration.FindInPageIntegration
 import com.prirai.android.nira.integration.ReaderModeIntegration
-import com.prirai.android.nira.integration.ReloadStopButtonIntegration
 import com.prirai.android.nira.preferences.UserPreferences
 import com.prirai.android.nira.settings.HomepageChoice
 import kotlinx.coroutines.Dispatchers.IO
@@ -82,6 +81,7 @@ import mozilla.components.feature.session.PictureInPictureFeature
 import mozilla.components.feature.session.SessionFeature
 import mozilla.components.feature.session.SwipeRefreshFeature
 import mozilla.components.feature.sitepermissions.SitePermissionsFeature
+import mozilla.components.feature.tabs.LastTabFeature
 import mozilla.components.lib.state.ext.consumeFlow
 import mozilla.components.support.base.feature.ActivityResultHandler
 import mozilla.components.support.base.feature.PermissionsFeature
@@ -142,7 +142,14 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
     private val passkeyAuthFeature = ViewBoundFeatureWrapper<PasskeyAuthFeature>()
     private var pipFeature: PictureInPictureFeature? = null
     val readerViewFeature = ViewBoundFeatureWrapper<ReaderModeIntegration>()
-    private val reloadStopButtonFeature = ViewBoundFeatureWrapper<ReloadStopButtonIntegration>()
+
+    /**
+     * Handles back-press when the current tab has no history left: removes
+     * external / custom-tab sessions, or falls back to the parent tab if the
+     * current tab was opened from another. Replaces the previous hand-rolled
+     * `removeSessionIfNeeded()` copy of the same logic.
+     */
+    private val lastTabFeature = ViewBoundFeatureWrapper<LastTabFeature>()
 
     var customTabSessionId: String? = null
 
@@ -308,23 +315,9 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
                 view = view
             )
 
-            // Reload/Stop button is now handled by UnifiedToolbar
-            // This avoids duplicate reload buttons when UnifiedToolbar is used
-            // reloadStopButtonFeature.set(
-            //     feature = ReloadStopButtonIntegration(
-            //         context = requireContext(),
-            //         store = components.store,
-            //         toolbar = toolbar,
-            //         onReload = { components.sessionUseCases.reload() },
-            //         onStop = {
-            //             components.store.state.selectedTab?.let {
-            //                 components.sessionUseCases.stopLoading.invoke(it.id)
-            //             }
-            //         }
-            //     ),
-            //     owner = this,
-            //     view = view
-            // )
+            // Reload/Stop is owned by UnifiedToolbar (see UnifiedToolbar.kt:470),
+            // so no ReloadStopButtonIntegration wrapper is bound at this level -
+            // binding one here would duplicate the reload button.
         }
 
         promptsFeature.set(
@@ -391,6 +384,22 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
             ),
             owner = this,
             view = view
+        )
+
+        // Upstream LastTabFeature handles back-press when the current tab has
+        // no more history: it removes external/custom-tab sessions (finishing
+        // the host activity) and reselects the parent tab for context-menu-
+        // opened tabs. Replaces the hand-rolled logic that used to live in
+        // BaseBrowserFragment.removeSessionIfNeeded().
+        lastTabFeature.set(
+            feature = LastTabFeature(
+                store = requireContext().components.store,
+                tabId = customTabSessionId,
+                removeTabUseCase = requireContext().components.tabsUseCases.removeTab,
+                activity = requireActivity(),
+            ),
+            owner = this,
+            view = view,
         )
 
         searchFeature.set(
@@ -881,15 +890,19 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
         if (fullScreenFeature.onBackPressed()) return true
         if (promptsFeature.onBackPressed()) return true
         if (sessionFeature.onBackPressed()) return true
-        
-        // As fallback, check if current tab can go back and handle it manually
+
+        // As fallback, walk page history if possible.
         val currentTab = requireContext().components.store.state.findTabOrCustomTabOrSelectedTab(customTabSessionId)
         if (currentTab?.content?.canGoBack == true) {
             requireContext().components.sessionUseCases.goBack.invoke(currentTab.id)
             return true
         }
-        
-        return removeSessionIfNeeded()
+
+        // No page history left: hand off to LastTabFeature, which mirrors the
+        // upstream contract - external / custom-tab sessions get finished,
+        // parent-tab-opened tabs reselect their parent, and anything else
+        // returns false so the host can navigate back to Home.
+        return lastTabFeature.onBackPressed()
     }
 
     /**
@@ -942,28 +955,10 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
         promptsFeature.withFeature { it.onActivityResult(requestCode, data, resultCode) }
     }
 
-    /**
-     * Removes the session if it was opened by an ACTION_VIEW intent
-     * or if it has a parent session and no more history
-     */
-    protected open fun removeSessionIfNeeded(): Boolean {
-        getCurrentTab()?.let { session ->
-            return if (session.source is SessionState.Source.External && !session.restored) {
-                activity?.finish()
-                requireContext().components.tabsUseCases.removeTab(session.id)
-                true
-            } else {
-                val hasParentSession = session is TabSessionState && session.parentId != null
-                if (hasParentSession) {
-                    requireContext().components.tabsUseCases.removeTab(session.id, selectParentIfExists = true)
-                }
-                // We want to return to home if this session didn't have a parent session to select.
-                val goToOverview = !hasParentSession
-                !goToOverview
-            }
-        }
-        return false
-    }
+    // `removeSessionIfNeeded` was a hand-rolled copy of upstream's
+    // `LastTabFeature.onBackPressed` (mozilla.components.feature.tabs).
+    // It has been replaced by the `lastTabFeature` ViewBoundFeatureWrapper -
+    // see `onBackPressed()` above.
 
     /**
      * Returns the layout [android.view.Gravity] for the quick settings and ETP dialog.

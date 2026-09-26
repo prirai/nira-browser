@@ -15,7 +15,7 @@ import com.prirai.android.nira.databinding.FragmentWebappSettingsBinding
 import com.prirai.android.nira.webapp.WebAppEntity
 import com.prirai.android.nira.webapp.WebAppActivity
 import com.prirai.android.nira.webapp.WebAppSettingsAdapter
-import com.prirai.android.nira.components.Components
+import com.prirai.android.nira.ext.components
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
@@ -83,7 +83,7 @@ class WebAppSettingsFragment : Fragment() {
 
     private fun setupObservers() {
         viewLifecycleOwner.lifecycleScope.launch {
-            Components(requireContext()).webAppManager.getAllWebApps()
+            requireContext().components.webAppManager.getAllWebApps()
                 .collectLatest { webApps ->
                     updateWebAppList(webApps)
                 }
@@ -111,7 +111,7 @@ class WebAppSettingsFragment : Fragment() {
 
     private fun launchWebApp(webApp: WebAppEntity) {
         viewLifecycleOwner.lifecycleScope.launch {
-            Components(requireContext()).webAppManager.updateWebAppUsage(webApp.id)
+            requireContext().components.webAppManager.updateWebAppUsage(webApp.id)
             // Launch the PWA using WebAppActivity
             val intent = Intent(requireContext(), WebAppActivity::class.java).apply {
                 putExtra(WebAppActivity.EXTRA_WEB_APP_URL, webApp.url)
@@ -133,7 +133,7 @@ class WebAppSettingsFragment : Fragment() {
 
     private fun uninstallWebApp(webApp: WebAppEntity) {
         viewLifecycleOwner.lifecycleScope.launch {
-            Components(requireContext()).webAppManager.uninstallWebApp(webApp.id)
+            requireContext().components.webAppManager.uninstallWebApp(webApp.id)
             // Also remove the shortcut if it exists
             // TODO: Implement shortcut removal
         }
@@ -141,7 +141,7 @@ class WebAppSettingsFragment : Fragment() {
 
     private fun toggleWebAppEnabled(webApp: WebAppEntity, enabled: Boolean) {
         viewLifecycleOwner.lifecycleScope.launch {
-            Components(requireContext()).webAppManager.setWebAppEnabled(webApp.id, enabled)
+            requireContext().components.webAppManager.setWebAppEnabled(webApp.id, enabled)
         }
     }
 
@@ -158,7 +158,7 @@ class WebAppSettingsFragment : Fragment() {
 
     private fun clearWebAppData(webApp: WebAppEntity) {
         viewLifecycleOwner.lifecycleScope.launch {
-            Components(requireContext()).webAppManager.clearWebAppData(webApp.id)
+            requireContext().components.webAppManager.clearWebAppData(webApp.id)
             // Show success message
             androidx.appcompat.app.AlertDialog.Builder(requireContext())
                 .setMessage(R.string.web_app_data_cleared)
@@ -169,7 +169,7 @@ class WebAppSettingsFragment : Fragment() {
 
     private fun updatePwaCache(webApp: WebAppEntity) {
         viewLifecycleOwner.lifecycleScope.launch {
-            Components(requireContext()).webAppManager.updatePwaCache(webApp.id)
+            requireContext().components.webAppManager.updatePwaCache(webApp.id)
             // Show success message
             androidx.appcompat.app.AlertDialog.Builder(requireContext())
                 .setMessage(getString(R.string.pwa_cache_updated, webApp.name))
@@ -182,7 +182,7 @@ class WebAppSettingsFragment : Fragment() {
         viewLifecycleOwner.lifecycleScope.launch {
             try {
                 // Load icon if available
-                val icon = Components(requireContext()).webAppManager.loadIconFromFile(webApp.iconUrl)
+                val icon = requireContext().components.webAppManager.loadIconFromFile(webApp.iconUrl)
 
                 // Create shortcut
                 val context = requireContext()

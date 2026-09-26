@@ -8,7 +8,6 @@ import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.fragment.app.DialogFragment
 import androidx.lifecycle.lifecycleScope
-import androidx.room.Room
 import com.prirai.android.nira.browser.home.compose.AddShortcutDialog
 import com.prirai.android.nira.ui.theme.NiraTheme
 import kotlinx.coroutines.Dispatchers
@@ -55,28 +54,8 @@ class AddShortcutDialogFragment : DialogFragment() {
     private suspend fun addShortcut(url: String, title: String) {
         val context = requireContext().applicationContext
         try {
-            // Use migrations to match ComposeHomeFragment database setup
-            val MIGRATION_1_2: androidx.room.migration.Migration = object : androidx.room.migration.Migration(1, 2) {
-                override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
-                    db.execSQL("ALTER TABLE shortcutentity ADD COLUMN title TEXT")
-                }
-            }
+            val database = ShortcutDatabase.getInstance(context)
 
-            val MIGRATION_2_3: androidx.room.migration.Migration = object : androidx.room.migration.Migration(2, 3) {
-                override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
-                    db.execSQL("CREATE TABLE shortcutentity_new (uid INTEGER NOT NULL, url TEXT, title TEXT, PRIMARY KEY(uid))")
-                    db.execSQL("INSERT INTO shortcutentity_new (uid, url, title) SELECT uid, url, title FROM shortcutentity")
-                    db.execSQL("DROP TABLE shortcutentity")
-                    db.execSQL("ALTER TABLE shortcutentity_new RENAME TO shortcutentity")
-                }
-            }
-            
-            val database = Room.databaseBuilder(
-                context,
-                ShortcutDatabase::class.java,
-                "shortcut-database"
-            ).addMigrations(MIGRATION_1_2, MIGRATION_2_3).build()
-            
             withContext(Dispatchers.IO) {
                 val entity = ShortcutEntity(url = url, title = title)
                 database.shortcutDao().insertAll(entity)

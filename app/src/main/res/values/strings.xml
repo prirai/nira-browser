@@ -430,7 +430,6 @@
     <string name="show_protocol_in_url">Show URL protocol in toolbar</string>
 
   <string name="search_suggestions">Search suggestions</string>
-  <string name="search_for_query">Search for \"%1$s\"</string>
   <string name="search_suggestion_count">Number of search suggestions</string>
 
   <string name="safe_browsing">Safe browsing</string>
@@ -929,4 +928,13 @@
     <string name="etp_strict_desc">Maximum protection. Some sites may display or function differently.</string>
     <string name="etp_custom_title">Custom</string>
     <string name="etp_custom_desc">Choose which categories of trackers to block.</string>
+
+    <!-- Global browser menu. -->
+    <string name="menu_add_to_favorite">Favorite</string>
+    <string name="menu_close_tab">Close tab</string>
+
+    <!-- One-time tab migration popup (see DefaultProfileTabMigration). -->
+    <string name="nira_default_profile_migration_title">Tabs moved to Default profile</string>
+    <string name="nira_default_profile_migration_message">%1$d tab(s) that had no profile assigned were moved to the Default profile. You can find them in the tab bar now.</string>
+    <string name="nira_default_profile_migration_message_zero">Your tabs are now organized under the Default profile.</string>
 </resources>

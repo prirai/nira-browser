@@ -6,6 +6,7 @@ import com.prirai.android.nira.browser.bookmark.items.BookmarkItem
 import com.prirai.android.nira.browser.bookmark.items.BookmarkSiteItem
 import com.squareup.moshi.JsonReader
 import com.squareup.moshi.JsonWriter
+import mozilla.components.support.base.log.logger.Logger
 import okio.buffer
 import okio.sink
 import okio.source
@@ -18,20 +19,29 @@ class BookmarkManager private constructor(context: Context) : Serializable {
     val root = BookmarkFolderItem(null, null, -1)
     private val siteIndex = ArrayList<BookmarkSiteItem>()
     private val siteComparator: Comparator<BookmarkSiteItem> = Comparator { s1, s2 -> s1.url.hashCode().compareTo(s2.url.hashCode()) }
+    private val logger = Logger("BookmarkManager")
 
     init {
         initialize()
     }
 
     companion object {
+        @Volatile
         private var instance: BookmarkManager? = null
 
+        /**
+         * Threadsafe singleton accessor. Uses double-checked locking with a
+         * `@Volatile` field so that concurrent callers on different threads
+         * cannot each construct their own `BookmarkManager` (the old
+         * implementation had a plain `if (instance == null) instance = ...`
+         * race that could produce two managers pointing at the same
+         * `bookmarks.dat` file, with the corresponding possibility of
+         * concurrent-writer data corruption).
+         */
         fun getInstance(context: Context): BookmarkManager {
-            if (instance == null) {
-                instance = BookmarkManager(context.applicationContext)
+            return instance ?: synchronized(this) {
+                instance ?: BookmarkManager(context.applicationContext).also { instance = it }
             }
-
-            return instance!!
         }
     }
 
@@ -50,6 +60,10 @@ class BookmarkManager private constructor(context: Context) : Serializable {
                 return true
             }
         } catch (e: IOException) {
+            // Bookmarks file is corrupt or unreadable. Return false so callers
+            // can react (currently none do - but at least the exception is
+            // no longer silently swallowed).
+            logger.error("Failed to read bookmarks from ${file.path}", e)
         }
         return false
     }
@@ -65,6 +79,10 @@ class BookmarkManager private constructor(context: Context) : Serializable {
                 return true
             }
         } catch (e: IOException) {
+            // Bookmarks write failed - disk full, permissions, etc. Callers
+            // observe the returned `false`; see BrowserFragment "Add Bookmark"
+            // menu action which surfaces this to the user as a Toast.
+            logger.error("Failed to save bookmarks to ${file.path}", e)
         }
 
         return false

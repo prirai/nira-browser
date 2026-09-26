@@ -3,6 +3,7 @@ package com.prirai.android.nira.webapp
 import android.content.Context
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
+import com.prirai.android.nira.ext.components
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
@@ -21,7 +22,7 @@ class WebAppUpdateManager(private val context: Context) {
     val availableUpdates: LiveData<List<PwaUpdate>> = _availableUpdates
 
     private val webAppManager: WebAppManager by lazy {
-        com.prirai.android.nira.components.Components(context).webAppManager
+        context.components.webAppManager
     }
 
     sealed class UpdateState {
@@ -83,11 +84,14 @@ class WebAppUpdateManager(private val context: Context) {
      */
     private suspend fun checkIfUpdateAvailable(webApp: WebAppEntity): PwaUpdate? {
         return try {
-            val components = com.prirai.android.nira.components.Components(context)
-            
+            // Use the process-wide Components singleton via context.components rather
+            // than constructing a fresh Components(context) graph (which would spin
+            // up a duplicate GeckoEngine and BrowserStore per call).
+            val components = context.components
+
             // Fetch the current manifest from the web
             webApp.manifestUrl ?: return null
-            
+
             // Load stored manifest from Mozilla components storage
             val storedManifest = components.webAppManifestStorage.loadManifest(webApp.url)
             

@@ -14,9 +14,6 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
-import androidx.room.Room
-import androidx.room.migration.Migration
-import androidx.sqlite.db.SupportSQLiteDatabase
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.prirai.android.nira.BrowserActivity
 import com.prirai.android.nira.NavGraphDirections
@@ -71,27 +68,8 @@ class ComposeHomeFragment : Fragment() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Initialize database with migrations
-        val MIGRATION_1_2: Migration = object : Migration(1, 2) {
-            override fun migrate(db: SupportSQLiteDatabase) {
-                db.execSQL("ALTER TABLE shortcutentity ADD COLUMN title TEXT")
-            }
-        }
-
-        val MIGRATION_2_3: Migration = object : Migration(2, 3) {
-            override fun migrate(db: SupportSQLiteDatabase) {
-                db.execSQL("CREATE TABLE shortcutentity_new (uid INTEGER NOT NULL, url TEXT, title TEXT, PRIMARY KEY(uid))")
-                db.execSQL("INSERT INTO shortcutentity_new (uid, url, title) SELECT uid, url, title FROM shortcutentity")
-                db.execSQL("DROP TABLE shortcutentity")
-                db.execSQL("ALTER TABLE shortcutentity_new RENAME TO shortcutentity")
-            }
-        }
-
-        val database = Room.databaseBuilder(
-            requireContext(),
-            ShortcutDatabase::class.java,
-            "shortcut-database"
-        ).addMigrations(MIGRATION_1_2, MIGRATION_2_3).build()
+        // Shortcut DB schema + migrations live in ShortcutDatabase.getInstance.
+        val database = ShortcutDatabase.getInstance(requireContext())
 
         val factory = HomeViewModelFactory(
             bookmarkManager = BookmarkManager.getInstance(requireContext()),
