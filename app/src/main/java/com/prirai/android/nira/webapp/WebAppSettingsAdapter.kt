@@ -10,7 +10,7 @@ import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.prirai.android.nira.R
 import com.prirai.android.nira.databinding.ItemWebappSettingBinding
-import com.prirai.android.nira.components.Components
+import com.prirai.android.nira.ext.components
 import com.prirai.android.nira.utils.FaviconCache
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -127,15 +127,19 @@ class WebAppSettingsAdapter(
     private suspend fun loadWebAppIcon(webApp: WebAppEntity): Bitmap? {
         return withContext(Dispatchers.IO) {
             // 1. Try webapp's stored icon
-            Components(context).webAppManager.loadIconFromFile(webApp.iconUrl)?.let { return@withContext it }
+            context.components.webAppManager.loadIconFromFile(webApp.iconUrl)?.let { return@withContext it }
             
             // 2. Try favicon cache
             FaviconCache.getInstance(context).loadFavicon(webApp.url)?.let { return@withContext it }
             
-            // 3. Try fetching from browser icons (BrowserIcons component)
+            // 3. Try fetching from browser icons (BrowserIcons component). Use
+            // the process-wide singleton via context.components; the previous
+            // `Components(context)` idiom created a duplicate BrowserIcons /
+            // GeckoEngine graph on every list-item bind, wasting memory and
+            // never hitting the icon cache.
             try {
                 val iconRequest = IconRequest(url = webApp.url)
-                val icon = Components(context).icons.loadIcon(iconRequest).await()
+                val icon = context.components.icons.loadIcon(iconRequest).await()
                 icon.bitmap
             } catch (e: Exception) {
                 null

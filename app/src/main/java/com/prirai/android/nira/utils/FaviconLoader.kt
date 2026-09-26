@@ -2,32 +2,29 @@ package com.prirai.android.nira.utils
 
 import android.content.Context
 import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import com.prirai.android.nira.ext.components
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import mozilla.components.browser.icons.IconRequest
-import java.net.URL
+import mozilla.components.support.base.log.logger.Logger
 
 /**
- * Centralized favicon loader with intelligent caching
+ * Centralized favicon loader with intelligent caching.
  *
  * This is the SINGLE source of truth for all favicon loading in the app.
  * Use this everywhere for consistent, fast favicon access.
  *
- * Features:
- * - Superfast memory lookup (synchronous)
- * - Persistent disk cache (survives restarts)
- * - Google favicon service for PWAs (fast CDN)
- * - Automatic BrowserIcons integration
- * - Domain-based key generation
- * - Thread-safe singleton pattern
- *
  * Cache Hierarchy (fastest to slowest):
  * 1. Memory cache - Instant synchronous access (0ms)
  * 2. Disk cache - Fast async access (~10ms)
- * 3. Google Favicon Service - Fast CDN (~50-200ms) [PWAs only]
- * 4. BrowserIcons - Network if needed (~100-1000ms)
+ * 3. Upstream `BrowserIcons` - own cache + network fetch (~100-1000ms)
+ *
+ * A previous revision consulted `https://www.google.com/s2/favicons` as a
+ * "fast CDN" fallback for PWAs. That path was removed: it leaked every PWA
+ * URL to Google on first-fetch, which contradicts the privacy-focused
+ * mission of the app. Upstream `BrowserIcons` has its own on-disk cache and
+ * a generator fallback, so it's fast enough on its own; latency-sensitive
+ * callers should use [getFromMemorySync] first and load asynchronously.
  *
  * Usage:
  * ```kotlin
@@ -37,13 +34,13 @@ import java.net.URL
  * // Full async load (checks all levels, fetches if needed)
  * val favicon = FaviconLoader.loadFavicon(context, url)
  *
- * // PWA-specific load (uses Google service for speed)
+ * // PWA-specific load (same as loadFavicon; retained for source compat)
  * val favicon = FaviconLoader.loadFaviconForPwa(context, url)
  * ```
  */
 object FaviconLoader {
 
-    private const val GOOGLE_FAVICON_SERVICE = "https://www.google.com/s2/favicons"
+    private val logger = Logger("FaviconLoader")
 
     /**
      * Load favicon with full cache hierarchy
@@ -89,134 +86,35 @@ object FaviconLoader {
 
                 val icon = context.components.icons.loadIcon(iconRequest).await()
                 val bitmap = icon.bitmap
-
-                if (bitmap != null) {
-                    // Save to cache for future fast access
-                    cache.saveFaviconSync(url, bitmap)
-                    bitmap
-                } else {
-                    null
-                }
+                // BrowserIcons always returns a bitmap (may be a generated
+                // placeholder). Cache it so subsequent lookups hit the fast
+                // path in FaviconCache.
+                cache.saveFaviconSync(url, bitmap)
+                bitmap
             } catch (e: Exception) {
-                e.printStackTrace()
+                logger.warn("Favicon load failed for $url", e)
                 null
             }
         }
     }
 
     /**
-     * Load favicon optimized for PWAs (uses Google's fast CDN service)
+     * Load favicon for a PWA. Alias of [loadFavicon] - kept for source-compat
+     * with the 4 existing callsites (PwaSuggestionsAdapter, PwaSuggestionManager,
+     * WebAppActivity, UnifiedWebAppFragment) so they don't need to change.
      *
-     * Order:
-     * 1. Memory cache (instant)
-     * 2. Disk cache (fast)
-     * 3. Google Favicon Service (fast CDN, ~50-200ms)
-     * 4. BrowserIcons (fallback if Google service fails)
+     * Historically this was a separate implementation that hit
+     * `https://www.google.com/s2/favicons` as a fast CDN. That path was
+     * removed for privacy - see the class kdoc.
      *
-     * Use this for PWA suggestions, webapp lists, and other PWA-related UI
-     * for faster initial loading compared to BrowserIcons.
+     * @param size retained for API compat; ignored (BrowserIcons picks its own size).
      */
+    @Suppress("UNUSED_PARAMETER")
     suspend fun loadFaviconForPwa(
         context: Context,
         url: String,
-        size: Int = 64
-    ): Bitmap? {
-        return withContext(Dispatchers.IO) {
-            try {
-                val cache = FaviconCache.getInstance(context)
-
-                cache.getFaviconFromMemory(url)?.let {
-                    return@withContext it
-                }
-
-                cache.loadFavicon(url)?.let {
-                    return@withContext it
-                }
-
-                val domain = extractDomain(url)
-                val googleFaviconUrl = "$GOOGLE_FAVICON_SERVICE?domain=$domain&sz=$size"
-
-                try {
-                    val connection = URL(googleFaviconUrl).openConnection()
-                    connection.connectTimeout = 5000 // 5 second timeout
-                    connection.readTimeout = 5000
-                    connection.connect()
-
-                    val inputStream = connection.getInputStream()
-                    val bitmap = BitmapFactory.decodeStream(inputStream)
-                    inputStream.close()
-
-                    if (bitmap != null && bitmap.width > 1 && bitmap.height > 1) {
-                        // Valid favicon (Google returns 1x1 pixel for errors)
-                        cache.saveFaviconSync(url, bitmap)
-                        return@withContext bitmap
-                    }
-                } catch (e: Exception) {
-                    // Google service failed, fall through to BrowserIcons
-                    e.printStackTrace()
-                }
-
-                val iconRequest = IconRequest(
-                    url = url,
-                    size = IconRequest.Size.DEFAULT,
-                    resources = listOf(
-                        IconRequest.Resource(
-                            url = url,
-                            type = IconRequest.Resource.Type.FAVICON
-                        ),
-                        IconRequest.Resource(
-                            url = url,
-                            type = IconRequest.Resource.Type.APPLE_TOUCH_ICON
-                        ),
-                        IconRequest.Resource(
-                            url = url,
-                            type = IconRequest.Resource.Type.IMAGE_SRC
-                        )
-                    )
-                )
-
-                val icon = context.components.icons.loadIcon(iconRequest).await()
-                val bitmap = icon.bitmap
-
-                if (bitmap != null) {
-                    // Save to cache for future fast access
-                    cache.saveFaviconSync(url, bitmap)
-                    bitmap
-                } else {
-                    null
-                }
-            } catch (e: Exception) {
-                e.printStackTrace()
-                null
-            }
-        }
-    }
-
-    /**
-     * Extract domain from URL for Google favicon service
-     */
-    private fun extractDomain(url: String): String {
-        return try {
-            var domain = url.lowercase().trim()
-
-            // Remove protocol
-            domain = when {
-                domain.startsWith("http://") -> domain.substring(7)
-                domain.startsWith("https://") -> domain.substring(8)
-                else -> domain
-            }
-
-            // Extract just the domain (before /, ?, #)
-            domain = domain.split("/", "?", "#")[0]
-
-            // Remove port if present
-            domain = domain.split(":")[0]
-
-            domain
-        } catch (e: Exception) {
-            url
-        }
-    }
+        size: Int = 64,
+    ): Bitmap? = loadFavicon(context, url)
 
     /**
      * Get favicon from memory cache only (SYNCHRONOUS - instant)
@@ -278,36 +176,19 @@ object FaviconLoader {
     }
 
     /**
-     * Load PWA favicon with retry logic (uses Google service for speed)
+     * Load PWA favicon with retry logic. Alias of [loadFaviconWithRetry] -
+     * kept for source-compat.
      *
-     * Optimized for PWA suggestions and webapp lists
+     * @param size retained for API compat; ignored.
      */
+    @Suppress("UNUSED_PARAMETER")
     suspend fun loadFaviconForPwaWithRetry(
         context: Context,
         url: String,
         size: Int = 64,
         maxRetries: Int = 2,
-        retryDelayMs: Long = 300
-    ): Bitmap? {
-        return withContext(Dispatchers.IO) {
-            var attempts = 0
-            var result: Bitmap? = null
-
-            while (attempts <= maxRetries && result == null) {
-                result = loadFaviconForPwa(context, url, size)
-
-                if (result == null && attempts < maxRetries) {
-                    // Wait before retry (another load might complete)
-                    kotlinx.coroutines.delay(retryDelayMs)
-                    attempts++
-                } else {
-                    break
-                }
-            }
-
-            result
-        }
-    }
+        retryDelayMs: Long = 300,
+    ): Bitmap? = loadFaviconWithRetry(context, url, maxRetries, retryDelayMs)
 
     /**
      * Preload favicon to memory from disk (warm-up cache)

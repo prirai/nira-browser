@@ -210,6 +210,42 @@ open class Components(private val applicationContext: Context) {
         )
     }
 
+    /**
+     * Global web-notification feature. Initialised exactly once for the app
+     * process (upstream doc: "Initialize this feature globally once on app
+     * start"). The `init` block registers a delegate with the engine, so
+     * simply resolving this lazy property is enough - we never call methods
+     * on it directly. It is anchored here in Components so the graph owns
+     * its lifetime; previously the constructor call was dropped on the floor
+     * inside `store.apply { ... }`, leaving no strong reference outside the
+     * engine's internal registration map.
+     *
+     * # PWA / Web Push status
+     * Server-initiated web push (Notification subscribed via a service
+     * worker's `pushManager.subscribe()`) additionally requires
+     * `mozilla.components.feature.push.AutoPushFeature` and a concrete
+     * `PushService`. As of mozilla-components v153 the only shipped service
+     * implementation is `lib-push-firebase` (Firebase Cloud Messaging), which
+     * requires adding `google-services.json`, the Google Services Gradle
+     * plugin, and `firebase-messaging` - all Google-proprietary dependencies
+     * that a privacy-focused browser probably should not ship by default.
+     * The removed `lib-push-amazon` module and community UnifiedPush
+     * adapters are no longer part of upstream. Foreground web notifications
+     * still work via the [WebNotificationFeature] above; only background
+     * server-pushed subscriptions are gated on adding a `PushService`.
+     */
+    val webNotificationFeature: WebNotificationFeature by lazy {
+        WebNotificationFeature(
+            context = applicationContext,
+            engine = engine,
+            browserIcons = icons,
+            smallIcon = R.drawable.ic_notification,
+            sitePermissionsStorage = permissionStorage,
+            activityClass = BrowserActivity::class.java,
+            notificationsDelegate = notificationsDelegate,
+        )
+    }
+
     val addonUpdater =
         DefaultAddonUpdater(applicationContext, Frequency(1, TimeUnit.DAYS), notificationsDelegate, Dispatchers.Main)
 
@@ -258,6 +294,19 @@ open class Components(private val applicationContext: Context) {
         com.prirai.android.nira.browser.profile.ProfileMiddleware(profileManager)
     }
 
+    /**
+     * One-time migration that rewrites [mozilla.components.browser.state.state.TabSessionState.contextId]
+     * on any tab restored with a null or empty contextId to `"profile_default"`. Runs
+     * exactly once per install, gated by the pref
+     * `nira.tabs.profile.defaultMigrate` (see [UserPreferences.defaultProfileMigrationDone]).
+     * Placed first in the middleware chain so it can intercept
+     * [mozilla.components.browser.state.action.TabListAction.RestoreAction] before the
+     * reducer applies it.
+     */
+    val defaultProfileTabMigration by lazy {
+        com.prirai.android.nira.browser.profile.DefaultProfileTabMigration(applicationContext)
+    }
+
     val remoteSettingsService by lazy {
         RemoteSettingsService(
             applicationContext,
@@ -270,6 +319,12 @@ open class Components(private val applicationContext: Context) {
     val store by lazy {
         BrowserStore(
                 middleware = listOf(
+                        // MUST be first: rewrites TabListAction.RestoreAction so restored
+                        // tabs with null/empty contextId get adopted by the default profile
+                        // before any downstream middleware (Undo, Thumbnails, TabGroup, etc.)
+                        // observes them. Guarded by the `nira.tabs.profile.defaultMigrate`
+                        // pref so it self-disables after the first successful run.
+                        defaultProfileTabMigration,
                         downloadConfirmationMiddleware,
                         DownloadMiddleware(
                             applicationContext,
@@ -339,11 +394,15 @@ open class Components(private val applicationContext: Context) {
         ).apply{
             icons.install(engine, this)
 
-            WebNotificationFeature(
-                    applicationContext, engine, icons, R.drawable.ic_notification,
-                    permissionStorage, BrowserActivity::class.java,
-                notificationsDelegate = notificationsDelegate
-            )
+            // Force the WebNotificationFeature singleton to initialise. Its
+            // `init { engine.registerWebNotificationDelegate(this) }` block
+            // hooks into GeckoView so web-notification permission prompts and
+            // dispatches to `NotificationsDelegate` work end-to-end. Storing
+            // the reference in a lazy Components field (rather than throwing
+            // the constructor result away like the previous code did) means
+            // the delegate is kept alive by our Components graph, not just by
+            // the engine's internal registration map.
+            webNotificationFeature
 
             MediaSessionFeature(applicationContext, MediaSessionService::class.java, this).start()
 

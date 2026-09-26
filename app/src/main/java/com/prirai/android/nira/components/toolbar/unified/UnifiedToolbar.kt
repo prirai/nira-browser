@@ -90,6 +90,7 @@ class UnifiedToolbar @JvmOverloads constructor(
 
     // Reload/Stop button integration
     private var reloadStopIntegration: com.prirai.android.nira.integration.ReloadStopButtonIntegration? = null
+
     
     // Contextual toolbar listener reference (used when contextual toolbar is disabled)
     private var contextualToolbarListener: ContextualBottomToolbar.ContextualToolbarListener? = null
@@ -459,6 +460,7 @@ class UnifiedToolbar @JvmOverloads constructor(
         // Add reload/stop button integration
         setupReloadStopButton(store, lifecycleOwner)
     }
+
     
     /**
      * Setup reload/stop button integration

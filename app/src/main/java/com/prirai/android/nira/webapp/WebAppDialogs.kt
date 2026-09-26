@@ -14,6 +14,7 @@ import com.prirai.android.nira.browser.profile.ProfileManager
 import com.prirai.android.nira.databinding.DialogWebappInstallBinding
 import com.prirai.android.nira.databinding.DialogWebappCloneBinding
 import com.prirai.android.nira.databinding.DialogWebappProfileBinding
+import com.prirai.android.nira.ext.components
 import com.prirai.android.nira.theme.ThemeManager
 import com.prirai.android.nira.preferences.UserPreferences
 import kotlinx.coroutines.launch
@@ -113,7 +114,7 @@ class WebAppCloneDialog(
         return kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
             try {
                 // Try webapp's stored icon
-                com.prirai.android.nira.components.Components(context).webAppManager
+                context.components.webAppManager
                     .loadIconFromFile(webApp.iconUrl) ?: run {
                     // Fallback to cache
                     com.prirai.android.nira.utils.FaviconCache.getInstance(context)
@@ -234,7 +235,7 @@ class WebAppProfileDialog(
         return kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
             try {
                 // Try webapp's stored icon
-                com.prirai.android.nira.components.Components(context).webAppManager
+                context.components.webAppManager
                     .loadIconFromFile(webApp.iconUrl) ?: run {
                     // Fallback to cache
                     com.prirai.android.nira.utils.FaviconCache.getInstance(context)
