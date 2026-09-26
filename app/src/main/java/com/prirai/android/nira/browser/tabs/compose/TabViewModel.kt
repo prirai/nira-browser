@@ -13,18 +13,15 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 
 /**
- * Data class for pending tab deletion (for undo)
- */
-data class PendingTabDeletion(
-    val tabId: String,
-    val tab: TabSessionState,
-    val groupId: String?,
-    val position: Int
-)
-
-/**
  * ViewModel for managing tabs, groups, and their order in Compose UI.
  * Serves as single source of truth, bridging UnifiedTabGroupManager and Compose UI.
+ *
+ * Tab-close undo is handled by mozilla-components' `UndoMiddleware` (installed in
+ * `Components.kt`) plus `TabsUseCases.undo`. When the user closes a tab we simply
+ * dispatch `RemoveTabAction`; the middleware snapshots the tab (including its
+ * `engineSessionState` and `id`) into `BrowserState.undoHistory` for ~5s. Calling
+ * `undo()` restores tabs with their original id, so `TabGroupMember` Room rows
+ * still resolve correctly - no restore-side reattachment code is needed.
  */
 class TabViewModel(
     private val context: Context,
@@ -53,12 +50,15 @@ class TabViewModel(
     // Expose order for UI to use
     val currentOrder: StateFlow<UnifiedTabOrder?> = orderManager.currentOrder
 
-    // Undo state (using GlobalSnackbarManager)
-    private var pendingTabDeletion: PendingTabDeletion? = null
-
-    // Callbacks for tab operations (to be set by UI/Fragment)
+    /**
+     * Optional callback invoked *after* a tab has been removed from the store.
+     * Kept as a hook so hosts (e.g. `TabsBottomSheetFragment`,
+     * `ComposeTabBarWithProfileSwitcher`) can run their own UI-only follow-up work
+     * (dismissing sheets, refreshing selection, etc.). The actual store removal is
+     * performed by this ViewModel via `TabsUseCases.removeTab`, and undo is handled
+     * upstream by `UndoMiddleware` - see [closeTab].
+     */
     var onTabRemove: ((String) -> Unit)? = null
-    var onTabRestore: ((TabSessionState, Int, String?) -> Unit)? = null
 
     init {
         // Observe group events and refresh when groups change
@@ -897,66 +897,50 @@ class TabViewModel(
     }
 
     /**
-     * Close a specific tab with undo functionality
+     * Close a specific tab, optionally with an undo snackbar.
      *
-     * This follows the standard pattern:
-     * 1. Immediately remove tab from store (UI updates instantly)
-     * 2. Show snackbar with undo option
-     * 3. If undo clicked: restore the tab
-     * 4. If timeout: tab stays deleted
+     * Delegates removal to `TabsUseCases.removeTab`, which triggers
+     * `UndoMiddleware` (installed in `Components.kt`) to snapshot the tab (id,
+     * `contextId`, `engineSessionState`, `index`, `lastAccess`, ...) into
+     * `BrowserState.undoHistory` for ~5s. If the user taps *Undo* on the
+     * snackbar we dispatch `TabsUseCases.undo()`, which restores every tab in
+     * `undoHistory` *with its original id*, so:
+     *  - the `EngineSession` bound to that id remains valid (no reload),
+     *  - `TabGroupMember` Room rows still reference a live tab,
+     *  - scroll position and form data are preserved.
+     *
+     * The [onTabRemove] callback (if set) fires *after* the store dispatch so
+     * hosts can dismiss sheets or refresh their own UI. It intentionally does
+     * NOT perform the store removal any more - keeping the store update in one
+     * place makes the undo semantics predictable across every entry point.
      */
     fun closeTab(tabId: String, showUndo: Boolean = true) {
         viewModelScope.launch {
             val tab = _tabs.value.find { it.id == tabId } ?: return@launch
-            val groupId = _groups.value.find { it.tabIds.contains(tabId) }?.id
-            val currentOrder = orderManager.currentOrder.value
-            val position = currentOrder?.primaryOrder?.indexOfFirst { item ->
-                when (item) {
-                    is UnifiedTabOrder.OrderItem.SingleTab -> item.tabId == tabId
-                    is UnifiedTabOrder.OrderItem.TabGroup -> item.tabIds.contains(tabId)
-                    else -> false
-                }
-            } ?: -1
+            val tabsUseCases = context.components.tabsUseCases
+
+            // Dispatch the removal. UndoMiddleware picks this up and stashes the
+            // tab in state.undoHistory for the default 5000ms window.
+            tabsUseCases.removeTab(tabId)
+            onTabRemove?.invoke(tabId)
 
             if (showUndo) {
-                // Store deletion info for undo
-                pendingTabDeletion = PendingTabDeletion(tabId, tab, groupId, position)
-
-                // IMMEDIATELY remove the tab (this is the standard approach)
-                onTabRemove?.invoke(tabId)
-
-                // Show global snackbar with undo action
                 GlobalSnackbarManager.getInstance().showUndoSnackbar(
                     message = "Tab closed",
-                    onUndo = { undoTabDeletion() },
+                    onUndo = {
+                        // Restores everything currently in undoHistory - which is
+                        // just this tab, because the 5s window resets on each new
+                        // removal. Same id is reused, so groups stay intact.
+                        tabsUseCases.undo()
+                    },
                     onConfirm = {
-                        // On confirm (timeout), just clear the pending deletion
-                        // Tab is already removed from store
-                        pendingTabDeletion = null
+                        // Timeout: nothing to do. UndoMiddleware will clear
+                        // undoHistory on its own after clearAfterMillis.
                     }
                 )
-            } else {
-                // Close immediately without undo
-                onTabRemove?.invoke(tabId)
             }
         }
     }
-
-    /**
-     * Undo tab deletion - restore the tab
-     */
-    fun undoTabDeletion() {
-        pendingTabDeletion?.let { deletion ->
-            // Restore the tab at its original position, re-adding to group if applicable
-            onTabRestore?.invoke(deletion.tab, deletion.position, deletion.groupId)
-        }
-        pendingTabDeletion = null
-    }
-
-    /**
-     * Get pending deletion info for UI to actually delete
-     */
-    fun getPendingDeletion(): PendingTabDeletion? = pendingTabDeletion
 
     /**
      * Close all other tabs except the specified one

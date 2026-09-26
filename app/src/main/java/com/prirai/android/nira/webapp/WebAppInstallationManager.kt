@@ -5,6 +5,7 @@ import android.graphics.Bitmap
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import com.prirai.android.nira.R
+import com.prirai.android.nira.ext.components
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -24,7 +25,7 @@ class WebAppInstallationManager(private val context: Context) {
     val detectedPwas: LiveData<List<DetectedPwa>> = _detectedPwas
 
     private val webAppManager: WebAppManager by lazy {
-        com.prirai.android.nira.components.Components(context).webAppManager
+        context.components.webAppManager
     }
 
     sealed class InstallationState {

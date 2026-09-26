@@ -169,6 +169,11 @@ class UnifiedTabGroupManager private constructor(private val context: Context) {
 
             _groupsState.value = groupDataList
         } catch (e: Exception) {
+            // Loading groups from Room failed - schema mismatch or DB
+            // corruption. Log so the empty tab-group state has an
+            // explanation instead of appearing to work fine but with
+            // no groups.
+            android.util.Log.e("UnifiedTabGroupManager", "Failed to load groups from database", e)
         }
     }
 

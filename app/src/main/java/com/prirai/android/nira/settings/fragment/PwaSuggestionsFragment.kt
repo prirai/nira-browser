@@ -7,6 +7,7 @@ import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import com.prirai.android.nira.R
 import com.prirai.android.nira.databinding.FragmentPwaSuggestionsBinding
+import com.prirai.android.nira.ext.components
 import com.prirai.android.nira.webapp.PwaSuggestionManager
 import com.prirai.android.nira.webapp.PwaSuggestionsAdapter
 
@@ -31,7 +32,7 @@ class PwaSuggestionsFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        suggestionManager = com.prirai.android.nira.components.Components(requireContext()).pwaSuggestionManager
+        suggestionManager = requireContext().components.pwaSuggestionManager
         setupRecyclerView()
         setupObservers()
         setupUI()

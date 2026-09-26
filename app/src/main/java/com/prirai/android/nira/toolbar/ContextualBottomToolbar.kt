@@ -82,8 +82,7 @@ class ContextualBottomToolbar @JvmOverloads constructor(
     }
     
     private fun applyIconScale() {
-        val userPrefs = context.getSharedPreferences("scw_preferences", Context.MODE_PRIVATE)
-        val iconScale = userPrefs.getFloat("toolbar_icon_size", 1.0f)
+        val iconScale = com.prirai.android.nira.preferences.UserPreferences(context).toolbarIconSize
         
         val baseHeight = (48 * context.resources.displayMetrics.density).toInt()
         val scaledHeight = (baseHeight * iconScale).toInt()
@@ -148,9 +147,9 @@ class ContextualBottomToolbar @JvmOverloads constructor(
         tabCount: Int,
         isHomepage: Boolean
     ) {
-        val userPrefs = context.getSharedPreferences("scw_preferences", Context.MODE_PRIVATE)
-        val showContextualToolbar = userPrefs.getBoolean("show_contextual_toolbar", true)
-        
+        val showContextualToolbar =
+            com.prirai.android.nira.preferences.UserPreferences(context).showContextualToolbar
+
         if (!showContextualToolbar) {
             this.visibility = GONE
             return

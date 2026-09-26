@@ -5,6 +5,7 @@ import android.content.SharedPreferences
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 
+import com.prirai.android.nira.ext.components
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -365,7 +366,7 @@ class PwaSuggestionManager(private val context: Context) {
                         )
                     )
                 )
-                val icon = com.prirai.android.nira.components.Components(context).icons.loadIcon(iconRequest).await()
+                val icon = context.components.icons.loadIcon(iconRequest).await()
                 if (icon.bitmap != null) {
                     // Save to cache for future use
                     com.prirai.android.nira.utils.FaviconCache.getInstance(context).saveFavicon(pwa.url, icon.bitmap)

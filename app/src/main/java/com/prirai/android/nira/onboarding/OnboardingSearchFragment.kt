@@ -33,10 +33,14 @@ class OnboardingSearchFragment : Fragment() {
         userPreferences = UserPreferences(requireContext())
         searchEngines = SearchEngineList(requireContext()).getEngines()
         
-        // Set DuckDuckGo as default (index 1) if Google is selected
-        // This ensures DuckDuckGo is the default for new users
-        val prefs = requireContext().getSharedPreferences("scw_preferences", android.content.Context.MODE_PRIVATE)
-        if (!prefs.contains("search_engine_choice")) {
+        // Set DuckDuckGo as default (index 1) if the user hasn't picked one
+        // yet. Reads through the shared UserPreferences.preferences handle so
+        // the key lookup matches the delegate's actual key
+        // (UserPreferences.SEARCH_ENGINE = "search_engine"). The previous
+        // implementation checked a non-existent key "search_engine_choice",
+        // so the branch always fired on first launch - functionally correct
+        // by accident but fragile.
+        if (!userPreferences.preferences.contains(UserPreferences.SEARCH_ENGINE)) {
             userPreferences.searchEngineChoice = 1 // DuckDuckGo
         }
         

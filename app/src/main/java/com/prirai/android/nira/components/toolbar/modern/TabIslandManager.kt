@@ -374,11 +374,20 @@ class TabIslandManager(private val context: Context) {
             else -> "default"
         }
         
-        // Get the unified order from TabOrderManager (using runBlocking since this is called from UI)
+        // Read the current order from the manager's StateFlow rather than
+        // synchronously blocking on `loadOrder(profileId)` from the UI thread.
+        // TabOrderManager keeps `currentOrder` up to date via its normal
+        // load/save flows; if it hasn't produced a value yet we return an
+        // empty ordering (the caller renders nothing, and the next state
+        // emission triggers a proper rebuild). The previous `runBlocking { }`
+        // was a hard main-thread stall on every tab-island recompute -
+        // measurable jank on tab-bar heavy pages.
         val orderManager = com.prirai.android.nira.browser.tabs.compose.TabOrderManager.getInstance(context, unifiedManager)
-        val order = kotlinx.coroutines.runBlocking {
-            orderManager.loadOrder(profileId)
-        }
+        val order = orderManager.currentOrder.value
+            ?: com.prirai.android.nira.browser.tabs.compose.UnifiedTabOrder(
+                profileId = profileId,
+                primaryOrder = emptyList(),
+            )
         
         val tabsById = tabs.associateBy { it.id }
         val allGroups = unifiedManager.getAllGroups()

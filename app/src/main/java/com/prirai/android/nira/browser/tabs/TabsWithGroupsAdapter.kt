@@ -61,28 +61,19 @@ class GroupTabsAdapter(
             val isGuestTab = tab.contextId == null
             val guestTabColor = com.prirai.android.nira.theme.ColorConstants.TabGroups.ORANGE
 
-            // Improved title logic
-            val isRealUrl = tab.content.url.isNotEmpty() &&
-                    !tab.content.url.startsWith("about:")
-            
+            // Title logic: prefer the real page title, fall back to URL, then
+            // "New Tab". We deliberately do NOT special-case google.com /
+            // duckduckgo `?q=` parameter extraction here - that logic was
+            // brittle (broke on Google URLs where `oq=`/`aq=` precede `q=`,
+            // silently truncated at `&`, ignored URL-encoded spaces) and
+            // rendered a different pill title from every other adapter in the
+            // codebase (which use `getTabDisplayTitle` in SwipeableTabPill.kt).
+            // Matching that behaviour keeps the pill consistent across tab
+            // views and avoids any temptation to derive history/pill data from
+            // the URL query string.
             val title = when {
                 tab.content.title.isNotBlank() -> tab.content.title
-                isRealUrl -> {
-                    val url = tab.content.url
-                    when {
-                        url.contains("duckduckgo.com/") && url.contains("q=") -> {
-                            java.net.URLDecoder.decode(
-                                url.substringAfter("q=").substringBefore("&"), "UTF-8"
-                            )
-                        }
-                        url.contains("google.com/search") && url.contains("q=") -> {
-                            java.net.URLDecoder.decode(
-                                url.substringAfter("q=").substringBefore("&"), "UTF-8"
-                            )
-                        }
-                        else -> url
-                    }
-                }
+                tab.content.url.isNotEmpty() && !tab.content.url.startsWith("about:") -> tab.content.url
                 else -> "New Tab"
             }
             tabTitle.text = title
