@@ -28,6 +28,28 @@ class UserPreferences(appContext: Context) : mozilla.components.support.ktx.andr
     var lastKnownPrivate by booleanPreference("last_known_mode_private", false)
     var firstLaunch by booleanPreference("first_launch", true)
 
+    /**
+     * Marks that the one-time "empty profile" -> default-profile tab migration has run
+     * on this install. When false, [DefaultProfileTabMigration] rewrites the contextId
+     * on any tab restored with a null/empty contextId to "profile_default", moves the
+     * corresponding tab groups, and forces the active profile to the built-in default.
+     *
+     * See browser/profile/DefaultProfileTabMigration.kt.
+     */
+    var defaultProfileMigrationDone by booleanPreference(NIRA_TABS_PROFILE_DEFAULT_MIGRATE, false)
+
+    /**
+     * Transient flag: set by [DefaultProfileTabMigration] after it moves tabs, cleared
+     * by BrowserActivity once it has shown the "migration complete" popup.
+     */
+    var pendingDefaultMigrationPopup by booleanPreference(NIRA_TABS_PROFILE_DEFAULT_MIGRATE_PENDING_POPUP, false)
+
+    /**
+     * Number of tabs moved during the one-time default-profile migration. Used only to
+     * populate the popup message; safe to leave stale after the popup is dismissed.
+     */
+    var pendingDefaultMigrationTabCount by intPreference(NIRA_TABS_PROFILE_DEFAULT_MIGRATE_TAB_COUNT, 0)
+
     // Preferences
     var javaScriptEnabled by booleanPreference(JAVA_SCRIPT_ENABLED, true)
     var searchEngineChoice by intPreference(SEARCH_ENGINE, 0)
@@ -36,6 +58,13 @@ class UserPreferences(appContext: Context) : mozilla.components.support.ktx.andr
     var privateSearchEngineChoice by intPreference(PRIVATE_SEARCH_ENGINE, -1)
     var desktopModeDefault by booleanPreference(DESKTOP_MODE_DEFAULT, false)
     var translationsEnabled by booleanPreference(TRANSLATIONS_ENABLED, true)
+
+    /**
+     * Inject a small built-in WebExtension into youtube.com pages that neutralises the
+     * Page Visibility API so that audio keeps playing when the tab is backgrounded.
+     * Off by default because it changes site behaviour.
+     */
+    var backgroundPlaybackYoutube by booleanPreference(BACKGROUND_PLAYBACK_YOUTUBE, false)
 
     fun hasDesktopModeDefault(): Boolean = preferences.contains(DESKTOP_MODE_DEFAULT)
     var toolbarPosition by intPreference(TOOLBAR_POSITION, ToolbarPosition.BOTTOM.ordinal)
@@ -67,8 +96,15 @@ class UserPreferences(appContext: Context) : mozilla.components.support.ktx.andr
     var showTabGroupBar by booleanPreference(SHOW_TAB_GROUP_BAR, true)
     var swipeToRefresh by booleanPreference(SWIPE_TO_REFRESH, true)
 
-    // SECURITY: Remote debugging disabled for production security
-    // var remoteDebugging by booleanPreference(REMOTE_DEBUGGING, false)
+    /**
+     * Enables GeckoView remote debugging so a desktop Firefox can inspect
+     * pages in this app via about:debugging.
+     *
+     * Off by default: only turn on while actively debugging over USB, because
+     * a debugger connection has full read/write access to any page loaded
+     * in the browser.
+     */
+    var remoteDebugging by booleanPreference(REMOTE_DEBUGGING, false)
     var promptExternalDownloader by booleanPreference(PROMPT_EXTERNAL_DOWNLOADER, false)
     var addonSort by intPreference(ADDON_SORT, AddonSortType.RATING.ordinal)
     var showUrlProtocol by booleanPreference(SHOW_URL_PROTOCOL, false)
@@ -247,6 +283,15 @@ class UserPreferences(appContext: Context) : mozilla.components.support.ktx.andr
 
         const val DESKTOP_MODE_DEFAULT = "desktop_mode_default"
         const val TRANSLATIONS_ENABLED = "translations_enabled"
+        const val BACKGROUND_PLAYBACK_YOUTUBE = "background_playback_youtube"
+
+        // One-time migration flags (nira.* namespace). Keys are literal so they survive
+        // future refactors and can be inspected directly in `scw_preferences.xml`.
+        const val NIRA_TABS_PROFILE_DEFAULT_MIGRATE = "nira.tabs.profile.defaultMigrate"
+        const val NIRA_TABS_PROFILE_DEFAULT_MIGRATE_PENDING_POPUP =
+            "nira.tabs.profile.defaultMigrate.pendingPopup"
+        const val NIRA_TABS_PROFILE_DEFAULT_MIGRATE_TAB_COUNT =
+            "nira.tabs.profile.defaultMigrate.tabCount"
 
         const val HTTPS_ONLY_OFF = 0
         const val HTTPS_ONLY_PRIVATE = 1

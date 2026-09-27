@@ -246,24 +246,4 @@ class WebAppFragment : Fragment(), EngineSession.Observer {
         }
     }
 
-    /**
-     * Request notification permission for this PWA
-     */
-    fun requestNotificationPermissionIfNeeded(callback: (Boolean) -> Unit) {
-        val notificationManager = WebAppNotificationManager(requireContext())
-        
-        if (notificationManager.hasNotificationPermission()) {
-            callback(true)
-            return
-        }
-        
-        val webAppActivity = activity as? WebAppActivity
-        if (webAppActivity != null) {
-            webAppActivity.requestNotificationPermission { granted ->
-                callback(granted)
-            }
-        } else {
-            callback(false)
-        }
-    }
 }

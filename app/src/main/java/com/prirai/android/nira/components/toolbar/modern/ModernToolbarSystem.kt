@@ -256,6 +256,6 @@ class ModernToolbarSystem @JvmOverloads constructor(
     enum class ComponentType {
         TAB_GROUP,
         ADDRESS_BAR,
-        CONTEXTUAL
+        CONTEXTUAL,
     }
 }

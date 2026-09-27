@@ -55,13 +55,31 @@ class AdvancedSettingsFragment : BaseSettingsFragment() {
             onClick = { sideloadXpiFile() }
         )
 
-        // SECURITY: Remote debugging disabled for security
+        // GeckoView remote debugging — off by default. When on, a desktop
+        // Firefox can inspect this app's pages via about:debugging over USB.
         switchPreference(
             preference = requireContext().resources.getString(R.string.key_remote_debugging),
-            isChecked = false,
-            isEnabled = false
+            isChecked = UserPreferences(requireContext()).remoteDebugging,
         ) {
-            // Disabled for security reasons
+            val prefs = UserPreferences(requireContext())
+            prefs.remoteDebugging = it
+            // Apply live so the user doesn't have to restart the app to
+            // start a debugging session.
+            try {
+                requireContext().components.engine.settings.remoteDebuggingEnabled = it
+            } catch (t: Throwable) {
+                android.util.Log.w(
+                    "AdvancedSettings",
+                    "Failed to apply remoteDebuggingEnabled at runtime",
+                    t,
+                )
+            }
+            Toast.makeText(
+                context,
+                if (it) "Remote debugging enabled. Connect from about:debugging on desktop Firefox."
+                else "Remote debugging disabled.",
+                Toast.LENGTH_LONG,
+            ).show()
         }
 
         // SECURITY: Third-party certificate trust disabled for security

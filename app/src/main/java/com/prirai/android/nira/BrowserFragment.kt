@@ -328,14 +328,21 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
 
     /**
      * Auto-collapse tab bar + contextual toolbar to a minimal address-bar-only
-     * state once the currently selected tab finishes loading. Any of the
-     * following exits minimal state without a URL tap:
+     * state ~400 ms after the currently selected tab finishes loading.
+     *
+     * The delay gives the user a moment to see the page in its full toolbar
+     * context before the aux bars slide away, so the transition doesn't feel
+     * abrupt.
+     *
+     * Any of the following exits minimal state automatically:
      *  - a new load starts on the selected tab,
      *  - the user switches to a different tab,
-     *  - the selected tab shows an in-app page (about:homepage, about:blank).
+     *  - the selected tab shows an in-app page (about:homepage /
+     *    about:blank / about:privatebrowsing).
      *
-     * The URL tap interceptor installed in [initializeUnifiedToolbar] handles
-     * the "first tap = expand, second tap = search dialog" flow.
+     * A single tap on the address bar also exits minimal state as a side
+     * effect - see the `onUrlClickIntercept` wiring in
+     * [initializeUnifiedToolbar].
      */
     private fun observeMinimalStateForLoading() {
         if (!isAdded) return
@@ -356,18 +363,21 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
                         url == "about:privatebrowsing"
 
                     if (tab.content.loading || isInAppPage) {
-                        // Cancel any pending collapse and make sure the bars
-                        // are visible while the page is still loading or the
-                        // user is looking at an in-app page.
+                        // Loading or in-app page - keep the aux bars visible
+                        // and cancel any pending collapse from a previous
+                        // completion.
                         pendingJob?.cancel()
                         pendingJob = null
                         toolbar.exitMinimalState()
                     } else {
-                        // Page finished loading. Give the user a moment before
-                        // collapsing so the transition doesn't feel abrupt.
+                        // Page finished loading. Delay before collapsing so
+                        // the transition doesn't feel abrupt.
                         pendingJob?.cancel()
                         pendingJob = viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
-                            kotlinx.coroutines.delay(400)
+                            // ~400 ms lets the user glance at the freshly
+                            // loaded page in its full toolbar context before
+                            // the aux bars collapse away.
+                            kotlinx.coroutines.delay(400L)
                             unifiedToolbar?.enterMinimalState()
                         }
                     }
@@ -375,7 +385,6 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
             }
         }
     }
-
 
     override fun initializeUnifiedToolbar(view: View, tab: SessionState) {
         val prefs = UserPreferences(requireContext())
@@ -461,19 +470,29 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
                 requireContext().components.tabsUseCases.selectTab(tabId)
             }
 
-            // Minimal state: when a page finishes loading we collapse the tab
-            // bar and contextual toolbar so only the address bar remains. The
-            // first tap on the address bar re-expands them; the second tap
-            // opens the search dialog (via the interceptor below).
+            // Address-bar tap semantics:
+            //  - Always opens the search dialog (interceptor returns `false`
+            //    so BrowserToolbarView continues on to `interactor.
+            //    onBrowserToolbarClicked()`).
+            //  - As a side effect, if we're currently in the minimal state,
+            //    also exit it. The aux bars slide back in behind the search
+            //    dialog, so when the user dismisses search they land on the
+            //    fully-expanded toolbar. No second tap required, no visible
+            //    "address bar shifting under my finger" jitter because the
+            //    dialog covers the toolbar during the animation.
             unifiedToolbar?.getBrowserToolbarView()?.onUrlClickIntercept = {
                 val toolbar = unifiedToolbar
                 if (toolbar != null && toolbar.isMinimal()) {
                     toolbar.exitMinimalState()
-                    true
-                } else {
-                    false
                 }
+                // Return false: the interceptor performs a side effect only;
+                // the search dialog must still open on this same tap.
+                false
             }
+            // Reinstate the on-page-load auto-minimise: 400 ms after a page
+            // finishes loading, collapse the aux bars so only the address
+            // bar remains. A new load, tab switch, or navigation to an
+            // in-app page (about:homepage / about:blank) reopens them.
             observeMinimalStateForLoading()
 
             // Set expansion state listener to update web content positioning
@@ -851,7 +870,7 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
 
         menuItems.add(com.prirai.android.nira.components.menu.Material3BrowserMenu.MenuItem.Divider)
 
-        // IconRow: Find in Page, Add to Bookmarks, Add to Favorites
+        // IconRow: Find in Page, Add to Bookmarks, Add to Favorite
         menuItems.add(
             com.prirai.android.nira.components.menu.Material3BrowserMenu.MenuItem.IconRow(
                 items = listOf(
@@ -875,10 +894,15 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
                                     url
                                 )
                                 dialog.setOnClickListener { _, _ ->
-                                    com.prirai.android.nira.browser.bookmark.repository.BookmarkManager.getInstance(requireContext()).save()
+                                    val saved = com.prirai.android.nira.browser.bookmark.repository.BookmarkManager
+                                        .getInstance(requireContext())
+                                        .save()
+                                    // Surface save failures instead of pretending
+                                    // the write succeeded. BookmarkManager.save()
+                                    // logs the underlying IOException.
                                     android.widget.Toast.makeText(
                                         requireContext(),
-                                        "Bookmark added",
+                                        if (saved) "Bookmark added" else "Failed to save bookmark",
                                         android.widget.Toast.LENGTH_SHORT
                                     ).show()
                                 }
@@ -887,7 +911,7 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
                         }
                     ),
                     com.prirai.android.nira.components.menu.Material3BrowserMenu.IconRowItem(
-                        title = "Favorites",
+                        title = getString(R.string.menu_add_to_favorite),
                         iconRes = mozilla.components.ui.icons.R.drawable.mozac_ic_pin_fill_24,
                         onClick = {
                             selectedTab?.let { tab ->
@@ -1045,6 +1069,24 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
             )
         )
 
+        // Close current tab. Distinct from the back button (which walks the
+        // page history) - this dispatches TabsUseCases.removeTab which flows
+        // through UndoMiddleware, so the user gets the standard undo snackbar
+        // if they change their mind. If no tab is selected, the item is not
+        // shown.
+        selectedTab?.let { tab ->
+            menuItems.add(
+                com.prirai.android.nira.components.menu.Material3BrowserMenu.MenuItem.Action(
+                    id = "close_tab",
+                    title = getString(R.string.menu_close_tab),
+                    iconRes = mozilla.components.ui.icons.R.drawable.mozac_ic_cross_24,
+                    onClick = {
+                        requireContext().components.tabsUseCases.removeTab(tab.id)
+                    }
+                )
+            )
+        }
+
         menuItems.add(com.prirai.android.nira.components.menu.Material3BrowserMenu.MenuItem.Divider)
         
         // Toolbar Row at bottom
@@ -1124,30 +1166,13 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
     }
     
     /**
-     * Initialize homepage ViewModel for shortcuts and bookmarks
+     * Initialize homepage ViewModel for shortcuts and bookmarks. Uses the
+     * process-wide singleton from [com.prirai.android.nira.browser.shortcuts.ShortcutDatabase.getInstance]
+     * so schema migrations only live in one place.
      */
     private fun initializeHomeViewModel() {
-        // Initialize database with migrations (same as ComposeHomeFragment)
-        val MIGRATION_1_2: androidx.room.migration.Migration = object : androidx.room.migration.Migration(1, 2) {
-            override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
-                db.execSQL("ALTER TABLE shortcutentity ADD COLUMN title TEXT")
-            }
-        }
-
-        val MIGRATION_2_3: androidx.room.migration.Migration = object : androidx.room.migration.Migration(2, 3) {
-            override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
-                db.execSQL("CREATE TABLE shortcutentity_new (uid INTEGER NOT NULL, url TEXT, title TEXT, PRIMARY KEY(uid))")
-                db.execSQL("INSERT INTO shortcutentity_new (uid, url, title) SELECT uid, url, title FROM shortcutentity")
-                db.execSQL("DROP TABLE shortcutentity")
-                db.execSQL("ALTER TABLE shortcutentity_new RENAME TO shortcutentity")
-            }
-        }
-
-        val database = androidx.room.Room.databaseBuilder(
-            requireContext(),
-            com.prirai.android.nira.browser.shortcuts.ShortcutDatabase::class.java,
-            "shortcut-database"
-        ).addMigrations(MIGRATION_1_2, MIGRATION_2_3).build()
+        val database = com.prirai.android.nira.browser.shortcuts.ShortcutDatabase
+            .getInstance(requireContext())
 
         val factory = com.prirai.android.nira.browser.home.compose.HomeViewModelFactory(
             bookmarkManager = com.prirai.android.nira.browser.bookmark.repository.BookmarkManager.getInstance(requireContext()),

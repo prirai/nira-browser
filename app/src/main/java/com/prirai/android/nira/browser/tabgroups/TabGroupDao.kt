@@ -65,6 +65,15 @@ interface TabGroupDao {
     
     @Query("SELECT COUNT(*) FROM tab_group_members WHERE groupId = :groupId")
     suspend fun getTabCountInGroup(groupId: String): Int
+
+    /**
+     * One-time migration helper: rewrite all rows whose contextId is null or the empty
+     * string to [newContextId]. Used by
+     * `com.prirai.android.nira.browser.profile.DefaultProfileTabMigration`.
+     * Returns the number of rows updated.
+     */
+    @Query("UPDATE tab_groups SET contextId = :newContextId WHERE contextId IS NULL OR contextId = ''")
+    suspend fun reassignEmptyContextIdGroups(newContextId: String): Int
 }
 
 /**

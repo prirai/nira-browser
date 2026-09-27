@@ -45,7 +45,7 @@ class GeneralSettingsFragment : BaseSettingsFragment() {
         val desktopDefault = if (UserPreferences(requireContext()).hasDesktopModeDefault()) {
             UserPreferences(requireContext()).desktopModeDefault
         } else {
-            Utils().isTablet(requireContext())
+            Utils.isTablet(requireContext())
         }
         switchPreference(
             preference = resources.getString(R.string.key_desktop_mode_default),
@@ -63,6 +63,19 @@ class GeneralSettingsFragment : BaseSettingsFragment() {
             isChecked = UserPreferences(requireContext()).translationsEnabled,
             onCheckChange = {
                 UserPreferences(requireContext()).translationsEnabled = it
+            }
+        )
+
+        switchPreference(
+            preference = resources.getString(R.string.key_background_playback_youtube),
+            isChecked = UserPreferences(requireContext()).backgroundPlaybackYoutube,
+            onCheckChange = {
+                UserPreferences(requireContext()).backgroundPlaybackYoutube = it
+                Toast.makeText(
+                    context,
+                    requireContext().resources.getText(R.string.app_restart),
+                    Toast.LENGTH_LONG,
+                ).show()
             }
         )
 

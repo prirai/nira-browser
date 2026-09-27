@@ -17,6 +17,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import mozilla.components.feature.pwa.ext.getWebAppManifest
+import com.prirai.android.nira.ext.components
 import com.prirai.android.nira.ext.enableEdgeToEdgeMode
 import com.prirai.android.nira.ext.applyPersistentInsets
 
@@ -59,17 +60,18 @@ class WebAppActivity : AppCompatActivity() {
         lifecycleScope.launch {
             val profileId = getProfileIdForUrl(url)
 
-            // Load web app details to set task description with icon
-            val webApp = com.prirai.android.nira.components.Components(this@WebAppActivity)
-                .webAppManager.getWebAppByUrl(url)
+            // Load web app details to set task description with icon. Use the
+            // process-wide Components singleton (via `components` ext) so we
+            // hit the same in-memory WebAppManager / BrowserIcons cache that
+            // the install path warmed up - not a fresh Components graph.
+            val webApp = components.webAppManager.getWebAppByUrl(url)
 
             // Set task description with app name and icon for recents
             webApp?.let { app ->
                 withContext(Dispatchers.IO) {
                     // Comprehensive icon loading with multiple fallbacks
                     val icon =
-                        com.prirai.android.nira.components.Components(this@WebAppActivity)
-                            .webAppManager.loadIconFromFile(app.iconUrl)
+                        components.webAppManager.loadIconFromFile(app.iconUrl)
                             ?: com.prirai.android.nira.utils.FaviconLoader.loadFavicon(this@WebAppActivity, url)
                             ?: com.prirai.android.nira.utils.FaviconLoader.loadFaviconForPwa(
                                 this@WebAppActivity,
@@ -107,9 +109,8 @@ class WebAppActivity : AppCompatActivity() {
     }
 
     private suspend fun getProfileIdForUrl(url: String): String = withContext(Dispatchers.IO) {
-        // Lookup webapp by URL to get its profile
-        val webApp = com.prirai.android.nira.components.Components(this@WebAppActivity)
-            .webAppManager.getWebAppByUrl(url)
+        // Lookup webapp by URL to get its profile via the shared singleton.
+        val webApp = components.webAppManager.getWebAppByUrl(url)
         webApp?.profileId ?: "default"
     }
 
