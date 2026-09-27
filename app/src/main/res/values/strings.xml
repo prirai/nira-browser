@@ -933,6 +933,9 @@
     <string name="menu_add_to_favorite">Favorite</string>
     <string name="menu_close_tab">Close tab</string>
 
+    <!-- Shown when a PWA settings action is discovered but not implemented. -->
+    <string name="web_app_action_not_implemented">This action isn\'t implemented yet.</string>
+
     <!-- One-time tab migration popup (see DefaultProfileTabMigration). -->
     <string name="nira_default_profile_migration_title">Tabs moved to Default profile</string>
     <string name="nira_default_profile_migration_message">%1$d tab(s) that had no profile assigned were moved to the Default profile. You can find them in the tab bar now.</string>

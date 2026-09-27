@@ -16,7 +16,6 @@ import com.prirai.android.nira.ext.components
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import mozilla.components.browser.icons.IconRequest
 import java.util.Locale
 
@@ -96,16 +95,27 @@ open class BookmarkAdapter(
         if (item is BookmarkSiteItem && holder is BookmarkSiteHolder) {
             holder.url.text = item.url
 
-            CoroutineScope(Dispatchers.Main).launch{
-                val bitmap: Bitmap
-                withContext(Dispatchers.IO) {
-                    bitmap = context.components.icons.loadIcon(IconRequest(item.url)).await().bitmap
-                }
-
-                withContext(Dispatchers.Main){
-                    holder.icon.setImageBitmap(bitmap)
-                }
+            // Cancel any icon load left over from the previous bind of this
+            // holder (recycled from scrolling). Without this, two coroutines
+            // race and the losing one can overwrite the correct icon with a
+            // stale one from an earlier URL.
+            holder.iconJob?.cancel()
+            // Launch on Main so we can set the ImageView directly. loadIcon()
+            // is `suspend`, does its own IO dispatch internally, and returns
+            // on Main - so the previous outer withContext(Dispatchers.Main)
+            // wrap was redundant.
+            holder.iconJob = CoroutineScope(Dispatchers.Main).launch {
+                val bitmap = context.components.icons.loadIcon(IconRequest(item.url)).await().bitmap
+                holder.icon.setImageBitmap(bitmap)
             }
+        }
+    }
+
+    override fun onViewRecycled(holder: BookmarkItemHolder) {
+        super.onViewRecycled(holder)
+        if (holder is BookmarkSiteHolder) {
+            holder.iconJob?.cancel()
+            holder.iconJob = null
         }
     }
 
@@ -134,8 +144,14 @@ open class BookmarkAdapter(
     }
 
     class BookmarkSiteHolder(itemView: View, adapter: BookmarkAdapter) : BookmarkItemHolder(itemView, adapter) {
-        // TODO: setting text size here, when customization settings are added
         val url: TextView = itemView.findViewById(R.id.urlTextView)
+
+        /**
+         * Job for the currently in-flight favicon load. Cancelled on rebind
+         * or recycle so we never race two loads on the same view - preventing
+         * the "wrong icon flashes in briefly during scroll" flicker.
+         */
+        var iconJob: kotlinx.coroutines.Job? = null
     }
 
     open class BookmarkItemHolder(itemView: View, private val bookmarkAdapter: BookmarkAdapter) : ArrayViewHolder<BookmarkItem>(itemView, bookmarkAdapter) {

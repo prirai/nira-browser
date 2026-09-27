@@ -312,7 +312,7 @@ open class Components(private val applicationContext: Context) {
             applicationContext,
             RemoteSettingsServer.Prod,
             channel = "release",
-            isLargeScreenSize = Utils().isTablet(applicationContext),
+            isLargeScreenSize = Utils.isTablet(applicationContext),
         )
     }
 
@@ -352,7 +352,7 @@ open class Components(private val applicationContext: Context) {
                             searchEngineSelectorConfig = SearchEngineSelectorConfig(
                                 appName = SearchApplicationName.FIREFOX_ANDROID,
                                 appVersion = com.prirai.android.nira.BuildConfig.VERSION_NAME,
-                                deviceType = if (Utils().isTablet(applicationContext)) {
+                                deviceType = if (Utils.isTablet(applicationContext)) {
                                     SearchDeviceType.TABLET
                                 } else {
                                     SearchDeviceType.SMARTPHONE
@@ -410,7 +410,7 @@ open class Components(private val applicationContext: Context) {
             val desktopDefault = if (prefs.hasDesktopModeDefault()) {
                 prefs.desktopModeDefault
             } else {
-                Utils().isTablet(applicationContext)
+                Utils.isTablet(applicationContext)
             }
             dispatch(DefaultDesktopModeAction.DesktopModeUpdated(desktopDefault))
 
@@ -577,9 +577,6 @@ open class Components(private val applicationContext: Context) {
     ) }
     val webAppUseCases by lazy { WebAppUseCases(applicationContext, store, webAppShortcutManager) }
     val webAppManager by lazy { com.prirai.android.nira.webapp.WebAppManager(applicationContext) }
-    val webAppNotificationManager by lazy { com.prirai.android.nira.webapp.WebAppNotificationManager(applicationContext) }
-    val webAppInstallationManager by lazy { com.prirai.android.nira.webapp.WebAppInstallationManager(applicationContext) }
-    val webAppUpdateManager by lazy { com.prirai.android.nira.webapp.WebAppUpdateManager(applicationContext) }
     val pwaSuggestionManager by lazy { com.prirai.android.nira.webapp.PwaSuggestionManager(applicationContext) }
 
     val tabsUseCases: TabsUseCases by lazy { TabsUseCases(store) }

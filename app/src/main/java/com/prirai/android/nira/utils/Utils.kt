@@ -12,7 +12,13 @@ import com.prirai.android.nira.R
 import androidx.core.graphics.createBitmap
 
 
-open class Utils {
+/**
+ * Stateless helpers. Was previously an `open class` that every callsite was
+ * instantiating as `Utils()` to reach these two methods - a fresh object per
+ * call for no state. Converted to a Kotlin `object` singleton so all callers
+ * share the one instance (`Utils.isTablet(...)` / `Utils.createImage(...)`).
+ */
+object Utils {
 
     /**
      * Generates letter bitmap in style of Mozac [DefaultIconGenerator] using first letter of string instead of URL
