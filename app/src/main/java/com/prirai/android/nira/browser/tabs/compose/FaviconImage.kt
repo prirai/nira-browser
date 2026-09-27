@@ -16,8 +16,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import mozilla.components.browser.state.state.TabSessionState
 import mozilla.components.browser.icons.IconRequest
@@ -210,26 +208,4 @@ private suspend fun loadFaviconFromUrl(url: String, context: android.content.Con
     }
 }
 
-/**
- * Preload favicons for multiple tabs
- * Call this when loading a list of tabs to improve perceived performance
- */
-fun preloadFavicons(context: android.content.Context, tabs: List<TabSessionState>) {
-    GlobalScope.launch(Dispatchers.IO) {
-        val icons = context.components.icons
 
-        tabs.forEach { tab ->
-            try {
-                if (tab.content.icon == null) {
-                    val iconRequest = IconRequest(
-                        url = tab.content.url,
-                        size = IconRequest.Size.DEFAULT
-                    )
-                    icons.loadIcon(iconRequest)
-                }
-            } catch (e: Exception) {
-                // Silently fail for preloading
-            }
-        }
-    }
-}

@@ -388,7 +388,6 @@ class TabsBottomSheetFragment : DialogFragment() {
             if (!browsingModeManager.mode.isPrivate) {
                 browsingModeManager.mode = BrowsingMode.Private
                 profileManager.setPrivateMode(true)
-                updateTabsDisplay()
                 // Trigger Compose recomposition (it will automatically refresh via LaunchedEffect)
                 profileStateTrigger.value++
             }
@@ -400,91 +399,17 @@ class TabsBottomSheetFragment : DialogFragment() {
                 browsingModeManager.mode = BrowsingMode.Normal
                 profileManager.setActiveProfile(profile)
                 profileManager.setPrivateMode(false)
-                updateTabsDisplay()
                 // Trigger Compose recomposition (it will automatically refresh via LaunchedEffect)
                 profileStateTrigger.value++
             }
         }
     }
 
-    private fun updateGridDisplay() {
-        if (!isAdded || context == null) return
-
-        lifecycleScope.launch {
-            val store = requireContext().components.store.state
-            val isPrivateMode = browsingModeManager.mode.isPrivate
-            val currentProfile = browsingModeManager.currentProfile
-
-            val filteredTabs = store.tabs.filter { tab ->
-                val tabIsPrivate = tab.content.private
-                if (tabIsPrivate != isPrivateMode) {
-                    false
-                } else if (isPrivateMode) {
-                    tab.contextId == "private"
-                } else {
-                    val expectedContextId = "profile_${currentProfile.id}"
-                    (tab.contextId == expectedContextId) || (tab.contextId == null)
-                }
-            }
-
-            val allGroups = unifiedGroupManager.getAllGroups()
-            val gridItems = mutableListOf<TabGridItem>()
-
-            val tabToGroupMap = mutableMapOf<String, com.prirai.android.nira.browser.tabgroups.TabGroupData>()
-            allGroups.forEach { group ->
-                group.tabIds.forEach { tabId ->
-                    tabToGroupMap[tabId] = group
-                }
-            }
-
-            val processedGroups = mutableSetOf<String>()
-            val processedTabs = mutableSetOf<String>()
-
-            filteredTabs.forEach { tab ->
-                if (processedTabs.contains(tab.id)) return@forEach
-
-                val group = tabToGroupMap[tab.id]
-
-                if (group != null && !processedGroups.contains(group.id)) {
-                    processedGroups.add(group.id)
-
-                    val groupTabs = filteredTabs.filter { it.id in group.tabIds }
-
-                    if (groupTabs.isNotEmpty()) {
-                        gridItems.add(
-                            TabGridItem.GroupHeader(
-                                groupId = group.id,
-                                name = group.name.ifBlank { "" },
-                                color = group.color,
-                                tabs = groupTabs
-                            )
-                        )
-                    }
-
-                    group.tabIds.forEach { processedTabs.add(it) }
-                } else if (group == null) {
-                    gridItems.add(TabGridItem.Tab(tab, null))
-                    processedTabs.add(tab.id)
-                }
-            }
-
-            if (filteredTabs.isEmpty()) {
-                binding.tabsGridRecyclerView.visibility = View.GONE
-                binding.emptyStateLayout.visibility = View.VISIBLE
-            } else {
-                binding.tabsGridRecyclerView.visibility = View.VISIBLE
-                binding.emptyStateLayout.visibility = View.GONE
-            }
-        }
-    }
-
-    private fun updateTabsDisplay() {
-        if (isGridView) {
-            updateGridDisplay()
-            return
-        }
-        return
-    }
+    // updateGridDisplay / updateTabsDisplay used to feed a RecyclerView with
+    // a TabGridItem list produced by the now-deleted TabsGridAdapter. The
+    // grid RecyclerView is still in the layout XML but is permanently GONE
+    // (see setupComposeTabViews) - the Compose tab sheet renders everything.
+    // The helper methods are gone with the adapter.
 
     private fun showMoveToProfileDialog(tabIds: List<String>, isGroup: Boolean = false) {
         val profileManager = com.prirai.android.nira.browser.profile.ProfileManager.getInstance(requireContext())
@@ -513,8 +438,6 @@ class TabsBottomSheetFragment : DialogFragment() {
                     "Moved $migratedCount $tabWord to ${items[which]}",
                     android.widget.Toast.LENGTH_SHORT
                 ).show()
-
-                updateTabsDisplay()
             }
             .setNegativeButton("Cancel", null)
             .show()
@@ -578,8 +501,6 @@ class TabsBottomSheetFragment : DialogFragment() {
 
                         browsingModeManager.currentProfile = newProfile
                         browsingModeManager.mode = BrowsingMode.Normal
-                        updateTabsDisplay()
-
                         (composeView.parent as? ViewGroup)?.removeView(composeView)
                     },
                     onImport = {
@@ -645,8 +566,6 @@ class TabsBottomSheetFragment : DialogFragment() {
                         profileManager.deleteProfile(profile.id)
 
                         setupMergedProfileButtons()
-                        updateTabsDisplay()
-
                         (composeView.parent as? ViewGroup)?.removeView(composeView)
                     },
                     onExport = {

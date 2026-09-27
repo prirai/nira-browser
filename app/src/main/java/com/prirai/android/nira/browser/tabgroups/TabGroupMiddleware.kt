@@ -79,14 +79,9 @@ class TabGroupMiddleware(
     private fun handleNewTab(state: BrowserState, action: TabListAction.AddTabAction) {
         val newTab = action.tab
         val newTabUrl = newTab.content.url
-
-        Log.d(TAG, "handleNewTab: tabId=${newTab.id}, url=$newTabUrl, parentId=${newTab.parentId}, source=${newTab.source}")
-
         // Check both the URL in the tab and the URL being loaded
         val effectiveUrl = if (newTabUrl.isBlank() || newTabUrl == "about:blank") {
             // If the tab has no URL yet, track it for later when URL is loaded
-            Log.d(TAG, "Tab has blank URL, tracking for pending grouping")
-            
             // Store parent ID for later grouping when URL is loaded
             if (newTab.parentId != null) {
                 pendingGrouping[newTab.id] = newTab.parentId
@@ -104,7 +99,6 @@ class TabGroupMiddleware(
 
         // Don't auto-group tabs with about: or chrome: URLs except about:homepage
         if ((effectiveUrl.startsWith("about:") && effectiveUrl != "about:homepage") || effectiveUrl.startsWith("chrome:")) {
-            Log.d(TAG, "Skipping system URL: $effectiveUrl")
             return
         }
 
@@ -124,16 +118,11 @@ class TabGroupMiddleware(
                 }
             }
         }
-
-        Log.d(TAG, "Source tab: ${sourceTab?.id}, url=${sourceTab?.content?.url}")
-
         if (sourceTab != null) {
             val sourceUrl = sourceTab.content.url
 
             // Group all links opened from another tab (both same-domain and cross-domain)
             if (sourceUrl.isNotBlank() && sourceUrl != "about:blank") {
-                Log.d(TAG, "Link opened from source tab, grouping tabs")
-
                 // Group the new tab with the source tab
                 CoroutineScope(Dispatchers.IO).launch {
                     try {
@@ -143,14 +132,12 @@ class TabGroupMiddleware(
                             sourceTabId = sourceTab.id,
                             sourceTabUrl = sourceUrl
                         )
-                        Log.d(TAG, "Successfully grouped tabs")
                     } catch (e: Exception) {
                         Log.e(TAG, "Failed to group tabs", e)
                     }
                 }
             }
         } else {
-            Log.d(TAG, "No source tab found")
         }
     }
     
@@ -164,30 +151,21 @@ class TabGroupMiddleware(
         
         // Check if this tab is pending grouping
         val parentId = pendingGrouping.remove(tabId) ?: return
-        
-        Log.d(TAG, "handleUrlUpdate: tabId=$tabId, url=$newUrl, parentId=$parentId")
-        
         // Skip system URLs
         if ((newUrl.startsWith("about:") && newUrl != "about:homepage") || newUrl.startsWith("chrome:")) {
-            Log.d(TAG, "Skipping system URL: $newUrl")
             return
         }
         
         // Find the parent tab
         val parentTab = state.tabs.find { it.id == parentId }
         if (parentTab == null) {
-            Log.d(TAG, "Parent tab not found: $parentId")
             return
         }
         
         val parentUrl = parentTab.content.url
         if (parentUrl.isBlank() || parentUrl == "about:blank") {
-            Log.d(TAG, "Parent tab has blank URL")
             return
         }
-        
-        Log.d(TAG, "Grouping tab $tabId with parent $parentId")
-        
         // Group the tabs
         CoroutineScope(Dispatchers.IO).launch {
             try {
@@ -197,7 +175,6 @@ class TabGroupMiddleware(
                     sourceTabId = parentId,
                     sourceTabUrl = parentUrl
                 )
-                Log.d(TAG, "Successfully grouped tabs after URL update")
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to group tabs after URL update", e)
             }

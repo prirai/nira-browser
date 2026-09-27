@@ -145,14 +145,6 @@ class TabIslandManager(private val context: Context) {
                 contextId = "profile_default"
             }
         }
-        
-        android.util.Log.d("TabIslandManager", "Creating island with tabIds: $tabIds")
-        android.util.Log.d("TabIslandManager", "Store has ${allTabs.size} tabs")
-        android.util.Log.d("TabIslandManager", "First tab ID to find: ${tabIds.firstOrNull()}")
-        android.util.Log.d("TabIslandManager", "First tab found: ${firstTab?.id}, contextId: $contextId, title: ${firstTab?.content?.title}")
-        android.util.Log.d("TabIslandManager", "All tab IDs in store: ${allTabs.map { it.id }}")
-        android.util.Log.d("TabIslandManager", "Final contextId to use: $contextId")
-        
         // Create group and get the actual group data with correct ID
         val groupData = unifiedManager.createGroup(
             tabIds = tabIds,
@@ -160,9 +152,6 @@ class TabIslandManager(private val context: Context) {
             color = color,
             contextId = contextId
         )
-        
-        android.util.Log.d("TabIslandManager", "Created group ${groupData.id} with contextId: ${groupData.contextId}")
-        
         // Update TabOrderManager to include the new group in its order (debounced)
         val profileId = when {
             contextId == "private" -> "private"

@@ -257,8 +257,6 @@ class TabOrderManager private constructor(
      * Add a new tab to a specific group
      */
     suspend fun addNewTabToGroup(groupId: String) {
-        android.util.Log.d("TabOrderManager", "addNewTabToGroup called for group: $groupId")
-        
         // Get the group to determine its contextId
         val group = groupManager.getGroup(groupId)
         if (group == null) {
@@ -267,14 +265,11 @@ class TabOrderManager private constructor(
         }
         
         val contextId = group.contextId
-        android.util.Log.d("TabOrderManager", "Group contextId: $contextId, tabIds: ${group.tabIds}")
-        
         // Use context to get components
         val store = context.components.store
         val tabsUseCases = context.components.tabsUseCases
         
         // Add a new tab
-        android.util.Log.d("TabOrderManager", "Creating new tab with contextId: $contextId")
         tabsUseCases.addTab(
             url = "about:homepage",
             private = contextId == "private",
@@ -298,31 +293,21 @@ class TabOrderManager private constructor(
             android.util.Log.e("TabOrderManager", "Failed to get new tab ID after creating tab")
             return
         }
-        
-        android.util.Log.d("TabOrderManager", "New tab created with ID: $newTabId")
-        
         // Verify the tab exists in store
         val newTab = store.state.tabs.find { it.id == newTabId }
         if (newTab == null) {
             android.util.Log.e("TabOrderManager", "Tab $newTabId not found in store")
             return
         }
-        
-        android.util.Log.d("TabOrderManager", "New tab contextId: ${newTab.contextId}")
-        
         // Add the new tab to the group in the order
-        android.util.Log.d("TabOrderManager", "Adding tab $newTabId to group $groupId in order")
         addTabToGroup(newTabId, groupId)
         
         // Also add it directly to the group manager if not already there
-        android.util.Log.d("TabOrderManager", "Syncing tab to group manager")
         groupManager.addTabToGroup(newTabId, groupId)
         
         // Force refresh by updating the order timestamp
         val current = _currentOrder.value ?: return
         _currentOrder.value = current.copy(lastModified = System.currentTimeMillis())
-        
-        android.util.Log.d("TabOrderManager", "Successfully added new tab $newTabId to group $groupId")
     }
     
     /**
@@ -363,19 +348,16 @@ class TabOrderManager private constructor(
      * Toggle group expansion state
      */
     suspend fun toggleGroupExpansion(groupId: String) {
-        android.util.Log.d("TabOrderManager", "toggleGroupExpansion called for: $groupId")
         // Just update local order for UI state
         val current = _currentOrder.value ?: return
         val newOrder = current.primaryOrder.map { item ->
             if (item is UnifiedTabOrder.OrderItem.TabGroup && item.groupId == groupId) {
-                android.util.Log.d("TabOrderManager", "Found group $groupId, current isExpanded=${item.isExpanded}, toggling to ${!item.isExpanded}")
                 item.copy(isExpanded = !item.isExpanded)
             } else {
                 item
             }
         }
         saveOrder(current.copy(primaryOrder = newOrder))
-        android.util.Log.d("TabOrderManager", "Group expansion toggled successfully")
     }
     
     /**
@@ -597,7 +579,5 @@ class TabOrderManager private constructor(
         )
         saveOrder(updatedOrder)
         _currentOrder.value = updatedOrder
-        
-        android.util.Log.d("TabOrderManager", "Rebuilt order for profile $profileId: ${newOrder.size} items")
     }
 }
