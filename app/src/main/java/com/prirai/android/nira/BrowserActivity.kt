@@ -449,7 +449,7 @@ open class BrowserActivity : LocaleAwareAppCompatActivity(), ComponentCallbacks2
     private fun openPopup(webExtensionState: WebExtensionState) {
         val fm: FragmentManager = supportFragmentManager
         val editNameDialogFragment =
-            if (Utils().isTablet(this)) WebExtensionTabletPopupFragment()
+            if (Utils.isTablet(this)) WebExtensionTabletPopupFragment()
             else WebExtensionPopupFragment()
 
         val bundle = Bundle()

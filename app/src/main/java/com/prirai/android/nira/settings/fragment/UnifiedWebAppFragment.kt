@@ -217,25 +217,27 @@ class UnifiedWebAppFragment : Fragment() {
     }
 
     private fun clearWebAppData(webApp: WebAppEntity) {
-        viewLifecycleOwner.lifecycleScope.launch {
-            // Clear web app data - this would involve clearing service worker caches, localStorage, etc.
-            // For now, just show confirmation
-            com.google.android.material.dialog.MaterialAlertDialogBuilder(requireActivity())
-                .setTitle(R.string.success)
-                .setMessage(R.string.web_app_data_cleared)
-                .setPositiveButton(android.R.string.ok, null)
-                .show()
-        }
+        // Honest UX: this action isn't implemented. GeckoView exposes
+        // `Engine.clearData(BrowsingData)` which could purge site cache /
+        // cookies / DOM storage for the PWA's origin, but wiring that with
+        // per-profile isolation and a confirmation UI is a real feature, not
+        // a one-liner. Until then, don't lie about success.
+        com.google.android.material.dialog.MaterialAlertDialogBuilder(requireActivity())
+            .setTitle(webApp.name)
+            .setMessage(R.string.web_app_action_not_implemented)
+            .setPositiveButton(android.R.string.ok, null)
+            .show()
     }
 
     private fun updatePwaCache(webApp: WebAppEntity) {
-        viewLifecycleOwner.lifecycleScope.launch {
-            requireContext().components.webAppManager.updatePwaCache(webApp.id)
-            androidx.appcompat.app.AlertDialog.Builder(requireContext())
-                .setMessage(getString(R.string.pwa_cache_updated, webApp.name))
-                .setPositiveButton(android.R.string.ok, null)
-                .show()
-        }
+        // Honest UX: same story as clearWebAppData. A real "update cache"
+        // action would need to invalidate the PWA's service-worker cache
+        // scope; mozilla-components doesn't expose a scoped API for this.
+        androidx.appcompat.app.AlertDialog.Builder(requireContext())
+            .setTitle(webApp.name)
+            .setMessage(R.string.web_app_action_not_implemented)
+            .setPositiveButton(android.R.string.ok, null)
+            .show()
     }
 
     private fun addShortcut(webApp: WebAppEntity) {

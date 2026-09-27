@@ -2,7 +2,6 @@ package com.prirai.android.nira.webapp
 
 import android.content.Context
 import android.graphics.Bitmap
-import androidx.core.app.NotificationCompat
 import androidx.room.Dao
 import androidx.room.Database
 import androidx.room.Entity
@@ -13,7 +12,6 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.Update
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.first
 import java.net.URL
 import java.util.UUID
 
@@ -129,86 +127,6 @@ class WebAppManager(private val context: Context) {
     }
 
     /**
-     * Clear all PWA data (storage, cache, etc.)
-     */
-    fun clearWebAppData(id: String) {
-        // TODO: Implement actual storage clearing
-        // This would involve clearing service worker caches, localStorage, etc.
-    }
-
-    /**
-     * Check if PWA supports offline mode
-     */
-    fun checkOfflineSupport(url: String): Boolean {
-        // Check if the PWA has a service worker and cache manifest
-        // This would involve checking the web app manifest and service worker registration
-        return false // Placeholder - would need GeckoView integration
-    }
-
-    /**
-     * Get offline status for all PWAs
-     */
-    suspend fun getOfflineStatusForAllApps(): List<WebAppWithOfflineSupport> {
-        val allApps = webAppDatabase.webAppDao().getAllSynchronously()
-        return allApps.map { webApp ->
-            val isOfflineCapable = checkOfflineSupport(webApp.url)
-            WebAppWithOfflineSupport(
-                webApp = webApp,
-                isOfflineCapable = isOfflineCapable,
-                offlineStorageSize = 0, // Would calculate actual cache size
-                lastCacheUpdate = System.currentTimeMillis(), // Would get from service worker
-                canUpdateWhileOffline = isOfflineCapable // Simple logic for now
-            )
-        }
-    }
-
-    /**
-     * Force update PWA cache (for offline use)
-     */
-    fun updatePwaCache(id: String) {
-        // This would trigger service worker cache update
-        // Would need GeckoView session integration
-    }
-
-    /**
-     * Get total offline storage used by all PWAs
-     */
-    fun getTotalOfflineStorage(): Long {
-        // Would sum up all PWA cache storage
-        return 0 // Placeholder
-    }
-
-    /**
-     * Get notification settings for a PWA
-     */
-    fun getNotificationSettings(webAppId: String): PwaNotificationSettings {
-        // Would retrieve from database or preferences
-        return PwaNotificationSettings(
-            webAppId = webAppId,
-            notificationsEnabled = true,
-            showBadges = true,
-            playSounds = true,
-            vibrate = true,
-            priority = NotificationCompat.PRIORITY_DEFAULT
-        )
-    }
-
-    /**
-     * Update notification settings for a PWA
-     */
-    fun updateNotificationSettings(settings: PwaNotificationSettings) {
-        // Would save to database or preferences
-    }
-
-    /**
-     * Check if PWA can send notifications
-     */
-    fun canSendNotifications(webAppId: String): Boolean {
-        // Would check GeckoView permissions and our own settings
-        return true // Placeholder
-    }
-
-    /**
      * Save icon bitmap to file and return path
      */
     private fun saveIconToFile(icon: Bitmap): String {
@@ -258,11 +176,6 @@ class WebAppManager(private val context: Context) {
     }
 }
 
-private suspend fun WebAppDao.getAllSynchronously(): List<WebAppEntity> {
-    // Helper to get all apps synchronously for offline status checks
-    return getAll().first() // Convert Flow to List
-}
-
 /**
  * Entity representing an installed PWA
  */
@@ -280,17 +193,6 @@ data class WebAppEntity(
     val launchCount: Int,
     val isEnabled: Boolean,
     val profileId: String = "default" // Associated profile, defaults to "default"
-)
-
-/**
- * Extended WebAppEntity with offline support
- */
-data class WebAppWithOfflineSupport(
-    val webApp: WebAppEntity,
-    val isOfflineCapable: Boolean,
-    val offlineStorageSize: Long,
-    val lastCacheUpdate: Long,
-    val canUpdateWhileOffline: Boolean
 )
 
 /**

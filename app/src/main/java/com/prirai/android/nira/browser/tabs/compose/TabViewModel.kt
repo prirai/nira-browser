@@ -331,8 +331,6 @@ class TabViewModel(
      * Toggle group expanded/collapsed state
      */
     fun toggleGroupExpanded(groupId: String) {
-        android.util.Log.d("TabViewModel", "toggleGroupExpanded called for: $groupId")
-        
         // Update in the group manager (centralized state)
         viewModelScope.launch {
             try {
@@ -340,7 +338,6 @@ class TabViewModel(
                 _currentProfileId.value?.let { profileId ->
                     saveCurrentOrder(profileId)
                 }
-                android.util.Log.d("TabViewModel", "Successfully toggled group collapsed state in manager")
             } catch (e: Exception) {
                 android.util.Log.e("TabViewModel", "Error toggling group collapsed state", e)
             }
@@ -850,9 +847,6 @@ class TabViewModel(
             val groupId = _groups.value.find { group ->
                 group.tabIds.contains(tabId)
             }?.id
-
-            android.util.Log.d("TabViewModel", "Duplicating tab $tabId in group $groupId, url: ${tab.content.url}")
-
             // Note: Actual tab creation must be handled by the caller through:
             // components.tabsUseCases.addTab(url = tab.content.url, private = tab.content.private)
             // Then if groupId != null: addTabToGroup(newTabId, groupId)
@@ -1024,8 +1018,6 @@ class TabViewModel(
                 // Add the new tab to the group
                 delay(100) // Wait for tab to be fully created
                 addTabToGroup(newTabId, groupId)
-
-                android.util.Log.d("TabViewModel", "Created new tab $newTabId in group $groupId")
             } catch (e: Exception) {
                 android.util.Log.e("TabViewModel", "Failed to create new tab in group", e)
             }

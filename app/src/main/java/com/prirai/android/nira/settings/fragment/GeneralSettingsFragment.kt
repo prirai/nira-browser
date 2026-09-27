@@ -45,7 +45,7 @@ class GeneralSettingsFragment : BaseSettingsFragment() {
         val desktopDefault = if (UserPreferences(requireContext()).hasDesktopModeDefault()) {
             UserPreferences(requireContext()).desktopModeDefault
         } else {
-            Utils().isTablet(requireContext())
+            Utils.isTablet(requireContext())
         }
         switchPreference(
             preference = resources.getString(R.string.key_desktop_mode_default),

@@ -349,35 +349,6 @@ class PwaSuggestionManager(private val context: Context) {
     }
 
     /**
-     * Preload favicons for all suggestions (old method - kept for manual refresh)
-     * Use preloadAllFaviconsOnce() for automatic one-time loading
-     */
-    private suspend fun preloadFavicons() {
-        highQualityPwas.forEach { pwa ->
-            try {
-                // Use Mozilla Components BrowserIcons instead of legacy FaviconLoader
-                val iconRequest = mozilla.components.browser.icons.IconRequest(
-                    url = pwa.url,
-                    size = mozilla.components.browser.icons.IconRequest.Size.DEFAULT,
-                    resources = listOf(
-                        mozilla.components.browser.icons.IconRequest.Resource(
-                            url = pwa.url,
-                            type = mozilla.components.browser.icons.IconRequest.Resource.Type.FAVICON
-                        )
-                    )
-                )
-                val icon = context.components.icons.loadIcon(iconRequest).await()
-                if (icon.bitmap != null) {
-                    // Save to cache for future use
-                    com.prirai.android.nira.utils.FaviconCache.getInstance(context).saveFavicon(pwa.url, icon.bitmap)
-                }
-            } catch (e: Exception) {
-                // Silently ignore errors
-            }
-        }
-    }
-
-    /**
      * Reset suggestions
      */
     fun reset() {
