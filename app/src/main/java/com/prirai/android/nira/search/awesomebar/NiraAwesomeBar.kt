@@ -237,9 +237,12 @@ internal class HeaderedSuggestionProvider(
 }
 
 internal fun providerPriority(provider: SuggestionProvider): Int {
+    // SearchForQueryProvider (priority 50) has been removed - the "Search for
+    // '<query>'" row caused per-keystroke UI churn. All remaining priorities
+    // stay unchanged so section ordering (search suggestions, then tabs,
+    // history, bookmarks) is preserved.
     return when (provider) {
         is HeaderedSuggestionProvider -> provider.priority
-        is SearchForQueryProvider -> 50
         is mozilla.components.feature.awesomebar.provider.SearchSuggestionProvider -> 40
         is NiraTabSuggestionProvider -> 30
         is NiraHistorySuggestionProvider -> 20

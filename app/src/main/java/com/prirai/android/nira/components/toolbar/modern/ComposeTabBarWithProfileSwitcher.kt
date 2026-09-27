@@ -69,28 +69,10 @@ class ComposeTabBarWithProfileSwitcher @JvmOverloads constructor(
         // Initialize managers
         groupManager = UnifiedTabGroupManager.getInstance(context)
         tabOrderManager = TabOrderManager.getInstance(context, groupManager!!)
-        tabViewModel = TabViewModel(context, groupManager!!).also { viewModel ->
-            // Set up callbacks for tab operations
-            viewModel.onTabRemove = { tabId ->
-                // Immediately remove tab from store
-                context.components.tabsUseCases.removeTab(tabId)
-            }
-            viewModel.onTabRestore = { tab, position, groupId ->
-                // Restore tab at original position
-                val components = context.components
-                val newTabId = components.tabsUseCases.addTab(
-                    url = tab.content.url,
-                    private = tab.content.private,
-                    contextId = tab.contextId,
-                    selectTab = false
-                )
-                if (groupId != null) {
-                    coroutineScope.launch {
-                        groupManager!!.addTabToGroup(newTabId, groupId)
-                    }
-                }
-            }
-        }
+        // TabViewModel.closeTab() now performs store removal directly via
+        // TabsUseCases + UndoMiddleware, so no host-side onTabRemove wiring is
+        // required. See TabViewModel.closeTab kdoc for the undo contract.
+        tabViewModel = TabViewModel(context, groupManager!!)
     }
 
     fun setup(

@@ -200,12 +200,6 @@ fun ColorPickerDialog(
  * - Simple tap-to-select interaction
  * - Cancel option
  *
- * TODO: Integration Points
- * - Connect to actual ProfileManager to get real profile list
- * - Show current profile indicator
- * - Add profile icons/avatars
- * - Handle profile creation if needed
- *
  * @param onConfirm Callback with selected profile ID when user picks a profile
  * @param onDismiss Callback when dialog is dismissed without picking
  */
@@ -215,14 +209,16 @@ fun ProfilePickerDialog(
     onConfirm: (String) -> Unit,
     onDismiss: () -> Unit
 ) {
-    // TODO: Get actual profiles from ProfileManager
-    // This is a placeholder implementation with hardcoded profiles
+    // Real profile list from ProfileManager instead of the previous
+    // "default / work / personal" hard-coded triple. Loaded once when the
+    // dialog is first composed - profiles are rarely created / renamed
+    // while a menu is open.
+    val context = androidx.compose.ui.platform.LocalContext.current
     val profiles = remember {
-        listOf(
-            "default" to "Default Profile",
-            "work" to "Work Profile",
-            "personal" to "Personal Profile"
-        )
+        com.prirai.android.nira.browser.profile.ProfileManager
+            .getInstance(context)
+            .getAllProfiles()
+            .map { it.id to it.name }
     }
 
     AlertDialog(

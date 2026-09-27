@@ -135,8 +135,21 @@ class AppRequestInterceptor(val context: Context) : RequestInterceptor {
             uri.startsWith("nira://search?q=") -> {
                 val query = uri.substringAfter("q=")
                 val decodedQuery = java.net.URLDecoder.decode(query, "UTF-8")
-                // Trigger search via components
-                context.components.tabsUseCases.addTab(decodedQuery, selectTab = true)
+                // BUG FIX: The previous implementation called
+                //   tabsUseCases.addTab(decodedQuery, selectTab = true)
+                // which treats `decodedQuery` as a URL. When the query is a
+                // free-form phrase like "how to bake bread", GeckoView normalises
+                // it to "http://how%20to%20bake%20bread/", records that garbage
+                // URL as a VisitInfo in PlacesHistoryStorage, then fails to
+                // load. Route through `searchUseCases.newTabSearch` instead,
+                // which resolves the current default engine (with correct
+                // `{searchTerms}` template - see SearchEngineList) and only
+                // loads a real result URL.
+                context.components.searchUseCases.newTabSearch.invoke(
+                    searchTerms = decodedQuery,
+                    source = mozilla.components.browser.state.state.SessionState.Source.Internal.UserEntered,
+                    selected = true,
+                )
             }
             uri == "nira://focus-search" -> {
                 // Navigation to search dialog will be handled by navController
@@ -155,22 +168,18 @@ class AppRequestInterceptor(val context: Context) : RequestInterceptor {
                 val shortcutId = params.getQueryParameter("id")?.toIntOrNull()
                 
                 if (shortcutId != null) {
-                    // Delete shortcut from database
+                    // Delete shortcut from database via the process-wide singleton
+                    // (ShortcutDatabase.getInstance owns the migrations).
                     CoroutineScope(Dispatchers.IO).launch {
                         try {
-                            val database = androidx.room.Room.databaseBuilder(
-                                context,
-                                com.prirai.android.nira.browser.shortcuts.ShortcutDatabase::class.java,
-                                "shortcut-database"
-                            ).build()
-                            
-                            val shortcutDao = database.shortcutDao()
+                            val shortcutDao = com.prirai.android.nira.browser.shortcuts.ShortcutDatabase
+                                .getInstance(context)
+                                .shortcutDao()
                             val shortcut = shortcutDao.loadAllByIds(intArrayOf(shortcutId)).firstOrNull()
                             if (shortcut != null) {
                                 shortcutDao.delete(shortcut)
                             }
-                            database.close()
-                            
+
                             // Reload the page to reflect changes
                             CoroutineScope(Dispatchers.Main).launch {
                                 context.components.sessionUseCases.reload()
@@ -188,21 +197,18 @@ class AppRequestInterceptor(val context: Context) : RequestInterceptor {
                 val title = params.getQueryParameter("title")
                 
                 if (url != null && title != null) {
-                    // Save shortcut to database
+                    // Save shortcut to database via the process-wide singleton
+                    // (ShortcutDatabase.getInstance owns the migrations).
                     CoroutineScope(Dispatchers.IO).launch {
                         try {
-                            val database = androidx.room.Room.databaseBuilder(
-                                context,
-                                com.prirai.android.nira.browser.shortcuts.ShortcutDatabase::class.java,
-                                "shortcut-database"
-                            ).build()
-                            
                             val entity = com.prirai.android.nira.browser.shortcuts.ShortcutEntity(
                                 url = url,
-                                title = title
+                                title = title,
                             )
-                            database.shortcutDao().insertAll(entity)
-                            database.close()
+                            com.prirai.android.nira.browser.shortcuts.ShortcutDatabase
+                                .getInstance(context)
+                                .shortcutDao()
+                                .insertAll(entity)
                         } catch (e: Exception) {
                             // Ignore errors
                         }
@@ -380,11 +386,15 @@ class AppRequestInterceptor(val context: Context) : RequestInterceptor {
                                 sourceTabId = currentTab.id,
                                 sourceTabUrl = lastUri
                             )
-                            
+
                         } catch (e: Exception) {
+                            // Non-fatal: auto-grouping the newly opened cross-
+                            // domain tab failed. The tab itself is still open
+                            // and usable.
+                            android.util.Log.w("AppRequestInterceptor", "Cross-domain auto-group failed", e)
                         }
                     }
-                    
+
                     // Return true to deny the original navigation (prevent same-tab navigation)
                     return true
                 } else {
@@ -393,8 +403,11 @@ class AppRequestInterceptor(val context: Context) : RequestInterceptor {
                 }
             }
         } catch (e: Exception) {
+            // If the cross-domain heuristic itself throws, fall back to letting
+            // the engine handle the navigation normally.
+            android.util.Log.w("AppRequestInterceptor", "Cross-domain heuristic failed", e)
         }
-        
+
         return false
     }
 

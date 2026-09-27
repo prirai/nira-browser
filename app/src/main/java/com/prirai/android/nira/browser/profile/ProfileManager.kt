@@ -163,41 +163,96 @@ class ProfileManager(private val context: Context) {
     }
 
     /**
-     * Migrate a tab to another profile by updating its contextId
-     * @param tabId The ID of the tab to migrate
-     * @param targetProfileId The ID of the target profile ("private" for private mode)
-     * @return true if migration was successful
+     * Migrate a tab to another profile by updating its `contextId` while
+     * preserving as much tab state as possible.
+     *
+     * @param tabId the ID of the tab to migrate
+     * @param targetProfileId the ID of the target profile (`"private"` for private mode)
+     * @return true if migration was applied, false if the tab was missing or already
+     *         under the target profile.
+     *
+     * # Implementation notes
+     * mozilla-components has no upstream action that updates
+     * `TabSessionState.contextId` in place, so we still remove and re-add the tab.
+     * The refactor from the previous version:
+     *  - Reuses the **same tab id** on re-add, so `TabGroupMember` rows and any
+     *    other Nira id-keyed metadata stay valid without an extra Room update.
+     *  - Copies the full `TabSessionState` (title, url, `parentId`, `readerState`,
+     *    `lastAccess`, `historyMetadata`, `source`, `createdAt`, thumbnails,
+     *    `hasFormData`, `desktopMode`, `contextId'`) instead of re-issuing a fresh
+     *    `addTab(url, title, ...)` that discards every non-URL field.
+     *  - Unlinks the live `EngineSession` before the `RemoveTabAction` so
+     *    `TabsRemovedMiddleware` skips `engineSession.close()` (it only closes
+     *    sessions still linked at the time of removal). We re-link the same
+     *    `EngineSession` to the new tab entry immediately after adding it, so
+     *    Gecko never tears down the page - form data, scroll position and
+     *    JS state all survive the migration.
+     *
+     * If the tab has no `EngineSession` yet (e.g. lazy-restored tab that hasn't
+     * been selected), the unlink/link steps are trivially no-ops and the flow
+     * degrades cleanly to a pure state-copy.
      */
     fun migrateTabToProfile(tabId: String, targetProfileId: String): Boolean {
         val store = context.components.store
         val tab = store.state.tabs.find { it.id == tabId } ?: return false
-        
-        // Don't migrate if already in the target profile
-        val currentContextId = tab.contextId
+
         val targetContextId = if (targetProfileId == "private") "private" else "profile_$targetProfileId"
-        if (currentContextId == targetContextId) return false
-        
-        // Check if migrating between private and normal
-        tab.content.private
+        if (tab.contextId == targetContextId) return false
+
         val isTargetPrivate = targetProfileId == "private"
-        
-        // Always recreate the tab with the new context and privacy mode
-        val url = tab.content.url
-        val title = tab.content.title
-        val isSelected = store.state.selectedTabId == tabId
-        
-        // Remove old tab
-        context.components.tabsUseCases.removeTab(tabId)
-        
-        // Create new tab with correct context
-        context.components.tabsUseCases.addTab(
-            url = url,
-            private = isTargetPrivate,
+        val wasSelected = store.state.selectedTabId == tabId
+        val existingEngineSession = tab.engineState.engineSession
+
+        // Build a copy that keeps everything - id, engineState (minus the live
+        // EngineSession which we re-link manually), content, thumbnails, index,
+        // reader state, history metadata - but with the new contextId and
+        // matching private flag.
+        val rewritten = tab.copy(
             contextId = targetContextId,
-            selectTab = isSelected,
-            title = title
+            content = tab.content.copy(private = isTargetPrivate),
+            // Detach the live session reference from the state copy so
+            // AddTabAction doesn't try to reconcile it via EngineDelegateMiddleware.
+            // We attach it via LinkEngineSessionAction below.
+            engineState = tab.engineState.copy(engineSession = null),
         )
-        
+
+        // Step 1: unlink so TabsRemovedMiddleware doesn't close the session.
+        if (existingEngineSession != null) {
+            store.dispatch(
+                mozilla.components.browser.state.action.EngineAction.UnlinkEngineSessionAction(tabId),
+            )
+        }
+
+        // Step 2: remove the old entry. `selectParentIfExists = false` matches
+        // the previous behavior - the caller decides selection via wasSelected.
+        store.dispatch(
+            mozilla.components.browser.state.action.TabListAction.RemoveTabAction(
+                tabId = tabId,
+                selectParentIfExists = false,
+            ),
+        )
+
+        // Step 3: re-add the rewritten copy with the SAME id. `ProfileMiddleware`
+        // sees a non-null contextId on the tab and passes it through unchanged
+        // (see ProfileMiddleware.kt L39-L42).
+        store.dispatch(
+            mozilla.components.browser.state.action.TabListAction.AddTabAction(
+                tab = rewritten,
+                select = wasSelected,
+            ),
+        )
+
+        // Step 4: re-link the surviving EngineSession, if any. This restores
+        // Gecko's live page - no reload, no lost form data.
+        if (existingEngineSession != null) {
+            store.dispatch(
+                mozilla.components.browser.state.action.EngineAction.LinkEngineSessionAction(
+                    tabId = tabId,
+                    engineSession = existingEngineSession,
+                ),
+            )
+        }
+
         return true
     }
     

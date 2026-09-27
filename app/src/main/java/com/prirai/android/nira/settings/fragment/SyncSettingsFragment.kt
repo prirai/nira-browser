@@ -140,7 +140,12 @@ class SyncSettingsFragment : Fragment() {
                                 }
                                 withContext(Dispatchers.IO) { constellation?.refreshDevices() }
                                 deviceCount = constellation?.state()?.otherDevices?.size
-                            } catch (_: Exception) { }
+                            } catch (e: Exception) {
+                                // Non-fatal: the connected-devices count is a
+                                // decorative badge on the sync screen. If FxA
+                                // is offline we just leave the count blank.
+                                android.util.Log.w("FxaAuth", "Failed to refresh device constellation", e)
+                            }
                         } else {
                             deviceCount = null
                         }
@@ -171,11 +176,18 @@ class SyncSettingsFragment : Fragment() {
                                     owner = lifecycleOwner,
                                     autoPause = true
                                 )
-                            } catch (_: Exception) { }
+                            } catch (e: Exception) {
+                                // Observer already registered / lifecycle race - log
+                                // instead of ignoring so the missing spinner has an
+                                // explanation.
+                                android.util.Log.w("FxaAuth", "Failed to register sync observer", e)
+                            }
                             onDispose {
                                 try {
                                     syncManager.accountManager.unregisterForSyncEvents(syncObserver)
-                                } catch (_: Exception) { }
+                                } catch (e: Exception) {
+                                    android.util.Log.w("FxaAuth", "Failed to unregister sync observer", e)
+                                }
                             }
                         } else {
                             onDispose { }
@@ -225,7 +237,17 @@ class SyncSettingsFragment : Fragment() {
                                             }
                                         )
                                     }
-                                } catch (_: Exception) { }
+                                } catch (e: Exception) {
+                                    // The user just tapped "Manage account" and the
+                                    // browser failed to open the account settings
+                                    // page - surface the error instead of doing
+                                    // nothing visible.
+                                    Toast.makeText(
+                                        context,
+                                        "Couldn't open account page: ${e.message ?: "unknown error"}",
+                                        Toast.LENGTH_LONG,
+                                    ).show()
+                                }
                             }
                         },
                         onExportLogs = {
@@ -298,7 +320,18 @@ class SyncSettingsFragment : Fragment() {
                                 try {
                                     syncManager.accountManager.setEngineEnabled(engine, enabled)
                                     syncManager.triggerSync()
-                                } catch (_: Exception) { }
+                                } catch (e: Exception) {
+                                    // The user just toggled a sync engine and expects
+                                    // action - if the account rejects the update we
+                                    // surface it as a Toast rather than silently
+                                    // leaving the switch in a state that doesn't
+                                    // match the server.
+                                    Toast.makeText(
+                                        context,
+                                        "Sync setting change failed: ${e.message ?: "unknown error"}",
+                                        Toast.LENGTH_LONG,
+                                    ).show()
+                                }
                             }
                         }
                     )

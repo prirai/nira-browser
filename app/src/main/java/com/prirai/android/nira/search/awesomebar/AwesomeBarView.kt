@@ -39,7 +39,6 @@ class AwesomeBarView(
     private val bookmarksStorageSuggestionProvider: BookmarksStorageSuggestionProvider
     private val shortcutsEnginePickerProvider: ShortcutsSuggestionProvider
     private val defaultSearchSuggestionProvider: SearchSuggestionProvider
-    private val defaultSearchActionProvider: SearchForQueryProvider
     private val searchSuggestionProviderMap: MutableMap<SearchEngine, List<AwesomeBar.SuggestionProvider>>
     private var providersInUse = mutableSetOf<AwesomeBar.SuggestionProvider>()
 
@@ -136,18 +135,18 @@ class AwesomeBarView(
                 icon = searchBitmap,
                 showDescription = false,
                 engine = engineForSpeculativeConnects,
+                // Suppress the raw typed query from appearing as its own row.
+                // Upstream `SearchSuggestionProvider.createMultipleSuggestions`
+                // otherwise prepends `text` at index 0 of its returned list
+                // with a near-MAX_VALUE score, which renders as a redundant
+                // top-of-section "you typed X" entry. The user's Enter still
+                // submits the exact text via BrowserActivity.load, so hiding
+                // it here loses nothing.
                 filterExactMatch = true,
                 private = when (activity.browsingModeManager.mode) {
                     BrowsingMode.Normal -> false
                     BrowsingMode.Private -> true
                 }
-            )
-
-        defaultSearchActionProvider =
-            SearchForQueryProvider(
-                searchUseCase = searchUseCase,
-                icon = searchBitmap,
-                titleFor = { query -> activity.getString(R.string.search_for_query, query) }
             )
 
         shortcutsEnginePickerProvider =
@@ -247,16 +246,19 @@ class AwesomeBarView(
     }
 
     private fun getSelectedSearchSuggestionProvider(context: Context, state: SearchFragmentState): List<AwesomeBar.SuggestionProvider> {
-        //TODO: Clean this up when switching to search suggestion provider option
+        // The dedicated "Search for '<query>'" row (`SearchForQueryProvider`)
+        // has been removed - it re-rendered a top-priority section on every
+        // keystroke, causing typing lag. Search suggestions from the engine
+        // now surface directly under the "Search suggestions" header, and
+        // exact-match filtering is disabled on `defaultSearchSuggestionProvider`
+        // so the typed query still appears when the engine hasn't returned
+        // a matching completion. If search suggestions are disabled entirely,
+        // we return no providers here - the URL bar's own Enter behaviour
+        // still runs the search.
         return when (state.searchEngineSource) {
             is SearchEngineSource.Default -> {
                 if (UserPreferences(context).searchSuggestionsEnabled) {
                     listOf(
-                        HeaderedSuggestionProvider(
-                            defaultSearchActionProvider,
-                            header = "",
-                            priority = 50
-                        ),
                         HeaderedSuggestionProvider(
                             defaultSearchSuggestionProvider,
                             header = context.getString(R.string.search_suggestions),
@@ -264,13 +266,7 @@ class AwesomeBarView(
                         )
                     )
                 } else {
-                    listOf(
-                        HeaderedSuggestionProvider(
-                            defaultSearchActionProvider,
-                            header = "",
-                            priority = 50
-                        )
-                    )
+                    emptyList()
                 }
             }
             is SearchEngineSource.Shortcut -> getSuggestionProviderForEngine(
@@ -301,16 +297,10 @@ class AwesomeBarView(
                 BrowsingMode.Private -> null
             }
 
+            // Shortcut-engine path: only the suggestions provider - the
+            // "Search for '<query>'" row was dropped for the same typing-perf
+            // reason as the default path.
             listOf(
-                HeaderedSuggestionProvider(
-                    SearchForQueryProvider(
-                        searchUseCase = shortcutSearchUseCase,
-                        icon = searchBitmap,
-                        titleFor = { query -> activity.getString(R.string.search_for_query, query) }
-                    ),
-                    header = "",
-                    priority = 50
-                ),
                 HeaderedSuggestionProvider(
                     SearchSuggestionProvider(
                         searchEngine = engine,
@@ -320,6 +310,8 @@ class AwesomeBarView(
                         mode = SearchSuggestionProvider.Mode.MULTIPLE_SUGGESTIONS,
                         icon = searchBitmap,
                         engine = engineForSpeculativeConnects,
+                        // See the default-engine branch above for why this is
+                        // `true` - suppresses the typed-query echo row.
                         filterExactMatch = true,
                         private = when (activity.browsingModeManager.mode) {
                             BrowsingMode.Normal -> false

@@ -18,6 +18,9 @@
   <string name="key_private_search_engine" translatable="false">private_search_engine</string>
   <string name="key_desktop_mode_default" translatable="false">desktop_mode_default</string>
   <string name="key_translations_enabled" translatable="false">translations_enabled</string>
+  <string name="key_background_playback_youtube" translatable="false">background_playback_youtube</string>
+  <string name="background_playback_youtube">Background audio on YouTube</string>
+  <string name="background_playback_youtube_summary">Keep YouTube playing when the tab or app is in the background (installs a content script on youtube.com). Requires app restart.</string>
     <string
         name="key_bar_addon_list"
         translatable="false"
@@ -427,7 +430,6 @@
     <string name="show_protocol_in_url">Show URL protocol in toolbar</string>
 
   <string name="search_suggestions">Search suggestions</string>
-  <string name="search_for_query">Search for \"%1$s\"</string>
   <string name="search_suggestion_count">Number of search suggestions</string>
 
   <string name="safe_browsing">Safe browsing</string>
@@ -926,4 +928,16 @@
     <string name="etp_strict_desc">Maximum protection. Some sites may display or function differently.</string>
     <string name="etp_custom_title">Custom</string>
     <string name="etp_custom_desc">Choose which categories of trackers to block.</string>
+
+    <!-- Global browser menu. -->
+    <string name="menu_add_to_favorite">Favorite</string>
+    <string name="menu_close_tab">Close tab</string>
+
+    <!-- Shown when a PWA settings action is discovered but not implemented. -->
+    <string name="web_app_action_not_implemented">This action isn\'t implemented yet.</string>
+
+    <!-- One-time tab migration popup (see DefaultProfileTabMigration). -->
+    <string name="nira_default_profile_migration_title">Tabs moved to Default profile</string>
+    <string name="nira_default_profile_migration_message">%1$d tab(s) that had no profile assigned were moved to the Default profile. You can find them in the tab bar now.</string>
+    <string name="nira_default_profile_migration_message_zero">Your tabs are now organized under the Default profile.</string>
 </resources>

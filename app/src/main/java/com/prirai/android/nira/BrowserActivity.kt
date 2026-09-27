@@ -64,8 +64,6 @@ open class BrowserActivity : LocaleAwareAppCompatActivity(), ComponentCallbacks2
     lateinit var browsingModeManager: BrowsingModeManager
     private lateinit var currentTheme: BrowsingMode
 
-    lateinit var tabGroupManager: com.prirai.android.nira.browser.tabgroups.TabGroupManager
-
     private var isToolbarInflated = false
     private lateinit var navigationToolbar: Toolbar
 
@@ -135,8 +133,9 @@ open class BrowserActivity : LocaleAwareAppCompatActivity(), ComponentCallbacks2
         )
         currentTheme = browsingModeManager.mode
 
-        // Initialize TabGroupManager - shared across all components
-        tabGroupManager = com.prirai.android.nira.browser.tabgroups.TabGroupManager(this)
+        // Tab-group management goes through `context.components.tabGroupManager`
+        // (a UnifiedTabGroupManager singleton). The legacy `TabGroupManager`
+        // that used to live here has been deleted - no callsite ever read it.
 
         binding = ActivityMainBinding.inflate(layoutInflater)
         val view = binding.root
@@ -203,6 +202,11 @@ open class BrowserActivity : LocaleAwareAppCompatActivity(), ComponentCallbacks2
             lifecycleScope.launch(kotlinx.coroutines.Dispatchers.IO) {
                 cleanupOrphanedThumbnails()
             }
+
+            // One-time migration popup: DefaultProfileTabMigration flips the pref below
+            // during BrowserStore restore. We poll briefly because restore is launched
+            // asynchronously from BrowserApp.onCreate and may not have dispatched yet.
+            maybeShowDefaultProfileMigrationPopup()
         }
 
         // Setup OnBackPressedDispatcher callback to replace deprecated onBackPressed()
@@ -445,7 +449,7 @@ open class BrowserActivity : LocaleAwareAppCompatActivity(), ComponentCallbacks2
     private fun openPopup(webExtensionState: WebExtensionState) {
         val fm: FragmentManager = supportFragmentManager
         val editNameDialogFragment =
-            if (Utils().isTablet(this)) WebExtensionTabletPopupFragment()
+            if (Utils.isTablet(this)) WebExtensionTabletPopupFragment()
             else WebExtensionPopupFragment()
 
         val bundle = Bundle()
@@ -601,6 +605,54 @@ open class BrowserActivity : LocaleAwareAppCompatActivity(), ComponentCallbacks2
             }
         } catch (e: Exception) {
             android.util.Log.e("BrowserActivity", "Error cleaning up thumbnails", e)
+        }
+    }
+
+    /**
+     * Shows a one-time dialog after [com.prirai.android.nira.browser.profile.DefaultProfileTabMigration]
+     * has moved tabs into the default profile. Uses a short bounded poll because the
+     * migration flag flips inside BrowserStore's restore coroutine, which is launched
+     * asynchronously from BrowserApp.onCreate and may complete slightly after this
+     * Activity's first `view.post`. If the flag never arrives (fresh install with
+     * nothing to migrate) we bail after ~3 seconds and do nothing.
+     */
+    private fun maybeShowDefaultProfileMigrationPopup() {
+        val prefs = UserPreferences(this)
+        // If nothing pending and the migration flag is already committed, no popup is
+        // ever due on this launch.
+        if (!prefs.pendingDefaultMigrationPopup && prefs.defaultProfileMigrationDone) return
+
+        lifecycleScope.launch {
+            // Poll for up to ~3s at 100ms intervals. The middleware sets the pref
+            // synchronously the moment it rewrites a RestoreAction, so this loop
+            // typically resolves on the first tick after tabs are restored.
+            var elapsed = 0
+            while (elapsed < 3_000 && !prefs.pendingDefaultMigrationPopup) {
+                kotlinx.coroutines.delay(100)
+                elapsed += 100
+            }
+            if (!prefs.pendingDefaultMigrationPopup) return@launch
+            if (isFinishing || isDestroyed) return@launch
+
+            val count = prefs.pendingDefaultMigrationTabCount
+            val message = if (count > 0) {
+                getString(R.string.nira_default_profile_migration_message, count)
+            } else {
+                getString(R.string.nira_default_profile_migration_message_zero)
+            }
+
+            androidx.appcompat.app.AlertDialog.Builder(this@BrowserActivity)
+                .setTitle(R.string.nira_default_profile_migration_title)
+                .setMessage(message)
+                .setPositiveButton(android.R.string.ok) { d, _ -> d.dismiss() }
+                .setOnDismissListener {
+                    // Clear the transient flag so we never show it again. The persistent
+                    // `defaultProfileMigrationDone` pref remains true forever.
+                    prefs.pendingDefaultMigrationPopup = false
+                    prefs.pendingDefaultMigrationTabCount = 0
+                }
+                .setCancelable(true)
+                .show()
         }
     }
 

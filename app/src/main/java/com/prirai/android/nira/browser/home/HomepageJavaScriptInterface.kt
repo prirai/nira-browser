@@ -2,13 +2,15 @@ package com.prirai.android.nira.browser.home
 
 import android.content.Context
 import android.webkit.JavascriptInterface
-import androidx.room.Room
 import com.prirai.android.nira.browser.bookmark.items.BookmarkFolderItem
 import com.prirai.android.nira.browser.bookmark.items.BookmarkItem
 import com.prirai.android.nira.browser.bookmark.items.BookmarkSiteItem
 import com.prirai.android.nira.browser.bookmark.repository.BookmarkManager
 import com.prirai.android.nira.browser.shortcuts.ShortcutDatabase
 import com.prirai.android.nira.browser.shortcuts.ShortcutEntity
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.runBlocking
+import mozilla.components.support.base.log.logger.Logger
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -17,21 +19,21 @@ import org.json.JSONObject
  * Provides access to shortcuts, bookmarks and handles search/navigation
  */
 class HomepageJavaScriptInterface(private val context: Context) {
-    
+
+    private val logger = Logger("HomepageJavaScriptInterface")
+
     @JavascriptInterface
     fun getShortcuts(): String {
         val shortcuts = JSONArray()
-        
+
         try {
-            val database = Room.databaseBuilder(
-                context,
-                ShortcutDatabase::class.java,
-                "shortcut-database"
-            ).allowMainThreadQueries().build()
-            
-            val dao = database.shortcutDao()
-            val items = dao.getAll()
-            
+            // Use the process-wide singleton so migrations run once and we don't
+            // race with other callsites opening the same SQLite file. The JS
+            // bridge is synchronous, so we hop to Dispatchers.IO via runBlocking
+            // instead of the previous `.allowMainThreadQueries()` builder flag.
+            val dao = ShortcutDatabase.getInstance(context).shortcutDao()
+            val items = runBlocking(Dispatchers.IO) { dao.getAll() }
+
             items.take(12).forEach { shortcut: ShortcutEntity ->
                 val obj = JSONObject()
                 obj.put("uid", shortcut.uid) // Add ID for deletion
@@ -42,9 +44,14 @@ class HomepageJavaScriptInterface(private val context: Context) {
                 shortcuts.put(obj)
             }
         } catch (e: Exception) {
-            // Return empty array on error
+            // The homepage JS bridge is synchronous - we return a JSON string
+            // that the WebView shows as the shortcut grid. If we can't read
+            // the DB (schema mismatch, disk full, IO error, ...) the grid
+            // ends up empty; log so we can diagnose why instead of showing
+            // the user an unexplained blank grid.
+            logger.error("Failed to load shortcuts for homepage", e)
         }
-        
+
         return shortcuts.toString()
     }
     
@@ -70,9 +77,11 @@ class HomepageJavaScriptInterface(private val context: Context) {
                 bookmarks.put(obj)
             }
         } catch (e: Exception) {
-            // Return empty array on error
+            // Same rationale as getShortcuts() above: log rather than silently
+            // return an empty list.
+            logger.error("Failed to load bookmarks for homepage", e)
         }
-        
+
         return bookmarks.toString()
     }
     
