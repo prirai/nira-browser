@@ -64,3 +64,6 @@ out
  /fixes.md
  /PROJECT_LOG.md
 /AGENT_JOURNAL.md
+
+# Local release helper (personal tooling, not shipped)
+/release.bat
