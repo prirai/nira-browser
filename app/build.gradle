@@ -9,7 +9,10 @@ plugins {
 
 
 android {
-    compileSdkVersion = 37
+    // AC 156 requires compileSdk 37 with minor API level 1 (Android 15.1).
+    // AGP 9 exposes the minor level via this DSL block; the old scalar
+    // `compileSdkVersion = 37` is equivalent to major-only.
+    compileSdk { version = release(37) { minorApiLevel = 1 } }
     buildFeatures {
         buildConfig = true
         viewBinding = true
@@ -23,8 +26,8 @@ android {
         minSdkVersion 27
         targetSdkVersion 37
         // Increment by 4 with each update, by 1 with each fix
-        versionCode = 59
-        versionName = "0.5.10"
+        versionCode = 63
+        versionName = "0.5.11"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 

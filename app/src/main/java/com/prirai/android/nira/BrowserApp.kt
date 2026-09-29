@@ -207,10 +207,14 @@ class BrowserApp : Application() {
             WebExtensionSupport.initialize(
             components.engine,
             components.store,
-            onNewTabOverride = { _, engineSession, url, isPrivate ->
+            // AC 156 added an explicit `isPrivate` boolean as the 5th
+            // parameter (previously the private-flag was inferred from the
+            // browsing mode). `selected` is the 4th param - respect the
+            // extension's choice instead of hard-coding `selectTab = true`.
+            onNewTabOverride = { _, engineSession, url, selected, isPrivate ->
                 components.tabsUseCases.addTab(
                     url = url,
-                    selectTab = true,
+                    selectTab = selected,
                     engineSession = engineSession,
                     private = isPrivate,
                 )

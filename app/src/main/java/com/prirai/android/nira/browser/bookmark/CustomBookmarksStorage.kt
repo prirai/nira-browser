@@ -64,8 +64,10 @@ class CustomBookmarksStorage(context: Context): BookmarksStorage {
     override suspend fun getRecentBookmarks(
         limit: Int,
         maxAge: Long?,
-        currentTime: Long
     ): Result<List<BookmarkNode>> {
+        // AC 156 dropped the `currentTime: Long` parameter from this
+        // interface method. `PlacesBookmarksStorage` computes the current
+        // time internally; callers no longer pass it in.
         return Result.failure(NotImplementedError("Not yet implemented"))
     }
 

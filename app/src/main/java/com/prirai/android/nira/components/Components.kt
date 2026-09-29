@@ -88,7 +88,7 @@ import mozilla.components.feature.tabs.TabsUseCases
 import mozilla.components.feature.webcompat.WebCompatFeature
 import mozilla.components.feature.webnotifications.WebNotificationFeature
 import mozilla.components.lib.publicsuffixlist.PublicSuffixList
-import mozilla.components.service.fxa.SyncEngine
+import mozilla.components.concept.sync.SyncEngine
 import mozilla.components.service.fxa.sync.GlobalSyncableStoreProvider
 import mozilla.components.service.location.LocationService
 import mozilla.components.support.base.android.NotificationsDelegate
@@ -605,9 +605,21 @@ open class Components(private val applicationContext: Context) {
     // Firefox Sync — default profile only
     val fxaSyncManager by lazy {
         // Register syncable stores before starting FxaAccountManager.
-        GlobalSyncableStoreProvider.configureStore(SyncEngine.History to lazyHistoryStorage)
-        GlobalSyncableStoreProvider.configureStore(SyncEngine.Tabs to lazy { remoteTabsStorage })
-        GlobalSyncableStoreProvider.configureStore(SyncEngine.Bookmarks to lazyBookmarksStorage)
+        // AC 156 tightened the `configureStore` signature to
+        // `Pair<SyncEngine, Lazy<SyncableStore>>`; the `to` infix on our
+        // concrete `Lazy<PlacesHistoryStorage>` etc. produces
+        // `Pair<SyncEngine, Lazy<PlacesHistoryStorage>>` which doesn't fit
+        // because `Pair` is invariant. Widening each `Lazy<T>` to
+        // `Lazy<SyncableStore>` via an explicit cast makes inference happy.
+        GlobalSyncableStoreProvider.configureStore(
+            SyncEngine.History to (lazyHistoryStorage as Lazy<mozilla.components.concept.sync.SyncableStore>)
+        )
+        GlobalSyncableStoreProvider.configureStore(
+            SyncEngine.Tabs to (lazy { remoteTabsStorage } as Lazy<mozilla.components.concept.sync.SyncableStore>)
+        )
+        GlobalSyncableStoreProvider.configureStore(
+            SyncEngine.Bookmarks to (lazyBookmarksStorage as Lazy<mozilla.components.concept.sync.SyncableStore>)
+        )
         com.prirai.android.nira.browser.sync.FxaSyncManager.getInstance(applicationContext)
     }
 
