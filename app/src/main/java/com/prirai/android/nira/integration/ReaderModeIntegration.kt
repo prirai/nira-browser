@@ -60,13 +60,23 @@ class ReaderModeIntegration(
         }
     }
 
-    private val feature = ReaderViewFeature(context, engine, store, controlsView) { available, active ->
-        readerViewButtonVisible = available
-        readerViewButton.setSelected(active)
+    // AC 156 added an `onListenClicked` parameter to ReaderViewFeature after
+    // `onReaderViewStatusChange`, so the trailing-lambda position no longer
+    // implicitly binds to the status-change callback. Pass the callback by
+    // name to keep the intent explicit.
+    private val feature = ReaderViewFeature(
+        context = context,
+        engine = engine,
+        store = store,
+        controlsView = controlsView,
+        onReaderViewStatusChange = { available, active ->
+            readerViewButtonVisible = available
+            readerViewButton.setSelected(active)
 
-        if (active) readerViewAppearanceButton.show() else readerViewAppearanceButton.hide()
-        toolbar.invalidateActions()
-    }
+            if (active) readerViewAppearanceButton.show() else readerViewAppearanceButton.hide()
+            toolbar.invalidateActions()
+        },
+    )
 
     override fun start() {
         feature.start()

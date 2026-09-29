@@ -306,6 +306,7 @@ class AppRequestInterceptor(val context: Context) : RequestInterceptor {
         ErrorType.ERROR_UNKNOWN_SOCKET_TYPE,
         ErrorType.ERROR_UNKNOWN_PROXY_HOST,
         ErrorType.ERROR_HTTPS_ONLY,
+        ErrorType.ERROR_LOCAL_NETWORK_ACCESS_DENIED,
         ErrorType.ERROR_UNKNOWN_PROTOCOL -> ErrorCategory.Network
 
         ErrorType.ERROR_SECURITY_BAD_CERT,
