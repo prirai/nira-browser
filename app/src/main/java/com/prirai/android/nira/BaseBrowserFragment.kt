@@ -466,7 +466,14 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
                 requireContext().applicationContext,
                 store = components.store,
                 useCases = components.downloadsUseCases,
-                fragmentManager = null,
+                // Issue #71: fragmentManager was null which silently disabled
+                // the third-party download-app chooser. Upstream's
+                // DownloadsFeature.showAppDownloaderDialog / showDownloadDialog
+                // both early-return unless a non-null, non-destroyed
+                // FragmentManager is available. `childFragmentManager` is
+                // what Fenix and the custom-tab flow use for the same
+                // purpose - matches ExternalAppBrowserFragment.kt.
+                fragmentManager = childFragmentManager,
                 shouldForwardToThirdParties = { UserPreferences(requireContext()).promptExternalDownloader },
                 onDownloadStopped = { download, id, status ->
                     debug("Download ID#$id $download with status $status is done.")
