@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
 import androidx.core.net.toUri
 
 /**
@@ -32,11 +33,24 @@ class UnifiedTabGroupManager private constructor(private val context: Context) {
     private val dao = database.tabGroupDao()
     private val scope = CoroutineScope(Dispatchers.IO)
 
-    // In-memory cache of groups for fast access
-    private val groupsCache = mutableMapOf<String, TabGroupData>()
-    
-    // Map tab ID to group ID for quick lookup
-    private val tabToGroupMap = mutableMapOf<String, String>()
+    // In-memory cache of groups for fast access.
+    //
+    // Writes come from suspend fns dispatched to Dispatchers.IO (createGroup,
+    // addTabToGroup, loadGroupsFromDatabase, etc.). Reads come from the Main
+    // thread via TabIslandManager.getAllIslands/getIslandForTab, Compose
+    // recomposition in ComposeTabBarWithProfileSwitcher, awesomebar
+    // providers, and callers inside TabsBottomSheetFragment / TabSearchFragment.
+    //
+    // A plain HashMap here is a cross-thread race: structural mutation on IO
+    // concurrent with iteration on Main can throw ConcurrentModificationException
+    // or return corrupt reads. ConcurrentHashMap gives weakly-consistent
+    // iterators and lock-free reads, which is exactly what the read paths need
+    // (they only ever snapshot values and sort/filter).
+    private val groupsCache = ConcurrentHashMap<String, TabGroupData>()
+
+    // Map tab ID to group ID for quick lookup. Same cross-thread access
+    // pattern as groupsCache, so same reasoning applies.
+    private val tabToGroupMap = ConcurrentHashMap<String, String>()
 
     // State flows for reactive UI updates
     private val _groupsState = MutableStateFlow<List<TabGroupData>>(emptyList())
