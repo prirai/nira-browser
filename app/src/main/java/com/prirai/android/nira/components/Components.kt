@@ -112,8 +112,10 @@ private val noOpCrashReporter = object : CrashReporting {
 
 open class Components(private val applicationContext: Context) {
     
-    // Visual completeness queue for deferred initialization
-    val visualCompletenessQueue = VisualCompletenessQueue()
+    // Visual completeness queue for deferred initialization.
+    // Lazy so the Mutex + mutableListOf allocation is skipped if nothing
+    // ever queues against it (test fixtures, headless flows).
+    val visualCompletenessQueue by lazy { VisualCompletenessQueue() }
     companion object {
         const val BROWSER_PREFERENCES = "browser_preferences"
         const val PREF_LAUNCH_EXTERNAL_APP = "launch_external_app"
@@ -137,8 +139,13 @@ open class Components(private val applicationContext: Context) {
 
     val packageNameProvider: () -> String by lazy { { applicationContext.packageName } }
 
-    val preferences: SharedPreferences =
-            applicationContext.getSharedPreferences(BROWSER_PREFERENCES, Context.MODE_PRIVATE)
+    // Lazy so that merely constructing Components does not open the
+    // "browser_preferences" SharedPreferences file (a synchronous XML read).
+    // The field is only touched from a handful of settings call sites, all
+    // off the critical startup path.
+    val preferences: SharedPreferences by lazy {
+        applicationContext.getSharedPreferences(BROWSER_PREFERENCES, Context.MODE_PRIVATE)
+    }
 
 
     fun darkEnabled(url: String? = null): PreferredColorScheme {
@@ -173,15 +180,23 @@ open class Components(private val applicationContext: Context) {
     }
 
     // Engine Settings
-    private val engineSettings: DefaultSettings
-        get() = DefaultSettings().apply {
+    //
+    // Memoised with `by lazy` so a second access does not rebuild DefaultSettings
+    // and re-read 8+ SharedPreferences keys. The only consumer is the `engine`
+    // lazy below (GeckoEngine takes the settings by reference at construction
+    // time), so caching the instance is safe - runtime mutations go through
+    // `engine.settings.X = Y` on the live settings object (see
+    // applyPrivacyEngineSettings). The previous getter form was accidentally
+    // reconstructing on every read.
+    private val engineSettings: DefaultSettings by lazy {
+        DefaultSettings().apply {
             historyTrackingDelegate = HistoryDelegate(lazyHistoryStorage)
             requestInterceptor = appRequestInterceptor
             // Off by default; user can flip via Advanced Settings.
             remoteDebuggingEnabled = UserPreferences(applicationContext).remoteDebugging
             supportMultipleWindows = true
             enterpriseRootsEnabled = false // SECURITY: Third-party certs disabled
-            if(!UserPreferences(applicationContext).autoFontSize){
+            if (!UserPreferences(applicationContext).autoFontSize) {
                 fontSizeFactor = UserPreferences(applicationContext).fontSizeFactor
                 automaticFontSizeAdjustment = false
             }
@@ -193,6 +208,7 @@ open class Components(private val applicationContext: Context) {
             dohProviderUrl = prefs.dohProviderUrl
             globalPrivacyControlEnabled = prefs.globalPrivacyControl
         }
+    }
 
     fun applyPrivacyEngineSettings() {
         val prefs = UserPreferences(applicationContext)
@@ -202,7 +218,12 @@ open class Components(private val applicationContext: Context) {
         engine.settings.globalPrivacyControlEnabled = prefs.globalPrivacyControl
     }
 
-    private val notificationManagerCompat = NotificationManagerCompat.from(applicationContext)
+    // Lazy so NotificationManagerCompat.from is not resolved until the
+    // notifications delegate is actually needed. The two consumers
+    // (notificationsDelegate and webNotificationFeature) are both lazy.
+    private val notificationManagerCompat by lazy {
+        NotificationManagerCompat.from(applicationContext)
+    }
 
     val notificationsDelegate: NotificationsDelegate by lazy {
         NotificationsDelegate(
@@ -246,8 +267,18 @@ open class Components(private val applicationContext: Context) {
         )
     }
 
-    val addonUpdater =
-        DefaultAddonUpdater(applicationContext, Frequency(1, TimeUnit.DAYS), notificationsDelegate, Dispatchers.Main)
+    // Lazy so that merely touching Components does not eagerly construct the
+    // DefaultAddonUpdater (which registers WorkManager polling for addon
+    // updates and resolves `notificationsDelegate`). Only consumed from
+    // BrowserApp.initializeAfterFirstFrame.
+    val addonUpdater by lazy {
+        DefaultAddonUpdater(
+            applicationContext,
+            Frequency(1, TimeUnit.DAYS),
+            notificationsDelegate,
+            Dispatchers.Main,
+        )
+    }
 
     // Engine
     open val engine: Engine by lazy {

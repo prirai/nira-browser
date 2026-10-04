@@ -1,7 +1,6 @@
 package com.prirai.android.nira
 
 import com.prirai.android.nira.components.Components
-import com.prirai.android.nira.theme.applyAppTheme
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -39,7 +38,14 @@ class BrowserApp : Application() {
             return
         }
 
-        Facts.registerProcessor(LogFactProcessor())
+        // LogFactProcessor forwards every mozilla-components Fact to logcat
+        // for the life of the process. That's useful while developing but it
+        // is pure CPU + logcat spam in release builds (every URL load, every
+        // engine action emits facts). Gate it behind BuildConfig.DEBUG so
+        // release users don't pay for it.
+        if (BuildConfig.DEBUG) {
+            Facts.registerProcessor(LogFactProcessor())
+        }
 
         // CRITICAL: Load NSS native libraries so the Rust megazord can find
         // them via dlopen(). The Rust fxaclient needs NSS for PKCE crypto.
@@ -67,12 +73,13 @@ class BrowserApp : Application() {
         // This prepares GeckoView but doesn't block on heavy operations
         components.engine.warmUp()
 
-        applyAppTheme(this)
-        
-        // Apply Material You dynamic colors if enabled
-        if (com.prirai.android.nira.theme.ThemeManager.shouldUseDynamicColors(this)) {
-            com.google.android.material.color.DynamicColors.applyToActivitiesIfAvailable(this)
-        }
+        // Theme + DynamicColors are applied in BrowserActivity.onCreate before
+        // super.onCreate - the Application-level pass was redundant work
+        // (AppCompatDelegate.setDefaultNightMode is a no-op on repeat calls
+        // but still touches resources, and DynamicColors.applyToActivitiesIfAvailable
+        // registered an ActivityLifecycleCallbacks that fires on every activity
+        // create - we don't need both the Application-wide hook *and* the
+        // per-Activity apply call).
 
         logger.info("App onCreate completed in ${System.currentTimeMillis() - appStartTime}ms")
 
@@ -174,6 +181,13 @@ class BrowserApp : Application() {
         applicationScope.launch(Dispatchers.IO) {
             components.webAppManifestStorage.warmUpScopes(System.currentTimeMillis())
         }
+
+        // Warm the Public Suffix List once per process on IO. Previously this
+        // was done per-Activity-start on the main thread via view.post, which
+        // forced the ~200 KB PSL parse into the first-frame budget.
+        applicationScope.launch(Dispatchers.IO) {
+            components.publicSuffixList.prefetch()
+        }
         
         // Restore downloads in background
         applicationScope.launch(Dispatchers.Main) {
@@ -242,7 +256,15 @@ class BrowserApp : Application() {
     }
 
     private fun restoreBrowserState() {
-        applicationScope.launch(Dispatchers.Main) {
+        // Previously launched on Dispatchers.Main. tabsUseCases.restore does
+        // its own suspending disk I/O and action dispatch, and
+        // sessionStorage.autoSave(...).periodicallyInForeground(...) sets up a
+        // periodic save timer that does not need the main thread. Running
+        // this on Main meant deserialising the whole session file (potentially
+        // multi-megabyte) on the UI thread, blocking the first frame. IO is
+        // the correct dispatcher - the store itself is thread-safe and the
+        // internal pipeline hops back to Main for state reductions.
+        applicationScope.launch(Dispatchers.IO) {
             components.tabsUseCases.restore(components.sessionStorage)
 
             components.sessionStorage.autoSave(components.store)
