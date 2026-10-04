@@ -34,7 +34,6 @@ import com.prirai.android.nira.ext.enableEdgeToEdgeMode
 import com.prirai.android.nira.ext.nav
 import com.prirai.android.nira.preferences.UserPreferences
 import com.prirai.android.nira.search.SearchDialogFragmentDirections
-import com.prirai.android.nira.theme.applyAppTheme
 import com.prirai.android.nira.utils.Utils
 import kotlinx.coroutines.launch
 import mozilla.components.browser.state.action.AppLifecycleAction
@@ -153,7 +152,9 @@ open class BrowserActivity : LocaleAwareAppCompatActivity(), ComponentCallbacks2
                     SearchEnginePreferences.apply(this@BrowserActivity, private = true)
                 }
             }
-            components.publicSuffixList.prefetch()
+            // publicSuffixList.prefetch() moved to BrowserApp.initializeAfterFirstFrame
+            // so it runs once per process on IO instead of on every Activity start
+            // against the main thread.
         }
 
         if (isActivityColdStarted(intent, savedInstanceState) &&
@@ -162,12 +163,11 @@ open class BrowserActivity : LocaleAwareAppCompatActivity(), ComponentCallbacks2
             navigateToBrowserOnColdStart()
         }
 
-        applyAppTheme(this)
-
-        // Apply Material You dynamic colors if enabled
-        if (com.prirai.android.nira.theme.ThemeManager.shouldUseDynamicColors(this)) {
-            com.google.android.material.color.DynamicColors.applyToActivityIfAvailable(this)
-        }
+        // Theme + DynamicColors already applied at the top of onCreate (lines
+        // 101/105-107) before super.onCreate(). The previous duplicate pass
+        // here forced AppCompatDelegate.setDefaultNightMode and another
+        // DynamicColors.applyToActivityIfAvailable call plus a second
+        // UserPreferences construction - all redundant.
 
         // Register lifecycle observer to capture state on background
         lifecycle.addObserver(object : DefaultLifecycleObserver {
