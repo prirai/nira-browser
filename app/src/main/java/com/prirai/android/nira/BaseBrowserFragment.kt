@@ -698,26 +698,32 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
             if (_binding == null) return@post
 
             val actualToolbarHeight = unifiedToolbar?.height ?: toolbarHeight
-            
-            // Set padding on swipeRefresh to prevent content from appearing under toolbar
-            // Padding ensures content is clipped and doesn't overlap with toolbar
+
+            // Reserve layout space for the pinned toolbar. BOTTOM-mode uses
+            // bottomMargin on swipeRefresh (which shortens the engine view's
+            // layout bounds so page content never draws under the toolbar);
+            // TOP-mode uses top padding (so SwipeRefreshLayout's own
+            // overscroll indicator still draws from the real top edge).
+            //
+            // UnifiedToolbar.reconcileEngineViewHeight() updates these
+            // values whenever the toolbar's visible height changes
+            // (minimal state toggle, rotation, font-scale), so this
+            // initial setup only has to seed the first-frame values.
             val swipeRefreshParams = binding.swipeRefresh.layoutParams as CoordinatorLayout.LayoutParams
-            
+
             when (prefs.toolbarPosition) {
                 com.prirai.android.nira.components.toolbar.ToolbarPosition.BOTTOM.ordinal -> {
-                    // Bottom toolbar: no padding; rely on dynamic toolbar clipping
                     binding.swipeRefresh.setPadding(0, 0, 0, 0)
-                    swipeRefreshParams.bottomMargin = 0
+                    swipeRefreshParams.bottomMargin = actualToolbarHeight
                     swipeRefreshParams.topMargin = 0
                 }
                 else -> {
-                    // Top toolbar: add top padding equal to actual toolbar height
                     binding.swipeRefresh.setPadding(0, actualToolbarHeight, 0, 0)
                     swipeRefreshParams.topMargin = 0
                     swipeRefreshParams.bottomMargin = 0
                 }
             }
-            
+
             binding.swipeRefresh.clipToPadding = false // Allow overscroll effects
             binding.swipeRefresh.layoutParams = swipeRefreshParams
             binding.swipeRefresh.requestLayout()
