@@ -137,7 +137,11 @@ open class Components(private val applicationContext: Context) {
 
     val downloadEstimator by lazy { DownloadEstimator(dateTimeProvider) }
 
-    val packageNameProvider: () -> String by lazy { { applicationContext.packageName } }
+    // Method reference instead of lambda-wrapping-lambda - the previous form
+    // `by lazy { { applicationContext.packageName } }` built the inner lambda
+    // the first time the lazy was read; the method reference below produces
+    // a single `Function0` instance with no captured closure.
+    val packageNameProvider: () -> String = applicationContext::getPackageName
 
     // Lazy so that merely constructing Components does not open the
     // "browser_preferences" SharedPreferences file (a synchronous XML read).
@@ -406,7 +410,12 @@ open class Components(private val applicationContext: Context) {
                             RECENTLY_CLOSED_MAX,
                         ),
                         SaveToPDFMiddleware(applicationContext),
-                        com.prirai.android.nira.browser.tabgroups.TabGroupMiddleware(tabGroupManager),
+                        // Pass the Lazy directly so adding the middleware to the
+                        // store does not force tabGroupManager construction (which
+                        // opens a Room database on first touch).
+                        com.prirai.android.nira.browser.tabgroups.TabGroupMiddleware(
+                            lazy { tabGroupManager }
+                        ),
                         profileMiddleware,  // Use the exposed instance
                         SessionPrioritizationMiddleware(),
                         TranslationsMiddleware(
@@ -422,21 +431,14 @@ open class Components(private val applicationContext: Context) {
                     engine,
                     trimMemoryAutomatically = false,
                 )
-        ).apply{
-            icons.install(engine, this)
-
-            // Force the WebNotificationFeature singleton to initialise. Its
-            // `init { engine.registerWebNotificationDelegate(this) }` block
-            // hooks into GeckoView so web-notification permission prompts and
-            // dispatches to `NotificationsDelegate` work end-to-end. Storing
-            // the reference in a lazy Components field (rather than throwing
-            // the constructor result away like the previous code did) means
-            // the delegate is kept alive by our Components graph, not just by
-            // the engine's internal registration map.
-            webNotificationFeature
-
-            MediaSessionFeature(applicationContext, MediaSessionService::class.java, this).start()
-
+        ).apply {
+            // Only the desktop-mode initial dispatch stays here, because it
+            // seeds state the reducer needs before any tab is restored. All
+            // the heavy registrations below (icons.install, webNotificationFeature,
+            // MediaSessionFeature.start, sleepingTabsManager.start) have moved
+            // to bootstrapStore() so they run after the first frame instead of
+            // during the store-construction burst on whichever thread first
+            // touches components.store.
             val prefs = UserPreferences(applicationContext)
             val desktopDefault = if (prefs.hasDesktopModeDefault()) {
                 prefs.desktopModeDefault
@@ -444,11 +446,59 @@ open class Components(private val applicationContext: Context) {
                 Utils.isTablet(applicationContext)
             }
             dispatch(DefaultDesktopModeAction.DesktopModeUpdated(desktopDefault))
-
-            // Start the sleeping-tabs manager. It observes tab selection and
-            // periodically suspends idle non-selected tabs.
-            sleepingTabsManager.start(this)
         }
+    }
+
+    /**
+     * Guards [bootstrapStore] against double-invocation. The method is called
+     * from `BrowserApp.initializeAfterFirstFrame`; this flag makes a hypothetical
+     * second call (e.g. a future test harness or a re-entry from a process
+     * warm start) a no-op instead of double-registering engine observers.
+     */
+    @Volatile
+    private var storeBootstrapped = false
+
+    /**
+     * Installs the store-level side-effects that used to run inside
+     * `store.apply { ... }`:
+     *
+     * - [BrowserIcons.install] (favicon fetching on page-load actions)
+     * - [WebNotificationFeature] lazy touch (its `init` block registers the
+     *   web-notification delegate with the engine; the field keeps the
+     *   delegate strongly reachable beyond the engine's internal registry)
+     * - [MediaSessionFeature.start] (binds [MediaSessionService] so media
+     *   playback can continue in the background with a notification)
+     * - [sleepingTabsManager.start] (observes tab selection and suspends
+     *   idle non-selected tabs)
+     *
+     * Must be called on the **main thread** - all four callees ultimately
+     * register observers with GeckoView, which requires a Handler bound to
+     * the main looper. Called from [com.prirai.android.nira.BrowserApp]
+     * once Choreographer confirms the first frame has been scheduled.
+     *
+     * Idempotent via [storeBootstrapped]; safe to call more than once.
+     */
+    fun bootstrapStore() {
+        if (storeBootstrapped) return
+        storeBootstrapped = true
+
+        icons.install(engine, store)
+
+        // Force the WebNotificationFeature singleton to initialise. Its
+        // `init { engine.registerWebNotificationDelegate(this) }` block
+        // hooks into GeckoView so web-notification permission prompts and
+        // dispatches to `NotificationsDelegate` work end-to-end. Storing
+        // the reference in a lazy Components field (rather than throwing
+        // the constructor result away) means the delegate is kept alive by
+        // our Components graph, not just by the engine's internal
+        // registration map.
+        webNotificationFeature
+
+        MediaSessionFeature(applicationContext, MediaSessionService::class.java, store).start()
+
+        // Start the sleeping-tabs manager. It observes tab selection and
+        // periodically suspends idle non-selected tabs.
+        sleepingTabsManager.start(store)
     }
 
     val sleepingTabsManager by lazy {
@@ -633,9 +683,27 @@ open class Components(private val applicationContext: Context) {
         mozilla.components.feature.tabs.CustomTabsUseCases(store, sessionUseCases.loadUrl) 
     }
 
-    // Firefox Sync — default profile only
-    val fxaSyncManager by lazy {
-        // Register syncable stores before starting FxaAccountManager.
+    /**
+     * Idempotently register the three syncable stores (history, tabs,
+     * bookmarks) with [GlobalSyncableStoreProvider]. Previously this was done
+     * inside the body of the [fxaSyncManager] lazy, which meant
+     * `BrowserApp.initializeAfterFirstFrame` paid for three static-map puts
+     * and the associated reflection-heavy registration on the Main thread
+     * right at the moment it was trying to touch GeckoView for extension
+     * installs. Moved out so [BrowserApp] can call it from an IO coroutine
+     * before `fxaSyncManager.start()`.
+     *
+     * Thread-safety: `GlobalSyncableStoreProvider.configureStore` is a
+     * static-map put with internal synchronization. The guard flag below
+     * additionally prevents triple-cast overhead on repeat calls.
+     */
+    @Volatile
+    private var syncableStoresRegistered = false
+
+    @Suppress("UNCHECKED_CAST")
+    fun registerSyncableStores() {
+        if (syncableStoresRegistered) return
+        syncableStoresRegistered = true
         // AC 156 tightened the `configureStore` signature to
         // `Pair<SyncEngine, Lazy<SyncableStore>>`; the `to` infix on our
         // concrete `Lazy<PlacesHistoryStorage>` etc. produces
@@ -651,6 +719,15 @@ open class Components(private val applicationContext: Context) {
         GlobalSyncableStoreProvider.configureStore(
             SyncEngine.Bookmarks to (lazyBookmarksStorage as Lazy<mozilla.components.concept.sync.SyncableStore>)
         )
+    }
+
+    // Firefox Sync — default profile only
+    val fxaSyncManager by lazy {
+        // Belt-and-suspenders: if someone resolves this lazy without having
+        // called registerSyncableStores() first, do it now so the sync engines
+        // know where to find their storage. The flag makes this a cheap no-op
+        // once the proper call site has run.
+        registerSyncableStores()
         com.prirai.android.nira.browser.sync.FxaSyncManager.getInstance(applicationContext)
     }
 
