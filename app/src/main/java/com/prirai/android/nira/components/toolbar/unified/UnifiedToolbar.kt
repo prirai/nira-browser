@@ -107,13 +107,13 @@ class UnifiedToolbar @JvmOverloads constructor(
         // Allow children to draw outside bounds (for elevated tab pills during drag)
         clipChildren = false
         clipToPadding = false
-        
+
         // Add toolbarSystem as child
         addView(toolbarSystem, LayoutParams(
             LayoutParams.MATCH_PARENT,
             LayoutParams.WRAP_CONTENT
         ))
-        
+
         // Set toolbar position from preferences
         val toolbarPos = if (prefs.toolbarPosition == ToolbarPosition.BOTTOM.ordinal) {
             ModernToolbarSystem.ToolbarPosition.BOTTOM
@@ -122,6 +122,20 @@ class UnifiedToolbar @JvmOverloads constructor(
         }
         toolbarSystem.setToolbarPosition(toolbarPos)
         shouldHideBottomComponents = (toolbarPos == ModernToolbarSystem.ToolbarPosition.TOP)
+
+        // Reconcile the engine view's reserved toolbar height whenever the
+        // toolbar system's layout changes. The aux bars (tab bar +
+        // contextual bar) go VISIBLE <-> GONE as minimal state toggles,
+        // which shrinks or grows toolbarSystem.height; without this listener
+        // GeckoView would keep clipping the originally-reserved full
+        // toolbar height, leaving a blank band of wasted space where the
+        // aux bars used to be. This also covers rotation and font-scale
+        // changes that affect toolbar height.
+        toolbarSystem.addOnLayoutChangeListener { _, _, top, _, bottom, _, oldTop, _, oldBottom ->
+            if (bottom - top != oldBottom - oldTop) {
+                reconcileEngineViewHeight()
+            }
+        }
     }
     
     // Forward ScrollableToolbar methods to toolbarSystem and behavior
@@ -886,6 +900,47 @@ class UnifiedToolbar @JvmOverloads constructor(
     fun setEngineView(engine: EngineView) {
         this.engineView = engine
         toolbarSystem.setEngineView(engine)
+        // The toolbar system does its own initial `setDynamicToolbarMaxHeight`
+        // via a `post {}` block but does NOT set vertical clipping, so the
+        // first paint on a pinned bottom toolbar would still have web
+        // content extending under the chrome. Post our own reconcile to
+        // the same message queue so it runs after measure settles.
+        post { reconcileEngineViewHeight() }
+    }
+
+    /**
+     * Tell BrowserFragment the toolbar's **current** visible height so
+     * `SwipeRefreshLayout` can carve out room for the pinned chrome.
+     *
+     * The actual reservation happens on the fragment side (see
+     * `BrowserFragment.adjustWebContentMarginsForToolbarOffset`): in
+     * BOTTOM mode we set `swipeRefreshParams.bottomMargin = visibleHeight`,
+     * in TOP mode we pad the top. This shrinks the engine view's layout
+     * bounds so the Gecko surface itself does not draw underneath the
+     * toolbar - no clipping tricks required.
+     *
+     * We previously tried a `setVerticalClipping(-visibleHeight)` here;
+     * that is the wrong API. `setVerticalClipping` tracks the dynamic
+     * toolbar's *translation* and is meaningful only while the toolbar
+     * is scrolled off-screen; for a pinned toolbar the value stays at
+     * 0 and does not reserve any viewport space.
+     *
+     * `setDynamicToolbarMaxHeight` is still kept because it is a cheap
+     * no-op in the pinned case and the AC convention expects it to be
+     * set at least once.
+     *
+     * This function is invoked automatically from a layout-change
+     * listener on `toolbarSystem` (installed in `init`), so entering or
+     * exiting minimal state - which flips the aux bars between VISIBLE
+     * and GONE - immediately re-coordinates the layout.
+     *
+     * No-op before `setEngineView` has run.
+     */
+    fun reconcileEngineViewHeight() {
+        val engine = engineView ?: return
+        val visible = toolbarSystem.getTotalHeight()
+        engine.setDynamicToolbarMaxHeight(visible)
+        onToolbarOffsetChanged?.invoke(0, visible)
     }
     
     /**
