@@ -221,16 +221,31 @@ object ThemeManager {
         val context = activity as Context
         val window = activity.window
 
-        // Mirror Fenix's ThemeManager.updateNavigationBar: paint the nav bar
-        // with the same layer1/colorSurface tone the BrowserToolbar uses so
-        // the gesture-nav strip visually blends with the toolbar when it is
-        // pinned at the bottom. When the toolbar is at the top the nav bar
-        // sits below web content and stays transparent so the page shows
-        // through. On target SDK 35+ the platform ignores navigationBarColor
-        // altogether, but we keep the assignment for the pre-15 code path.
+        // Snapshot the three preference-derived flags we need **once** per
+        // call. Previously this function went through:
+        //   - new UserPreferences(context) for `toolbarPosition`
+        //   - isAmoledActive(context) -> new UserPreferences + `amoledMode`
+        //                             -> isDarkMode(context) -> new UserPreferences + `appThemeChoice`
+        //   - isDarkMode(context) again on the API>=R branch
+        //   - isDarkMode(context) a third time on the pre-R branch
+        // i.e. up to 4 UserPreferences wrapper allocations and 3 reads of
+        // `appThemeChoice` plus 1 read of `amoledMode` and 1 read of
+        // `toolbarPosition` per call. This function runs on every tab switch
+        // (via updateToolbarAndStatusBarTheme) so the waste compounds.
         val prefs = com.prirai.android.nira.preferences.UserPreferences(context)
         val toolbarAtBottom = prefs.toolbarPosition ==
             com.prirai.android.nira.components.toolbar.ToolbarPosition.BOTTOM.ordinal
+        // Inline the isDarkMode / isAmoledActive logic to avoid re-reading
+        // the same two prefs multiple times.
+        val isDark = when (prefs.appThemeChoice) {
+            ThemeChoice.LIGHT.ordinal -> false
+            ThemeChoice.DARK.ordinal -> true
+            else -> {
+                val nightModeFlags = context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK
+                nightModeFlags == Configuration.UI_MODE_NIGHT_YES
+            }
+        }
+        val isAmoled = prefs.amoledMode && isDark
 
         if (isPrivateMode) {
             // Purple theme for private mode
@@ -238,7 +253,7 @@ object ThemeManager {
             window.statusBarColor = purpleColor
             window.navigationBarColor = if (toolbarAtBottom) purpleColor
                 else android.graphics.Color.TRANSPARENT
-        } else if (isAmoledActive(context)) {
+        } else if (isAmoled) {
             // Pure black for AMOLED
             window.statusBarColor = android.graphics.Color.BLACK
             window.navigationBarColor = if (toolbarAtBottom) android.graphics.Color.BLACK
@@ -250,22 +265,20 @@ object ThemeManager {
             window.navigationBarColor = if (toolbarAtBottom) surfaceColor
                 else android.graphics.Color.TRANSPARENT
         }
-        
+
         // Set light/dark status bar icons
         @Suppress("DEPRECATION")
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            val isDark = isDarkMode(context)
             window.insetsController?.setSystemBarsAppearance(
                 if (isDark || isPrivateMode) 0 else android.view.WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS,
                 android.view.WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS
             )
         } else {
-            val isDark = isDarkMode(context)
             if (isDark || isPrivateMode) {
-                window.decorView.systemUiVisibility = 
+                window.decorView.systemUiVisibility =
                     window.decorView.systemUiVisibility and android.view.View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR.inv()
             } else {
-                window.decorView.systemUiVisibility = 
+                window.decorView.systemUiVisibility =
                     window.decorView.systemUiVisibility or android.view.View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
             }
         }
