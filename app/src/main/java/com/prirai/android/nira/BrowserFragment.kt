@@ -337,66 +337,6 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
         }
     }
 
-    /**
-     * Auto-collapse tab bar + contextual toolbar to a minimal address-bar-only
-     * state ~400 ms after the currently selected tab finishes loading.
-     *
-     * The delay gives the user a moment to see the page in its full toolbar
-     * context before the aux bars slide away, so the transition doesn't feel
-     * abrupt.
-     *
-     * Any of the following exits minimal state automatically:
-     *  - a new load starts on the selected tab,
-     *  - the user switches to a different tab,
-     *  - the selected tab shows an in-app page (about:homepage /
-     *    about:blank / about:privatebrowsing).
-     *
-     * A single tap on the address bar also exits minimal state as a side
-     * effect - see the `onUrlClickIntercept` wiring in
-     * [initializeUnifiedToolbar].
-     */
-    private fun observeMinimalStateForLoading() {
-        if (!isAdded) return
-        val store = requireContext().components.store
-        viewLifecycleOwner.lifecycleScope.launch {
-            store.flowScoped(viewLifecycleOwner, Dispatchers.Main) { flow ->
-                var pendingJob: kotlinx.coroutines.Job? = null
-                flow.mapNotNull { state ->
-                    state.tabs.find { it.id == state.selectedTabId }
-                }.ifAnyChanged { tab ->
-                    arrayOf(tab.id, tab.content.loading, tab.content.url)
-                }.collect { tab ->
-                    val toolbar = unifiedToolbar ?: return@collect
-                    val url = tab.content.url
-                    val isInAppPage = url.isEmpty() ||
-                        url == "about:homepage" ||
-                        url == "about:blank" ||
-                        url == "about:privatebrowsing"
-
-                    if (tab.content.loading || isInAppPage) {
-                        // Loading or in-app page - keep the aux bars visible
-                        // and cancel any pending collapse from a previous
-                        // completion.
-                        pendingJob?.cancel()
-                        pendingJob = null
-                        toolbar.exitMinimalState()
-                    } else {
-                        // Page finished loading. Delay before collapsing so
-                        // the transition doesn't feel abrupt.
-                        pendingJob?.cancel()
-                        pendingJob = viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
-                            // ~400 ms lets the user glance at the freshly
-                            // loaded page in its full toolbar context before
-                            // the aux bars collapse away.
-                            kotlinx.coroutines.delay(400L)
-                            unifiedToolbar?.enterMinimalState()
-                        }
-                    }
-                }
-            }
-        }
-    }
-
     override fun initializeUnifiedToolbar(view: View, tab: SessionState) {
         val prefs = UserPreferences(requireContext())
 
@@ -434,13 +374,12 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
                             androidx.coordinatorlayout.widget.CoordinatorLayout.LayoutParams.WRAP_CONTENT
                         ).apply {
                             gravity = android.view.Gravity.BOTTOM
-                            // IMPORTANT: Add scroll behavior for hide-on-scroll functionality
-                            // Bottom components should hide when scrolling down, show when scrolling up
-                            behavior = mozilla.components.ui.widgets.behavior.EngineViewScrollingGesturesBehavior(
-                                engineView = binding.engineView,
-                                dependency = container,
-                                dependencyGravity = mozilla.components.ui.widgets.behavior.DependencyGravity.Bottom
-                            )
+                            // Intentionally no scroll behavior: the detached
+                            // bottom components (tab bar + contextual bar) are
+                            // pinned at the bottom and only hide / show via
+                            // UnifiedToolbar's minimal state. Page scroll
+                            // enters/exits minimal through ModernScrollBehavior
+                            // installed on the top address bar's parent.
                         }
                         
                         // Apply Material 3 background with elevation
@@ -481,30 +420,25 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
                 requireContext().components.tabsUseCases.selectTab(tabId)
             }
 
-            // Address-bar tap semantics:
-            //  - Always opens the search dialog (interceptor returns `false`
-            //    so BrowserToolbarView continues on to `interactor.
-            //    onBrowserToolbarClicked()`).
-            //  - As a side effect, if we're currently in the minimal state,
-            //    also exit it. The aux bars slide back in behind the search
-            //    dialog, so when the user dismisses search they land on the
-            //    fully-expanded toolbar. No second tap required, no visible
-            //    "address bar shifting under my finger" jitter because the
-            //    dialog covers the toolbar during the animation.
-            unifiedToolbar?.getBrowserToolbarView()?.onUrlClickIntercept = {
-                val toolbar = unifiedToolbar
-                if (toolbar != null && toolbar.isMinimal()) {
-                    toolbar.exitMinimalState()
+            // Minimal state is now driven entirely by user gestures:
+            //  - swipe DOWN on the address bar  -> enterMinimalState()
+            //  - swipe UP on the address bar    -> exitMinimalState()
+            //  - page scroll down               -> enterMinimalState()
+            //  - page scroll up                 -> exitMinimalState()
+            // The swipe gesture detection is wired inside BrowserToolbarView
+            // (see onToolbarSwipe). Page scroll is handled by
+            // ModernScrollBehavior which, instead of fully collapsing the
+            // UnifiedToolbar, now toggles minimal state via the callback
+            // installed below so the address bar always stays visible.
+            unifiedToolbar?.getBrowserToolbarView()?.onToolbarSwipe = { directionUp ->
+                unifiedToolbar?.let { toolbar ->
+                    if (directionUp) {
+                        toolbar.exitMinimalState()
+                    } else {
+                        toolbar.enterMinimalState()
+                    }
                 }
-                // Return false: the interceptor performs a side effect only;
-                // the search dialog must still open on this same tap.
-                false
             }
-            // Reinstate the on-page-load auto-minimise: 400 ms after a page
-            // finishes loading, collapse the aux bars so only the address
-            // bar remains. A new load, tab switch, or navigation to an
-            // in-app page (about:homepage / about:blank) reopens them.
-            observeMinimalStateForLoading()
 
             // Set expansion state listener to update web content positioning
             unifiedToolbar?.setOnExpansionStateChangedListener { expanded ->
