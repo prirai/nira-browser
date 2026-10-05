@@ -694,18 +694,42 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
         // Calculate visible toolbar height
         val visibleHeight = (totalHeight - currentOffset).coerceAtLeast(0)
 
-        // Update padding based on toolbar position. Previously this hit
-        // SharedPreferences on every scroll frame; cachedToolbarPosition
-        // resolves once per fragment lifetime (toolbar position changes
-        // trigger Activity recreate).
+        // Since the toolbar is pinned (never scrolls off), the pinned chrome
+        // area must be subtracted from swipeRefresh's layout bounds so the
+        // engine view does not draw underneath it. The toolbar sits in the
+        // CoordinatorLayout with Gravity.TOP or BOTTOM; we match that with
+        // a margin on the opposite edge of swipeRefresh.
+        //
+        // visibleHeight comes from UnifiedToolbar.reconcileEngineViewHeight()
+        // which fires every time the toolbar's layout changes (minimal
+        // state toggle, rotation, font-scale change).
+        val lp = binding.swipeRefresh.layoutParams
+            as? androidx.coordinatorlayout.widget.CoordinatorLayout.LayoutParams
+            ?: return
+
         when (cachedToolbarPosition) {
             com.prirai.android.nira.components.toolbar.ToolbarPosition.BOTTOM.ordinal -> {
-                // Bottom toolbar: no padding; rely on dynamic toolbar clipping
-                binding.swipeRefresh.setPadding(0, 0, 0, 0)
+                if (lp.bottomMargin != visibleHeight) {
+                    lp.bottomMargin = visibleHeight
+                    binding.swipeRefresh.layoutParams = lp
+                }
+                // Clear any stale top padding from a previous TOP-mode layout
+                if (binding.swipeRefresh.paddingTop != 0 ||
+                    binding.swipeRefresh.paddingBottom != 0) {
+                    binding.swipeRefresh.setPadding(0, 0, 0, 0)
+                }
             }
             else -> {
-                // Top toolbar: adjust top padding as toolbar hides/shows
-                binding.swipeRefresh.setPadding(0, visibleHeight, 0, 0)
+                // TOP mode: reserve space with top padding (not margin, so
+                // SwipeRefreshLayout overscroll indicator still draws from the
+                // real top edge).
+                if (binding.swipeRefresh.paddingTop != visibleHeight) {
+                    binding.swipeRefresh.setPadding(0, visibleHeight, 0, 0)
+                }
+                if (lp.bottomMargin != 0) {
+                    lp.bottomMargin = 0
+                    binding.swipeRefresh.layoutParams = lp
+                }
             }
         }
     }

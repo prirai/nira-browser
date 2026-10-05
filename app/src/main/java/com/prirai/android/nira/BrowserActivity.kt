@@ -198,12 +198,16 @@ open class BrowserActivity : LocaleAwareAppCompatActivity(), ComponentCallbacks2
         // Root view handles insets without padding - fragments manage their own insets
         ViewCompat.setOnApplyWindowInsetsListener(view) { _, insets -> insets }
 
+        // Must run BEFORE STARTED/RESUMED: NotificationsDelegate.bindToActivity
+        // calls registerForActivityResult which androidx.activity rejects
+        // after STARTED with
+        //   "LifecycleOwner ... is attempting to register while current state is RESUMED"
+        // An earlier revision deferred this into view.post - that crashed on
+        // launch because view.post runs after STARTED.
+        components.notificationsDelegate.bindToActivity(this)
+
         // OPTIMIZATION: Defer non-critical component initialization to after first frame.
-        // notificationsDelegate.bindToActivity only needs a live Activity reference;
-        // nothing fires a notification between super.onCreate() and the first
-        // view.post, so this is safe to defer with the rest.
         view.post {
-            components.notificationsDelegate.bindToActivity(this)
             components.appRequestInterceptor.setNavController(navHost.navController)
 
             // Clean up orphaned thumbnails on app start

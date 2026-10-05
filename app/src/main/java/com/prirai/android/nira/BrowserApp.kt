@@ -9,6 +9,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import mozilla.components.browser.state.action.SystemAction
 import mozilla.components.feature.addons.update.GlobalAddonDependencyProvider
 import mozilla.components.support.base.facts.Facts
@@ -106,43 +107,23 @@ class BrowserApp : Application() {
             android.util.Log.w("BrowserApp", "Rust/NSS init failed (sync may be unavailable)", e)
         }
 
-        // Previously `components.engine.warmUp()` was called inline on Main.
+        // GeckoRuntime.create requires the main thread. It calls
+        // `ThreadUtils.assertOnUiThread()` as its first act and crashes with
+        // IllegalThreadStateException otherwise. An earlier revision of this
+        // file tried to kick engine construction off onto a background
+        // thread with a `by lazy` SYNCHRONIZED latch for correctness; that
+        // crashed on launch because `by lazy` runs its init block on
+        // whichever thread first forces the lazy, not on Main. The whole
+        // engine chain (runtime, UserJsPreferences disk write,
+        // WebCompatFeature.install) therefore has to happen on Main.
         //
-        // Resolving the `components.engine` lazy triggers a chain:
-        //   engine -> runtime -> UserJsPreferences.applyTo (disk write) +
-        //   GeckoRuntime.create (loads libxul, parses greprefs.js, allocates
-        //   the content-process pool, inits NSS/profile dir) +
-        //   WebCompatFeature.install (installs the webcompat extension).
-        //
-        // On a mid-range device cold start that chain is 150-400 ms, all on
-        // Main. GeckoRuntime.create is documented as safe to call off the
-        // Android main thread; `WebCompatFeature.install` internally uses
-        // the engine's own threading, so it does not require Main either.
-        //
-        // We kick the chain off on a background Thread. Kotlin's `by lazy`
-        // default `SYNCHRONIZED` mode guarantees that any later call to
-        // `components.engine` from any thread either (a) returns the
-        // already-resolved value for free, or (b) blocks on the lazy's
-        // monitor until the background thread's resolution finishes. Both
-        // paths see a fully-built engine, so `BrowserActivity.onCreateView`
-        // -> `components.engine.createView` stays correct on Main - it just
-        // might wait briefly for the background to finish.
-        //
-        // The warm-up call is placed after resolution because warmUp needs
-        // the live engine; it is itself a cheap "run some async pre-warm
-        // tasks on gecko threads" call once the runtime exists.
-        Thread({
-            try {
-                components.engine.warmUp()
-            } catch (t: Throwable) {
-                android.util.Log.e("BrowserApp", "engine.warmUp failed", t)
-            }
-        }, "nira-engine-warmup").apply {
-            // priority 1 above default so the lazy resolves promptly without
-            // pre-empting UI work on dual-A53 class devices
-            priority = Thread.NORM_PRIORITY + 1
-            isDaemon = true
-        }.start()
+        // warmUp() itself is a cheap "run some pre-warm tasks on Gecko
+        // threads" that returns immediately; the heavy work is inside
+        // GeckoRuntime.create during the `engine` lazy's initialisation.
+        // So this call is effectively equivalent to "force the engine
+        // lazy on Main"; keeping warmUp() for its documented pre-warm
+        // benefit.
+        components.engine.warmUp()
 
         // Theme + DynamicColors are applied in BrowserActivity.onCreate before
         // super.onCreate - the Application-level pass was redundant work
@@ -372,21 +353,21 @@ class BrowserApp : Application() {
     }
 
     private fun restoreBrowserState() {
-        // Previously launched on Dispatchers.Main. tabsUseCases.restore does
-        // its own suspending disk I/O and action dispatch, and
-        // sessionStorage.autoSave(...).periodicallyInForeground(...) sets up a
-        // periodic save timer that does not need the main thread. Running
-        // this on Main meant deserialising the whole session file (potentially
-        // multi-megabyte) on the UI thread, blocking the first frame. IO is
-        // the correct dispatcher - the store itself is thread-safe and the
-        // internal pipeline hops back to Main for state reductions.
+        // Do the heavy session-file deserialise on IO (that is what P1-11
+        // originally targeted: the session file is potentially multi-megabyte
+        // and historically blocked the first frame). But
+        // AutoSave.periodicallyInForeground installs a lifecycle observer
+        // on ProcessLifecycleOwner via LifecycleRegistry.addObserver, which
+        // enforces Main-thread access. So hop to Main for just the autoSave
+        // wiring.
         applicationScope.launch(Dispatchers.IO) {
             components.tabsUseCases.restore(components.sessionStorage)
-
-            components.sessionStorage.autoSave(components.store)
-                .periodicallyInForeground(interval = 30, unit = TimeUnit.SECONDS)
-                .whenGoingToBackground()
-                .whenSessionsChange()
+            withContext(Dispatchers.Main) {
+                components.sessionStorage.autoSave(components.store)
+                    .periodicallyInForeground(interval = 30, unit = TimeUnit.SECONDS)
+                    .whenGoingToBackground()
+                    .whenSessionsChange()
+            }
         }
     }
 
