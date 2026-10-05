@@ -50,6 +50,17 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
     // Homepage ViewModel for shortcuts and bookmarks
     private lateinit var homeViewModel: com.prirai.android.nira.browser.home.compose.HomeViewModel
 
+    // Cached toolbar position for this fragment lifetime. Changing the
+    // toolbar position pref triggers Activity.recreate() (see
+    // BrowserActivity.onResume), so the value is stable within one fragment
+    // instance. Reading it once avoids a SharedPreferences monitor acquire
+    // on every pixel of toolbar scroll offset change (see
+    // adjustWebContentMarginsForToolbarOffset which fires ~60-120Hz during
+    // a flick).
+    private val cachedToolbarPosition: Int by lazy {
+        UserPreferences(requireContext()).toolbarPosition
+    }
+
     // Toolbar icon for fullscreen toggle
 
     override fun initializeUI(view: View, tab: SessionState) {
@@ -745,14 +756,15 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
         if (!isAdded || view == null) {
             return
         }
-        
-        val prefs = UserPreferences(requireContext())
-        
+
         // Calculate visible toolbar height
         val visibleHeight = (totalHeight - currentOffset).coerceAtLeast(0)
-        
-        // Update padding based on toolbar position
-        when (prefs.toolbarPosition) {
+
+        // Update padding based on toolbar position. Previously this hit
+        // SharedPreferences on every scroll frame; cachedToolbarPosition
+        // resolves once per fragment lifetime (toolbar position changes
+        // trigger Activity recreate).
+        when (cachedToolbarPosition) {
             com.prirai.android.nira.components.toolbar.ToolbarPosition.BOTTOM.ordinal -> {
                 // Bottom toolbar: no padding; rely on dynamic toolbar clipping
                 binding.swipeRefresh.setPadding(0, 0, 0, 0)
@@ -774,10 +786,8 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
     // Legacy method removed - no longer needed with UnifiedToolbar
 
     private fun applySimpleScrollBehaviorFix() {
-        val prefs = UserPreferences(requireContext())
-
         // Only apply for bottom toolbar position
-        if (prefs.toolbarPosition == com.prirai.android.nira.components.toolbar.ToolbarPosition.BOTTOM.ordinal) {
+        if (cachedToolbarPosition == com.prirai.android.nira.components.toolbar.ToolbarPosition.BOTTOM.ordinal) {
 
 
             // The modern toolbar system handles dynamic height automatically
@@ -1112,21 +1122,23 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
         )
         
         // Find anchor for menu
-        // When contextual toolbar is enabled, prioritize menu button from it, not from address bar
-        val prefs = UserPreferences(requireContext())
+        // When contextual toolbar is enabled, prioritize menu button from it, not from address bar.
+        // Previously `showContextualToolbar` was read twice through the SharedPreferences
+        // monitor on the same local; `toolbarPosition` is cached on the fragment.
+        val showContextualToolbar = UserPreferences(requireContext()).showContextualToolbar
         val menuButton = view?.findViewById<android.widget.ImageButton>(R.id.menu_button)
         val toolbarView = unifiedToolbar?.getToolbarView()
-        
+
         // Use menu button if contextual toolbar is showing, otherwise use toolbar view
-        val anchor = if (prefs.showContextualToolbar && menuButton != null) {
+        val anchor = if (showContextualToolbar && menuButton != null) {
             menuButton
         } else {
             toolbarView ?: menuButton ?: view
         }
-        
+
         // Determine menu position: prefer bottom UNLESS toolbar is at top AND contextual toolbar is disabled
-        val preferBottom = prefs.toolbarPosition == com.prirai.android.nira.components.toolbar.ToolbarPosition.BOTTOM.ordinal ||
-                          prefs.showContextualToolbar
+        val preferBottom = cachedToolbarPosition == com.prirai.android.nira.components.toolbar.ToolbarPosition.BOTTOM.ordinal ||
+                          showContextualToolbar
         
         anchor?.let {
             com.prirai.android.nira.components.menu.Material3BrowserMenu(
