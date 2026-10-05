@@ -13,14 +13,28 @@ import mozilla.components.lib.state.Store
 
 /**
  * Middleware that monitors tab creation and applies cross-domain grouping logic.
+ *
+ * The [UnifiedTabGroupManager] is injected as a [Lazy] so that merely adding
+ * this middleware to the [mozilla.components.browser.state.store.BrowserStore]
+ * middleware chain does not force construction of the manager. The manager
+ * opens a Room database (`TabGroupDatabase.getInstance`) on construction;
+ * resolving it eagerly during `BrowserStore` build - which runs on whichever
+ * thread first touches `components.store` - would pull Room's class graph
+ * onto the main thread during cold start.
+ *
+ * Instead, we resolve the lazy on the first action-dispatch that actually
+ * needs grouping (via [groupManager]), which happens well after startup.
  */
 class TabGroupMiddleware(
-    private val tabGroupManager: UnifiedTabGroupManager
+    private val lazyTabGroupManager: Lazy<UnifiedTabGroupManager>
 ) : Middleware<BrowserState, BrowserAction> {
 
     companion object {
         private const val TAG = "TabGroupMiddleware"
     }
+
+    private val tabGroupManager: UnifiedTabGroupManager
+        get() = lazyTabGroupManager.value
 
     // Track tabs pending grouping (tab ID -> parent ID)
     private val pendingGrouping = mutableMapOf<String, String?>()

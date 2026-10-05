@@ -129,10 +129,25 @@ object UserJsPreferences {
      * Writes the privacy config JSON file and registers it with [builder] via
      * [GeckoRuntimeSettings.Builder.configFilePath]. Must be called **before**
      * [GeckoRuntimeSettings.Builder.build].
+     *
+     * The write is **content-gated**: we read the existing file (if any) and
+     * only call [File.writeText] when its contents differ from the freshly
+     * built JSON. Previously this was an unconditional write on every cold
+     * start, which is a strict-mode-violating main-thread disk write (the
+     * builder itself is constructed on the thread that first resolves the
+     * `runtime` lazy, currently Main). The config is only ~800 bytes but on
+     * slow flash the open + write + fsync can be 5-30 ms. Reading the file
+     * first is cheap (same inode, same block, warm page cache after the first
+     * read) and almost always finds the bytes already match, so the hot path
+     * becomes read-only.
      */
     fun applyTo(context: Context, builder: GeckoRuntimeSettings.Builder) {
         val configFile = File(context.filesDir, CONFIG_FILE_NAME)
-        configFile.writeText(buildConfigJson())
+        val desired = buildConfigJson()
+        val current = runCatching { if (configFile.exists()) configFile.readText() else null }.getOrNull()
+        if (current != desired) {
+            configFile.writeText(desired)
+        }
         builder.configFilePath(configFile.absolutePath)
     }
 

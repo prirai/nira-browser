@@ -99,16 +99,24 @@ open class BrowserActivity : LocaleAwareAppCompatActivity(), ComponentCallbacks2
         // Apply user theme preferences
         com.prirai.android.nira.theme.ThemeManager.applyTheme(this)
 
-        // Apply Material 3 dynamic colors (Material You) on Android 12+ if enabled
+        // Single UserPreferences instance reused for the whole onCreate.
+        // Each `UserPreferences(this)` construction wraps the same cached
+        // SharedPreferences but still allocates property delegates; the
+        // previous code constructed one five times here.
         val prefs = UserPreferences(this)
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S && prefs.dynamicColors) {
+
+        // Apply Material 3 dynamic colors (Material You) on Android 12+ if enabled.
+        // ThemeManager.shouldUseDynamicColors already folds in the SDK gate
+        // and the pref read, so we delegate to it instead of duplicating the
+        // check with a fresh UserPreferences construction.
+        if (com.prirai.android.nira.theme.ThemeManager.shouldUseDynamicColors(this)) {
             com.google.android.material.color.DynamicColors.applyToActivityIfAvailable(this)
         }
 
         super.onCreate(savedInstanceState)
 
         // Check for first launch and show onboarding
-        if (UserPreferences(this).firstLaunch) {
+        if (prefs.firstLaunch) {
             val intent = Intent(this, com.prirai.android.nira.onboarding.OnboardingActivity::class.java)
             intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
             startActivity(intent)
@@ -121,7 +129,7 @@ open class BrowserActivity : LocaleAwareAppCompatActivity(), ComponentCallbacks2
 
         val profileManager = com.prirai.android.nira.browser.profile.ProfileManager.getInstance(this)
         val initialProfile = profileManager.getActiveProfile()
-        val isPrivate = UserPreferences(this).lastKnownPrivate
+        val isPrivate = prefs.lastKnownPrivate
 
         // Sync ProfileManager's private mode state with BrowsingModeManager
         profileManager.setPrivateMode(isPrivate)
@@ -141,7 +149,7 @@ open class BrowserActivity : LocaleAwareAppCompatActivity(), ComponentCallbacks2
 
         setContentView(view)
 
-        lastToolbarPosition = UserPreferences(this).toolbarPosition
+        lastToolbarPosition = prefs.toolbarPosition
 
         // OPTIMIZATION: Defer search engine setup to after first frame
         // This was accessing components.store.state which triggers heavy initialization
@@ -190,12 +198,12 @@ open class BrowserActivity : LocaleAwareAppCompatActivity(), ComponentCallbacks2
         // Root view handles insets without padding - fragments manage their own insets
         ViewCompat.setOnApplyWindowInsetsListener(view) { _, insets -> insets }
 
-        // OPTIMIZATION: Components that need lifecycle registration must be initialized in onCreate
-        // These still trigger lazy component init but are required for proper lifecycle
-        components.notificationsDelegate.bindToActivity(this)
-
-        // OPTIMIZATION: Defer non-critical component initialization to after first frame
+        // OPTIMIZATION: Defer non-critical component initialization to after first frame.
+        // notificationsDelegate.bindToActivity only needs a live Activity reference;
+        // nothing fires a notification between super.onCreate() and the first
+        // view.post, so this is safe to defer with the rest.
         view.post {
+            components.notificationsDelegate.bindToActivity(this)
             components.appRequestInterceptor.setNavController(navHost.navController)
 
             // Clean up orphaned thumbnails on app start
