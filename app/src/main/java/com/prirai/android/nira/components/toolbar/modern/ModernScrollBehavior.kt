@@ -5,17 +5,23 @@ import android.util.AttributeSet
 import android.view.View
 import androidx.coordinatorlayout.widget.CoordinatorLayout
 import androidx.core.view.ViewCompat
-import mozilla.components.concept.toolbar.ScrollableToolbar
+import com.prirai.android.nira.components.toolbar.unified.UnifiedToolbar
 
 /**
- * Scroll behavior for toolbar auto-hide on scroll.
- * 
- * Uses scroll distance accumulation (modern browser behavior):
- * - Accumulates scroll distance in each direction
- * - Hides toolbar after scrolling down a threshold distance
- * - Shows toolbar after scrolling up a threshold distance
- * 
- * Works with any ScrollableToolbar implementation (UnifiedToolbar or ModernToolbarSystem).
+ * Scroll behavior that toggles the UnifiedToolbar's **minimal state** based
+ * on page scroll direction.
+ *
+ * - Scroll page DOWN (dy > 0) past the threshold -> enter minimal state:
+ *   the auxiliary bars (tab bar + contextual bar) animate out, address
+ *   bar stays visible.
+ * - Scroll page UP (dy < 0) past the threshold -> exit minimal state:
+ *   the auxiliary bars animate back in.
+ *
+ * This replaces the previous "fully collapse the toolbar" semantics. The
+ * address bar now never scrolls off-screen; only the aux bars toggle.
+ *
+ * Direction changes reset the accumulator so a small flick back-and-forth
+ * does not oscillate the state.
  */
 class ModernScrollBehavior(
     context: Context,
@@ -23,18 +29,13 @@ class ModernScrollBehavior(
 ) : CoordinatorLayout.Behavior<View>(context, attrs) {
 
     private var isScrollingEnabled = true
-    private var isToolbarHidden = false
-    
+
     // Scroll distance accumulation
     private var scrollYAccumulator = 0
-    
-    // Threshold in pixels to trigger show/hide (similar to Chrome/Firefox)
-    private val scrollThreshold = 56 // dp converted to pixels below
-    private val scrollThresholdPx: Int
-    
-    init {
-        scrollThresholdPx = (scrollThreshold * context.resources.displayMetrics.density).toInt()
-    }
+
+    // 56 dp - same threshold Chrome/Firefox use for their toolbar hide.
+    private val scrollThresholdPx: Int =
+        (56 * context.resources.displayMetrics.density).toInt()
 
     override fun onLayoutChild(
         parent: CoordinatorLayout,
@@ -44,15 +45,11 @@ class ModernScrollBehavior(
         // Find and connect to the EngineView for UnifiedToolbar or ModernToolbarSystem
         findEngineView(parent)?.let { engine ->
             when (child) {
-                is com.prirai.android.nira.components.toolbar.unified.UnifiedToolbar -> {
-                    child.setEngineView(engine)
-                }
-                is ModernToolbarSystem -> {
-                    child.setEngineView(engine)
-                }
+                is UnifiedToolbar -> child.setEngineView(engine)
+                is ModernToolbarSystem -> child.setEngineView(engine)
             }
         }
-        
+
         return super.onLayoutChild(parent, child, layoutDirection)
     }
 
@@ -77,40 +74,7 @@ class ModernScrollBehavior(
         type: Int
     ) {
         if (!isScrollingEnabled) return
-
-        // Accumulate scroll distance based on direction
-        when {
-            dy > 0 -> {
-                // Scrolling down - accumulate downward scroll
-                if (scrollYAccumulator > 0) {
-                    // Change of direction - reset accumulator
-                    scrollYAccumulator = 0
-                }
-                scrollYAccumulator += dy
-                
-                // Hide toolbar if threshold reached and not already hidden
-                if (!isToolbarHidden && scrollYAccumulator >= scrollThresholdPx) {
-                    collapseToolbar(child)
-                    isToolbarHidden = true
-                    scrollYAccumulator = 0 // Reset after action
-                }
-            }
-            dy < 0 -> {
-                // Scrolling up - accumulate upward scroll
-                if (scrollYAccumulator < 0) {
-                    // Change of direction - reset accumulator
-                    scrollYAccumulator = 0
-                }
-                scrollYAccumulator += dy
-                
-                // Show toolbar if threshold reached and currently hidden
-                if (isToolbarHidden && scrollYAccumulator <= -scrollThresholdPx) {
-                    expandToolbar(child)
-                    isToolbarHidden = false
-                    scrollYAccumulator = 0 // Reset after action
-                }
-            }
-        }
+        accumulateAndMaybeToggle(child, dy)
     }
 
     override fun onNestedScroll(
@@ -124,35 +88,9 @@ class ModernScrollBehavior(
         type: Int,
         consumed: IntArray
     ) {
-        // Handle overscroll/fling scenarios with same scroll distance logic
-        when {
-            dyUnconsumed > 0 -> {
-                // Scrolling down past content
-                if (scrollYAccumulator > 0) {
-                    scrollYAccumulator = 0
-                }
-                scrollYAccumulator += dyUnconsumed
-                
-                if (!isToolbarHidden && scrollYAccumulator >= scrollThresholdPx) {
-                    collapseToolbar(child)
-                    isToolbarHidden = true
-                    scrollYAccumulator = 0
-                }
-            }
-            dyUnconsumed < 0 -> {
-                // Scrolling up past content
-                if (scrollYAccumulator < 0) {
-                    scrollYAccumulator = 0
-                }
-                scrollYAccumulator += dyUnconsumed
-                
-                if (isToolbarHidden && scrollYAccumulator <= -scrollThresholdPx) {
-                    expandToolbar(child)
-                    isToolbarHidden = false
-                    scrollYAccumulator = 0
-                }
-            }
-        }
+        if (!isScrollingEnabled) return
+        // Covers overscroll / fling residue the target view did not consume.
+        accumulateAndMaybeToggle(child, dyUnconsumed)
     }
 
     override fun onStopNestedScroll(
@@ -161,15 +99,32 @@ class ModernScrollBehavior(
         target: View,
         type: Int
     ) {
-        // Nothing to do - state is already determined by scroll direction
+        // No-op: minimal state does not need to settle to a particular
+        // position on gesture end the way a hide-on-scroll toolbar would.
     }
-    
-    private fun expandToolbar(child: View) {
-        (child as? ScrollableToolbar)?.expand()
-    }
-    
-    private fun collapseToolbar(child: View) {
-        (child as? ScrollableToolbar)?.collapse()
+
+    private fun accumulateAndMaybeToggle(child: View, dy: Int) {
+        val toolbar = child as? UnifiedToolbar ?: return
+        when {
+            dy > 0 -> {
+                // Finger moving upward (reading further down the page).
+                if (scrollYAccumulator < 0) scrollYAccumulator = 0
+                scrollYAccumulator += dy
+                if (!toolbar.isMinimal() && scrollYAccumulator >= scrollThresholdPx) {
+                    toolbar.enterMinimalState()
+                    scrollYAccumulator = 0
+                }
+            }
+            dy < 0 -> {
+                // Finger moving downward (scrolling back toward top).
+                if (scrollYAccumulator > 0) scrollYAccumulator = 0
+                scrollYAccumulator += dy
+                if (toolbar.isMinimal() && scrollYAccumulator <= -scrollThresholdPx) {
+                    toolbar.exitMinimalState()
+                    scrollYAccumulator = 0
+                }
+            }
+        }
     }
 
     private fun findEngineView(coordinatorLayout: CoordinatorLayout): mozilla.components.concept.engine.EngineView? {
