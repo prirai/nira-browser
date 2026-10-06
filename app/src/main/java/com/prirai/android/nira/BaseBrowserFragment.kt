@@ -433,6 +433,25 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
             view = view
         )
 
+        // Site-permission prompts (geolocation, notifications, camera, mic,
+        // DRM, autoplay, persistent storage, cross-origin storage access,
+        // MIDI). AC's SitePermissionsDialogFragment reads these styling
+        // fields on its first layout and respects them for the dialog's
+        // window placement.
+        //
+        // - gravity = CENTER: anchor the dialog in the middle of the window
+        //   instead of at the toolbar edge. The old BOTTOM gravity made the
+        //   prompt appear overlapping the toolbar when the toolbar was at
+        //   the bottom (default), which felt cramped and inconsistent with
+        //   Material 3 dialog guidelines (Material 3 dialogs are modal
+        //   centered surfaces).
+        // - shouldWidthMatchParent = false: let the dialog size itself to
+        //   its content (M3 "basic dialog" sizing) rather than stretching
+        //   edge-to-edge, which previously happened in BOTTOM gravity.
+        //
+        // Button colors stay accented (secondary_icon / photonWhite) so
+        // Allow is still visually distinct from Deny, which uses the M3
+        // outlined-button style defined on the overridden layout.
         val accentHighContrastColor = R.color.secondary_icon
 
         sitePermissionsFeature.set(
@@ -441,8 +460,8 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
                 storage = context.components.permissionStorage,
                 fragmentManager = parentFragmentManager,
                 promptsStyling = SitePermissionsFeature.PromptsStyling(
-                    gravity = getAppropriateLayoutGravity(),
-                    shouldWidthMatchParent = true,
+                    gravity = android.view.Gravity.CENTER,
+                    shouldWidthMatchParent = false,
                     positiveButtonBackgroundColor = accentHighContrastColor,
                     positiveButtonTextColor = R.color.photonWhite
                 ),
@@ -972,12 +991,6 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
     // `LastTabFeature.onBackPressed` (mozilla.components.feature.tabs).
     // It has been replaced by the `lastTabFeature` ViewBoundFeatureWrapper -
     // see `onBackPressed()` above.
-
-    /**
-     * Returns the layout [android.view.Gravity] for the quick settings and ETP dialog.
-     */
-    protected fun getAppropriateLayoutGravity(): Int =
-        UserPreferences(requireContext()).toolbarPositionType.androidGravity
 
     /**
      * Set the activity normal/private theme to match the current session.
