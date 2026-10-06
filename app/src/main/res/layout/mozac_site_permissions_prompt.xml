@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Nira override of mozilla-components' feature-sitepermissions prompt
+    layout. AC's SitePermissionsDialogFragment.createContainer() inflates
+    `R.layout.mozac_site_permissions_prompt` by name, so this file shadows
+    the upstream resource at build time.
+
+    Contract: the fragment casts findViewById() to concrete types, so the
+    following IDs MUST stay as the following View subclasses:
+
+      @+id/icon             -> ImageView
+      @+id/title            -> TextView
+      @+id/message          -> TextView
+      @+id/learn_more       -> TextView
+      @+id/do_not_ask_again -> CheckBox
+      @+id/deny_button      -> Button
+      @+id/allow_button     -> Button
+
+    The redesign:
+      - vertical LinearLayout root with Material 3 dialog padding (24dp)
+      - icon above title (M3 "hero icon" dialog variant)
+      - M3 TypeAppearance.HeadlineSmall for title, BodyMedium for body
+      - 24dp padding, 16dp gaps between stacked rows
+      - button row at the bottom-right with M3 button styles
+
+    The window background still comes from the activity theme (Material 3
+    DayNight NoActionBar), so this layout only draws content; it does not
+    paint its own surface. Combined with
+    `PromptsStyling(gravity = CENTER, shouldWidthMatchParent = false)` in
+    `BaseBrowserFragment#initializeUI`, the dialog floats in the center
+    with wrap-content size, matching M3 "basic dialog" guidelines.
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:paddingStart="24dp"
+    android:paddingTop="24dp"
+    android:paddingEnd="24dp"
+    android:paddingBottom="18dp"
+    android:background="?android:windowBackground">
+
+    <androidx.appcompat.widget.AppCompatImageView
+        android:id="@+id/icon"
+        android:layout_width="24dp"
+        android:layout_height="24dp"
+        android:layout_gravity="start"
+        android:importantForAccessibility="no"
+        android:scaleType="center"
+        app:tint="?attr/colorPrimary"
+        tools:src="@android:drawable/ic_menu_camera"
+        tools:tint="#6750A4" />
+
+    <TextView
+        android:id="@+id/title"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:textAppearance="?attr/textAppearanceHeadlineSmall"
+        android:textColor="?attr/colorOnSurface"
+        tools:text="Allow wikipedia.org to use your camera?" />
+
+    <TextView
+        android:id="@+id/message"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:textAppearance="?attr/textAppearanceBodyMedium"
+        android:textColor="?attr/colorOnSurfaceVariant"
+        android:visibility="gone"
+        tools:text="This is a message offering more context about the permission."
+        tools:visibility="visible" />
+
+    <TextView
+        android:id="@+id/learn_more"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:text="@string/mozac_feature_sitepermissions_learn_more_title"
+        android:textAppearance="?attr/textAppearanceLabelLarge"
+        android:textColor="?attr/colorPrimary"
+        android:visibility="gone"
+        tools:visibility="visible" />
+
+    <CheckBox
+        android:id="@+id/do_not_ask_again"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:minHeight="0dp"
+        android:checked="true"
+        android:text="@string/mozac_feature_sitepermissions_do_not_ask_again_on_this_site2"
+        android:textAppearance="?attr/textAppearanceBodyMedium"
+        android:textColor="?attr/colorOnSurface"
+        android:visibility="gone"
+        tools:visibility="visible" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="24dp"
+        android:gravity="end"
+        android:orientation="horizontal">
+
+        <Button
+            android:id="@+id/deny_button"
+            style="?attr/materialButtonOutlinedStyle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="8dp"
+            android:text="@string/mozac_feature_sitepermissions_not_allow"
+            android:textAlignment="center"
+            android:textAllCaps="false" />
+
+        <Button
+            android:id="@+id/allow_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/mozac_feature_sitepermissions_allow"
+            android:textAlignment="center"
+            android:textAllCaps="false" />
+    </LinearLayout>
+
+</LinearLayout>

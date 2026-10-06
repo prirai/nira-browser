@@ -919,15 +919,20 @@ class UnifiedToolbar @JvmOverloads constructor(
      * bounds so the Gecko surface itself does not draw underneath the
      * toolbar - no clipping tricks required.
      *
-     * We previously tried a `setVerticalClipping(-visibleHeight)` here;
-     * that is the wrong API. `setVerticalClipping` tracks the dynamic
-     * toolbar's *translation* and is meaningful only while the toolbar
-     * is scrolled off-screen; for a pinned toolbar the value stays at
-     * 0 and does not reserve any viewport space.
+     * `setDynamicToolbarMaxHeight(0)` tells GeckoView there is **no**
+     * dynamic chrome. Our toolbar is pinned so the entire reservation
+     * happens at the Android layout level via the margin above; if we
+     * were to pass the toolbar height here, GeckoView would additionally
+     * push `position: fixed; bottom: 0` elements up by that height
+     * **inside** our already-cropped surface, making page footers
+     * (Fandom's sticky nav, cookie banners, chat bubbles) float visibly
+     * above the toolbar instead of sitting flush against it.
      *
-     * `setDynamicToolbarMaxHeight` is still kept because it is a cheap
-     * no-op in the pinned case and the AC convention expects it to be
-     * set at least once.
+     * `setVerticalClipping` is intentionally **not** called either: it
+     * tracks the dynamic toolbar's translation and is only meaningful
+     * while a toolbar is in motion. For a pinned toolbar both APIs
+     * must stay at 0 so GeckoView treats the (externally shrunk)
+     * viewport as the full canvas.
      *
      * This function is invoked automatically from a layout-change
      * listener on `toolbarSystem` (installed in `init`), so entering or
@@ -939,7 +944,13 @@ class UnifiedToolbar @JvmOverloads constructor(
     fun reconcileEngineViewHeight() {
         val engine = engineView ?: return
         val visible = toolbarSystem.getTotalHeight()
-        engine.setDynamicToolbarMaxHeight(visible)
+        // Zero out any dynamic-toolbar reservation; the pinned toolbar is
+        // reserved purely at the layout level (see BrowserFragment's
+        // adjustWebContentMarginsForToolbarOffset / bottomMargin on
+        // swipeRefresh). We still emit the visible height to the
+        // offset listener so the fragment can update its own
+        // margin/padding bookkeeping.
+        engine.setDynamicToolbarMaxHeight(0)
         onToolbarOffsetChanged?.invoke(0, visible)
     }
     
