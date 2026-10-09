@@ -484,6 +484,16 @@ open class Components(private val applicationContext: Context) {
 
         icons.install(engine, store)
 
+        // Pre-create the "Site notifications" channel so it shows up under
+        // System Settings -> Apps -> Nira -> Notifications before any site
+        // has fired a notification. AC's WebNotificationFeature creates
+        // the same channel lazily on first onShowNotification; because
+        // NotificationManager.createNotificationChannel is idempotent on
+        // channel ID, the later call is a no-op if the channel already
+        // exists. This also lets users mute Nira's web notifications
+        // without having to visit a website that triggers one first.
+        preCreateWebNotificationChannel()
+
         // Force the WebNotificationFeature singleton to initialise. Its
         // `init { engine.registerWebNotificationDelegate(this) }` block
         // hooks into GeckoView so web-notification permission prompts and
@@ -499,6 +509,36 @@ open class Components(private val applicationContext: Context) {
         // Start the sleeping-tabs manager. It observes tab selection and
         // periodically suspends idle non-selected tabs.
         sleepingTabsManager.start(store)
+    }
+
+    /**
+     * Creates the Android notification channel that
+     * [mozilla.components.feature.webnotifications.WebNotificationFeature]
+     * uses for all site-triggered web notifications.
+     *
+     * Channel ID matches AC's hard-coded
+     * `"mozac.feature.webnotifications.generic.channel"` so AC's own lazy
+     * `ensureNotificationGroupAndChannelExists()` call sees the channel
+     * already configured and skips creating it. Importance / badge /
+     * lockscreen visibility match AC's values so there is no visible
+     * behaviour difference after the first notification.
+     *
+     * Only runs on API 26+ (channels did not exist pre-Oreo).
+     */
+    private fun preCreateWebNotificationChannel() {
+        if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.O) return
+        val channelId = "mozac.feature.webnotifications.generic.channel"
+        if (notificationManagerCompat.getNotificationChannel(channelId) != null) return
+
+        val channel = android.app.NotificationChannel(
+            channelId,
+            applicationContext.getString(mozilla.components.feature.webnotifications.R.string.mozac_feature_notification_channel_name),
+            android.app.NotificationManager.IMPORTANCE_DEFAULT,
+        ).apply {
+            setShowBadge(true)
+            lockscreenVisibility = androidx.core.app.NotificationCompat.VISIBILITY_PRIVATE
+        }
+        notificationManagerCompat.createNotificationChannel(channel)
     }
 
     val sleepingTabsManager by lazy {

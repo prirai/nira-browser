@@ -107,14 +107,18 @@ class ModernToolbarSystem @JvmOverloads constructor(
 
     fun setEngineView(engine: EngineView) {
         engineView = engine
-        
-        // Enable dynamic toolbar with current height for proper clipping
-        // This tells GeckoView to reserve space and clip content accordingly
+
+        // Previously called `setDynamicToolbarMaxHeight(currentHeight)`
+        // on first attach; that reserved a soft gutter inside the
+        // engine viewport which caused `position: fixed; bottom: 0`
+        // page elements to float above our pinned toolbar instead of
+        // sitting flush against it. The pinned toolbar's layout
+        // reservation now happens entirely via swipeRefresh.bottomMargin
+        // on the BrowserFragment side (see
+        // UnifiedToolbar.reconcileEngineViewHeight), so we tell Gecko
+        // there is no dynamic chrome at all.
         post {
-            val currentHeight = getTotalHeight()
-            if (currentHeight > 0) {
-                engine.setDynamicToolbarMaxHeight(currentHeight)
-            }
+            engine.setDynamicToolbarMaxHeight(0)
         }
     }
 
@@ -228,20 +232,20 @@ class ModernToolbarSystem @JvmOverloads constructor(
     }
     
     /**
-     * Update engine view padding to prevent content from appearing under toolbar.
-     * Adjusts padding dynamically as toolbar hides/shows.
+     * Formerly updated GeckoView's dynamic-toolbar reservation as the
+     * toolbar translated during scroll. The toolbar is now pinned (see
+     * UnifiedToolbar + ModernScrollBehavior: scroll toggles minimal
+     * state, not translation). Chrome reservation is a static
+     * swipeRefresh.bottomMargin on the fragment side, so GeckoView's
+     * dynamic-toolbar reservation stays at 0.
+     *
+     * Kept as a no-op so the existing `updateEngineViewClipping()`
+     * call sites inside this file (addComponent, removeComponent,
+     * setToolbarOffset for fullscreen) continue to compile without
+     * touching every callsite.
      */
     private fun updateEngineViewClipping() {
-        val engine = engineView ?: return
-        
-        val totalHeight = getTotalHeight()
-        if (totalHeight <= 0) return
-        
-        // Calculate visible toolbar height
-        val visibleHeight = (totalHeight - currentOffset).coerceAtLeast(0)
-        
-        // Tell GeckoView the current visible toolbar height for content coordination
-        engine.setDynamicToolbarMaxHeight(visibleHeight)
+        // Intentional no-op; see KDoc.
     }
 
     fun getCurrentOffset(): Int = currentOffset
