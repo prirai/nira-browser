@@ -445,9 +445,16 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
         //   the bottom (default), which felt cramped and inconsistent with
         //   Material 3 dialog guidelines (Material 3 dialogs are modal
         //   centered surfaces).
-        // - shouldWidthMatchParent = false: let the dialog size itself to
-        //   its content (M3 "basic dialog" sizing) rather than stretching
-        //   edge-to-edge, which previously happened in BOTTOM gravity.
+        // - shouldWidthMatchParent = true: tell AC's SitePermissionsDialogFragment
+        //   to call `setLayout(MATCH_PARENT, WRAP_CONTENT)` + make the dialog
+        //   window background transparent. Without this flag, AC leaves the
+        //   window at the system default WRAP_CONTENT in both dimensions,
+        //   which clamps the dialog to its measured minimum (icon + title
+        //   next to a two-column button stack) - cramped and unreadable.
+        //   The horizontal insets that make the dialog look like a floating
+        //   card instead of a full-bleed sheet come from the overridden
+        //   `res/layout/mozac_site_permissions_prompt.xml` which gives the
+        //   root a card background + 24dp side margins.
         //
         // Button colors stay accented (secondary_icon / photonWhite) so
         // Allow is still visually distinct from Deny, which uses the M3
@@ -461,9 +468,19 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
                 fragmentManager = parentFragmentManager,
                 promptsStyling = SitePermissionsFeature.PromptsStyling(
                     gravity = android.view.Gravity.CENTER,
-                    shouldWidthMatchParent = false,
+                    shouldWidthMatchParent = true,
                     positiveButtonBackgroundColor = accentHighContrastColor,
                     positiveButtonTextColor = R.color.photonWhite
+                ),
+                // Pre-check "Remember decision for this site" so Allow/Deny
+                // persists by default. AC's default is false (unchecked),
+                // which means a user who tapped Deny without first ticking
+                // the box ends up with a *temporary* decision - the prompt
+                // reappears on reload. The user's expected contract is
+                // "my choice sticks unless I say otherwise", so we flip
+                // the default. Matches Fenix's choice via `DialogConfig`.
+                dialogConfig = SitePermissionsFeature.DialogConfig(
+                    shouldPreselectDoNotAskAgain = true,
                 ),
                 sessionId = customTabSessionId,
                 onNeedToRequestPermissions = { permissions ->
