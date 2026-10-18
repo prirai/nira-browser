@@ -1,20 +1,31 @@
 package com.prirai.android.nira.ssl
 
+import android.content.res.ColorStateList
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
+import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
+import androidx.appcompat.content.res.AppCompatResources
+import androidx.appcompat.widget.AppCompatImageView
+import androidx.lifecycle.lifecycleScope
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import com.google.android.material.button.MaterialButton
-import com.google.android.material.switchmaterial.SwitchMaterial
+import com.google.android.material.card.MaterialCardView
+import com.google.android.material.color.MaterialColors
+import com.google.android.material.materialswitch.MaterialSwitch
 import com.prirai.android.nira.R
 import com.prirai.android.nira.ext.components
 import com.prirai.android.nira.preferences.UserPreferences
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import mozilla.components.browser.state.selector.selectedTab
+import mozilla.components.support.ktx.kotlin.getOrigin
 import mozilla.components.support.ktx.kotlin.tryGetHostFromUrl
 
 /**
@@ -49,7 +60,7 @@ class ConnectionInfoBottomSheet : BottomSheetDialogFragment() {
         val certificateIssuer = view.findViewById<TextView>(R.id.certificate_issuer)
         val certificateHolder = view.findViewById<TextView>(R.id.certificate_holder)
         val privacySection = view.findViewById<View>(R.id.privacy_section)
-        val trackingProtectionSwitch = view.findViewById<SwitchMaterial>(R.id.tracking_protection_switch)
+        val trackingProtectionSwitch = view.findViewById<MaterialSwitch>(R.id.tracking_protection_switch)
         val trackingProtectionSubtitle = view.findViewById<TextView>(R.id.tracking_protection_subtitle)
         val clearCookiesButton = view.findViewById<MaterialButton>(R.id.clear_cookies_button)
         val closeButton = view.findViewById<MaterialButton>(R.id.close_button)
@@ -120,11 +131,80 @@ class ConnectionInfoBottomSheet : BottomSheetDialogFragment() {
             clearCookiesButton.setOnClickListener {
                 showClearCookiesConfirmation()
             }
+
+            // Site permissions pill: populate the icon strip from the
+            // on-disk SitePermissions row for the current origin, show the
+            // pill only when at least one permission has a stored decision,
+            // and open the detailed sheet on tap.
+            setupSitePermissionsPill(view, url, selectedTab?.content?.private == true)
         }
 
         // Close button
         closeButton.setOnClickListener {
             dismiss()
+        }
+    }
+
+    /**
+     * Populate the "Site permissions" pill with up to five icons for
+     * permissions the site has already decided (non-NO_DECISION). Tap
+     * opens [SitePermissionsBottomSheet].
+     *
+     * Hidden when:
+     * - The URL has no origin (chrome:// / about:) - handled by caller
+     *   via `isInternalPage`, but we double-check here.
+     * - The on-disk row is null OR all permissions are at defaults.
+     *   This keeps the pill from showing on sites the user hasn't
+     *   interacted with yet; see [SitePermissionsBottomSheet.summaryIcons].
+     */
+    private fun setupSitePermissionsPill(view: View, url: String, isPrivate: Boolean) {
+        val pill = view.findViewById<MaterialCardView>(R.id.site_permissions_pill)
+        val iconsRow = view.findViewById<LinearLayout>(R.id.site_permissions_icons)
+        val origin = url.getOrigin()
+        if (origin == null) {
+            pill.visibility = View.GONE
+            return
+        }
+
+        val context = requireContext()
+        val iconTint = ColorStateList.valueOf(
+            MaterialColors.getColor(
+                pill,
+                com.google.android.material.R.attr.colorOnSurfaceVariant,
+            ),
+        )
+
+        viewLifecycleOwner.lifecycleScope.launch {
+            val stored = withContext(Dispatchers.IO) {
+                context.components.permissionStorage.findSitePermissionsBy(
+                    origin,
+                    private = isPrivate,
+                )
+            }
+            val icons = SitePermissionsBottomSheet.summaryIcons(stored)
+            if (icons.isEmpty()) {
+                pill.visibility = View.GONE
+                return@launch
+            }
+            iconsRow.removeAllViews()
+            val density = resources.displayMetrics.density
+            val sizePx = (18f * density).toInt()
+            val marginPx = (6f * density).toInt()
+            icons.forEach { iconRes ->
+                val iv = AppCompatImageView(context)
+                val lp = LinearLayout.LayoutParams(sizePx, sizePx)
+                lp.marginStart = marginPx
+                iv.layoutParams = lp
+                iv.setImageDrawable(AppCompatResources.getDrawable(context, iconRes))
+                iv.imageTintList = iconTint
+                iconsRow.addView(iv)
+            }
+            pill.visibility = View.VISIBLE
+            pill.setOnClickListener {
+                SitePermissionsBottomSheet.newInstance()
+                    .show(parentFragmentManager, SitePermissionsBottomSheet.TAG)
+                dismiss()
+            }
         }
     }
 
