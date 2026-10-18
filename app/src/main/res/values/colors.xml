@@ -1,11 +1,7 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <resources>
     <!-- Legacy colors (deprecated - use Material 3 attributes instead) -->
-    <color name="colorPrimary">#6650a4</color>
-    <color name="colorPrimaryDark">#4F378B</color>
-    <color name="colorAccent">#6650a4</color>
-    <color name="purple_500">#6650a4</color>
-    <color name="white">#FFFFFF</color>
+<color name="white">#FFFFFF</color>
     
     <!-- Material 3 Light Color Scheme -->
     <color name="m3_primary">#6650a4</color>
@@ -42,52 +38,24 @@
     
     <color name="m3_outline">#79747E</color>
     <color name="m3_outline_variant">#CAC4D0</color>
-    
-    <color name="m3_inverse_surface">#313033</color>
-    <color name="m3_inverse_on_surface">#F4EFF4</color>
-    <color name="m3_inverse_primary">#D0BCFF</color>
-    
-    <color name="m3_scrim">#000000</color>
-    
-    <!-- Semantic colors for compatibility -->
-    <color name="main_icon">@color/m3_on_surface</color>
-    <color name="primary_icon">@color/m3_on_surface_variant</color>
+<!-- Semantic colors for compatibility -->
+<color name="primary_icon">@color/m3_on_surface_variant</color>
     <color name="secondary_icon">@color/m3_outline</color>
-    <color name="toolbar_background">@color/m3_surface_container</color>
-    <color name="toolbar_private_outline">#E4AAE4</color>
-    <color name="statusbar_background">@color/m3_surface_container_high</color>
-    <color name="selected_tab">@color/m3_primary_container</color>
-    <color name="icon_circle_5">#F7E9D5</color>
+<color name="statusbar_background">@color/m3_surface_container_high</color>
+<color name="icon_circle_5">#F7E9D5</color>
     <color name="icon_inside_5">#f59714</color>
 
     <!-- Tab card colors (light mode) -->
-    <color name="tab_card_background">@color/m3_surface_container_low</color>
-    <color name="tab_card_stroke">@color/m3_outline_variant</color>
-    <color name="tab_group_background">@color/m3_surface_container</color>
-    <color name="tab_group_stroke">@color/m3_outline</color>
-    
-    <!-- Search result chips -->
+<!-- Search result chips -->
     <color name="chip_stroke_color_themed">@color/m3_primary</color>
     <color name="chip_text_color_themed">@color/m3_primary</color>
 
     <!-- Unified Toolbar colors -->
-    <color name="primary_text_color">@color/m3_on_surface</color>
-    <color name="secondary_text_color">@color/m3_on_surface_variant</color>
-    <color name="separator_color">@color/m3_outline_variant</color>
-    <color name="tab_count_badge_background">@color/m3_primary</color>
-    <color name="tab_count_badge_text">@color/m3_on_primary</color>
-    <color name="secure_icon_color">#4CAF50</color>
+<color name="secure_icon_color">#4CAF50</color>
     <color name="insecure_icon_color">@color/m3_error</color>
     
     <!-- Material 3 themed backgrounds and text -->
-    <color name="m3_surface_container_background">@color/m3_surface_container</color>
-    <color name="m3_primary_text">@color/m3_on_surface</color>
-    <color name="m3_on_surface_emphasis_high">@color/m3_on_surface</color>
-    <color name="contextual_toolbar_background">@color/m3_surface_container_high</color>
-    <color name="contextual_toolbar_icon">@color/m3_on_surface</color>
-    <color name="contextual_toolbar_text">@color/m3_on_surface</color>
-    
-    <!-- Additional semantic colors -->
+<!-- Additional semantic colors -->
     <color name="security_indicator_secure">@color/secure_icon_color</color>
     <color name="menu_text_color">@color/m3_on_surface</color>
     
@@ -95,15 +63,9 @@
     <color name="preference_divider">@color/m3_outline_variant</color>
     
     <!-- Pure black for AMOLED mode -->
-    <color name="amoled_black">#000000</color>
-    <color name="amoled_surface_variant">#0A0A0A</color>
-    
-    <!-- Legacy Mozilla colors for compatibility -->
+<!-- Legacy Mozilla colors for compatibility -->
     <color name="photonGrey40">@color/m3_outline_variant</color>
-    <color name="photonRed50">@color/m3_error</color>
-    <color name="photonBlue40">@color/m3_primary</color>
+<color name="photonBlue40">@color/m3_primary</color>
     
     <!-- Mozilla Reader View color overrides -->
-    <color name="mozac_feature_readerview_text_color">@color/m3_on_surface</color>
-    <color name="mozac_feature_readerview_selected">@color/m3_primary</color>
 </resources>

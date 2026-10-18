@@ -460,10 +460,14 @@ class ComposeHomeFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        
-        // Force hardware layer on view to prevent rendering artifacts
-        view.findViewById<CoordinatorLayout>(R.id.homeLayout)?.setLayerType(View.LAYER_TYPE_HARDWARE, null)
-        
+
+        // Previously tried `view.findViewById<CoordinatorLayout>(R.id.homeLayout)
+        // ?.setLayerType(LAYER_TYPE_HARDWARE, null)` to "prevent rendering
+        // artifacts", but the host view is a `ComposeView` with no legacy
+        // homeLayout child, so the lookup always returned null and the
+        // safe-call did nothing. The call-site + its layout dependency
+        // are both removed.
+
         updateToolbarStyling()
         restoreLastMode()
 

@@ -287,11 +287,6 @@
         <item name="cornerSize">16dp</item>
     </style>
     
-    <style name="ShapeAppearance.Material3.Corner.ExtraLarge" parent="ShapeAppearance.MaterialComponents.LargeComponent">
-        <item name="cornerFamily">rounded</item>
-        <item name="cornerSize">28dp</item>
-    </style>
-
     <!-- Shape appearances for connected card lists (top/bottom rounding only) -->
     <style name="ShapeAppearance.Material3.Card.TopRounded" parent="ShapeAppearance.Material3.LargeComponent">
         <item name="cornerSizeBottomLeft">0dp</item>

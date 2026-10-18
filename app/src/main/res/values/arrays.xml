@@ -1,10 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string-array name="add_bookmark_option">
-        <item>Add bookmark</item>
-        <item>Delete bookmark</item>
-    </string-array>
-    <string-array name="history_delete_times">
+<string-array name="history_delete_times">
         <item>Last hour</item>
         <item>Last day</item>
         <item>Last 2 days</item>
@@ -13,22 +9,7 @@
         <item>Last year</item>
         <item>All time</item>
     </string-array>
-
-    <string-array name="etp_level_names">
-        <item>None</item>
-        <item>Standard (Recommended)</item>
-        <item>Strict</item>
-        <item>Custom</item>
-    </string-array>
-
-    <string-array name="etp_level_values" translatable="false">
-        <item>0</item>
-        <item>1</item>
-        <item>2</item>
-        <item>3</item>
-    </string-array>
-
-    <string-array name="https_only_mode_names">
+<string-array name="https_only_mode_names">
         <item>@string/https_only_off</item>
         <item>@string/https_only_private</item>
         <item>@string/https_only_all</item>
