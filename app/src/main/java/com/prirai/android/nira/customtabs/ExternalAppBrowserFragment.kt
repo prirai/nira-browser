@@ -170,6 +170,23 @@ class ExternalAppBrowserFragment : Fragment(), UserInteractionHandler, ActivityR
                 context = requireContext(),
                 storage = components.permissionStorage,
                 fragmentManager = childFragmentManager,
+                // Same styling as the main BrowserFragment path so custom
+                // tabs do not fall back to AC's default (uncentered, no
+                // accent colors). Mirrors BaseBrowserFragment#initializeUI;
+                // see that call-site for why shouldWidthMatchParent = true.
+                promptsStyling = SitePermissionsFeature.PromptsStyling(
+                    gravity = android.view.Gravity.CENTER,
+                    shouldWidthMatchParent = true,
+                    positiveButtonBackgroundColor = com.prirai.android.nira.R.color.secondary_icon,
+                    positiveButtonTextColor = com.prirai.android.nira.R.color.photonWhite
+                ),
+                // Mirrors BaseBrowserFragment#initializeUI: pre-check the
+                // "Remember decision for this site" box so the user's
+                // choice persists by default. See the main-fragment call-
+                // site for the full rationale.
+                dialogConfig = SitePermissionsFeature.DialogConfig(
+                    shouldPreselectDoNotAskAgain = true,
+                ),
                 sessionId = sessionId,
                 onNeedToRequestPermissions = { permissions ->
                     requestPermissions(permissions, REQUEST_CODE_APP_PERMISSIONS)

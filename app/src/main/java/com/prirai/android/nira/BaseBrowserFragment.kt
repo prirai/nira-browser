@@ -433,6 +433,32 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
             view = view
         )
 
+        // Site-permission prompts (geolocation, notifications, camera, mic,
+        // DRM, autoplay, persistent storage, cross-origin storage access,
+        // MIDI). AC's SitePermissionsDialogFragment reads these styling
+        // fields on its first layout and respects them for the dialog's
+        // window placement.
+        //
+        // - gravity = CENTER: anchor the dialog in the middle of the window
+        //   instead of at the toolbar edge. The old BOTTOM gravity made the
+        //   prompt appear overlapping the toolbar when the toolbar was at
+        //   the bottom (default), which felt cramped and inconsistent with
+        //   Material 3 dialog guidelines (Material 3 dialogs are modal
+        //   centered surfaces).
+        // - shouldWidthMatchParent = true: tell AC's SitePermissionsDialogFragment
+        //   to call `setLayout(MATCH_PARENT, WRAP_CONTENT)` + make the dialog
+        //   window background transparent. Without this flag, AC leaves the
+        //   window at the system default WRAP_CONTENT in both dimensions,
+        //   which clamps the dialog to its measured minimum (icon + title
+        //   next to a two-column button stack) - cramped and unreadable.
+        //   The horizontal insets that make the dialog look like a floating
+        //   card instead of a full-bleed sheet come from the overridden
+        //   `res/layout/mozac_site_permissions_prompt.xml` which gives the
+        //   root a card background + 24dp side margins.
+        //
+        // Button colors stay accented (secondary_icon / photonWhite) so
+        // Allow is still visually distinct from Deny, which uses the M3
+        // outlined-button style defined on the overridden layout.
         val accentHighContrastColor = R.color.secondary_icon
 
         sitePermissionsFeature.set(
@@ -441,10 +467,20 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
                 storage = context.components.permissionStorage,
                 fragmentManager = parentFragmentManager,
                 promptsStyling = SitePermissionsFeature.PromptsStyling(
-                    gravity = getAppropriateLayoutGravity(),
+                    gravity = android.view.Gravity.CENTER,
                     shouldWidthMatchParent = true,
                     positiveButtonBackgroundColor = accentHighContrastColor,
                     positiveButtonTextColor = R.color.photonWhite
+                ),
+                // Pre-check "Remember decision for this site" so Allow/Deny
+                // persists by default. AC's default is false (unchecked),
+                // which means a user who tapped Deny without first ticking
+                // the box ends up with a *temporary* decision - the prompt
+                // reappears on reload. The user's expected contract is
+                // "my choice sticks unless I say otherwise", so we flip
+                // the default. Matches Fenix's choice via `DialogConfig`.
+                dialogConfig = SitePermissionsFeature.DialogConfig(
+                    shouldPreselectDoNotAskAgain = true,
                 ),
                 sessionId = customTabSessionId,
                 onNeedToRequestPermissions = { permissions ->
@@ -972,12 +1008,6 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
     // `LastTabFeature.onBackPressed` (mozilla.components.feature.tabs).
     // It has been replaced by the `lastTabFeature` ViewBoundFeatureWrapper -
     // see `onBackPressed()` above.
-
-    /**
-     * Returns the layout [android.view.Gravity] for the quick settings and ETP dialog.
-     */
-    protected fun getAppropriateLayoutGravity(): Int =
-        UserPreferences(requireContext()).toolbarPositionType.androidGravity
 
     /**
      * Set the activity normal/private theme to match the current session.
