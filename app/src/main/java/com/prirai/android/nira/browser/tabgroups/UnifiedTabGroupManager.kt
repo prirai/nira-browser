@@ -37,9 +37,9 @@ class UnifiedTabGroupManager private constructor(private val context: Context) {
     //
     // Writes come from suspend fns dispatched to Dispatchers.IO (createGroup,
     // addTabToGroup, loadGroupsFromDatabase, etc.). Reads come from the Main
-    // thread via TabIslandManager.getAllIslands/getIslandForTab, Compose
-    // recomposition in ComposeTabBarWithProfileSwitcher, awesomebar
-    // providers, and callers inside TabsBottomSheetFragment / TabSearchFragment.
+    // thread via Compose recomposition in ComposeTabBarWithProfileSwitcher,
+    // awesomebar providers, and callers inside TabsBottomSheetFragment /
+    // TabSearchFragment.
     //
     // A plain HashMap here is a cross-thread race: structural mutation on IO
     // concurrent with iteration on Main can throw ConcurrentModificationException
