@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
@@ -191,12 +192,82 @@
 
             </LinearLayout>
 
-            <com.google.android.material.switchmaterial.SwitchMaterial
+            <!--
+                Material 3 switch. Previously `SwitchMaterial` (M2 pill),
+                which bypassed the global `switchStyle` theme override and
+                visually diverged from the M3 `MaterialSwitch` used across
+                the settings screens. Nira now uses `MaterialSwitch` here
+                for consistency with the Preferences UI.
+            -->
+            <com.google.android.material.materialswitch.MaterialSwitch
                 android:id="@+id/tracking_protection_switch"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content" />
 
         </LinearLayout>
+
+        <!--
+            Tappable "Site permissions" pill. Shows a label plus up to
+            five icons representing permissions that are currently in a
+            non-default state. Tapping opens `SitePermissionsBottomSheet`.
+            Hidden when the current origin has no stored permissions.
+
+            The pill mimics a Material 3 outlined chip but keeps the
+            same button widget family as the other actions so the touch
+            feedback stays consistent.
+        -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/site_permissions_pill"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="12dp"
+            android:clickable="true"
+            android:focusable="true"
+            app:cardBackgroundColor="?attr/colorSurfaceContainer"
+            app:cardCornerRadius="20dp"
+            app:cardElevation="0dp"
+            app:strokeColor="?attr/colorOutlineVariant"
+            app:strokeWidth="1dp"
+            android:visibility="gone"
+            tools:visibility="visible">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:paddingStart="16dp"
+                android:paddingEnd="12dp"
+                android:paddingVertical="10dp">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@string/site_permissions"
+                    android:textAppearance="?attr/textAppearanceBodyMedium"
+                    android:textColor="?attr/colorOnSurface" />
+
+                <!--
+                    Up to five icon slots. Filled from Kotlin based on the
+                    stored SitePermissions row; empty slots stay GONE.
+                -->
+                <LinearLayout
+                    android:id="@+id/site_permissions_icons"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical" />
+
+                <androidx.appcompat.widget.AppCompatImageView
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:layout_marginStart="8dp"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/mozac_ic_chevron_right_20"
+                    app:tint="?attr/colorOnSurfaceVariant" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
 
         <!-- Clear Cookies Button -->
         <com.google.android.material.button.MaterialButton

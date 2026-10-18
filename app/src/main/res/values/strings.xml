@@ -940,4 +940,24 @@
     <string name="nira_default_profile_migration_title">Tabs moved to Default profile</string>
     <string name="nira_default_profile_migration_message">%1$d tab(s) that had no profile assigned were moved to the Default profile. You can find them in the tab bar now.</string>
     <string name="nira_default_profile_migration_message_zero">Your tabs are now organized under the Default profile.</string>
+
+    <!-- Site permissions bottom sheet, opened from the Connection Info pill. -->
+    <string name="site_permissions">Site permissions</string>
+    <string name="site_permissions_title">Site permissions</string>
+    <string name="site_permissions_empty_hint">This site has not requested any permissions yet.</string>
+    <string name="permission_location">Location</string>
+    <string name="permission_notification">Notifications</string>
+    <string name="permission_microphone">Microphone</string>
+    <string name="permission_camera">Camera</string>
+    <string name="permission_persistent_storage">Persistent storage</string>
+    <string name="permission_drm">DRM-controlled content</string>
+    <string name="permission_cross_origin_storage">Cross-site cookies</string>
+    <string name="permission_autoplay_audible">Autoplay with sound</string>
+    <string name="permission_autoplay_inaudible">Autoplay (muted)</string>
+    <string name="permission_local_device_access">Local device access</string>
+    <string name="permission_local_network_access">Local network access</string>
+    <string name="permission_bluetooth">Bluetooth</string>
+    <string name="permission_status_allowed">Allowed</string>
+    <string name="permission_status_blocked">Blocked</string>
+    <string name="permission_status_ask">Ask every time</string>
 </resources>
