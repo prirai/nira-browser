@@ -6,12 +6,6 @@
     app:startDestination="@id/browserFragment">
 
     <action
-        android:id="@+id/action_global_home"
-        app:destination="@id/browserFragment"
-        app:popUpTo="@id/browserFragment"
-        app:popUpToInclusive="true" />
-
-    <action
         android:id="@+id/action_global_browser"
         app:destination="@id/browserFragment"
         app:launchSingleTop="true"

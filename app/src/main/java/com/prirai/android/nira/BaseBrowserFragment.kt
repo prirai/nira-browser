@@ -30,9 +30,6 @@ import com.prirai.android.nira.auth.PasskeyAuthFeature
 import com.prirai.android.nira.browser.BrowsingMode
 import com.prirai.android.nira.browser.SwipeGestureLayout
 import com.prirai.android.nira.browser.home.SharedViewModel
-import com.prirai.android.nira.components.StoreProvider
-import com.prirai.android.nira.components.toolbar.BrowserFragmentState
-import com.prirai.android.nira.components.toolbar.BrowserFragmentStore
 import com.prirai.android.nira.components.toolbar.BrowserInteractor
 import com.prirai.android.nira.components.toolbar.BrowserToolbarViewInteractor
 import com.prirai.android.nira.components.toolbar.DefaultBrowserToolbarController
@@ -105,7 +102,6 @@ import java.lang.ref.WeakReference
 abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, ActivityResultHandler,
     AccessibilityManager.AccessibilityStateChangeListener {
 
-    private lateinit var browserFragmentStore: BrowserFragmentStore
     private lateinit var browserAnimator: BrowserAnimator
 
     private var _browserInteractor: BrowserToolbarViewInteractor? = null
@@ -187,12 +183,6 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
         val activity = activity as BrowserActivity
         val originalContext = ActivityContextWrapper.getOriginalContext(activity)
         binding.engineView.setActivityContext(originalContext)
-
-        browserFragmentStore = StoreProvider.get(this) {
-            BrowserFragmentStore(
-                BrowserFragmentState()
-            )
-        }
 
         return view
     }
