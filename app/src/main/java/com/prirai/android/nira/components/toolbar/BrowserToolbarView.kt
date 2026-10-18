@@ -84,36 +84,9 @@ class BrowserToolbarView(
 
     val toolbarIntegration: ToolbarIntegration
 
-    /**
-     * Vertical swipe callback on the address bar.
-     *
-     * `directionUp = true`  -> user swiped up on the bar
-     * `directionUp = false` -> user swiped down on the bar
-     *
-     * BrowserFragment wires this to UnifiedToolbar's minimal-state toggle:
-     * swipe down enters minimal, swipe up exits minimal. Taps still open
-     * search; long-press still shows the paste menu.
-     *
-     * The detector fires on either (a) a sustained vertical drag of at
-     * least `swipeThresholdPx` with a dominant vertical component, OR
-     * (b) a fling with velocity over `swipeVelocityThresholdPx` per second.
-     */
-    var onToolbarSwipe: ((directionUp: Boolean) -> Unit)? = null
-
     @VisibleForTesting
     internal val isPwaTabOrTwaTab: Boolean
         get() = false
-
-    // 16 dp is just under a typical system-touch-slop threshold on a
-    // high-density display and gives the gesture a snappy feel without
-    // firing on accidental finger wobble during a tap.
-    private val swipeThresholdPx: Float =
-        16f * container.context.resources.displayMetrics.density
-    // 300 dp/s is Android's own default swipe-velocity threshold used by
-    // ViewPager, SwipeRefreshLayout, etc. Chosen so an intentional fling
-    // registers even if the drag distance is small.
-    private val swipeVelocityThresholdPx: Float =
-        300f * container.context.resources.displayMetrics.density
 
     init {
         view.display.setOnUrlLongClickListener {
@@ -124,67 +97,6 @@ class BrowserToolbarView(
                 interactor::onBrowserToolbarPaste
             )
             true
-        }
-
-        // Vertical swipe detector. We install this as a non-consuming
-        // OnTouchListener on the toolbar root so that tap/long-press flow
-        // through to AC's internal handlers unchanged - we only observe
-        // the stream and emit a swipe signal on fling or sustained drag.
-        val swipeGesture = android.view.GestureDetector(
-            container.context,
-            object : android.view.GestureDetector.SimpleOnGestureListener() {
-                override fun onFling(
-                    e1: android.view.MotionEvent?,
-                    e2: android.view.MotionEvent,
-                    velocityX: Float,
-                    velocityY: Float,
-                ): Boolean {
-                    if (e1 == null) return false
-                    val dx = kotlin.math.abs(e2.x - e1.x)
-                    val dy = kotlin.math.abs(e2.y - e1.y)
-                    // Only treat predominantly vertical motion as a swipe,
-                    // otherwise horizontal gestures (e.g. tab-switch swipe
-                    // on the toolbar) would be hijacked.
-                    if (dy <= dx) return false
-                    if (kotlin.math.abs(velocityY) < swipeVelocityThresholdPx) return false
-                    // velocityY > 0 means the finger moved downwards.
-                    val directionUp = velocityY < 0
-                    onToolbarSwipe?.invoke(directionUp)
-                    return true
-                }
-
-                override fun onScroll(
-                    e1: android.view.MotionEvent?,
-                    e2: android.view.MotionEvent,
-                    distanceX: Float,
-                    distanceY: Float,
-                ): Boolean {
-                    if (e1 == null) return false
-                    val totalDy = e2.y - e1.y
-                    val totalDx = e2.x - e1.x
-                    // Same horizontal-vs-vertical check as above, applied
-                    // to the total drag from the ACTION_DOWN to right now.
-                    if (kotlin.math.abs(totalDy) <= kotlin.math.abs(totalDx)) return false
-                    if (kotlin.math.abs(totalDy) < swipeThresholdPx) return false
-                    val directionUp = totalDy < 0
-                    onToolbarSwipe?.invoke(directionUp)
-                    // Return true once we have emitted the signal so
-                    // GestureDetector marks the gesture handled and does
-                    // not fire again until the next ACTION_DOWN. We still
-                    // leave the OnTouchListener non-consuming so the AC
-                    // click/long-click pipeline keeps receiving the up event.
-                    return true
-                }
-            }
-        )
-        layout.setOnTouchListener { v, event ->
-            swipeGesture.onTouchEvent(event)
-            // Return false so AC's own click/long-click detection on the
-            // display toolbar continues to receive this event. A swipe
-            // large enough to trigger our detector also drags the finger
-            // away from the URL view, so AC's onClick threshold is not
-            // crossed and no accidental tap fires.
-            false
         }
 
         with(container.context) {
