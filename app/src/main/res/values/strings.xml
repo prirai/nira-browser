@@ -21,11 +21,7 @@
   <string name="key_background_playback_youtube" translatable="false">background_playback_youtube</string>
   <string name="background_playback_youtube">Background audio on YouTube</string>
   <string name="background_playback_youtube_summary">Keep YouTube playing when the tab or app is in the background (installs a content script on youtube.com). Requires app restart.</string>
-    <string
-        name="key_bar_addon_list"
-        translatable="false"
-    >bar_addons_list</string>
-  <string name="key_clear_tabs" translatable="false">clear_tabs</string>
+<string name="key_clear_tabs" translatable="false">clear_tabs</string>
   <string name="key_clear_history" translatable="false">clear_history</string>
   <string name="key_clear_cookies" translatable="false">clear_cookies</string>
   <string name="key_clear_cache" translatable="false">clear_cache</string>
@@ -52,8 +48,7 @@
         name="key_font_size_factor"
         translatable="false"
     >font_size_factor</string>
-  <string name="key_hide_url_bar" translatable="false">hide_url_bar</string>
-  <string
+<string
         name="key_show_contextual_toolbar"
         translatable="false"
     >show_contextual_toolbar</string>
@@ -161,9 +156,7 @@
     <string name="custom">Custom</string>
 
   <string name="tabs">Tabs</string>
-    <string name="no_tabs_message">No tabs open</string>
-  <string name="no_tabs_description">Tap the + button to open a new tab</string>
-  <string name="close">Close</string>
+<string name="close">Close</string>
 
   <string name="tab_grid">Show tabs in grid</string>
 
@@ -179,8 +172,7 @@
   <string name="reload">Reload</string>
   <string name="settings">Settings</string>
   <string name="new_tab">New tab</string>
-    <string name="close_tab">Close tab</string>
-  <string name="desktop_mode">Desktop site</string>
+<string name="desktop_mode">Desktop site</string>
   <string name="desktop_mode_default">Request desktop site by default</string>
   <string name="desktop_mode_default_summary">New tabs open in desktop mode. Tablets and large windows use this unless you turn it off.</string>
   <string name="translations_enabled">Page translations</string>
@@ -245,14 +237,7 @@
   <string
         name="mozac_reader_view_description_selected"
     >Disable Reader View</string>
-
-    <string name="all_extensions">All extensions</string>
-
-  <string name="tab_removed">Tab removed</string>
-  <string name="undo">Undo</string>
-
-  <string name="hide_url_bar">Hide URL bar while scrolling</string>
-  <string name="show_contextual_toolbar">Show contextual toolbar</string>
+<string name="show_contextual_toolbar">Show contextual toolbar</string>
   <string
         name="show_contextual_toolbar_desc"
     >Display bottom toolbar with navigation buttons</string>
@@ -262,9 +247,7 @@
     >Display tab island bar above address bar</string>
 
     <string name="search">Search or enter address</string>
-  <string name="no_results">No results</string>
-
-  <string name="bookmark">Bookmark</string>
+<string name="bookmark">Bookmark</string>
   <string name="title">Title</string>
   <string name="url">URL</string>
   <string name="folder">Folder</string>
@@ -279,20 +262,14 @@
   <string name="url_empty_mes">URL empty!</string>
   <string name="title_empty_mes">Title empty!</string>
   <string name="sort">Sort</string>
-  <string name="sort_rating">Rating</string>
-  <string name="sort_a_z">A-Z</string>
-  <string name="sort_z_a">Z-A</string>
-    <string name="move_bookmark">Move to folder</string>
+<string name="move_bookmark">Move to folder</string>
     <string name="delete_bookmark">Delete bookmark</string>
   <string name="delete_folder">Delete folder</string>
   <string name="flatten_folder">Flatten folder</string>
   <string
         name="flatten_folder_confirm_formatted"
     >Flatten \"%1$s\"? All items inside will be moved to the current folder and the folder will be deleted.</string>
-  <string
-        name="flatten_folder_confirm"
-    >Flatten this folder? All items inside will be moved to the current folder and the folder will be deleted.</string>
-  <string name="open">Open</string>
+<string name="open">Open</string>
   <string name="open_new">Open in new tab</string>
   <string name="open_new_private">Open in new private tab</string>
   <string name="open_bg">Open in background tab</string>
@@ -315,24 +292,15 @@
   <string name="paste">Paste</string>
   <string name="paste_and_go">Paste and go</string>
   <string name="copied">Copied to clipboard</string>
-
-  <string name="loading_addons">Loading add-ons…</string>
-  <string name="loading">Loading…</string>
+<string name="loading">Loading…</string>
 
   <string name="tabs_cleared">Tabs cleared!</string>
   <string name="history_cleared">History cleared!</string>
   <string name="cookies_cleared">Cookies cleared!</string>
   <string name="cache_cleared">Cache cleared!</string>
   <string name="permissions_cleared">Permissions cleared!</string>
-
-    <string name="bar_addon_list">Navbar add-on list</string>
-
-  <string name="shortcuts">Shortcuts</string>
-  <string name="add_shortcut">Add shortcut</string>
-  <string name="edit_shortcut">Edit shortcut</string>
-  <string name="delete_shortcut">Delete shortcut</string>
-
-  <string name="homepage_type">Homepage type</string>
+<string name="add_shortcut">Add shortcut</string>
+<string name="homepage_type">Homepage type</string>
   <string name="default_word">Default</string>
   <string name="blank_page">Blank page</string>
   <string name="only_search_bar">Only Search Bar</string>
@@ -397,12 +365,7 @@
         name="key_sideload_xpi_file"
         translatable="false"
     >sideload_xpi_file</string>
-
-    <string
-        name="addon_not_available"
-    >This add-on is not available from the add-on store. Nira cannot confirm the permissions it requests. Only proceed if you trust this extension.</string>
-
-  <string name="swipe_to_refresh">Swipe to refresh</string>
+<string name="swipe_to_refresh">Swipe to refresh</string>
   <string name="swipe_to_refresh_summary">Pull down from the top of the page to reload</string>
 
     <string
@@ -421,13 +384,7 @@
   <string
         name="prompt_external_downloader"
     >Ask which app to use to download files</string>
-
-  <string name="close_current_tab">Close current tab</string>
-  <string name="close_all_tabs">Close all tabs</string>
-  <string name="close_other_tabs">Close other tabs</string>
-  <string name="close_app">Close browser</string>
-
-    <string name="show_protocol_in_url">Show URL protocol in toolbar</string>
+<string name="show_protocol_in_url">Show URL protocol in toolbar</string>
 
   <string name="search_suggestions">Search suggestions</string>
   <string name="search_suggestion_count">Number of search suggestions</string>
@@ -485,8 +442,7 @@
     >Search URL does not contain %s</string>
 
   <string name="clear">Clear</string>
-  <string name="name">Name</string>
-  <string name="none">None</string>
+<string name="none">None</string>
 
     <string name="save_as_pdf">Save as PDF</string>
 
@@ -566,30 +522,9 @@
   <string name="delete_confirm_title">Confirm Delete</string>
 
   <!-- Tab Islands -->
-  <string name="tab_island_name">Tab Island</string>
-
-    <!-- Tab groups in tabs list -->
-    <string name="ungrouped_tabs">Ungrouped Tabs</string>
-  <string name="expand_collapse">Expand/Collapse</string>
-  <string name="tab_thumbnail">Tab thumbnail</string>
-
-    <!-- Accessibility descriptions -->
-    <string
-        name="collapsed_island_description"
-    >Collapsed island %1$s with %2$d tabs, tap to expand</string>
-  <string
-        name="expanded_island_description"
-    >Expanded island %1$s with %2$d tabs, tap to collapse</string>
-  <string name="collapse_island_button">Collapse island</string>
-  <string name="tab_in_island_description">in %1$s island</string>
-  <string name="selected_tab_description">Selected tab: %1$s, %2$s %3$s</string>
-  <string name="tab_description">Tab: %1$s, %2$s %3$s</string>
-  <string name="close_tab_button">Close %1$s</string>
-  <string
-        name="ungrouped_tabs_header_description"
-    >Ungrouped tabs section</string>
-
-  <!-- Drag and drop -->
+<!-- Tab groups in tabs list -->
+<!-- Accessibility descriptions -->
+<!-- Drag and drop -->
 
     <!-- Delete confirmation -->
 
@@ -609,76 +544,17 @@
   </string>
 
   <!-- Onboarding strings -->
-  <string name="skip">Skip</string>
-  <string name="next">Next</string>
-  <string name="get_started">Get Started</string>
-  <string name="welcome_to_nira">Welcome to Nira Browser</string>
-  <string
-        name="welcome_subtitle"
-    >A fast, private, and customizable browser designed for you</string>
-  <string name="privacy">Privacy</string>
-  <string name="privacy_first">Privacy First</string>
-  <string name="ad_blocking">Ad Blocking</string>
-  <string
-        name="built_in_ad_blocking"
-    >Built-in ad blocking and tracking protection</string>
-  <string name="extensions">Extensions</string>
-  <string name="extension_support">Full extension support</string>
-  <string name="highly_customizable">Highly customizable interface</string>
-
-  <string name="choose_your_theme">Choose Your Theme</string>
-  <string name="theme_description">Select your preferred color scheme</string>
-  <string name="onboarding_light_theme">Light Theme</string>
-  <string name="light_theme_desc">Bright and clean interface</string>
-  <string name="onboarding_dark_theme">Dark Theme</string>
-  <string name="dark_theme_desc">Easy on the eyes</string>
-  <string name="system_theme">System Default</string>
-  <string name="system_theme_desc">Match your device settings</string>
-
-  <string name="choose_search_engine">Choose Search Engine</string>
-  <string
-        name="search_engine_description"
-    >Select your default search provider</string>
-
-  <string name="privacy_security">Privacy &amp; Security</string>
-  <string name="privacy_description">Configure your privacy settings</string>
-  <string name="tracking_protection_desc">Block trackers and ads</string>
-  <string name="safe_browsing_desc">Protection from dangerous sites</string>
-  <string name="search_suggestions_desc">Get suggestions as you type</string>
-
-  <string name="customization">Customization</string>
-  <string name="customization_description">Make the browser yours</string>
-  <string name="toolbar_position">Toolbar Position</string>
-  <string name="top">Top</string>
-  <string name="bottom">Bottom</string>
-  <string name="icon_size">Icon Size</string>
-  <string name="small">Small</string>
+<string name="extensions">Extensions</string>
+<string name="small">Small</string>
   <string name="large">Large</string>
-  <string name="icon_size_desc">Adjust toolbar icon size</string>
-
-  <!-- Per-site dark mode -->
+<!-- Per-site dark mode -->
 
     <!-- Lite Apps (PWA) -->
     <string name="install_web_app">Install Web App</string>
     <string name="app_installed">App installed successfully</string>
 
     <!-- Web Theme -->
-  <string name="web_theme_title">Website Theme</string>
-  <string
-        name="web_theme_description"
-    >Choose how websites should appear</string>
-  <string name="website_theme">Website Theme</string>
-  <string
-        name="website_theme_desc"
-    >Only available when app is in dark mode</string>
-  <string name="web_light_theme">Light Websites</string>
-  <string name="web_light_theme_desc">Request light mode from websites</string>
-  <string name="web_dark_theme">Dark Websites</string>
-  <string name="web_dark_theme_desc">Request dark mode from websites</string>
-  <string name="web_system_theme">Follow System</string>
-  <string name="web_system_theme_desc">Match your device\'s theme</string>
-
-  <!-- Settings -->
+<!-- Settings -->
   <string name="toolbar_icon_size">Toolbar Icon Size</string>
   <string
         name="toolbar_icon_size_desc"
@@ -697,14 +573,9 @@
   <string name="reader_view_appearance">Reader view appearance</string>
   <string name="security_icon">Security icon</string>
   <string name="shortcut_icon">Shortcut icon</string>
-  <string name="tab_favicon">Tab favicon</string>
-  <string name="tab_close_button">Close tab</string>
-
-  <!-- HardcodedText fixes -->
+<!-- HardcodedText fixes -->
   <string name="add">Add</string>
-  <string name="find_in_page">Find in page</string>
-  <string name="previous">Previous</string>
-  <string name="select_time_range">Select time range</string>
+<string name="select_time_range">Select time range</string>
   <string name="issued_by">Issued by</string>
   <string name="issued_to">Issued to</string>
   <string name="folder_name">Folder Name</string>
@@ -724,72 +595,21 @@
   <string
         name="clear_cookies_and_site_data"
     >Clear cookies and site data</string>
-  <string name="tab_title">Tab Title</string>
-  <string name="island">Island</string>
-  <string name="island_icon">Island icon</string>
-  <string name="collapse_or_expand_island">Collapse or expand island</string>
-  <string name="add_new_tab_to_island">Add new tab to island</string>
-  <string name="island_name">Island Name</string>
-
-    <!-- PWA Management Strings -->
-  <string name="web_app_settings_title">Web Apps</string>
-  <string name="no_web_apps_installed">No web apps installed</string>
-  <string
-        name="no_web_apps_installed_description"
-    >Install progressive web apps from websites to manage them here</string>
-  <string name="web_app_icon">Web app icon</string>
+<!-- PWA Management Strings -->
+<string name="web_app_icon">Web app icon</string>
   <string name="uninstall_web_app">Uninstall Web App</string>
-  <string
-        name="uninstall_web_app_confirmation"
-    >Are you sure you want to uninstall \"%1$s\"? This will remove the app from your device.</string>
-  <string name="uninstall">Uninstall</string>
-  <string name="clear_web_app_data">Clear App Data</string>
-  <string
-        name="clear_web_app_data_confirmation"
-    >Are you sure you want to clear all data for \"%1$s\"? This will remove cached files, databases, and other stored data.</string>
-  <string name="clear_data">Clear Data</string>
-  <string name="web_app_data_cleared">Web app data cleared successfully</string>
-  <string
-        name="pwa_cache_updated"
-    >Cache updated for \"%1$s\". This app can now work better offline.</string>
-    <string name="update_cache">Update Cache</string>
-  <string name="pwa_offline_status">Offline: %1$s</string>
-
-  <!-- PWA Notification Strings -->
+<string name="uninstall">Uninstall</string>
+<string name="clear_data">Clear Data</string>
+<!-- PWA Notification Strings -->
 
     <!-- Enhanced PWA Installation Strings -->
-  <string
-        name="pwa_install_excellent"
-    >\"%1$s\" is an excellent progressive web app with full offline support</string>
-  <string
-        name="pwa_install_good"
-    >\"%1$s\" is a good progressive web app with basic offline features</string>
-  <string
-        name="pwa_install_basic"
-    >\"%1$s\" can be installed as a basic web app</string>
-  <string
-        name="pwa_install_poor"
-    >\"%1$s\" has limited web app capabilities</string>
-  <string name="pwa_benefit_offline">Work offline without internet</string>
-  <string name="pwa_benefit_notifications">Receive notifications</string>
-  <string name="pwa_benefit_homescreen">Quick access from home screen</string>
-  <string name="pwa_benefit_themed">Custom themed experience</string>
-    <string
+<string
         name="pwa_installation_complete"
     >\"%1$s\" installed successfully!</string>
 
     <!-- PWA Update Strings -->
-    <string name="pwa_management_navigation">Opening PWA Management</string>
-  <string name="learn_more">Learn More</string>
-
-  <!-- PWA Suggestion Strings -->
-  <string name="pwa_suggestions">Suggested Web Apps</string>
-    <string name="install_suggested_pwa">Install Suggested App</string>
-  <string name="pwa_categories">Categories</string>
-    <string name="all_categories">All Categories</string>
-  <string name="no_suggestions">No suggestions available</string>
-
-  <!-- Unified Web Apps Strings -->
+<!-- PWA Suggestion Strings -->
+<!-- Unified Web Apps Strings -->
   <string name="web_apps_title">Web Apps</string>
   <string name="installed_apps">Installed</string>
   <string name="discover_apps">Discover</string>
@@ -799,16 +619,8 @@
     >Browse websites to see suggestions</string>
     <string name="launch">Launch</string>
   <string name="installation_failed">Installation Failed</string>
-  <string name="loading_suggestions">Loading suggestions…</string>
-  <string name="shortcut_added">Shortcut Added</string>
-  <string
-        name="shortcut_added_message"
-    >Shortcut for \"%1$s\" has been added to your home screen</string>
-  <string name="shortcut_failed">Shortcut Failed</string>
-  <string
-        name="shortcut_failed_message"
-    >Failed to add shortcut to home screen</string>
-    <string name="associate_profile">Associate Profile</string>
+<string name="shortcut_failed">Shortcut Failed</string>
+<string name="associate_profile">Associate Profile</string>
   <string name="clone_webapp">Clone Web App</string>
   <string name="more_options">More Options</string>
   <string name="current_profile">Profile: %1$s</string>
@@ -836,13 +648,9 @@
 
   <!-- Web App Installation Profile Selection -->
   <string name="select_profile">Select Profile</string>
-  <string name="profile">Profile</string>
-  <string name="addon_enabled_for_profiles">Enabled for profiles</string>
+<string name="addon_enabled_for_profiles">Enabled for profiles</string>
   <string name="addon_enabled_for_all_profiles">All profiles</string>
-  <string
-        name="install_web_app_profile_selection"
-    >Select Profile for Web App</string>
-  <string
+<string
         name="install_web_app_profile_message"
     >Choose which profile to associate with this web app. Each profile has separate cookies and data.</string>
   <string
@@ -854,8 +662,7 @@
     >This web app is already installed for the selected profile</string>
 
   <!-- Tab Search Strings -->
-  <string name="search_tabs">Search tabs</string>
-  <string
+<string
         name="search_tabs_bookmarks_history"
     >Search tabs, bookmarks, and history</string>
   <string
@@ -865,31 +672,8 @@
     <string name="pdf_icon">PDF Icon</string>
 
   <!-- Theme picker descriptions -->
-  <string name="light_mode">Light Mode</string>
-  <string
-        name="light_mode_description"
-    >Bright and clean interface for daytime use</string>
-  <string name="dark_mode">Dark Mode</string>
-  <string
-        name="dark_mode_description"
-    >Easy on the eyes, perfect for low-light environments</string>
-  <string name="system_default">System Default</string>
-  <string
-        name="system_default_description"
-    >Automatically follows your device theme</string>
-
-  <!-- Web theme picker descriptions -->
-  <string
-        name="web_light_theme_description"
-    >Request websites to use light theme</string>
-  <string
-        name="web_dark_theme_description"
-    >Request websites to use dark theme</string>
-  <string
-        name="web_system_theme_description"
-    >Follow system theme preference</string>
-
-    <string name="selected_count">%d selected</string>
+<!-- Web theme picker descriptions -->
+<string name="selected_count">%d selected</string>
     <string name="bookmark_title_placeholder">Bookmark Title</string>
     <string name="history_title_placeholder">History Title</string>
     <string name="tab_title_placeholder">Tab Title</string>
@@ -904,16 +688,11 @@
     <string name="mozac_feature_toolbar_forward_button">Forward</string>
     <string name="scan_qr_code">Scan QR code</string>
     <string name="change_search_engine">Change Search Engine</string>
-  <string name="webapps_category_header">Manage Web Apps</string>
-
-
-  <plurals name="multiselect_count">
+<plurals name="multiselect_count">
     <item quantity="one">%1$d selected</item>
     <item quantity="other">%1$d selected</item>
   </plurals>
-    <string name="add_tab_to_group">Add tab to group</string>
-
-    <!-- Firefox Sync -->
+<!-- Firefox Sync -->
     <string name="settings_sync">Firefox Sync</string>
     <string name="settings_sync_explain">Sign in to sync history and tabs</string>
 
