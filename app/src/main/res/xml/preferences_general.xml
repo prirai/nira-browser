@@ -87,15 +87,12 @@
 
     </PreferenceCategory>
 
-    <PreferenceCategory android:title="Media">
-
-        <com.prirai.android.nira.settings.MaterialSwitchPreference
-            app:key="@string/key_background_playback_youtube"
-            app:title="@string/background_playback_youtube"
-            app:summary="@string/background_playback_youtube_summary"
-            app:singleLineTitle="false"
-            app:defaultValue="false"/>
-
-    </PreferenceCategory>
+    <!--
+        The "Media" category previously held a global "Background audio
+        on YouTube" toggle. It has been replaced by a per-site
+        "Background playback" permission in the Connection Info ->
+        Site Permissions sheet. See BackgroundPlaybackAllowlist and the
+        migration in BrowserApp.initializeAfterFirstFrame.
+    -->
 
 </PreferenceScreen>

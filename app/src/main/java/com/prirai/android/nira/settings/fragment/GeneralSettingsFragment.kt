@@ -66,18 +66,13 @@ class GeneralSettingsFragment : BaseSettingsFragment() {
             }
         )
 
-        switchPreference(
-            preference = resources.getString(R.string.key_background_playback_youtube),
-            isChecked = UserPreferences(requireContext()).backgroundPlaybackYoutube,
-            onCheckChange = {
-                UserPreferences(requireContext()).backgroundPlaybackYoutube = it
-                Toast.makeText(
-                    context,
-                    requireContext().resources.getText(R.string.app_restart),
-                    Toast.LENGTH_LONG,
-                ).show()
-            }
-        )
+        // "Background audio on YouTube" global toggle used to live here;
+        // it has been replaced by a per-site "Background playback"
+        // permission managed from the Connection Info -> Site Permissions
+        // sheet. See BackgroundPlaybackAllowlist for storage, and the
+        // migration in BrowserApp.initializeAfterFirstFrame that seeds
+        // the allow-list with YouTube origins when the legacy global
+        // pref was previously enabled.
 
         switchPreference(
             preference = requireContext().resources.getString(R.string.key_search_suggestions_enabled),

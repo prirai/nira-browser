@@ -18,6 +18,7 @@ import com.prirai.android.nira.ext.components
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import com.prirai.android.nira.permissions.BackgroundPlaybackAllowlist
 import mozilla.components.browser.state.selector.selectedTab
 import mozilla.components.concept.engine.permission.SitePermissions
 import mozilla.components.concept.engine.permission.SitePermissions.AutoplayStatus
@@ -95,16 +96,19 @@ class SitePermissionsBottomSheet : BottomSheetDialogFragment() {
     }
 
     /**
-     * Build the row list from the stored permissions. Only permissions the
-     * site has actually interacted with (non-default values) are shown so
-     * the sheet does not become a wall of twelve "Ask every time" entries
-     * for a page that never asked for anything.
+     * Build the row list from the stored permissions. Only AC permissions
+     * the site has actually interacted with (non-default values) are
+     * shown so the sheet does not become a wall of twelve "Ask every
+     * time" entries for a page that never asked for anything.
      *
-     * The autoplay permissions are an exception: they always have a
-     * concrete value (BLOCKED or ALLOWED), so showing them unconditionally
-     * would still be a wall. We only show them when the user previously
-     * had a prompt or when `stored != null` (which implies at least one
-     * permission has been touched for this origin).
+     * Background playback is a Nira-local permission (not in AC's
+     * `SitePermissions` enum). Its row is always rendered since the
+     * user may want to opt-in before the site is "touched" in any AC
+     * sense.
+     *
+     * The autoplay permissions are also always shown when `stored` is
+     * non-null, since they are two-state and AC seeds them to concrete
+     * values.
      */
     private fun renderRows(
         container: LinearLayout,
@@ -113,7 +117,15 @@ class SitePermissionsBottomSheet : BottomSheetDialogFragment() {
     ) {
         container.removeAllViews()
 
+        // Background playback - always rendered because it is Nira-local
+        // storage (BackgroundPlaybackAllowlist) and the user may want to
+        // opt in before any AC permission has been touched.
+        addBackgroundPlaybackRow(container)
+
         if (stored == null) {
+            // Hint stays visible because no AC permission has been
+            // interacted with yet, but the bg-playback row above is
+            // still there to toggle.
             emptyHint.visibility = View.VISIBLE
             return
         }
@@ -295,6 +307,39 @@ class SitePermissionsBottomSheet : BottomSheetDialogFragment() {
         origin = origin,
         savedAt = System.currentTimeMillis(),
     )
+
+    /**
+     * Nira-local "Background playback" row. Backed by
+     * [BackgroundPlaybackAllowlist] (SharedPref `Set<String>` of origins)
+     * instead of AC's `SitePermissions`, because AC's data class is a
+     * closed set and does not include a background-playback field.
+     *
+     * The row is always rendered (unlike AC rows that are gated on a
+     * stored decision) so the user can opt in before interacting with
+     * the site in any other way. Subtitle hints that the extension
+     * currently only has an effect on YouTube hostnames; the toggle
+     * still writes to the allow-list uniformly so a future broadening
+     * of the extension's content-script match works without a schema
+     * migration.
+     */
+    private fun addBackgroundPlaybackRow(container: LinearLayout) {
+        val context = requireContext()
+        val allowlist = BackgroundPlaybackAllowlist.getInstance(context)
+        val row = inflateRow(
+            container,
+            R.string.permission_background_playback,
+            iconsR.drawable.mozac_ic_autoplay_24,
+        )
+        val switch = row.findViewById<MaterialSwitch>(R.id.permission_switch)
+        val subtitle = row.findViewById<TextView>(R.id.permission_subtitle)
+        subtitle.visibility = View.VISIBLE
+        subtitle.setText(R.string.permission_background_playback_subtitle)
+        switch.isChecked = allowlist.isAllowed(origin)
+        switch.setOnCheckedChangeListener { _, isChecked ->
+            if (isChecked) allowlist.allow(origin) else allowlist.block(origin)
+        }
+        container.addView(row)
+    }
 
     companion object {
         const val TAG = "SitePermissionsBottomSheet"

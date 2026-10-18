@@ -960,4 +960,10 @@
     <string name="permission_status_allowed">Allowed</string>
     <string name="permission_status_blocked">Blocked</string>
     <string name="permission_status_ask">Ask every time</string>
+
+    <!-- Nira-local background-playback permission. Not an AC SitePermissions field;
+         backed by `BackgroundPlaybackAllowlist`. See SitePermissionsBottomSheet
+         for rationale. -->
+    <string name="permission_background_playback">Background playback</string>
+    <string name="permission_background_playback_subtitle">Keeps audio playing when the tab or app is in the background. Currently takes effect only on YouTube.</string>
 </resources>
