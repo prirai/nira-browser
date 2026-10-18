@@ -530,38 +530,11 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
             initializeModernToolbarWithCurrentState()
 
         } catch (e: Exception) {
-            // Silently handle toolbar initialization failure and apply simple fix
-            applySimpleScrollBehaviorFix()
-        }
-    }
-
-    // Legacy method - no longer used with UnifiedToolbar
-    // Kept for potential backward compatibility
-
-
-    private fun handleNewTabInIsland(islandId: String) {
-        // Navigate to Compose home fragment
-        try {
-            androidx.navigation.fragment.NavHostFragment.findNavController(this).navigate(R.id.homeFragment)
-        } catch (e: Exception) {
-            // Fallback: Create a new tab and automatically add it to the specified island
-            val store = requireContext().components.store
-            val state = store.state
-            val selectedTab = state.tabs.find { it.id == state.selectedTabId }
-
-            // Create new tab with current tab as parent to enable auto-grouping
-            val newTabId = requireContext().components.tabsUseCases.addTab.invoke(
-                url = "about:homepage",
-                selectTab = true,
-                parentId = selectedTab?.id
-            )
-
-            // Manually add to island since we're creating from plus button
-            if (newTabId != null) {
-                val islandManager =
-                    com.prirai.android.nira.components.toolbar.modern.TabIslandManager.getInstance(requireContext())
-                islandManager.addTabToIsland(newTabId, islandId)
-            }
+            // Toolbar initialization failed; the engine view keeps rendering
+            // full-screen without chrome, which is better than crashing the
+            // whole fragment. UnifiedToolbar handles its own dynamic height
+            // coordination, so there is no fallback positioning to apply.
+            android.util.Log.e("BrowserFragment", "UnifiedToolbar init failed", e)
         }
     }
 
@@ -738,19 +711,6 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
      * Setup floating fullscreen toggle button above toolbars
      */
 
-
-    // Legacy method removed - no longer needed with UnifiedToolbar
-
-    // Legacy method removed - no longer needed with UnifiedToolbar
-
-    private fun applySimpleScrollBehaviorFix() {
-        // Only apply for bottom toolbar position
-        if (cachedToolbarPosition == com.prirai.android.nira.components.toolbar.ToolbarPosition.BOTTOM.ordinal) {
-
-
-            // The modern toolbar system handles dynamic height automatically
-        }
-    }
 
     /**
      * Override fullscreen handling to properly hide/show modern toolbar system.
