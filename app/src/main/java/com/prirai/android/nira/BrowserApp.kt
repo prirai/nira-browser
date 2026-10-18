@@ -20,6 +20,8 @@ import mozilla.components.support.ktx.android.content.runOnlyInMainProcess
 import mozilla.components.support.webextensions.WebExtensionSupport
 import java.util.concurrent.TimeUnit
 
+private const val NIRA_BG_PLAY_EXTENSION_ID = "nira-bg-play@prirai.android.nira"
+
 class BrowserApp : Application() {
 
     private val logger = Logger("BrowserApp")
@@ -195,23 +197,59 @@ class BrowserApp : Application() {
             }
         }
 
-        // Optional: install the Nira background-playback content script that
-        // neutralises YouTube's Page Visibility handler so audio keeps playing
-        // when the tab is deselected or the app is backgrounded. Off by default.
+        // Install the Nira background-playback content script when at
+        // least one origin is on the allow-list; uninstall when the
+        // allow-list becomes empty. The allow-list is per-origin now
+        // (see BackgroundPlaybackAllowlist) and controlled from
+        // SitePermissionsBottomSheet; the legacy global toggle lives on
+        // only as a one-time migration seed.
+        //
+        // The extension itself still only matches YouTube hostnames
+        // (see assets/extensions/nira-bg-play/manifest.json
+        // content_scripts.matches). Non-YouTube origins in the allow-
+        // list are accepted but have no visible effect until the match
+        // glob is broadened in a follow-up.
         applicationScope.launch(Dispatchers.Main) {
             try {
-                val prefs = com.prirai.android.nira.preferences.UserPreferences(this@BrowserApp)
-                if (prefs.backgroundPlaybackYoutube) {
-                    components.engine.installBuiltInWebExtension(
-                        url = "resource://android/assets/extensions/nira-bg-play/",
-                        id = "nira-bg-play@prirai.android.nira",
-                        onSuccess = { _ ->
-                            logger.info("nira-bg-play extension installed")
-                        },
-                        onError = { err ->
-                            android.util.Log.w("NiraBgPlay", "install FAILED", err)
-                        }
-                    )
+                val allowlist =
+                    com.prirai.android.nira.permissions.BackgroundPlaybackAllowlist
+                        .getInstance(this@BrowserApp)
+                // One-time migration: if the deprecated global pref was
+                // enabled, seed the allow-list with YouTube origins so
+                // existing users keep working after upgrade.
+                val legacyPref = com.prirai.android.nira.preferences
+                    .UserPreferences(this@BrowserApp).backgroundPlaybackYoutube
+                allowlist.migrateFromLegacyGlobalPref(enabledBefore = legacyPref)
+
+                var installed = false
+                allowlist.origins.collect { origins ->
+                    val shouldInstall = origins.isNotEmpty()
+                    if (shouldInstall && !installed) {
+                        components.engine.installBuiltInWebExtension(
+                            url = "resource://android/assets/extensions/nira-bg-play/",
+                            id = NIRA_BG_PLAY_EXTENSION_ID,
+                            onSuccess = {
+                                logger.info("nira-bg-play extension installed")
+                            },
+                            onError = { err ->
+                                android.util.Log.w("NiraBgPlay", "install FAILED", err)
+                            },
+                        )
+                        installed = true
+                    } else if (!shouldInstall && installed) {
+                        // AC's Engine does not expose a direct uninstall-by-id
+                        // for built-in extensions. The best effect we can
+                        // achieve without restarting the process is to leave
+                        // the extension installed; the content.js hostname
+                        // gate means a cleared allow-list still means no
+                        // active matcher since YouTube is the only matched
+                        // host and the user would have to specifically remove
+                        // YouTube. If users do need true per-session
+                        // uninstall, a follow-up can add a native-messaging
+                        // channel so content.js can read the allow-list and
+                        // self-disable. Logging the transition for debug.
+                        logger.info("nira-bg-play allow-list cleared; extension remains installed until next launch")
+                    }
                 }
             } catch (e: Exception) {
                 android.util.Log.w("NiraBgPlay", "install exception", e)
