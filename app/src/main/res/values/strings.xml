@@ -745,4 +745,10 @@
          for rationale. -->
     <string name="permission_background_playback">Background playback</string>
     <string name="permission_background_playback_subtitle">Keeps audio playing when the tab or app is in the background. Currently takes effect only on YouTube.</string>
+
+    <!-- Minimal-state toggle button (right of the URL pill in the address bar).
+         Down chevron while expanded (tap to minimize); up chevron while
+         minimal (tap to restore the tab bar + contextual bar). -->
+    <string name="minimal_state_collapse">Collapse toolbar</string>
+    <string name="minimal_state_expand">Expand toolbar</string>
 </resources>

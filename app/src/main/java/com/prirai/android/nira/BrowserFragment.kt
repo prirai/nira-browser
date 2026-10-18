@@ -420,23 +420,22 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
                 requireContext().components.tabsUseCases.selectTab(tabId)
             }
 
-            // Minimal state is now driven entirely by user gestures:
-            //  - swipe DOWN on the address bar  -> enterMinimalState()
-            //  - swipe UP on the address bar    -> exitMinimalState()
-            //  - page scroll down               -> enterMinimalState()
-            //  - page scroll up                 -> exitMinimalState()
-            // The swipe gesture detection is wired inside BrowserToolbarView
-            // (see onToolbarSwipe). Page scroll is handled by
-            // ModernScrollBehavior which, instead of fully collapsing the
-            // UnifiedToolbar, now toggles minimal state via the callback
-            // installed below so the address bar always stays visible.
-            unifiedToolbar?.getBrowserToolbarView()?.onToolbarSwipe = { directionUp ->
+            // Minimal state is driven by two inputs:
+            //  - tap the toggle button to the right of the URL pill
+            //    (down chevron while expanded, up chevron while minimal)
+            //    -> see MinimalStateToggleIntegration below
+            //  - page scroll on the web content via ModernScrollBehavior
+            //    -> scroll past the threshold enters/exits minimal
+            // The address bar itself never scrolls off; only the aux bars
+            // (tab bar + contextual bar) animate in and out.
+            val minimalToggle = unifiedToolbar?.getBrowserToolbar()?.let { browserToolbar ->
                 unifiedToolbar?.let { toolbar ->
-                    if (directionUp) {
-                        toolbar.exitMinimalState()
-                    } else {
-                        toolbar.enterMinimalState()
-                    }
+                    com.prirai.android.nira.integration
+                        .MinimalStateToggleIntegration(
+                            context = requireContext(),
+                            toolbar = browserToolbar,
+                            unifiedToolbar = toolbar,
+                        ).also { viewLifecycleOwner.lifecycle.addObserver(it) }
                 }
             }
 
@@ -445,10 +444,16 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
                 requestWebContentPositionUpdate()
             }
 
-            // Recompute web content positioning when the minimal-state
-            // transition removes/adds the auxiliary bars.
+            // Minimal-state listener - compose the two concerns here
+            // because UnifiedToolbar only supports a single listener:
+            //  1. Recompute web content positioning (aux bars appeared /
+            //     disappeared).
+            //  2. Tell the toggle integration to swap its chevron glyph
+            //     (so the icon stays in sync when the state is changed
+            //     by page scroll, not just by tapping the button).
             unifiedToolbar?.setOnMinimalStateChangedListener {
                 requestWebContentPositionUpdate()
+                minimalToggle?.onMinimalStateChanged()
             }
             
             // Set toolbar offset listener for smooth margin adjustment

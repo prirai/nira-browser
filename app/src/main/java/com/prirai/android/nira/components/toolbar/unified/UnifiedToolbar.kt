@@ -1,9 +1,11 @@
 package com.prirai.android.nira.components.toolbar.unified
 
+import android.animation.ValueAnimator
 import android.content.Context
 import android.util.AttributeSet
 import android.view.View
 import android.view.ViewGroup
+import android.view.animation.AccelerateDecelerateInterpolator
 import androidx.coordinatorlayout.widget.CoordinatorLayout
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.DefaultLifecycleObserver
@@ -88,6 +90,29 @@ class UnifiedToolbar @JvmOverloads constructor(
     private var minimalState: Boolean = false
     private var onMinimalStateChanged: ((Boolean) -> Unit)? = null
 
+    // Single value-animator that drives the minimal-state transition. We
+    // use the same `ValueAnimator`-emitting-offset-per-frame pattern
+    // `ModernToolbarSystem.animateToOffset` uses (and that AC's
+    // `EngineViewClippingBehavior` effectively uses by updating
+    // `engineViewParent.translationY` / `setVerticalClipping` on every
+    // frame of a nested scroll). Each frame we:
+    //   - translate the aux bars by the current offset so they slide
+    //     out/in,
+    //   - fire `onToolbarOffsetChanged(offset, totalHeight)` so
+    //     `BrowserFragment.adjustWebContentMarginsForToolbarOffset`
+    //     shrinks/grows `swipeRefresh.bottomMargin` in step.
+    // Without the per-frame listener call, the aux bars fade out but the
+    // engine view does not grow to fill the vacated space until the
+    // animation's end layout pass - leaving a visible black band during
+    // the 200 ms window where chrome WAS.
+    private var minimalAnimator: ValueAnimator? = null
+
+    // Set to `true` while `minimalAnimator` is running so the
+    // `OnLayoutChangeListener` on `toolbarSystem` does not fire a
+    // mid-animation `reconcileEngineViewHeight()` that would conflict
+    // with the per-frame updates.
+    private var suppressReconcileDuringAnimation = false
+
     // Reload/Stop button integration
     private var reloadStopIntegration: com.prirai.android.nira.integration.ReloadStopButtonIntegration? = null
 
@@ -131,8 +156,16 @@ class UnifiedToolbar @JvmOverloads constructor(
         // toolbar height, leaving a blank band of wasted space where the
         // aux bars used to be. This also covers rotation and font-scale
         // changes that affect toolbar height.
+        //
+        // During the minimal-state animation the aux bars are only being
+        // translated (not laid out), so this listener does NOT fire from
+        // the animation itself. But the terminal `visibility = GONE` /
+        // `VISIBLE` toggles at animation end would re-trigger it and
+        // double-fire the offset listener on the same frame the animator
+        // emitted its final value; the `suppressReconcileDuringAnimation`
+        // flag below skips that duplicate.
         toolbarSystem.addOnLayoutChangeListener { _, _, top, _, bottom, _, oldTop, _, oldBottom ->
-            if (bottom - top != oldBottom - oldTop) {
+            if (bottom - top != oldBottom - oldTop && !suppressReconcileDuringAnimation) {
                 reconcileEngineViewHeight()
             }
         }
@@ -850,10 +883,42 @@ class UnifiedToolbar @JvmOverloads constructor(
     }
 
     /**
-     * Smoothly animate the tab bar and contextual toolbar in/out. The address
-     * bar is left alone. When hiding, we use View.GONE at the end so the layout
-     * pass drops the space; when showing, we set VISIBLE first and animate the
-     * translation/alpha back to 0/1.
+     * Smoothly animate the tab bar and contextual toolbar in/out so the
+     * engine view's reserved layout space (`swipeRefresh.bottomMargin` in
+     * `BrowserFragment`) grows or shrinks **in step** with the aux bars'
+     * translation.
+     *
+     * Previous implementation ran independent `view.animate()` chains per
+     * aux view and let `withEndAction { visibility = GONE }` trigger the
+     * layout-change listener. That worked but produced a visible black
+     * band for the full 200 ms duration: the aux bars faded out via
+     * alpha + translation, but the engine view's layout bounds stayed
+     * clipped above the (now-visually-gone) chrome area because the
+     * reconcile fired only once, at the END of the animation.
+     *
+     * Pattern copied from upstream:
+     * - `ModernToolbarSystem.animateToOffset` (same repo): single
+     *   `ValueAnimator` interpolates an `Int` offset, each frame it
+     *   both translates its children and fires
+     *   `onOffsetChangedListener(currentOffset, totalHeight)` so a
+     *   downstream `BrowserFragment` can update its margins in step.
+     * - AC's `mozilla.components.ui.widgets.behavior.EngineViewClippingBehavior`
+     *   (`ui-widgets-153` sources): on every nested-scroll tick it
+     *   updates `engineViewParent.translationY` AND calls
+     *   `EngineView.setVerticalClipping(...)` so the engine view slides
+     *   in lock-step with the toolbar instead of waiting for a terminal
+     *   layout pass.
+     *
+     * Nira's pinned-toolbar design uses layout margin (not GeckoView
+     * clipping) for the reservation, so we emit the per-frame offset
+     * to the fragment's `adjustWebContentMarginsForToolbarOffset` which
+     * updates `swipeRefresh.bottomMargin` directly. The visual effect
+     * matches: everything slides together.
+     *
+     * Duration (200 ms) and interpolator (`AccelerateDecelerateInterpolator`,
+     * the Android default) match `ModernToolbarSystem.animateToOffset`
+     * so the collapse-on-fullscreen and the minimal-state transition
+     * feel identical.
      */
     private fun animateAuxiliaryComponents(show: Boolean) {
         val auxiliaries = listOfNotNull(
@@ -862,30 +927,104 @@ class UnifiedToolbar @JvmOverloads constructor(
         )
         if (auxiliaries.isEmpty()) return
 
-        val duration = 200L
-        for (view in auxiliaries) {
-            view.animate().cancel()
-            if (show) {
-                view.visibility = VISIBLE
-                view.animate()
-                    .alpha(1f)
-                    .translationY(0f)
-                    .setDuration(duration)
-                    .withEndAction { view.alpha = 1f }
-                    .start()
-            } else {
-                val offset = view.height.toFloat()
-                view.animate()
-                    .alpha(0f)
-                    .translationY(offset)
-                    .setDuration(duration)
-                    .withEndAction {
-                        view.visibility = GONE
-                        // Reset so the next show animation starts from a clean baseline.
-                        view.translationY = 0f
-                    }
-                    .start()
+        // Cancel any animator mid-flight; start the new one from the
+        // current translation so a rapid toggle (e.g. two quick scroll
+        // reversals) stays continuous rather than snapping.
+        minimalAnimator?.cancel()
+
+        // Pre-measure aux bars so `view.height` is populated when we
+        // read it below. Views that are currently GONE have height 0;
+        // when transitioning to visible we need the measured height
+        // so we know the full extent of the slide.
+        auxiliaries.forEach { it.visibility = VISIBLE }
+        // Force a measure pass so freshly-made-VISIBLE views report
+        // their real height before the animator reads it.
+        measure(
+            View.MeasureSpec.makeMeasureSpec(width, View.MeasureSpec.EXACTLY),
+            View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED),
+        )
+
+        val auxTotalHeight = auxiliaries.sumOf { it.measuredHeight }
+        if (auxTotalHeight <= 0) return
+
+        // Address bar height is the stable "pinned" chrome height; the
+        // animator interpolates between this (minimal state) and
+        // `addressBarHeight + auxTotalHeight` (full chrome).
+        val addressBarHeight = (toolbarSystem.measuredHeight - auxTotalHeight)
+            .coerceAtLeast(0)
+        val fullHeight = addressBarHeight + auxTotalHeight
+
+        // Current translation of each aux view: 0 when visible,
+        // view.height when fully hidden. We read it so cancelled
+        // animations resume cleanly.
+        val startTranslation = auxiliaries.first().translationY
+        val targetTranslation = if (show) 0f else auxTotalHeight.toFloat()
+
+        suppressReconcileDuringAnimation = true
+
+        minimalAnimator = ValueAnimator.ofFloat(startTranslation, targetTranslation).apply {
+            duration = ANIMATION_DURATION_MS
+            interpolator = AccelerateDecelerateInterpolator()
+
+            addUpdateListener { animator ->
+                val currentTranslation = animator.animatedValue as Float
+                // How many pixels of the aux stack are currently hidden
+                // (0 = fully visible, auxTotalHeight = fully hidden).
+                val hiddenPx = currentTranslation.coerceIn(0f, auxTotalHeight.toFloat())
+                // Visible chrome height for this frame; passed to the
+                // fragment to update swipeRefresh.bottomMargin so the
+                // engine view grows/shrinks in step with the aux bars.
+                val visibleChrome = (fullHeight - hiddenPx).toInt().coerceAtLeast(addressBarHeight)
+                // Translate each aux view individually so stacked bars
+                // slide the same amount (they are siblings in a vertical
+                // LinearLayout; translating the parent would move the
+                // address bar too). Alpha fade is kept for a smoother
+                // visual - the parent window background may show
+                // through briefly during the slide, and the fade
+                // disguises it the same way AC's toolbar does.
+                auxiliaries.forEach { view ->
+                    view.translationY = hiddenPx
+                    view.alpha = 1f - (hiddenPx / auxTotalHeight.toFloat()).coerceIn(0f, 1f)
+                }
+                // Emit per-frame to BrowserFragment. `currentOffset` is
+                // the amount hidden, `totalHeight` is the full chrome
+                // height; `adjustWebContentMarginsForToolbarOffset`
+                // computes `visibleHeight = totalHeight - currentOffset`.
+                onToolbarOffsetChanged?.invoke(hiddenPx.toInt(), fullHeight)
             }
+
+            addListener(object : android.animation.AnimatorListenerAdapter() {
+                override fun onAnimationEnd(animation: android.animation.Animator) {
+                    // Snap to final state in a single layout pass. All
+                    // of these are idempotent with what the final
+                    // animator frame already applied, so no visible jump.
+                    auxiliaries.forEach { view ->
+                        view.translationY = 0f
+                        if (show) {
+                            view.alpha = 1f
+                            view.visibility = VISIBLE
+                        } else {
+                            view.alpha = 1f // reset for next show
+                            view.visibility = GONE
+                        }
+                    }
+                    suppressReconcileDuringAnimation = false
+                    // One final reconcile so the engine view sees the
+                    // post-layout stable height (not the measured-but-
+                    // not-laid-out value the animator was using).
+                    reconcileEngineViewHeight()
+                    minimalAnimator = null
+                }
+
+                override fun onAnimationCancel(animation: android.animation.Animator) {
+                    // If we were cancelled mid-flight the new animator's
+                    // `onAnimationEnd` will clear the suppress flag; do
+                    // not clear it here, otherwise rapid toggles could
+                    // leak reconciles between the two animations.
+                }
+            })
+
+            start()
         }
     }
 
@@ -1027,6 +1166,14 @@ class UnifiedToolbar @JvmOverloads constructor(
     }
 
     companion object {
+        /**
+         * Minimal-state transition duration. Matches
+         * `ModernToolbarSystem.animateToOffset`'s 200 ms so the two
+         * code paths (fullscreen collapse vs. minimal toggle) feel
+         * identical and AC's typical dynamic-toolbar snap window.
+         */
+        private const val ANIMATION_DURATION_MS: Long = 200L
+
         /**
          * Create and attach a unified toolbar to a parent container
          */
