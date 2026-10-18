@@ -26,35 +26,5 @@ data class TabGroup(
 data class TabGroupMember(
     val tabId: String,
     val groupId: String,
-    val position: Int = 0
+    val position: Int = 0,
 )
-
-/**
- * Domain model representing a tab group with its members.
- */
-data class TabGroupWithTabs(
-    val group: TabGroup,
-    val tabIds: List<String> = emptyList()
-) {
-    val tabCount: Int get() = tabIds.size
-    val isEmpty: Boolean get() = tabIds.isEmpty()
-    val isNotEmpty: Boolean get() = tabIds.isNotEmpty()
-}
-
-/**
- * Tab group name generator that returns blank names.
- * Groups are identified internally by their UUID, but display no name by default.
- */
-class TabGroupNameGenerator {
-    /**
-     * Returns an empty string as the default group name.
-     * Groups have internal IDs (UUIDs) for identification.
-     */
-    fun generateName(): String {
-        return ""
-    }
-
-    fun releaseName(name: String) {
-        // No-op since we don't track blank names
-    }
-}

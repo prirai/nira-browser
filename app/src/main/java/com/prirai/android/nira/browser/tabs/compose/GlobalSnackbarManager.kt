@@ -10,47 +10,29 @@ import kotlinx.coroutines.launch
 /**
  * Global Snackbar Manager
  *
- * Provides a centralized, action-based snackbar system that can be accessed from anywhere
- * in the application (Activity, Fragment, ViewModel, Composables).
+ * Centralized, action-based snackbar system. Appears above all UI
+ * elements regardless of which composable requested it, which is useful
+ * for destructive-action feedback (undo tab close, etc.).
  *
- * Features:
- * - Single snackbar instance across the entire app
- * - Action-based (not context-based) - appears above all UI elements
- * - Supports undo actions with callbacks
- * - Automatic timeout handling
- * - Thread-safe singleton pattern
+ * Thread-safe singleton. The host composable observes [snackbarHostState]
+ * and the Activity/Fragment lifetime scope is injected via
+ * [coroutineScope].
  *
- * Usage:
- * ```kotlin
- * // In your root Composable (e.g., BrowserActivity or TabsBottomSheetFragment)
- * val snackbarManager = GlobalSnackbarManager.getInstance()
- * val snackbarHostState = snackbarManager.snackbarHostState
- *
- * Scaffold(
- *     snackbarHost = { SnackbarHost(snackbarHostState) }
- * ) {
- *     // Your content
- * }
- *
- * // From anywhere in the app:
- * GlobalSnackbarManager.getInstance().showSnackbar(
- *     message = "Tab closed",
- *     actionLabel = "Undo",
- *     onAction = { /* undo logic */ },
- *     onDismiss = { /* confirm deletion */ }
- * )
- * ```
+ * The only call-site today is `TabViewModel.showUndoSnackbar(...)` for
+ * the tab-close undo flow. Dead helpers (`showInfo`, `dismiss()`,
+ * `clearCallbacks()`, companion `reset()`, top-level
+ * `showGlobalSnackbar` / `showUndoSnackbar` extensions) were removed
+ * - every one of them had zero callers outside this file.
  */
 class GlobalSnackbarManager private constructor() {
 
-    /**
-     * The SnackbarHostState that should be observed by the UI
-     */
+    /** SnackbarHostState the UI layer binds to a `SnackbarHost`. */
     val snackbarHostState = SnackbarHostState()
 
     /**
-     * Coroutine scope for snackbar operations
-     * Should be set by the UI layer (Activity/Fragment)
+     * Coroutine scope for snackbar operations. Must be set by the UI
+     * layer (Activity/Fragment) before the first [showUndoSnackbar]
+     * call; setting it to `null` cancels any in-flight snackbar.
      */
     var coroutineScope: CoroutineScope? = null
         set(value) {
@@ -65,20 +47,15 @@ class GlobalSnackbarManager private constructor() {
     private var currentOnDismiss: (() -> Unit)? = null
 
     /**
-     * Show a snackbar with optional action
-     *
-     * @param message The message to display
-     * @param actionLabel Optional action button label (e.g., "Undo")
-     * @param duration How long to show the snackbar
-     * @param onAction Callback when action button is clicked
-     * @param onDismiss Callback when snackbar is dismissed (timeout or swipe)
+     * Internal: show a snackbar with optional action. Kept private
+     * because the only public shape used today is [showUndoSnackbar].
      */
-    fun showSnackbar(
+    private fun showSnackbar(
         message: String,
         actionLabel: String? = null,
         duration: SnackbarDuration = SnackbarDuration.Long,
         onAction: (() -> Unit)? = null,
-        onDismiss: (() -> Unit)? = null
+        onDismiss: (() -> Unit)? = null,
     ) {
         val scope = coroutineScope ?: run {
             android.util.Log.w(TAG, "Cannot show snackbar: coroutineScope not set")
@@ -95,31 +72,24 @@ class GlobalSnackbarManager private constructor() {
                     message = message,
                     actionLabel = actionLabel,
                     duration = duration,
-                    withDismissAction = true // Show X button
+                    withDismissAction = true, // Show X button
                 )
 
                 when (result) {
                     SnackbarResult.ActionPerformed -> {
-                        // User clicked the action button (e.g., "Undo")
-                        val callback = currentOnDismiss
-                        currentOnDismiss = null // Clear before invoking to prevent re-entry
+                        currentOnDismiss = null
                         onAction?.invoke()
-                        // Don't call onDismiss since action was performed
                     }
-
                     SnackbarResult.Dismissed -> {
-                        // User dismissed or timeout occurred
                         val callback = currentOnDismiss
-                        currentOnDismiss = null // Clear before invoking
+                        currentOnDismiss = null
                         callback?.invoke()
                     }
                 }
             } catch (e: kotlinx.coroutines.CancellationException) {
-                // Job was cancelled (e.g., new snackbar shown) - don't invoke dismiss callback
                 android.util.Log.d(TAG, "Snackbar cancelled")
-                throw e // Re-throw to propagate cancellation
+                throw e
             } catch (e: Exception) {
-                // Other errors - invoke dismiss callback
                 android.util.Log.e(TAG, "Error showing snackbar", e)
                 val callback = currentOnDismiss
                 currentOnDismiss = null
@@ -131,60 +101,25 @@ class GlobalSnackbarManager private constructor() {
     }
 
     /**
-     * Show a simple informational snackbar (no action)
-     */
-    fun showInfo(message: String, duration: SnackbarDuration = SnackbarDuration.Short) {
-        showSnackbar(
-            message = message,
-            actionLabel = null,
-            duration = duration,
-            onAction = null,
-            onDismiss = null
-        )
-    }
-
-    /**
-     * Show an undo snackbar (common pattern for destructive actions)
+     * Show an undo snackbar (used for destructive actions like tab-close).
      *
-     * @param message The message to display (e.g., "Tab closed")
-     * @param onUndo Callback when user clicks "Undo"
-     * @param onConfirm Callback when action is confirmed (timeout or dismiss)
-     * @param duration How long to show before auto-confirming
+     * @param message e.g. "Tab closed"
+     * @param onUndo Callback when the user taps "Undo"
+     * @param onConfirm Callback when the snackbar is dismissed without undo
      */
     fun showUndoSnackbar(
         message: String,
         onUndo: () -> Unit,
         onConfirm: () -> Unit,
-        duration: SnackbarDuration = SnackbarDuration.Long
+        duration: SnackbarDuration = SnackbarDuration.Long,
     ) {
         showSnackbar(
             message = message,
             actionLabel = "Undo",
             duration = duration,
             onAction = onUndo,
-            onDismiss = onConfirm
+            onDismiss = onConfirm,
         )
-    }
-
-    /**
-     * Dismiss the current snackbar
-     */
-    fun dismiss() {
-        currentSnackbarJob?.cancel()
-        currentSnackbarJob = null
-        currentOnDismiss?.invoke()
-        currentOnDismiss = null
-
-        coroutineScope?.launch {
-            snackbarHostState.currentSnackbarData?.dismiss()
-        }
-    }
-
-    /**
-     * Clear any pending callbacks without showing dismiss animation
-     */
-    fun clearCallbacks() {
-        currentOnDismiss = null
     }
 
     companion object {
@@ -193,58 +128,10 @@ class GlobalSnackbarManager private constructor() {
         @Volatile
         private var instance: GlobalSnackbarManager? = null
 
-        /**
-         * Get the singleton instance
-         */
         fun getInstance(): GlobalSnackbarManager {
             return instance ?: synchronized(this) {
                 instance ?: GlobalSnackbarManager().also { instance = it }
             }
         }
-
-        /**
-         * Reset the singleton (mainly for testing)
-         */
-        @Suppress("unused")
-        fun reset() {
-            synchronized(this) {
-                instance?.dismiss()
-                instance = null
-            }
-        }
     }
-}
-
-/**
- * Extension function for easy access from ViewModels
- */
-fun showGlobalSnackbar(
-    message: String,
-    actionLabel: String? = null,
-    duration: SnackbarDuration = SnackbarDuration.Long,
-    onAction: (() -> Unit)? = null,
-    onDismiss: (() -> Unit)? = null
-) {
-    GlobalSnackbarManager.getInstance().showSnackbar(
-        message = message,
-        actionLabel = actionLabel,
-        duration = duration,
-        onAction = onAction,
-        onDismiss = onDismiss
-    )
-}
-
-/**
- * Extension function for undo pattern
- */
-fun showUndoSnackbar(
-    message: String,
-    onUndo: () -> Unit,
-    onConfirm: () -> Unit
-) {
-    GlobalSnackbarManager.getInstance().showUndoSnackbar(
-        message = message,
-        onUndo = onUndo,
-        onConfirm = onConfirm
-    )
 }

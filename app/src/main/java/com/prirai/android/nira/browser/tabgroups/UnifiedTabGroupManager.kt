@@ -507,27 +507,6 @@ class UnifiedTabGroupManager private constructor(private val context: Context) {
         return tabToGroupMap.containsKey(tabId)
     }
 
-    /**
-     * Moves a tab from one group to another
-     */
-    suspend fun moveTabBetweenGroups(
-        tabId: String,
-        fromGroupId: String,
-        toGroupId: String,
-        position: Int? = null
-    ): Boolean {
-        if (fromGroupId == toGroupId) return false
-
-        removeTabFromGroup(tabId, notifyChange = false)
-        val result = addTabToGroup(tabId, toGroupId, position)
-        
-        if (result) {
-            emitStateUpdate()
-            _groupEvents.emit(GroupEvent.TabMovedBetweenGroups(tabId, fromGroupId, toGroupId))
-        }
-        
-        return result
-    }
 
     /**
      * Merges two groups together
@@ -661,14 +640,6 @@ class UnifiedTabGroupManager private constructor(private val context: Context) {
     private fun colorToString(color: Int): String {
         return com.prirai.android.nira.theme.ColorConstants.TabGroups.getColorName(color)
     }
-
-    /**
-     * Cleanup method - call when no longer needed
-     */
-    fun cleanup() {
-        groupsCache.clear()
-        tabToGroupMap.clear()
-    }
 }
 
 /**
@@ -700,7 +671,6 @@ sealed class GroupEvent {
     data class GroupUpdated(val groupId: String) : GroupEvent()
     data class TabAddedToGroup(val tabId: String, val groupId: String) : GroupEvent()
     data class TabRemovedFromGroup(val tabId: String, val groupId: String) : GroupEvent()
-    data class TabMovedBetweenGroups(val tabId: String, val fromGroupId: String, val toGroupId: String) : GroupEvent()
     data class GroupsMerged(val sourceGroupId: String, val targetGroupId: String) : GroupEvent()
     object AllGroupsCleared : GroupEvent()
 }
