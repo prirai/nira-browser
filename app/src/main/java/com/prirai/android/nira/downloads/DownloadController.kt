@@ -14,6 +14,7 @@ import mozilla.components.concept.fetch.MutableHeaders
 import mozilla.components.concept.fetch.Request
 import mozilla.components.feature.downloads.AbstractFetchDownloadService
 import mozilla.components.feature.downloads.INTENT_EXTRA_DOWNLOAD_ID
+import mozilla.components.support.utils.DefaultDownloadFileUtils
 
 /**
  * Routes a user-initiated download to either [DownloadService] (serial,
@@ -70,8 +71,33 @@ object DownloadController {
      * `null` so the caller can start the serial path immediately and
      * let [start] probe the server asynchronously.
      */
-    fun start(context: Context, download: DownloadState) {
+    fun start(context: Context, incoming: DownloadState) {
         val app = context.applicationContext
+
+        // Guarantee a non-null `fileName` before any service touches
+        // the DownloadState. This is normally handled by MozAC's
+        // DownloadsFeature pre-dialog pipeline (via
+        // `DownloadState.getRealFilenameOrGuessed`), but Nira presents
+        // its own confirmation UI in `ComposeDownloadsScreen` and
+        // routes directly here, bypassing that step. If we hand a
+        // state with `fileName == null` to [ParallelDownloadService]
+        // or [DownloadService], MozAC's
+        // `DefaultDownloadFileWriter.handleDownloadToDefaultDirectory`
+        // early-returns null on its `fileName ?: return null` guard
+        // and the outer writer throws
+        // `IOException: Failed to create or find a document for the
+        // download: null` - the exact symptom reported on APK and ZIP
+        // downloads from F-Droid, GitHub releases, etc. The failing
+        // path is reproducible against
+        // https://f-droid.org/F-Droid.apk which serves no
+        // Content-Disposition header; the Cloudflare mirror works
+        // because it does.
+        val download = ensureFileName(app, incoming).also { resolved ->
+            if (resolved !== incoming) {
+                app.components.store.dispatch(DownloadAction.UpdateDownloadAction(resolved))
+            }
+        }
+
         val http = download.url.startsWith("http://") || download.url.startsWith("https://")
 
         if (!http) {
@@ -149,8 +175,13 @@ object DownloadController {
         )
     }
 
-    fun resume(context: Context, download: DownloadState) {
+    fun resume(context: Context, incoming: DownloadState) {
         val app = context.applicationContext
+        val download = ensureFileName(app, incoming).also { resolved ->
+            if (resolved !== incoming) {
+                app.components.store.dispatch(DownloadAction.UpdateDownloadAction(resolved))
+            }
+        }
         if (shouldUseParallel(app, download)) {
             app.sendBroadcast(
                 Intent(ACTION_RESUME).apply {
@@ -212,6 +243,31 @@ object DownloadController {
             Log.w(TAG, "Content-length probe failed for ${download.url}", t)
             null
         }
+    }
+
+    /**
+     * Resolve a non-null, usable file name for [download], mirroring
+     * `DownloadState.getRealFilenameOrGuessed` in MozAC. Returns the
+     * same instance when a name is already set, otherwise a copy with
+     * `fileName` derived from the URL path and MIME. We don't have the
+     * original `Content-Disposition` by this point (it's not persisted
+     * on `DownloadState`), so we pass null for it and let
+     * `DefaultDownloadFileUtils.guessFileName` fall through to the URL
+     * + MIME-based guess - the same fallback MozAC uses when its own
+     * pre-dialog pipeline runs with a missing header.
+     */
+    private fun ensureFileName(context: Context, download: DownloadState): DownloadState {
+        if (!download.fileName.isNullOrBlank()) return download
+        val utils = DefaultDownloadFileUtils(
+            context = context.applicationContext,
+            downloadLocation = { download.directoryPath },
+        )
+        val guessed = utils.guessFileName(
+            contentDisposition = null,
+            url = download.url,
+            mimeType = download.contentType,
+        )
+        return download.copy(fileName = guessed)
     }
 
     private fun startService(context: Context, service: Class<*>, downloadId: String) {
