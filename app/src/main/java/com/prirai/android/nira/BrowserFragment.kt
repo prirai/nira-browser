@@ -377,9 +377,10 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
                             // Intentionally no scroll behavior: the detached
                             // bottom components (tab bar + contextual bar) are
                             // pinned at the bottom and only hide / show via
-                            // UnifiedToolbar's minimal state. Page scroll
-                            // enters/exits minimal through ModernScrollBehavior
-                            // installed on the top address bar's parent.
+                            // UnifiedToolbar's minimal state. Minimal state is
+                            // toggled by the chevron button on the address bar
+                            // (post-v0.5.14 the scroll-driven toggle was
+                            // removed - see ModernScrollBehavior kdoc).
                         }
                         
                         // Apply Material 3 background with elevation
@@ -420,14 +421,16 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
                 requireContext().components.tabsUseCases.selectTab(tabId)
             }
 
-            // Minimal state is driven by two inputs:
-            //  - tap the toggle button to the right of the URL pill
-            //    (down chevron while expanded, up chevron while minimal)
-            //    -> see MinimalStateToggleIntegration below
-            //  - page scroll on the web content via ModernScrollBehavior
-            //    -> scroll past the threshold enters/exits minimal
-            // The address bar itself never scrolls off; only the aux bars
-            // (tab bar + contextual bar) animate in and out.
+            // Minimal state has two inputs:
+            //  - scrolling DOWN past the threshold (56 dp sustained)
+            //    enters minimal state - see ModernScrollBehavior.
+            //  - the chevron toggle button to the right of the URL pill
+            //    toggles both directions and is the only way to EXIT
+            //    minimal (scroll-up intentionally does not auto-exit,
+            //    which avoids the oscillation bug on sites with
+            //    internal scroll containers).
+            // The address bar itself never scrolls off; only the aux
+            // bars (tab bar + contextual bar) animate in and out.
             val minimalToggle = unifiedToolbar?.getBrowserToolbar()?.let { browserToolbar ->
                 unifiedToolbar?.let { toolbar ->
                     com.prirai.android.nira.integration

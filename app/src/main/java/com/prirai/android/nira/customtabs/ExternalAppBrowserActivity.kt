@@ -53,12 +53,18 @@ open class ExternalAppBrowserActivity : BrowserActivity() {
                 // After the session is created, update its contextId to match the PWA profile.
                 // EngineDelegateMiddleware.loadUrl() runs in a coroutine, so patching the store
                 // state here (on the main thread) is guaranteed to happen before the engine
-                // session is created — preserving cookie / login state across the PWA and tab.
+                // session is created - preserving cookie / login state across the PWA and tab.
+                //
+                // Mapping goes through BrowserProfile.contextIdFor so the default profile
+                // resolves to `null` (Gecko's default partition, shared with normal custom
+                // tabs). That is what unifies LinkedIn / etc. logins across the main
+                // browser and external VIEW intents post-v0.5.14.
                 val profileId = SafeIntent(intent).getStringExtra("PROFILE_ID")
                 if (!profileId.isNullOrEmpty() && sessionId != null) {
-                    val contextId = "profile_$profileId"
+                    val contextId = com.prirai.android.nira.browser.profile.BrowserProfile
+                        .contextIdFor(profileId, isPrivate = false)
                     val customTab = components.store.state.findCustomTab(sessionId)
-                    if (customTab != null) {
+                    if (customTab != null && customTab.contextId != contextId) {
                         components.store.dispatch(CustomTabListAction.RemoveCustomTabAction(sessionId))
                         components.store.dispatch(
                             CustomTabListAction.AddCustomTabAction(customTab.copy(contextId = contextId))

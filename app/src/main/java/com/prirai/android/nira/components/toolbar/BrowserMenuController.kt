@@ -244,8 +244,9 @@ class DefaultBrowserToolbarMenuController(
             is ToolbarMenu.Item.NewTab -> {
                 val profileManager = com.prirai.android.nira.browser.profile.ProfileManager.getInstance(activity)
                 val currentProfile = profileManager.getActiveProfile()
-                val contextId = "profile_${currentProfile.id}"
-                
+                val contextId = com.prirai.android.nira.browser.profile.BrowserProfile
+                    .contextIdFor(currentProfile, isPrivate = false)
+
                 activity.components.tabsUseCases.addTab.invoke(
                     "about:homepage",
                     selectTab = true,

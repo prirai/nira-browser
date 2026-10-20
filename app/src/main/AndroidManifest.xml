@@ -209,6 +209,15 @@
 
     </activity>
 
+    <!--
+        Note: `android:stopWithTask` is intentionally omitted. The
+        flag only applies to services started via `startService`; the
+        AC `MediaSessionFeature` only ever `bindService`s this one
+        with `BIND_AUTO_CREATE`, so stopWithTask would be a no-op.
+        Task-removal shutdown is handled explicitly in
+        `BrowserActivity.onDestroy` (stop the feature, stopService,
+        killProcess) - see the kdoc there for why.
+    -->
     <service
             android:name=".media.MediaSessionService"
             android:foregroundServiceType="mediaPlayback"

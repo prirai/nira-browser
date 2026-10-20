@@ -40,7 +40,8 @@ import mozilla.components.service.fxa.toAuthType
 /**
  * Singleton wrapper around [FxaAccountManager].
  * Handles: initialization, sign-in, sign-out, sync trigger, and account state observation.
- * Only syncs data for the default profile (contextId = null / "profile_default").
+ * Only syncs data for the default profile (contextId == null; legacy
+ * "profile_default" rows are migrated to null by DefaultProfileTabMigration).
  */
 class FxaSyncManager private constructor(private val context: Context) {
 

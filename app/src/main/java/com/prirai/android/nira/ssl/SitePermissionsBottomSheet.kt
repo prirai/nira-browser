@@ -7,11 +7,14 @@ import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
+import android.widget.Toast
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
+import androidx.appcompat.app.AlertDialog
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import com.google.android.material.button.MaterialButton
+import com.google.android.material.chip.Chip
 import com.google.android.material.materialswitch.MaterialSwitch
 import com.prirai.android.nira.R
 import com.prirai.android.nira.ext.components
@@ -19,11 +22,13 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import com.prirai.android.nira.permissions.BackgroundPlaybackAllowlist
+import com.prirai.android.nira.privacy.cookies.CookiePolicyRepository
 import mozilla.components.browser.state.selector.selectedTab
 import mozilla.components.concept.engine.permission.SitePermissions
 import mozilla.components.concept.engine.permission.SitePermissions.AutoplayStatus
 import mozilla.components.concept.engine.permission.SitePermissions.Status
 import mozilla.components.support.ktx.kotlin.getOrigin
+import mozilla.components.support.ktx.kotlin.tryGetHostFromUrl
 import mozilla.components.ui.icons.R as iconsR
 
 /**
@@ -67,10 +72,18 @@ class SitePermissionsBottomSheet : BottomSheetDialogFragment() {
         super.onViewCreated(view, savedInstanceState)
 
         val context = requireContext()
+        // Prefer an explicit origin passed via arguments (used by the
+        // Site Exceptions screen in settings) so this sheet can be
+        // reused for any origin, not just the currently selected tab.
+        // Fall back to deriving from the selected tab for the normal
+        // "lock icon -> site permissions pill" entry point.
+        val argOrigin = arguments?.getString(ARG_ORIGIN)
+        val argPrivate = arguments?.getBoolean(ARG_PRIVATE, false) ?: false
         val selectedTab = context.components.store.state.selectedTab
-        val url = selectedTab?.content?.url.orEmpty()
-        isPrivate = selectedTab?.content?.private == true
-        origin = url.getOrigin() ?: run {
+        val tabUrl = selectedTab?.content?.url.orEmpty()
+        val url = argOrigin ?: tabUrl
+        isPrivate = argOrigin?.let { argPrivate } ?: (selectedTab?.content?.private == true)
+        origin = argOrigin ?: url.getOrigin() ?: run {
             // No valid origin (chrome:// / about:); nothing to show.
             dismiss()
             return
@@ -78,6 +91,25 @@ class SitePermissionsBottomSheet : BottomSheetDialogFragment() {
 
         view.findViewById<TextView>(R.id.origin_label).text = origin
         view.findViewById<MaterialButton>(R.id.close_button).setOnClickListener { dismiss() }
+
+        // Destructive site-scoped action: wipe cookies + DOM storage for
+        // this origin and reload. Lives inside the permissions sheet so
+        // the user sees permissions and data controls together.
+        view.findViewById<MaterialButton>(R.id.clear_cookies_button).setOnClickListener {
+            showClearCookiesConfirmation(url)
+        }
+
+        // Automatic cookie retention: a status chip on the right of
+        // the "Cookie Policy" label. The chip text IS the current
+        // policy ("Never" / "6 h" / "24 h" / "7 d" / "30 d"); tapping
+        // it opens the chooser dialog. CookiePolicyWorker sweeps every
+        // ~hour and clears cookies for any origin whose window has
+        // elapsed.
+        val retentionPill = view.findViewById<Chip>(R.id.cookie_retention_pill)
+        retentionPill.setOnClickListener {
+            showCookieRetentionChooser(retentionPill)
+        }
+        refreshCookieRetentionPill(retentionPill)
 
         val listContainer = view.findViewById<LinearLayout>(R.id.permissions_list)
         val emptyHint = view.findViewById<TextView>(R.id.empty_hint)
@@ -341,10 +373,133 @@ class SitePermissionsBottomSheet : BottomSheetDialogFragment() {
         container.addView(row)
     }
 
+    /**
+     * Confirm-before-clear flow for cookies + DOM storage scoped to the
+     * current site. The confirm dialog explicitly calls out that the
+     * user may have to sign in again, matching the previous behaviour
+     * in `ConnectionInfoBottomSheet` before this action was relocated
+     * here.
+     */
+    private fun showClearCookiesConfirmation(url: String) {
+        AlertDialog.Builder(requireContext())
+            .setTitle(R.string.clear_cookies_dialog_title)
+            .setMessage(R.string.clear_cookies_dialog_message)
+            .setPositiveButton(R.string.clear_cookies_dialog_positive) { _, _ ->
+                clearCookiesForCurrentSite(url)
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
+    private fun clearCookiesForCurrentSite(url: String) {
+        if (url.isEmpty()) {
+            dismiss()
+            return
+        }
+        val context = requireContext()
+        context.components.engine.clearData(
+            data = mozilla.components.concept.engine.Engine.BrowsingData.select(
+                mozilla.components.concept.engine.Engine.BrowsingData.COOKIES,
+                mozilla.components.concept.engine.Engine.BrowsingData.DOM_STORAGES,
+            ),
+            host = url.tryGetHostFromUrl(),
+        )
+        Toast.makeText(
+            context,
+            R.string.clear_cookies_toast,
+            Toast.LENGTH_SHORT,
+        ).show()
+        context.components.sessionUseCases.reload()
+        dismiss()
+    }
+
+    /**
+     * Pop up a single-choice dialog letting the user pick a retention
+     * window for the current origin. Writing a value calls
+     * `CookiePolicyRepository.setPolicy`; picking "Never" removes the
+     * row. After writing we refresh the pill text so the user sees the
+     * new state without re-opening the sheet.
+     */
+    private fun showCookieRetentionChooser(pill: Chip) {
+        val labels = arrayOf(
+            getString(R.string.cookie_retention_option_never),
+            getString(R.string.cookie_retention_option_6h),
+            getString(R.string.cookie_retention_option_24h),
+            getString(R.string.cookie_retention_option_7d),
+            getString(R.string.cookie_retention_option_30d),
+        )
+        AlertDialog.Builder(requireContext())
+            .setTitle(R.string.cookie_retention_dialog_title)
+            .setItems(labels) { _, index ->
+                val repo = CookiePolicyRepository.getInstance(requireContext())
+                val origin = origin
+                viewLifecycleOwner.lifecycleScope.launch {
+                    withContext(Dispatchers.IO) {
+                        when (index) {
+                            0 -> repo.remove(origin)
+                            1 -> repo.setPolicy(origin, hoursUntilClear = 6)
+                            2 -> repo.setPolicy(origin, hoursUntilClear = 24)
+                            3 -> repo.setPolicy(origin, hoursUntilClear = 24 * 7)
+                            4 -> repo.setPolicy(origin, hoursUntilClear = 24 * 30)
+                        }
+                    }
+                    refreshCookieRetentionPill(pill)
+                }
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
+    /**
+     * Reads the stored [CookiePolicy] for the current origin and sets
+     * the chip text to the human-readable retention window ("Never"
+     * when no row exists, otherwise e.g. "24 h" / "7 d"). Called from
+     * [onViewCreated] on initial render and from
+     * [showCookieRetentionChooser] after the user picks a new value.
+     */
+    private fun refreshCookieRetentionPill(pill: Chip) {
+        val repo = CookiePolicyRepository.getInstance(requireContext())
+        viewLifecycleOwner.lifecycleScope.launch {
+            val current = withContext(Dispatchers.IO) { repo.get(origin) }
+            pill.text = if (current == null) {
+                getString(R.string.cookie_retention_none)
+            } else {
+                formatRetentionHours(current.hoursUntilClear)
+            }
+        }
+    }
+
+    private fun formatRetentionHours(hours: Int): String {
+        return if (hours >= 24 && hours % 24 == 0) {
+            getString(R.string.cookie_retention_days, hours / 24)
+        } else {
+            getString(R.string.cookie_retention_hours, hours)
+        }
+    }
+
     companion object {
         const val TAG = "SitePermissionsBottomSheet"
 
+        private const val ARG_ORIGIN = "arg.origin"
+        private const val ARG_PRIVATE = "arg.private"
+
         fun newInstance(): SitePermissionsBottomSheet = SitePermissionsBottomSheet()
+
+        /**
+         * Open the sheet pre-wired to an explicit [origin] (instead of
+         * deriving from `BrowserStore.selectedTab`). Used by the Site
+         * Exceptions settings screen so the sheet works outside the
+         * browser surface.
+         */
+        fun newInstanceForOrigin(
+            origin: String,
+            isPrivate: Boolean = false,
+        ): SitePermissionsBottomSheet = SitePermissionsBottomSheet().apply {
+            arguments = Bundle().apply {
+                putString(ARG_ORIGIN, origin)
+                putBoolean(ARG_PRIVATE, isPrivate)
+            }
+        }
 
         /**
          * Icon references for the permissions currently in a non-default

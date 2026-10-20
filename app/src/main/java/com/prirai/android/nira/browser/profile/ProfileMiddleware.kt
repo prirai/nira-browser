@@ -41,16 +41,27 @@ class ProfileMiddleware(
                     return
                 }
                 
-                // Tab has no contextId - assign based on private flag or profile manager
+                // Tab has no contextId - assign based on private flag or profile manager.
+                // The built-in default profile shares Gecko's default partition
+                // (contextId == null) with custom tabs so that signed-in cookies
+                // and site storage carry across external-app VIEW intents without
+                // the two getting split into separate Gecko contexts. Only named
+                // user profiles get a `profile_<id>` tag; private mode gets `"private"`.
                 val isPrivate = action.tab.content.private || profileManager.isPrivateMode()
                 val currentProfile = profileManager.getActiveProfile()
-                
-                val contextId = if (isPrivate) {
-                    "private"
-                } else {
-                    "profile_${currentProfile.id}"
+
+                val contextId: String? = when {
+                    isPrivate -> "private"
+                    currentProfile.isDefault || currentProfile.id == "default" -> null
+                    else -> "profile_${currentProfile.id}"
                 }
-                
+
+                if (contextId == null && action.tab.contextId == null) {
+                    // Nothing to overwrite; let the action through as-is.
+                    next(action)
+                    return
+                }
+
                 val updatedTab = action.tab.copy(contextId = contextId)
                 next(TabListAction.AddTabAction(updatedTab, action.select))
                 return

@@ -59,5 +59,28 @@ data class BrowserProfile(
         fun getEmojiForIndex(index: Int): String {
             return PROFILE_EMOJIS.getOrElse(index) { "👤" }
         }
+
+        /**
+         * Canonical mapping from a (profile, private-mode) tuple to the
+         * `contextId` string we persist on `TabSessionState` and
+         * `TabGroup` rows.
+         *
+         * The built-in default profile is deliberately mapped to `null`
+         * so it shares Gecko's default storage partition with custom
+         * tabs (external VIEW intents) - keeping cookies and site data
+         * aligned across the two surfaces. See
+         * [com.prirai.android.nira.browser.profile.DefaultProfileTabMigration]
+         * for the migration that cleared the previous
+         * `"profile_default"` sentinel.
+         */
+        fun contextIdFor(profileId: String, isPrivate: Boolean = false): String? = when {
+            isPrivate -> "private"
+            profileId == "default" -> null
+            else -> "profile_$profileId"
+        }
+
+        /** @see contextIdFor */
+        fun contextIdFor(profile: BrowserProfile, isPrivate: Boolean = false): String? =
+            contextIdFor(profile.id, isPrivate)
     }
 }

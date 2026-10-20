@@ -8,7 +8,6 @@ import android.view.ViewGroup
 import android.view.ViewStub
 import android.widget.ImageButton
 import android.widget.LinearLayout
-import android.widget.PopupMenu
 import android.widget.TextView
 import androidx.browser.customtabs.CustomTabsIntent
 import androidx.core.graphics.toColorInt
@@ -31,6 +30,7 @@ import mozilla.components.feature.downloads.DownloadsFeature
 import mozilla.components.feature.downloads.manager.FetchDownloadManager
 import mozilla.components.feature.media.fullscreen.MediaSessionFullscreenFeature
 import mozilla.components.feature.prompts.PromptFeature
+import mozilla.components.feature.session.PictureInPictureFeature
 import mozilla.components.feature.session.SessionFeature
 import mozilla.components.feature.session.SwipeRefreshFeature
 import mozilla.components.feature.sitepermissions.SitePermissionsFeature
@@ -60,12 +60,26 @@ class ExternalAppBrowserFragment : Fragment(), UserInteractionHandler, ActivityR
     private val contextMenuIntegration = ViewBoundFeatureWrapper<ContextMenuIntegration>()
     private val sitePermissionsFeature = ViewBoundFeatureWrapper<SitePermissionsFeature>()
     private val fullScreenMediaSessionFeature = ViewBoundFeatureWrapper<MediaSessionFullscreenFeature>()
-    
+
+    // Picture-in-picture: wired at onViewCreated once we have a session
+    // id, invoked from the Minimize button in the header.
+    private var pipFeature: PictureInPictureFeature? = null
+
     private var customTabHeader: LinearLayout? = null
     private var customTabTitle: TextView? = null
     private var customTabUrl: TextView? = null
     private var customTabMenuButton: ImageButton? = null
     private var customTabCloseButton: ImageButton? = null
+    private var customTabMinimizeButton: ImageButton? = null
+
+    // Upstream-style title/url observer state: once we have shown a
+    // real title we stay in "showing a title" mode and fall back to
+    // the URL only on subsequent URL changes with an empty title. This
+    // avoids the stuck-"Loading..." symptom where the title briefly
+    // emptied mid-load and we overwrote the just-shown real title.
+    private var observedTitle: String? = null
+    private var observedUrl: String? = null
+    private var showedTitleOnce: Boolean = false
     
     private var engineView: EngineView? = null
     
@@ -207,6 +221,16 @@ class ExternalAppBrowserFragment : Fragment(), UserInteractionHandler, ActivityR
             owner = this,
             view = binding.root
         )
+
+        // Picture-in-picture: construct eagerly so the Minimize menu
+        // entry has a target without having to lazy-create. The feature
+        // is a thin wrapper around the host Activity's enterPipMode
+        // intents and does not retain references we need to tear down.
+        pipFeature = PictureInPictureFeature(
+            store = components.store,
+            activity = requireActivity(),
+            tabId = sessionId,
+        )
         
         // Custom tab window feature - handles opening links in same window
         customTabWindowFeature.set(
@@ -309,33 +333,82 @@ class ExternalAppBrowserFragment : Fragment(), UserInteractionHandler, ActivityR
         androidx.core.view.ViewCompat.requestApplyInsets(binding.browserLayout)
     }
     
+    /**
+     * Pad the browser content so it does not render under the custom-
+     * tab header. The side on which padding is applied follows the
+     * header's mount position (top vs. bottom), which in turn follows
+     * [UserPreferences.shouldUseBottomToolbar].
+     *
+     * Previously this was a single `browserWindow.post {}` snapshot
+     * of `headerWrapper.height` taken after the first layout pass.
+     * That meant the engine view measured once at full-height, then
+     * re-measured with padding on the next frame - a visible
+     * reflow + white flash on first paint on cheap devices. Rewired
+     * to a `OnLayoutChangeListener` that keeps padding in sync any
+     * time the header's measured height changes (status-bar inset
+     * late-arriving, nav-bar inset late-arriving, rotation). The
+     * first callback fires before the first content frame so the
+     * engine view measures with the correct available area from the
+     * start.
+     */
     private fun setupCustomTabContentPadding(view: View) {
         val browserWindow = view.findViewById<ViewGroup>(R.id.browserWindow) ?: return
         val browserLayout = binding.browserLayout
-        
-        // Apply padding to browserLayout once header is measured
-        browserWindow.post {
-            val headerWrapper = browserWindow.findViewWithTag<View>("customTabHeaderWrapper")
-            if (headerWrapper != null) {
-                val headerHeight = headerWrapper.height
-                browserLayout.setPadding(0, headerHeight, 0, 0)
+        val bottom = UserPreferences(requireContext()).shouldUseBottomToolbar
+
+        // Apply a safe initial padding synchronously from the known
+        // design height (56 dp content + ~24 dp status bar guess, or
+        // nav-bar bottom guess) so the engine view measures correctly
+        // on the first pass without waiting for a post().
+        val density = resources.displayMetrics.density
+        val initialPadPx = ((56f + 24f) * density).toInt()
+        if (bottom) {
+            browserLayout.setPadding(0, 0, 0, initialPadPx)
+        } else {
+            browserLayout.setPadding(0, initialPadPx, 0, 0)
+        }
+
+        val headerWrapper = browserWindow.findViewWithTag<View>("customTabHeaderWrapper")
+            ?: return
+        headerWrapper.addOnLayoutChangeListener { v, _, _, _, _, _, _, _, _ ->
+            val h = v.height
+            if (bottom) {
+                if (browserLayout.paddingBottom != h) {
+                    browserLayout.setPadding(0, 0, 0, h)
+                }
+            } else {
+                if (browserLayout.paddingTop != h) {
+                    browserLayout.setPadding(0, h, 0, 0)
+                }
             }
         }
     }
-    
+
+    /**
+     * Mount the custom-tab header at the top (default) or the bottom
+     * of the fragment, depending on
+     * [UserPreferences.shouldUseBottomToolbar]. The system-insets
+     * listener pads the matching side (status-bar when top-mounted,
+     * navigation-bar when bottom-mounted) so the header never sits
+     * under a system bar.
+     */
     private fun addCustomHeader(view: View, tab: SessionState) {
-        // Inflate custom header
         val headerView = layoutInflater.inflate(R.layout.custom_tab_header, null)
-        
+
         // Find the main constraint layout (browserWindow), not browserLayout
         val browserWindow = view.findViewById<ViewGroup>(R.id.browserWindow) ?: return
-        
-        // Set layout params to overlay at the top with proper z-index
+
+        val bottom = UserPreferences(requireContext()).shouldUseBottomToolbar
+
         val layoutParams = androidx.constraintlayout.widget.ConstraintLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT,
-            ViewGroup.LayoutParams.WRAP_CONTENT
+            ViewGroup.LayoutParams.WRAP_CONTENT,
         ).apply {
-            topToTop = androidx.constraintlayout.widget.ConstraintLayout.LayoutParams.PARENT_ID
+            if (bottom) {
+                bottomToBottom = androidx.constraintlayout.widget.ConstraintLayout.LayoutParams.PARENT_ID
+            } else {
+                topToTop = androidx.constraintlayout.widget.ConstraintLayout.LayoutParams.PARENT_ID
+            }
             startToStart = androidx.constraintlayout.widget.ConstraintLayout.LayoutParams.PARENT_ID
             endToEnd = androidx.constraintlayout.widget.ConstraintLayout.LayoutParams.PARENT_ID
         }
@@ -343,43 +416,45 @@ class ExternalAppBrowserFragment : Fragment(), UserInteractionHandler, ActivityR
         headerView.elevation = 8f
         headerView.tag = "customTabHeaderWrapper"
         headerView.id = View.generateViewId()
-        
-        // Add header to the browserWindow (sibling to browserLayout)
+
         browserWindow.addView(headerView)
-        
-        // Setup window insets for the header wrapper
+
+        // Pad the system-bar side opposite the content. When the header
+        // is at the top we pad its top for the status bar; when at the
+        // bottom we pad its bottom for the navigation bar.
         androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(headerView) { v, insets ->
             val systemBars = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars())
-            v.setPadding(0, systemBars.top, 0, 0)
+            if (bottom) {
+                v.setPadding(0, 0, 0, systemBars.bottom)
+            } else {
+                v.setPadding(0, systemBars.top, 0, 0)
+            }
             insets
         }
-        
-        // Force apply insets
+
         headerView.post {
             androidx.core.view.ViewCompat.requestApplyInsets(headerView)
         }
-        
-        // Initialize header views
+
         customTabHeader = headerView.findViewById(R.id.customTabHeader)
         customTabTitle = headerView.findViewById(R.id.customTabTitle)
         customTabUrl = headerView.findViewById(R.id.customTabUrl)
         customTabMenuButton = headerView.findViewById(R.id.customTabMenuButton)
         customTabCloseButton = headerView.findViewById(R.id.customTabCloseButton)
-        
-        // Apply custom tab theming if provided
+        customTabMinimizeButton = headerView.findViewById(R.id.customTabMinimizeButton)
+
         applyCustomTabTheming()
-        
-        // Set up close button
+
         customTabCloseButton?.setOnClickListener {
             closeCustomTab()
         }
-        
-        // Set up menu button
         customTabMenuButton?.setOnClickListener { anchor ->
             showCustomTabMenu(anchor)
         }
-        
-        // Update initial content
+        customTabMinimizeButton?.setOnClickListener {
+            pipFeature?.enterPipModeCompat()
+        }
+
         updateHeaderDisplay(tab)
     }
     
@@ -392,64 +467,133 @@ class ExternalAppBrowserFragment : Fragment(), UserInteractionHandler, ActivityR
         }
     }
     
+    /**
+     * Keep the title + subtitle synced to the custom tab's current
+     * state. Semantics mirror upstream `CustomTabSessionTitleObserver`
+     * for the title-latch (once a real title has been shown we never
+     * blank it, only replace with URL on subsequent empty-title
+     * frames), but with one deliberate difference: before the first
+     * real title arrives we **show the display URL on the title line
+     * immediately** so the user sees something recognisable instead of
+     * a blank header while GeckoView is still fetching the page.
+     *
+     *   title line  : realTitle (when non-empty) else toDisplayUrl(url)
+     *   subtitle    : toDisplayUrl(url)  -- same stripping used by the
+     *                 main browser address bar via
+     *                 `mozilla.components.support.ktx.util.URLStringUtils`
+     *                 (removes http(s)://, leading www., trailing /).
+     *
+     * The TextView is only mutated when the underlying string actually
+     * changes to avoid redundant layout passes.
+     */
     private fun updateHeaderDisplay(tab: SessionState) {
-        // Update title
-        customTabTitle?.text = if (tab.content.title.isNotEmpty()) {
-            tab.content.title
+        val newTitle = tab.content.title
+        val newUrl = tab.content.url
+        val displayUrl = if (newUrl.isNotEmpty()) {
+            mozilla.components.support.ktx.util.URLStringUtils
+                .toDisplayUrl(newUrl).toString()
         } else {
-            "Loading..."
+            ""
         }
-        
-        // Update URL with "Powered by Nira" branding
-        customTabUrl?.text = if (tab.content.url.isNotEmpty()) {
-            val domain = try {
-                java.net.URL(tab.content.url).host
-            } catch (e: Exception) {
-                tab.content.url
+
+        if (newTitle != observedTitle) {
+            if (newTitle.isNotEmpty()) {
+                customTabTitle?.text = newTitle
+                showedTitleOnce = true
+            } else {
+                // No real title yet (or lost mid-load). Fall back to the
+                // display URL on the title line so the user is never
+                // staring at a blank header.
+                customTabTitle?.text = displayUrl
             }
-            "Powered by Nira  •  $domain"
-        } else {
-            "Powered by Nira"
+            observedTitle = newTitle
+        }
+
+        if (newUrl != observedUrl) {
+            // Keep the title in sync when it is still empty (same
+            // fallback as above - URL changed under us without the
+            // title updating).
+            if (!showedTitleOnce || newTitle.isEmpty()) {
+                customTabTitle?.text = displayUrl
+            }
+            customTabUrl?.text = displayUrl
+            observedUrl = newUrl
         }
     }
-    
+
+    /**
+     * Renders the overflow menu using the same [Material3BrowserMenu]
+     * widget as the main browser, so the two surfaces share a visual
+     * language. The item set is intentionally filtered to the
+     * custom-tab-appropriate subset:
+     *   - Find in page
+     *   - Share
+     *   - Open in Nira (promotes the current URL into a full browser
+     *     tab)
+     *
+     * Minimize is NOT in the overflow menu anymore - it is a dedicated
+     * header button so one-tap minimizing matches the chevron on the
+     * main browser.
+     *
+     * Material3BrowserMenu accepts `preferBottom`; we flip it based on
+     * whether the custom-tab header is mounted at the top or bottom so
+     * the menu always pops away from the header.
+     */
     private fun showCustomTabMenu(anchor: View) {
-        val popup = PopupMenu(requireContext(), anchor)
-        popup.menuInflater.inflate(R.menu.custom_tab_menu, popup.menu)
-        
-        popup.setOnMenuItemClickListener { item ->
-            when (item.itemId) {
-                R.id.menu_find_in_page -> {
-                    findInPageIntegration.get()?.launch()
-                    true
-                }
-                R.id.menu_share -> {
-                    shareCurrentUrl()
-                    true
-                }
-                R.id.menu_open_in_browser -> {
-                    openInBrowser()
-                    true
-                }
-                else -> false
-            }
+        val menuItems = buildList {
+            add(
+                com.prirai.android.nira.components.menu.Material3BrowserMenu.MenuItem.Action(
+                    id = "find_in_page",
+                    title = getString(R.string.browser_menu_find_in_page),
+                    iconRes = R.drawable.ic_baseline_find_in_page,
+                    onClick = { findInPageIntegration.get()?.launch() },
+                ),
+            )
+            add(
+                com.prirai.android.nira.components.menu.Material3BrowserMenu.MenuItem.Action(
+                    id = "share",
+                    title = getString(R.string.share),
+                    iconRes = R.drawable.ios_share_24,
+                    onClick = { shareCurrentUrl() },
+                ),
+            )
+            add(com.prirai.android.nira.components.menu.Material3BrowserMenu.MenuItem.Divider)
+            add(
+                com.prirai.android.nira.components.menu.Material3BrowserMenu.MenuItem.Action(
+                    id = "open_in_browser",
+                    title = getString(R.string.browser_menu_open_in_nira),
+                    iconRes = mozilla.components.ui.icons.R.drawable.mozac_ic_external_link_24,
+                    onClick = { openInBrowser() },
+                ),
+            )
         }
-        popup.show()
+
+        // When the header is mounted at the bottom we want the menu to
+        // pop upward (above the anchor); when at the top we want it to
+        // pop downward (below the anchor). Material3BrowserMenu's
+        // `preferBottom = true` means "prefer showing the menu below
+        // the anchor", so we invert the shouldUseBottomToolbar flag.
+        val headerAtBottom = UserPreferences(requireContext()).shouldUseBottomToolbar
+        com.prirai.android.nira.components.menu.Material3BrowserMenu(
+            requireContext(),
+            menuItems,
+        ).show(anchor, preferBottom = !headerAtBottom)
     }
     
     private fun applyCustomTabTheming() {
         if (toolbarColor == -1) return
-        
+
         // Apply background color to header
         customTabHeader?.setBackgroundColor(toolbarColor)
-        
+
         // Apply text colors
         customTabTitle?.setTextColor(textColor)
         customTabUrl?.setTextColor(textColor)
-        
+
         // Apply icon tints
         customTabCloseButton?.setColorFilter(textColor)
         customTabMenuButton?.setColorFilter(textColor)
+        customTabMinimizeButton?.setColorFilter(textColor)
     }
     
     private fun isColorLight(color: Int): Boolean {
@@ -465,9 +609,27 @@ class ExternalAppBrowserFragment : Fragment(), UserInteractionHandler, ActivityR
         return luminance > 0.5
     }
     
+    /**
+     * Wire the find-in-page affordance to a dynamically-inflated
+     * stub inside the fragment layout. The previous implementation
+     * attempted to cast `customTabHeader.parent` to a
+     * `BrowserToolbar` and bailed out when the cast failed (our
+     * header is a `LinearLayout`), leaving `findInPageIntegration`
+     * never set and the overflow menu entry silently no-op.
+     *
+     * [FindInPageIntegration.ToolbarInfo.toolbar] has been widened to
+     * accept a plain `View`, so we pass the header's root
+     * `LinearLayout` directly - the only thing the integration reads
+     * off `toolbar` is `height`, which every View exposes.
+     *
+     * `isToolbarPlacedAtTop` reflects our mount position so the
+     * find bar's gravity / translation choices match the toolbar's.
+     */
     private fun setupCustomFindInPage(sessionId: String) {
         val stub = view?.findViewById<ViewStub>(R.id.stubFindInPage) ?: return
-        
+        val header = customTabHeader ?: return
+        val toolbarAtTop = !UserPreferences(requireContext()).shouldUseBottomToolbar
+
         findInPageIntegration.set(
             feature = FindInPageIntegration(
                 store = requireContext().components.store,
@@ -475,16 +637,15 @@ class ExternalAppBrowserFragment : Fragment(), UserInteractionHandler, ActivityR
                 stub = stub,
                 engineView = binding.engineView,
                 toolbarInfo = FindInPageIntegration.ToolbarInfo(
-                    toolbar = customTabHeader?.parent as? mozilla.components.browser.toolbar.BrowserToolbar
-                        ?: return, // Not a BrowserToolbar, can't use
+                    toolbar = header,
                     isToolbarDynamic = false,
-                    isToolbarPlacedAtTop = true
+                    isToolbarPlacedAtTop = toolbarAtTop,
                 ),
                 prepareLayout = {},
-                restorePreviousLayout = {}
+                restorePreviousLayout = {},
             ),
             owner = this,
-            view = requireView()
+            view = requireView(),
         )
     }
     
@@ -569,6 +730,17 @@ class ExternalAppBrowserFragment : Fragment(), UserInteractionHandler, ActivityR
 
     override fun onActivityResult(requestCode: Int, data: Intent?, resultCode: Int): Boolean {
         return promptsFeature.onActivityResult(requestCode, data, resultCode)
+    }
+
+    /**
+     * Forwards the OS Picture-in-Picture lifecycle callback to
+     * [PictureInPictureFeature] so AC can update its media-session
+     * controls when the user flips in and out of PiP via the overflow
+     * menu's "Minimize" entry (or the system-provided PiP gesture).
+     */
+    override fun onPictureInPictureModeChanged(isInPictureInPictureMode: Boolean) {
+        super.onPictureInPictureModeChanged(isInPictureInPictureMode)
+        pipFeature?.onPictureInPictureModeChanged(isInPictureInPictureMode)
     }
     
     override fun onRequestPermissionsResult(

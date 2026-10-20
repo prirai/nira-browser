@@ -18,14 +18,13 @@ import kotlinx.coroutines.flow.asStateFlow
  * Flow:
  * - UI (`SitePermissionsBottomSheet`) toggles an origin on/off via
  *   [allow] / [block].
- * - `BrowserApp.initializeAfterFirstFrame` observes [origins] and
- *   installs the `nira-bg-play` built-in extension when the set is
- *   non-empty, uninstalls it when it becomes empty.
- * - The extension's content-script matcher in `assets/extensions/
- *   nira-bg-play/manifest.json` still gates by hostname (YouTube
- *   only today), so a non-YouTube origin in the set is accepted but
- *   has no visible effect. Broadening the extension's host match
- *   is a separate change.
+ * - `BrowserApp.initializeAfterFirstFrame` installs the
+ *   `nira-bg-play` built-in extension once at launch and attaches
+ *   [NiraBgPlayAllowlistBridge], which pushes the current [origins]
+ *   set to the extension's background script over a persistent
+ *   native-messaging port. The extension gates per-origin inside
+ *   its own content.js, so a cleared or empty allow-list is a
+ *   no-op without having to uninstall the extension.
  *
  * Origin format: the exact `scheme://host:port` form returned by
  * `support-ktx`'s `String.getOrigin()` extension (e.g.

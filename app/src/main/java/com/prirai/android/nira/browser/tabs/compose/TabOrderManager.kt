@@ -441,13 +441,11 @@ class TabOrderManager private constructor(
     suspend fun syncToGroupManager() {
         val current = _currentOrder.value ?: return
         
-        // Determine contextId from profileId
-        val contextId = when (current.profileId) {
-            "private" -> "private"
-            "default" -> "profile_default"
-            else -> "profile_${current.profileId}"
-        }
-        
+        // Determine contextId from profileId. Default profile shares Gecko's
+        // default partition (contextId == null) with custom tabs.
+        val contextId = com.prirai.android.nira.browser.profile.BrowserProfile
+            .contextIdFor(current.profileId, isPrivate = current.profileId == "private")
+
         current.primaryOrder.forEach { item ->
             when (item) {
                 is UnifiedTabOrder.OrderItem.SingleTab -> {
@@ -492,17 +490,17 @@ class TabOrderManager private constructor(
         // Get all groups for this profile
         val allGroups = groupManager.getAllGroups()
         
-        // Determine contextId for filtering
-        val contextId = when (profileId) {
-            "private" -> "private"
-            "default" -> "profile_default"
-            else -> "profile_$profileId"
-        }
-        
-        // Filter groups by contextId
+        // Determine contextId for filtering. Default profile shares Gecko's
+        // default partition (contextId == null) with custom tabs.
+        val contextId = com.prirai.android.nira.browser.profile.BrowserProfile
+            .contextIdFor(profileId, isPrivate = profileId == "private")
+
+        // Filter groups by contextId. The default profile is now `null`;
+        // legacy "profile_default" rows (installs mid-migration) still match.
         val profileGroups = allGroups.filter { group ->
             when {
-                profileId == "default" -> group.contextId == "profile_default" || group.contextId == null
+                profileId == "default" ->
+                    group.contextId == null || group.contextId == "profile_default"
                 else -> group.contextId == contextId
             }
         }

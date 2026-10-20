@@ -123,6 +123,11 @@ dependencies {
     implementation libs.androidx.room.runtime
     ksp libs.androidx.room.compiler
 
+    // WorkManager - periodic site-cookie-sweeper (see
+    // CookiePolicyWorker + CookiePolicyScheduler). Also used by any
+    // future long-lived background work.
+    implementation libs.androidx.work.runtime.ktx
+
     // Mozilla Components version is defined in gradle/libs.versions.toml (components, remotesettings).
     // See https://maven.mozilla.org/maven2/?prefix=maven2/org/mozilla/geckoview/ for available versions.
 
@@ -232,6 +237,10 @@ dependencies {
     implementation libs.androidx.ui.tooling.preview
     implementation libs.androidx.activity.compose
     implementation libs.androidx.lifecycle.viewmodel.compose
+    // lifecycle-process for ProcessLifecycleOwner (used by
+    // BackgroundPlaybackGuard to intercept ON_STOP and pause tabs
+    // whose origin isn't on the bg-playback allow-list).
+    implementation libs.androidx.lifecycle.process
     implementation libs.coil.compose
 
     // DataStore for preferences

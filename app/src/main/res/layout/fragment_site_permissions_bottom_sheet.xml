@@ -76,11 +76,79 @@
                  SitePermissionsBottomSheet.addPermissionRow(...). -->
         </LinearLayout>
 
+        <!--
+            Cookie Policy row: a plain label on the left, a tappable
+            status pill on the right that both displays the current
+            retention window and opens the chooser dialog when tapped.
+            Replaces the previous outlined-button + subtitle pair; the
+            pill now carries the status text itself so no separate
+            subtitle is needed.
+
+            See SitePermissionsBottomSheet.refreshCookieRetentionPill
+            for how the pill text is kept in sync with
+            CookiePolicyRepository.
+        -->
+        <LinearLayout
+            android:id="@+id/cookie_policy_row"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginTop="20dp">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/cookie_policy_label"
+                android:textAppearance="?attr/textAppearanceBodyLarge"
+                android:textColor="?attr/colorOnSurface" />
+
+            <!--
+                Material 3 Assist Chip. Corner radius comes from the
+                M3 chip shape (8 dp small-component) which is far less
+                rounded than the previous button-with-cornerRadius=18dp
+                look, matching the rest of the app's chip surfaces.
+                The chip is non-checkable (plain tap-to-open) and the
+                `app:chipIcon` slot is used for the current status's
+                history glyph.
+            -->
+            <com.google.android.material.chip.Chip
+                android:id="@+id/cookie_retention_pill"
+                style="@style/Widget.Material3.Chip.Assist"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:checkable="false"
+                android:clickable="true"
+                android:focusable="true"
+                app:chipIcon="@drawable/ic_baseline_history"
+                app:chipIconVisible="true"
+                tools:text="Never" />
+
+        </LinearLayout>
+
+        <!--
+            Clear cookies / site-data. Moved here from the Connection Info
+            sheet (post-v0.5.14) so destructive site-scoped actions live
+            next to the per-permission toggles the user is already
+            inspecting. Guarded by a confirmation dialog.
+        -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/clear_cookies_button"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="@string/clear_cookies_and_site_data"
+            android:textAllCaps="false"
+            style="@style/Widget.Material3.Button.OutlinedButton"
+            app:icon="@drawable/ic_baseline_lock_open"
+            app:iconGravity="start" />
+
         <com.google.android.material.button.MaterialButton
             android:id="@+id/close_button"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="20dp"
+            android:layout_marginTop="8dp"
             android:text="@string/close"
             style="@style/Widget.Material3.Button.TextButton" />
 

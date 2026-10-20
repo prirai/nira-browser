@@ -829,9 +829,10 @@ private fun GroupPill(
                     // Add tab button
                     IconButton(
                         onClick = {
-                            // Create new tab and add to this group
-                            val contextId = group.contextId ?: "profile_default"
-                            viewModel.createNewTabInGroup(group.groupId, contextId)
+                            // Create new tab and add to this group. Default-profile
+                            // groups now carry contextId == null (shared with
+                            // custom tabs' Gecko partition).
+                            viewModel.createNewTabInGroup(group.groupId, group.contextId)
                         },
                         modifier = Modifier.size(32.dp)
                     ) {

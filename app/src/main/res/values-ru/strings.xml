@@ -199,7 +199,6 @@
     <string name="ungrouped_tabs_header_description">Раздел несгруппированных вкладок</string>
     <string name="browser_menu_open_in_nira">Открыть в браузере Nira</string>
     <string name="browser_menu_find_in_page">Найти на странице</string>
-    <string name="powered_by_nira">Работает на Nira</string>
     <string name="skip">Пропустить</string>
     <string name="next">Далее</string>
     <string name="get_started">Начать</string>

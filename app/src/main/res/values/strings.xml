@@ -29,6 +29,10 @@
         name="key_clear_permissions"
         translatable="false"
     >clear_permissions</string>
+  <string
+        name="key_site_exceptions"
+        translatable="false"
+    >site_exceptions</string>
   <string name="key_homepage_type" translatable="false">homepage_type</string>
   <string name="key_move_navbar" translatable="false">move_navbar</string>
   <string
@@ -531,7 +535,7 @@
     <!-- Custom Tabs -->
   <string name="browser_menu_open_in_nira">Open in Nira Browser</string>
   <string name="browser_menu_find_in_page">Find in page</string>
-  <string name="powered_by_nira">Powered by Nira</string>
+  <string name="custom_tab_menu_minimize">Minimize</string>
 
   <!-- WebAuthn/FIDO2 Digital Asset Links -->
   <string name="asset_statements" translatable="false">
@@ -595,6 +599,38 @@
   <string
         name="clear_cookies_and_site_data"
     >Clear cookies and site data</string>
+  <string name="clear_cookies_dialog_title">Clear cookies and site data?</string>
+  <string
+        name="clear_cookies_dialog_message"
+    >This will clear all cookies and site data for this website. You may need to sign in again.</string>
+  <string name="clear_cookies_dialog_positive">Clear</string>
+  <string name="clear_cookies_toast">Cookies and site data cleared</string>
+  <string name="cookie_retention_button">Automatic cookie retention</string>
+  <string name="cookie_policy_label">Cookie Policy</string>
+  <string name="cookie_retention_none">Never</string>
+  <string name="cookie_retention_dialog_title">Clear cookies for this site every…</string>
+  <string name="cookie_retention_option_never">Never</string>
+  <string name="cookie_retention_option_6h">6 hours</string>
+  <string name="cookie_retention_option_24h">24 hours</string>
+  <string name="cookie_retention_option_7d">7 days</string>
+  <string name="cookie_retention_option_30d">30 days</string>
+  <string name="cookie_retention_hours">%1$d h</string>
+  <string name="cookie_retention_days">%1$d d</string>
+  <string name="site_exceptions_title">Site exceptions</string>
+  <string
+        name="site_exceptions_summary"
+    >Per-site permissions and cookie-retention policies</string>
+  <string name="site_exceptions_empty">No per-site exceptions yet</string>
+  <string name="site_exceptions_summary_count">%1$d exception(s)</string>
+  <string name="site_exceptions_clear_all">Clear all exceptions</string>
+  <string
+        name="site_exceptions_clear_all_confirm"
+    >Remove every per-site exception (permissions and cookie retention)? This cannot be undone.</string>
+  <string name="site_exceptions_remove_row">Remove exceptions for this site</string>
+  <string
+        name="site_exceptions_cookie_window"
+    >Clearing cookies every %1$s</string>
+  <string name="site_exceptions_no_overrides">No active overrides</string>
 <!-- PWA Management Strings -->
 <string name="web_app_icon">Web app icon</string>
   <string name="uninstall_web_app">Uninstall Web App</string>
@@ -692,6 +728,10 @@
     <item quantity="one">%1$d selected</item>
     <item quantity="other">%1$d selected</item>
   </plurals>
+<plurals name="site_exceptions_permissions_count">
+    <item quantity="one">%1$d permission override</item>
+    <item quantity="other">%1$d permission overrides</item>
+  </plurals>
 <!-- Firefox Sync -->
     <string name="settings_sync">Firefox Sync</string>
     <string name="settings_sync_explain">Sign in to sync history and tabs</string>
@@ -744,7 +784,9 @@
          backed by `BackgroundPlaybackAllowlist`. See SitePermissionsBottomSheet
          for rationale. -->
     <string name="permission_background_playback">Background playback</string>
-    <string name="permission_background_playback_subtitle">Keeps audio playing when the tab or app is in the background. Currently takes effect only on YouTube.</string>
+    <string
+        name="permission_background_playback_subtitle"
+    >Keeps audio playing when the tab is backgrounded, the screen is off, or the app has been swiped from recents.</string>
 
     <!-- Minimal-state toggle button (right of the URL pill in the address bar).
          Down chevron while expanded (tap to minimize); up chevron while
