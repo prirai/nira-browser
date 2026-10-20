@@ -4,15 +4,13 @@ import android.util.Log
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ProcessLifecycleOwner
-import mozilla.components.browser.state.state.SessionState
 import mozilla.components.browser.state.store.BrowserStore
 import mozilla.components.concept.engine.mediasession.MediaSession
 import mozilla.components.support.ktx.kotlin.getOrigin
 
 /**
- * Pauses tabs that are playing media when the app goes into the
- * background unless their origin is on
- * [BackgroundPlaybackAllowlist].
+ * Stops media playback on tabs whose origin is NOT on
+ * [BackgroundPlaybackAllowlist] when the app goes into the background.
  *
  * # Why not rely on `MediaSessionService.onTaskRemoved`?
  * `onTaskRemoved` only fires when the user **removes the task** from
@@ -25,16 +23,35 @@ import mozilla.components.support.ktx.kotlin.getOrigin
  * (when the last visible Activity of the process stops), which is the
  * right trigger for a per-site "may keep playing in background" gate.
  *
+ * # Why stop() and not pause()?
+ * AC's [mozilla.components.feature.media.service.MediaSessionServiceDelegate]
+ * treats `pause()` and `stop()` very differently:
+ *
+ *   - `pause()` -> `handleMediaPaused` runs: foreground service goes
+ *     away (`stopForegroundCompat(false)`) BUT the MediaSession stays
+ *     active and `updateNotification` re-emits the PAUSED-state
+ *     notification. The visible media notification remains, which
+ *     looks like a stuck playback control.
+ *   - `stop()` -> `handleMediaStopped` runs: foreground service goes
+ *     away, audio focus is abandoned, AND `updateNotification` is
+ *     called with a STOPPED state which hits the `else -> cancel()`
+ *     branch in [MediaSessionServiceDelegate.updateNotification],
+ *     clearing the notification. The MediaSession itself goes
+ *     inactive on the next `handleNoMedia` -> `shutdown()` tick.
+ *
+ * We want the second behaviour. Calling `pause()` here produced the
+ * "paused media session stays visible in the notification shade after
+ * I background the app" symptom the user reported on 2026-10-20.
+ *
  * # Semantics
  * On ON_STOP, walk `store.state.tabs` and `state.customTabs`. For every
  * tab whose `mediaSessionState.playbackState == PLAYING`:
  *   - If the tab's origin is on [BackgroundPlaybackAllowlist], leave it
  *     alone (user explicitly opted in).
- *   - Otherwise call `mediaSessionState.controller.pause()`.
+ *   - Otherwise call `mediaSessionState.controller.stop()`.
  *
  * No action on ON_START - a user tapping back into the app does not
- * magically resume the paused tabs; they tap play again, same as
- * every other browser.
+ * auto-resume the stopped tabs; they tap play again.
  *
  * # Lifecycle
  * Attached once in [BrowserApp.onCreate] via
@@ -54,7 +71,7 @@ internal class BackgroundPlaybackGuard(
         }
         if (playing.isEmpty()) return
 
-        var paused = 0
+        var stopped = 0
         playing.forEach { tab ->
             val origin = tab.content.url.getOrigin()
             if (origin != null && origin in allowed) {
@@ -62,16 +79,16 @@ internal class BackgroundPlaybackGuard(
                 return@forEach
             }
             try {
-                tab.mediaSessionState?.controller?.pause()
-                paused++
+                tab.mediaSessionState?.controller?.stop()
+                stopped++
             } catch (t: Throwable) {
-                Log.w(TAG, "pause() failed for tab ${tab.id}", t)
+                Log.w(TAG, "stop() failed for tab ${tab.id}", t)
             }
         }
-        if (paused > 0) {
+        if (stopped > 0) {
             Log.i(
                 TAG,
-                "App backgrounded; paused $paused tab(s) not on bg-playback allow-list",
+                "App backgrounded; stopped $stopped tab(s) not on bg-playback allow-list",
             )
         }
     }
