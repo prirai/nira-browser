@@ -41,6 +41,7 @@ room = "2.8.4"
 runtime = "1.12.0"
 tooling-glean-gradle = "95.0.5"
 ui = "1.12.0"
+work = "2.11.0"
 
 [libraries]
 androidx-activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "activity-compose" }
@@ -71,6 +72,7 @@ androidx-room-runtime = { group = "androidx.room", name = "room-runtime", versio
 androidx-runtime = { group = "androidx.compose.runtime", name = "runtime", version.ref = "runtime" }
 androidx-ui = { group = "androidx.compose.ui", name = "ui", version.ref = "ui" }
 androidx-ui-tooling-preview = { group = "androidx.compose.ui", name = "ui-tooling-preview", version.ref = "ui" }
+androidx-work-runtime-ktx = { group = "androidx.work", name = "work-runtime-ktx", version.ref = "work" }
 browser-engine-gecko = { group = "org.mozilla.components", name = "browser-engine-gecko", version.ref = "components" }
 browser-errorpages = { group = "org.mozilla.components", name = "browser-errorpages", version.ref = "components" }
 browser-icons = { group = "org.mozilla.components", name = "browser-icons", version.ref = "components" }

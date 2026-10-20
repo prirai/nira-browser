@@ -291,6 +291,18 @@ class BrowserApp : Application() {
             } catch (_: Exception) { /* sync unavailable */ }
         }
 
+        // Schedule the periodic per-site cookie sweeper. Idempotent -
+        // existing periodic work is KEPT, so this call is a no-op on
+        // every cold-start after the first.
+        applicationScope.launch(Dispatchers.IO) {
+            try {
+                com.prirai.android.nira.privacy.cookies.CookiePolicyScheduler
+                    .ensureScheduled(this@BrowserApp)
+            } catch (t: Throwable) {
+                logger.warn("CookiePolicyScheduler.ensureScheduled failed", t)
+            }
+        }
+
         // Collect incoming FxA tabs (e.g. Send Tab from another device)
         applicationScope.launch(Dispatchers.Main) {
             try {

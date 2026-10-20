@@ -601,6 +601,19 @@
     >This will clear all cookies and site data for this website. You may need to sign in again.</string>
   <string name="clear_cookies_dialog_positive">Clear</string>
   <string name="clear_cookies_toast">Cookies and site data cleared</string>
+  <string name="cookie_retention_button">Automatic cookie retention</string>
+  <string name="cookie_retention_none">No automatic retention</string>
+  <string
+        name="cookie_retention_configured"
+    >Clearing cookies every %1$s</string>
+  <string name="cookie_retention_dialog_title">Clear cookies for this site every…</string>
+  <string name="cookie_retention_option_never">Never</string>
+  <string name="cookie_retention_option_6h">6 hours</string>
+  <string name="cookie_retention_option_24h">24 hours</string>
+  <string name="cookie_retention_option_7d">7 days</string>
+  <string name="cookie_retention_option_30d">30 days</string>
+  <string name="cookie_retention_hours">%1$d h</string>
+  <string name="cookie_retention_days">%1$d d</string>
 <!-- PWA Management Strings -->
 <string name="web_app_icon">Web app icon</string>
   <string name="uninstall_web_app">Uninstall Web App</string>

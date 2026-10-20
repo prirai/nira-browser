@@ -77,6 +77,35 @@
         </LinearLayout>
 
         <!--
+            Automatic retention: tap to pick a window after which the
+            sweeper (CookiePolicyWorker) wipes cookies + DOM storage for
+            this origin. Independent of the manual "Clear now" button
+            below; both share the same underlying engine.clearData path.
+
+            The subtitle text is set from Kotlin based on the current
+            policy stored in CookiePolicyRepository.
+        -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/cookie_retention_button"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:text="@string/cookie_retention_button"
+            android:textAllCaps="false"
+            style="@style/Widget.Material3.Button.OutlinedButton"
+            app:icon="@drawable/ic_baseline_history"
+            app:iconGravity="start" />
+
+        <TextView
+            android:id="@+id/cookie_retention_subtitle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:textAppearance="?attr/textAppearanceBodySmall"
+            android:textColor="?attr/colorOnSurfaceVariant"
+            tools:text="No automatic retention" />
+
+        <!--
             Clear cookies / site-data. Moved here from the Connection Info
             sheet (post-v0.5.14) so destructive site-scoped actions live
             next to the per-permission toggles the user is already
@@ -86,7 +115,7 @@
             android:id="@+id/clear_cookies_button"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="20dp"
+            android:layout_marginTop="12dp"
             android:text="@string/clear_cookies_and_site_data"
             android:textAllCaps="false"
             style="@style/Widget.Material3.Button.OutlinedButton"

@@ -21,6 +21,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import com.prirai.android.nira.permissions.BackgroundPlaybackAllowlist
+import com.prirai.android.nira.privacy.cookies.CookiePolicyRepository
 import mozilla.components.browser.state.selector.selectedTab
 import mozilla.components.concept.engine.permission.SitePermissions
 import mozilla.components.concept.engine.permission.SitePermissions.AutoplayStatus
@@ -88,6 +89,16 @@ class SitePermissionsBottomSheet : BottomSheetDialogFragment() {
         view.findViewById<MaterialButton>(R.id.clear_cookies_button).setOnClickListener {
             showClearCookiesConfirmation(url)
         }
+
+        // Automatic cookie retention: let the user pick a window; the
+        // CookiePolicyWorker then sweeps every ~hour and clears cookies
+        // for any origin whose window has elapsed.
+        val retentionButton = view.findViewById<MaterialButton>(R.id.cookie_retention_button)
+        val retentionSubtitle = view.findViewById<TextView>(R.id.cookie_retention_subtitle)
+        retentionButton.setOnClickListener {
+            showCookieRetentionChooser(retentionSubtitle)
+        }
+        refreshCookieRetentionSubtitle(retentionSubtitle)
 
         val listContainer = view.findViewById<LinearLayout>(R.id.permissions_list)
         val emptyHint = view.findViewById<TextView>(R.id.empty_hint)
@@ -389,6 +400,67 @@ class SitePermissionsBottomSheet : BottomSheetDialogFragment() {
         ).show()
         context.components.sessionUseCases.reload()
         dismiss()
+    }
+
+    /**
+     * Pop up a single-choice dialog letting the user pick a retention
+     * window for the current origin. Writing a value calls
+     * `CookiePolicyRepository.setPolicy`; picking "Never" removes the
+     * row. After writing we refresh the subtitle on the retention
+     * button so the user sees the new state without re-opening the
+     * sheet.
+     */
+    private fun showCookieRetentionChooser(subtitleView: TextView) {
+        val labels = arrayOf(
+            getString(R.string.cookie_retention_option_never),
+            getString(R.string.cookie_retention_option_6h),
+            getString(R.string.cookie_retention_option_24h),
+            getString(R.string.cookie_retention_option_7d),
+            getString(R.string.cookie_retention_option_30d),
+        )
+        AlertDialog.Builder(requireContext())
+            .setTitle(R.string.cookie_retention_dialog_title)
+            .setItems(labels) { _, index ->
+                val repo = CookiePolicyRepository.getInstance(requireContext())
+                val origin = origin
+                viewLifecycleOwner.lifecycleScope.launch {
+                    withContext(Dispatchers.IO) {
+                        when (index) {
+                            0 -> repo.remove(origin)
+                            1 -> repo.setPolicy(origin, hoursUntilClear = 6)
+                            2 -> repo.setPolicy(origin, hoursUntilClear = 24)
+                            3 -> repo.setPolicy(origin, hoursUntilClear = 24 * 7)
+                            4 -> repo.setPolicy(origin, hoursUntilClear = 24 * 30)
+                        }
+                    }
+                    refreshCookieRetentionSubtitle(subtitleView)
+                }
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
+    private fun refreshCookieRetentionSubtitle(subtitleView: TextView) {
+        val repo = CookiePolicyRepository.getInstance(requireContext())
+        viewLifecycleOwner.lifecycleScope.launch {
+            val current = withContext(Dispatchers.IO) { repo.get(origin) }
+            subtitleView.text = if (current == null) {
+                getString(R.string.cookie_retention_none)
+            } else {
+                getString(
+                    R.string.cookie_retention_configured,
+                    formatRetentionHours(current.hoursUntilClear),
+                )
+            }
+        }
+    }
+
+    private fun formatRetentionHours(hours: Int): String {
+        return if (hours >= 24 && hours % 24 == 0) {
+            getString(R.string.cookie_retention_days, hours / 24)
+        } else {
+            getString(R.string.cookie_retention_hours, hours)
+        }
     }
 
     companion object {
