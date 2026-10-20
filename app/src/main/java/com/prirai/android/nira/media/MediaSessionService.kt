@@ -15,31 +15,36 @@ import mozilla.components.support.base.android.NotificationsDelegate
  * Nira's `foregroundServiceType="mediaPlayback"` service.
  *
  * # Task-removal semantics
- * On swipe-from-recents (`onTaskRemoved`) we always tear down,
- * regardless of whether the current site is on the
+ * On swipe-from-recents we always tear down, regardless of the
  * [com.prirai.android.nira.permissions.BackgroundPlaybackAllowlist].
  * The allow-list only matters during **backgrounding** (HOME, lock,
  * app-switch) which [com.prirai.android.nira.permissions.BackgroundPlaybackGuard]
  * handles on `ProcessLifecycleOwner.ON_STOP`.
  *
- * # Why override `onTaskRemoved` instead of letting
- * `AbstractMediaSessionService` do it
- * The upstream override routes to
- * `MediaSessionServiceDelegate.onTaskRemoved` which only iterates
- * `store.state.tabs` and skips `state.customTabs` (see the
- * "no need to do this for custom tabs" comment in AC 156.0.1). If
- * audio is playing in a custom tab (external VIEW intent) the
- * controller is never told to stop, the engine session is destroyed
- * mid-stream without a graceful stop, and on some OEM builds the
- * foreground `mediaPlayback` service lingers because audio focus is
- * still held.
+ * # How the teardown reaches us
+ * Two paths, both lead to full teardown:
  *
- * We proactively walk BOTH `tabs` and `customTabs`, call `stop()` on
- * every playing controller, THEN call `super.onTaskRemoved` so AC's
- * `shutdown()` runs (releases MediaSession, cancels notification,
- * stops the service). Finally we `stopForegroundCompat` + `stopSelf`
- * as a defensive final step in case AC's shutdown lost the race with
- * the engine shutdown.
+ * 1. **`android:stopWithTask="true"` in the manifest.** The system
+ *    destroys this service the moment the task is removed, even if
+ *    the service is bound (which it always is while media is
+ *    playing - `MediaSessionFeature` uses `BIND_AUTO_CREATE` and
+ *    only unbinds via `handleNoMedia`, which never fires on
+ *    task-removal because the Activity never gets a chance to run
+ *    its teardown code). Without this flag the bound-service
+ *    semantics would keep the process pinned alive.
+ *    `onDestroy` then runs the AC shutdown chain (release
+ *    `MediaSession`, cancel notification, abandon audio focus).
+ *
+ * 2. **`onTaskRemoved` override.** Still implemented defensively so
+ *    we also handle the rare path where the system DOES call
+ *    `onTaskRemoved` before destroying us. We proactively stop
+ *    media on both `tabs` and `customTabs` (upstream
+ *    `MediaSessionServiceDelegate.onTaskRemoved` skips custom
+ *    tabs - see the "no need to do this for custom tabs" comment
+ *    in AC 156.0.1), then fall through to `super`.
+ *
+ * `onDestroy` emits a diagnostic log line so field logs can
+ * distinguish which path ran.
  */
 class MediaSessionService : AbstractMediaSessionService() {
     override val crashReporter: CrashReporting? = null
@@ -84,6 +89,11 @@ class MediaSessionService : AbstractMediaSessionService() {
         } catch (t: Throwable) {
             Log.w(TAG, "defensive stopSelf failed", t)
         }
+    }
+
+    override fun onDestroy() {
+        Log.i(TAG, "onDestroy")
+        super.onDestroy()
     }
 
     companion object {

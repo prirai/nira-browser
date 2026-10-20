@@ -209,10 +209,23 @@
 
     </activity>
 
+    <!--
+        android:stopWithTask="true" ensures Android destroys this
+        service (and dispatches onDestroy -> AC shutdown chain) the
+        moment the user swipes Nira from recents, regardless of
+        whether the service is in foreground state at that instant.
+        Without this flag, some OEM builds (observed on Motorola)
+        skip onTaskRemoved entirely when the service has already
+        transitioned out of foreground (e.g. BackgroundPlaybackGuard
+        paused the only playing tab seconds earlier), leaving the
+        process pinned alive by the Gecko child-service pool. See
+        MediaSessionService class kdoc for the full rationale.
+    -->
     <service
             android:name=".media.MediaSessionService"
             android:foregroundServiceType="mediaPlayback"
             android:exported="false"
+            android:stopWithTask="true"
         />
 
     <service
