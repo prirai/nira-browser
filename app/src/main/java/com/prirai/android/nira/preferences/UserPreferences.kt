@@ -55,6 +55,18 @@ class UserPreferences(appContext: Context) : mozilla.components.support.ktx.andr
      */
     var pendingDefaultMigrationTabCount by intPreference(NIRA_TABS_PROFILE_DEFAULT_MIGRATE_TAB_COUNT, 0)
 
+    /**
+     * Set to true after [com.prirai.android.nira.permissions.NiraBgPlayController]
+     * has queried `Engine.listInstalledWebExtensions` once on this install.
+     * The scan is only needed to detect a stale `nira-bg-play` extension that
+     * might have been installed by a previous Nira build with the old
+     * always-on controller; once we have checked, we never need to pay the
+     * Gecko IPC round-trip at cold start again.
+     *
+     * Cleared only by uninstall/reinstall of the APK or `clear app data`.
+     */
+    var niraBgPlayStaleCheckDone by booleanPreference(NIRA_BG_PLAY_STALE_CHECK_DONE, false)
+
     // Preferences
     var javaScriptEnabled by booleanPreference(JAVA_SCRIPT_ENABLED, true)
     var searchEngineChoice by intPreference(SEARCH_ENGINE, 0)
@@ -301,6 +313,15 @@ class UserPreferences(appContext: Context) : mozilla.components.support.ktx.andr
             "nira.tabs.profile.defaultMigrate.v2.pendingPopup"
         const val NIRA_TABS_PROFILE_DEFAULT_MIGRATE_TAB_COUNT =
             "nira.tabs.profile.defaultMigrate.v2.tabCount"
+
+        /**
+         * One-shot flag that gates the `listInstalledWebExtensions` scan
+         * done by [com.prirai.android.nira.permissions.NiraBgPlayController]
+         * at startup to detect a stale `nira-bg-play` install from an
+         * earlier Nira build. See the pref doc for details.
+         */
+        const val NIRA_BG_PLAY_STALE_CHECK_DONE =
+            "nira.permissions.bgPlay.staleCheckDone"
 
         const val HTTPS_ONLY_OFF = 0
         const val HTTPS_ONLY_PRIVATE = 1

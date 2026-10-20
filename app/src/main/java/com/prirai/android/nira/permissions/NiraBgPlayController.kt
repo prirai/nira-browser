@@ -2,6 +2,7 @@ package com.prirai.android.nira.permissions
 
 import android.content.Context
 import android.util.Log
+import com.prirai.android.nira.preferences.UserPreferences
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -65,27 +66,58 @@ internal class NiraBgPlayController(
      * extension accordingly. Idempotent - repeat calls cancel any
      * prior collector.
      *
-     * Seeds [current] from `engine.listInstalledWebExtensions()` on
-     * launch so an extension that was installed by an earlier Nira
-     * build (prior to this reactive controller) is discovered and
-     * eligible for uninstall when the allow-list is empty. Without
-     * this step a stale install would persist in the Gecko profile
-     * across upgrades and keep running on every page load even after
-     * the user has toggled every origin off.
+     * # Cold-start cost
+     * The previous revision unconditionally called
+     * `engine.listInstalledWebExtensions()` at launch to detect a
+     * stale `nira-bg-play` install from an earlier Nira build. That
+     * is a Gecko IPC round-trip (observed ~30-50 ms on the device
+     * log), and it fires every cold start even when the user has
+     * never used background playback.
+     *
+     * We now:
+     *   - Fast path: if the allow-list is empty AND we have
+     *     previously confirmed there is no stale install (via the
+     *     [UserPreferences.niraBgPlayStaleCheckDone] pref), skip
+     *     the listInstalled call entirely and begin collecting.
+     *     With `current == null` the first collector tick fires
+     *     `reconcile(false)` which is a no-op.
+     *   - Slow path: if the allow-list is non-empty OR we have not
+     *     yet done the one-time stale check, run the listInstalled
+     *     call. After it completes we set the pref so subsequent
+     *     cold starts take the fast path.
+     *
+     * This preserves the correctness guarantee from round-4 (stale
+     * installs eventually get uninstalled) while avoiding the per-
+     * launch Gecko round-trip when there is nothing to do.
      */
     fun start() {
         observerJob?.cancel()
         observerJob = scope.launch(Dispatchers.Main) {
-            // Discover any pre-existing install before we start
-            // reacting to allow-list changes.
-            try {
-                current = findExistingInstall()
-                if (current != null) {
-                    Log.i(tag, "nira-bg-play already installed from a previous session")
+            val prefs = UserPreferences(applicationContext)
+            val allowlistEmpty = allowlist.origins.value.isEmpty()
+            val staleCheckAlreadyDone = prefs.niraBgPlayStaleCheckDone
+
+            if (allowlistEmpty && staleCheckAlreadyDone) {
+                // Fast path - no Gecko round-trip at cold start.
+                // The collector below handles any later flip of the
+                // allow-list to non-empty.
+            } else {
+                try {
+                    current = findExistingInstall()
+                    if (current != null) {
+                        Log.i(tag, "nira-bg-play already installed from a previous session")
+                    }
+                    // Mark the stale check done regardless of outcome.
+                    // Even an onError callback counts as "we tried"; a
+                    // follow-up install triggered by the user flipping
+                    // the allow-list on will succeed if the Gecko API
+                    // is reachable then.
+                    prefs.niraBgPlayStaleCheckDone = true
+                } catch (t: Throwable) {
+                    Log.w(tag, "listInstalledWebExtensions failed", t)
                 }
-            } catch (t: Throwable) {
-                Log.w(tag, "listInstalledWebExtensions failed", t)
             }
+
             allowlist.origins
                 .map { it.isNotEmpty() }
                 .distinctUntilChanged()
