@@ -224,6 +224,15 @@ class BrowserApp : Application() {
                     allowlist = allowlist,
                     scope = applicationScope,
                 ).start()
+
+                // Pause tabs that are playing media when the app goes
+                // into the background, UNLESS their origin is on the
+                // allow-list. Covers every "left the app" path -
+                // HOME button, back-to-launcher, screen-off, task
+                // switch - not just the task-removed-from-recents
+                // path handled by MediaSessionService.onTaskRemoved.
+                com.prirai.android.nira.permissions.BackgroundPlaybackGuard
+                    .install(components.store, allowlist)
             } catch (e: Exception) {
                 android.util.Log.w("NiraBgPlay", "controller setup exception", e)
             }
