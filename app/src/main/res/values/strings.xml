@@ -29,6 +29,10 @@
         name="key_clear_permissions"
         translatable="false"
     >clear_permissions</string>
+  <string
+        name="key_site_exceptions"
+        translatable="false"
+    >site_exceptions</string>
   <string name="key_homepage_type" translatable="false">homepage_type</string>
   <string name="key_move_navbar" translatable="false">move_navbar</string>
   <string
@@ -614,6 +618,21 @@
   <string name="cookie_retention_option_30d">30 days</string>
   <string name="cookie_retention_hours">%1$d h</string>
   <string name="cookie_retention_days">%1$d d</string>
+  <string name="site_exceptions_title">Site exceptions</string>
+  <string
+        name="site_exceptions_summary"
+    >Per-site permissions and cookie-retention policies</string>
+  <string name="site_exceptions_empty">No per-site exceptions yet</string>
+  <string name="site_exceptions_summary_count">%1$d exception(s)</string>
+  <string name="site_exceptions_clear_all">Clear all exceptions</string>
+  <string
+        name="site_exceptions_clear_all_confirm"
+    >Remove every per-site exception (permissions and cookie retention)? This cannot be undone.</string>
+  <string name="site_exceptions_remove_row">Remove exceptions for this site</string>
+  <string
+        name="site_exceptions_cookie_window"
+    >Clearing cookies every %1$s</string>
+  <string name="site_exceptions_no_overrides">No active overrides</string>
 <!-- PWA Management Strings -->
 <string name="web_app_icon">Web app icon</string>
   <string name="uninstall_web_app">Uninstall Web App</string>
@@ -710,6 +729,10 @@
 <plurals name="multiselect_count">
     <item quantity="one">%1$d selected</item>
     <item quantity="other">%1$d selected</item>
+  </plurals>
+<plurals name="site_exceptions_permissions_count">
+    <item quantity="one">%1$d permission override</item>
+    <item quantity="other">%1$d permission overrides</item>
   </plurals>
 <!-- Firefox Sync -->
     <string name="settings_sync">Firefox Sync</string>

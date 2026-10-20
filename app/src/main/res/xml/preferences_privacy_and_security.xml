@@ -113,6 +113,12 @@
             app:title="@string/clear_tabs"/>
 
         <Preference
+            app:key="@string/key_site_exceptions"
+            app:title="@string/site_exceptions_title"
+            app:summary="@string/site_exceptions_summary"
+            app:fragment="com.prirai.android.nira.settings.fragment.SiteExceptionsFragment" />
+
+        <Preference
             app:key="@string/key_clear_permissions"
             app:title="@string/clear_permissions"/>
 

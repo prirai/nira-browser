@@ -71,10 +71,18 @@ class SitePermissionsBottomSheet : BottomSheetDialogFragment() {
         super.onViewCreated(view, savedInstanceState)
 
         val context = requireContext()
+        // Prefer an explicit origin passed via arguments (used by the
+        // Site Exceptions screen in settings) so this sheet can be
+        // reused for any origin, not just the currently selected tab.
+        // Fall back to deriving from the selected tab for the normal
+        // "lock icon -> site permissions pill" entry point.
+        val argOrigin = arguments?.getString(ARG_ORIGIN)
+        val argPrivate = arguments?.getBoolean(ARG_PRIVATE, false) ?: false
         val selectedTab = context.components.store.state.selectedTab
-        val url = selectedTab?.content?.url.orEmpty()
-        isPrivate = selectedTab?.content?.private == true
-        origin = url.getOrigin() ?: run {
+        val tabUrl = selectedTab?.content?.url.orEmpty()
+        val url = argOrigin ?: tabUrl
+        isPrivate = argOrigin?.let { argPrivate } ?: (selectedTab?.content?.private == true)
+        origin = argOrigin ?: url.getOrigin() ?: run {
             // No valid origin (chrome:// / about:); nothing to show.
             dismiss()
             return
@@ -466,7 +474,26 @@ class SitePermissionsBottomSheet : BottomSheetDialogFragment() {
     companion object {
         const val TAG = "SitePermissionsBottomSheet"
 
+        private const val ARG_ORIGIN = "arg.origin"
+        private const val ARG_PRIVATE = "arg.private"
+
         fun newInstance(): SitePermissionsBottomSheet = SitePermissionsBottomSheet()
+
+        /**
+         * Open the sheet pre-wired to an explicit [origin] (instead of
+         * deriving from `BrowserStore.selectedTab`). Used by the Site
+         * Exceptions settings screen so the sheet works outside the
+         * browser surface.
+         */
+        fun newInstanceForOrigin(
+            origin: String,
+            isPrivate: Boolean = false,
+        ): SitePermissionsBottomSheet = SitePermissionsBottomSheet().apply {
+            arguments = Bundle().apply {
+                putString(ARG_ORIGIN, origin)
+                putBoolean(ARG_PRIVATE, isPrivate)
+            }
+        }
 
         /**
          * Icon references for the permissions currently in a non-default
