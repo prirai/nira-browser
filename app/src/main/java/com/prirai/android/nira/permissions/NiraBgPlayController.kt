@@ -64,16 +64,45 @@ internal class NiraBgPlayController(
      * Start observing the allow-list and install/uninstall the
      * extension accordingly. Idempotent - repeat calls cancel any
      * prior collector.
+     *
+     * Seeds [current] from `engine.listInstalledWebExtensions()` on
+     * launch so an extension that was installed by an earlier Nira
+     * build (prior to this reactive controller) is discovered and
+     * eligible for uninstall when the allow-list is empty. Without
+     * this step a stale install would persist in the Gecko profile
+     * across upgrades and keep running on every page load even after
+     * the user has toggled every origin off.
      */
     fun start() {
         observerJob?.cancel()
         observerJob = scope.launch(Dispatchers.Main) {
+            // Discover any pre-existing install before we start
+            // reacting to allow-list changes.
+            try {
+                current = findExistingInstall()
+                if (current != null) {
+                    Log.i(tag, "nira-bg-play already installed from a previous session")
+                }
+            } catch (t: Throwable) {
+                Log.w(tag, "listInstalledWebExtensions failed", t)
+            }
             allowlist.origins
                 .map { it.isNotEmpty() }
                 .distinctUntilChanged()
                 .collect { shouldBeInstalled ->
                     reconcile(shouldBeInstalled)
                 }
+        }
+    }
+
+    private suspend fun findExistingInstall(): WebExtension? = withContext(Dispatchers.Main) {
+        suspendCoroutine<WebExtension?> { cont ->
+            engine.listInstalledWebExtensions(
+                onSuccess = { installed ->
+                    cont.resume(installed.firstOrNull { it.id == EXTENSION_ID })
+                },
+                onError = { _ -> cont.resume(null) },
+            )
         }
     }
 

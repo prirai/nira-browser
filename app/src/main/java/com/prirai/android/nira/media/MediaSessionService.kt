@@ -1,32 +1,39 @@
 package com.prirai.android.nira.media
 
 import android.content.Intent
-import mozilla.components.browser.state.store.BrowserStore
-import mozilla.components.feature.media.service.AbstractMediaSessionService
+import android.util.Log
 import com.prirai.android.nira.ext.components
+import com.prirai.android.nira.permissions.BackgroundPlaybackAllowlist
+import mozilla.components.browser.state.state.SessionState
+import mozilla.components.browser.state.store.BrowserStore
 import mozilla.components.concept.base.crash.CrashReporting
+import mozilla.components.concept.engine.mediasession.MediaSession
+import mozilla.components.feature.media.service.AbstractMediaSessionService
 import mozilla.components.support.base.android.NotificationsDelegate
+import mozilla.components.support.ktx.kotlin.getOrigin
 
 /**
- * Nira's `foregroundServiceType="mediaPlayback"` service that keeps
- * audio alive while the app is backgrounded.
+ * Nira's `foregroundServiceType="mediaPlayback"` service.
  *
- * Upstream `AbstractMediaSessionService.onTaskRemoved` calls
+ * Upstream `AbstractMediaSessionService.onTaskRemoved` always calls
  * `delegate.onTaskRemoved()`, which iterates every tab and invokes
  * `mediaSessionState.controller.stop()` on each, then calls
- * `shutdown()` and `stopSelf()`. That means swiping the task out of
- * the recents panel kills audio playback mid-track - which is the
- * opposite of what a user who explicitly enabled background playback
- * for a site expects.
+ * `shutdown()` and `stopSelf()`. That default kills audio mid-track
+ * when the user swipes the task from recents.
  *
- * We override `onTaskRemoved` to intentionally skip the stop + shutdown
- * path. Android keeps a foreground service of type `mediaPlayback`
- * alive after the hosting task is removed; the user still has the
- * media notification controls and can stop playback from there (or
- * from the per-site Background playback toggle). The service naturally
- * ends when `handleMediaStopped` fires (end of track / user hits
- * pause in the notification), which still calls `shutdown()` via
- * `MediaSessionServiceDelegate.handleMediaStopped`.
+ * We only want to keep playback alive after task-removal when the
+ * currently playing tab's origin is on
+ * [BackgroundPlaybackAllowlist]. Otherwise we follow the upstream
+ * "stop + shutdown" path so swiping the app really does stop the
+ * audio - which is the user's expectation when they have not opted
+ * that site in to background playback.
+ *
+ * Note on scope: the allow-list check reads a snapshot of the
+ * `BrowserStore` and of `BackgroundPlaybackAllowlist.origins.value`
+ * at the moment of task-removal. If the user changes the allow-list
+ * later (while audio is already in the background) nothing changes
+ * until the next pause/stop event; the already-granted "allowed to
+ * run in background" status is preserved for the current session.
  */
 class MediaSessionService : AbstractMediaSessionService() {
     override val crashReporter: CrashReporting? = null
@@ -34,10 +41,52 @@ class MediaSessionService : AbstractMediaSessionService() {
     override val store: BrowserStore by lazy { components.store }
 
     override fun onTaskRemoved(rootIntent: Intent?) {
-        // Intentionally NOT calling super.onTaskRemoved(). Upstream
-        // stops every tab's media controller and shuts the service
-        // down; we want playback to survive the task being swiped
-        // away so the user can continue listening with the app
-        // closed. See class kdoc.
+        if (shouldKeepPlayingAfterTaskRemoved()) {
+            Log.i(TAG, "Task removed; keeping playback alive (origin on bg-playback allow-list)")
+            // Intentionally NOT calling super.onTaskRemoved() so the
+            // foreground service (and the audio) survives.
+            return
+        }
+        Log.i(TAG, "Task removed; stopping playback (no allow-listed origin playing)")
+        super.onTaskRemoved(rootIntent)
+    }
+
+    /**
+     * Walk every tab (normal + custom) and ask: is there any one with
+     * `MediaSession.PlaybackState.PLAYING` whose origin is in the
+     * [BackgroundPlaybackAllowlist]? If yes we are allowed to keep
+     * running. We check normal tabs AND custom tabs because external
+     * app VIEW intents produce custom tabs that can also hold media.
+     */
+    private fun shouldKeepPlayingAfterTaskRemoved(): Boolean {
+        val allowlist = try {
+            BackgroundPlaybackAllowlist.getInstance(applicationContext).origins.value
+        } catch (t: Throwable) {
+            Log.w(TAG, "Failed to read bg-playback allow-list", t)
+            return false
+        }
+        if (allowlist.isEmpty()) return false
+
+        val state = try {
+            store.state
+        } catch (t: Throwable) {
+            Log.w(TAG, "Failed to read BrowserStore state", t)
+            return false
+        }
+
+        val playingTabs: List<SessionState> =
+            (state.tabs + state.customTabs).filter { tab ->
+                tab.mediaSessionState?.playbackState == MediaSession.PlaybackState.PLAYING
+            }
+        if (playingTabs.isEmpty()) return false
+
+        return playingTabs.any { tab ->
+            val origin = tab.content.url.getOrigin() ?: return@any false
+            origin in allowlist
+        }
+    }
+
+    companion object {
+        private const val TAG = "NiraMediaSvc"
     }
 }
