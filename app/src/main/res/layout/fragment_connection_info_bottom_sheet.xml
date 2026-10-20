@@ -227,9 +227,7 @@
             app:cardCornerRadius="20dp"
             app:cardElevation="0dp"
             app:strokeColor="?attr/colorOutlineVariant"
-            app:strokeWidth="1dp"
-            android:visibility="gone"
-            tools:visibility="visible">
+            app:strokeWidth="1dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -269,17 +267,11 @@
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
-        <!-- Clear Cookies Button -->
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/clear_cookies_button"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/clear_cookies_and_site_data"
-            android:textAllCaps="false"
-            style="@style/Widget.Material3.Button.OutlinedButton"
-            android:layout_marginBottom="12dp"
-            app:icon="@drawable/ic_baseline_lock_open"
-            app:iconGravity="start" />
+        <!--
+            Clear cookies has moved into the Site Permissions bottom sheet
+            (reachable via the pill above). Keeping only the pill here
+            avoids duplicating a destructive action across two surfaces.
+        -->
 
     </LinearLayout>
 

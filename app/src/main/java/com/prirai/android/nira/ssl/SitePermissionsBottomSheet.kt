@@ -7,8 +7,10 @@ import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
+import android.widget.Toast
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
+import androidx.appcompat.app.AlertDialog
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import com.google.android.material.button.MaterialButton
@@ -24,6 +26,7 @@ import mozilla.components.concept.engine.permission.SitePermissions
 import mozilla.components.concept.engine.permission.SitePermissions.AutoplayStatus
 import mozilla.components.concept.engine.permission.SitePermissions.Status
 import mozilla.components.support.ktx.kotlin.getOrigin
+import mozilla.components.support.ktx.kotlin.tryGetHostFromUrl
 import mozilla.components.ui.icons.R as iconsR
 
 /**
@@ -78,6 +81,13 @@ class SitePermissionsBottomSheet : BottomSheetDialogFragment() {
 
         view.findViewById<TextView>(R.id.origin_label).text = origin
         view.findViewById<MaterialButton>(R.id.close_button).setOnClickListener { dismiss() }
+
+        // Destructive site-scoped action: wipe cookies + DOM storage for
+        // this origin and reload. Lives inside the permissions sheet so
+        // the user sees permissions and data controls together.
+        view.findViewById<MaterialButton>(R.id.clear_cookies_button).setOnClickListener {
+            showClearCookiesConfirmation(url)
+        }
 
         val listContainer = view.findViewById<LinearLayout>(R.id.permissions_list)
         val emptyHint = view.findViewById<TextView>(R.id.empty_hint)
@@ -339,6 +349,46 @@ class SitePermissionsBottomSheet : BottomSheetDialogFragment() {
             if (isChecked) allowlist.allow(origin) else allowlist.block(origin)
         }
         container.addView(row)
+    }
+
+    /**
+     * Confirm-before-clear flow for cookies + DOM storage scoped to the
+     * current site. The confirm dialog explicitly calls out that the
+     * user may have to sign in again, matching the previous behaviour
+     * in `ConnectionInfoBottomSheet` before this action was relocated
+     * here.
+     */
+    private fun showClearCookiesConfirmation(url: String) {
+        AlertDialog.Builder(requireContext())
+            .setTitle(R.string.clear_cookies_dialog_title)
+            .setMessage(R.string.clear_cookies_dialog_message)
+            .setPositiveButton(R.string.clear_cookies_dialog_positive) { _, _ ->
+                clearCookiesForCurrentSite(url)
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
+    private fun clearCookiesForCurrentSite(url: String) {
+        if (url.isEmpty()) {
+            dismiss()
+            return
+        }
+        val context = requireContext()
+        context.components.engine.clearData(
+            data = mozilla.components.concept.engine.Engine.BrowsingData.select(
+                mozilla.components.concept.engine.Engine.BrowsingData.COOKIES,
+                mozilla.components.concept.engine.Engine.BrowsingData.DOM_STORAGES,
+            ),
+            host = url.tryGetHostFromUrl(),
+        )
+        Toast.makeText(
+            context,
+            R.string.clear_cookies_toast,
+            Toast.LENGTH_SHORT,
+        ).show()
+        context.components.sessionUseCases.reload()
+        dismiss()
     }
 
     companion object {

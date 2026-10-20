@@ -9,7 +9,6 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
-import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.content.res.AppCompatResources
 import androidx.appcompat.widget.AppCompatImageView
 import androidx.lifecycle.lifecycleScope
@@ -62,7 +61,6 @@ class ConnectionInfoBottomSheet : BottomSheetDialogFragment() {
         val privacySection = view.findViewById<View>(R.id.privacy_section)
         val trackingProtectionSwitch = view.findViewById<MaterialSwitch>(R.id.tracking_protection_switch)
         val trackingProtectionSubtitle = view.findViewById<TextView>(R.id.tracking_protection_subtitle)
-        val clearCookiesButton = view.findViewById<MaterialButton>(R.id.clear_cookies_button)
         val closeButton = view.findViewById<MaterialButton>(R.id.close_button)
 
         // Check if this is an internal page
@@ -127,15 +125,11 @@ class ConnectionInfoBottomSheet : BottomSheetDialogFragment() {
                 "Not blocking trackers"
             }
 
-            // Clear cookies button
-            clearCookiesButton.setOnClickListener {
-                showClearCookiesConfirmation()
-            }
-
-            // Site permissions pill: populate the icon strip from the
-            // on-disk SitePermissions row for the current origin, show the
-            // pill only when at least one permission has a stored decision,
-            // and open the detailed sheet on tap.
+            // Site permissions pill: always visible on non-internal pages so
+            // the user can enter the detailed sheet regardless of whether the
+            // site has made any permission decisions yet. The icon strip is
+            // still populated from the stored SitePermissions row when
+            // available. Clear-cookies lives inside the detailed sheet.
             setupSitePermissionsPill(view, url, selectedTab?.content?.private == true)
         }
 
@@ -146,16 +140,19 @@ class ConnectionInfoBottomSheet : BottomSheetDialogFragment() {
     }
 
     /**
-     * Populate the "Site permissions" pill with up to five icons for
-     * permissions the site has already decided (non-NO_DECISION). Tap
-     * opens [SitePermissionsBottomSheet].
+     * Always-visible "Site permissions" entry pill. The pill opens
+     * [SitePermissionsBottomSheet] regardless of whether the current
+     * origin has any stored permission decisions, so the user can grant
+     * / revoke / clear-cookies without having to make a decision first
+     * (the "always visible" behaviour requested post-v0.5.14).
      *
-     * Hidden when:
-     * - The URL has no origin (chrome:// / about:) - handled by caller
-     *   via `isInternalPage`, but we double-check here.
-     * - The on-disk row is null OR all permissions are at defaults.
-     *   This keeps the pill from showing on sites the user hasn't
-     *   interacted with yet; see [SitePermissionsBottomSheet.summaryIcons].
+     * When the on-disk `SitePermissions` row has non-default values the
+     * pill still renders up to five summary icons as a glanceable hint
+     * of what's been decided for this site.
+     *
+     * Only hidden when the URL has no origin (chrome:// / about:). The
+     * caller already short-circuits internal pages by not calling us,
+     * but we double-check here as a defence-in-depth guard.
      */
     private fun setupSitePermissionsPill(view: View, url: String, isPrivate: Boolean) {
         val pill = view.findViewById<MaterialCardView>(R.id.site_permissions_pill)
@@ -174,6 +171,14 @@ class ConnectionInfoBottomSheet : BottomSheetDialogFragment() {
             ),
         )
 
+        pill.visibility = View.VISIBLE
+        iconsRow.removeAllViews()
+        pill.setOnClickListener {
+            SitePermissionsBottomSheet.newInstance()
+                .show(parentFragmentManager, SitePermissionsBottomSheet.TAG)
+            dismiss()
+        }
+
         viewLifecycleOwner.lifecycleScope.launch {
             val stored = withContext(Dispatchers.IO) {
                 context.components.permissionStorage.findSitePermissionsBy(
@@ -182,11 +187,8 @@ class ConnectionInfoBottomSheet : BottomSheetDialogFragment() {
                 )
             }
             val icons = SitePermissionsBottomSheet.summaryIcons(stored)
-            if (icons.isEmpty()) {
-                pill.visibility = View.GONE
-                return@launch
-            }
-            iconsRow.removeAllViews()
+            if (icons.isEmpty()) return@launch
+
             val density = resources.displayMetrics.density
             val sizePx = (18f * density).toInt()
             val marginPx = (6f * density).toInt()
@@ -199,59 +201,14 @@ class ConnectionInfoBottomSheet : BottomSheetDialogFragment() {
                 iv.imageTintList = iconTint
                 iconsRow.addView(iv)
             }
-            pill.visibility = View.VISIBLE
-            pill.setOnClickListener {
-                SitePermissionsBottomSheet.newInstance()
-                    .show(parentFragmentManager, SitePermissionsBottomSheet.TAG)
-                dismiss()
-            }
         }
     }
 
     private fun isInternalUrl(url: String): Boolean {
-        return url.startsWith("about:") || 
+        return url.startsWith("about:") ||
                url.startsWith("moz-extension://") ||
                url.startsWith("resource://") ||
                url.startsWith("chrome://")
-    }
-
-    private fun showClearCookiesConfirmation() {
-        AlertDialog.Builder(requireContext())
-            .setTitle("Clear cookies and site data?")
-            .setMessage("This will clear all cookies and site data for this website. You may need to sign in again.")
-            .setPositiveButton("Clear") { _, _ ->
-                clearCookiesForCurrentSite()
-            }
-            .setNegativeButton("Cancel", null)
-            .show()
-    }
-
-    private fun clearCookiesForCurrentSite() {
-        val context = requireContext()
-        val selectedTab = context.components.store.state.selectedTab
-        val url = selectedTab?.content?.url ?: ""
-        
-        if (url.isNotEmpty()) {
-            // Clear cookies for the current site
-            context.components.engine.clearData(
-                mozilla.components.concept.engine.Engine.BrowsingData.select(
-                    mozilla.components.concept.engine.Engine.BrowsingData.COOKIES,
-                    mozilla.components.concept.engine.Engine.BrowsingData.DOM_STORAGES
-                ),
-                host = url.tryGetHostFromUrl()
-            )
-            
-            Toast.makeText(
-                context,
-                "Cookies and site data cleared",
-                Toast.LENGTH_SHORT
-            ).show()
-            
-            // Reload the page
-            context.components.sessionUseCases.reload()
-            
-            dismiss()
-        }
     }
 
     companion object {

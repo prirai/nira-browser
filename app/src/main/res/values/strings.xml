@@ -595,6 +595,12 @@
   <string
         name="clear_cookies_and_site_data"
     >Clear cookies and site data</string>
+  <string name="clear_cookies_dialog_title">Clear cookies and site data?</string>
+  <string
+        name="clear_cookies_dialog_message"
+    >This will clear all cookies and site data for this website. You may need to sign in again.</string>
+  <string name="clear_cookies_dialog_positive">Clear</string>
+  <string name="clear_cookies_toast">Cookies and site data cleared</string>
 <!-- PWA Management Strings -->
 <string name="web_app_icon">Web app icon</string>
   <string name="uninstall_web_app">Uninstall Web App</string>

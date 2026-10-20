@@ -76,11 +76,28 @@
                  SitePermissionsBottomSheet.addPermissionRow(...). -->
         </LinearLayout>
 
+        <!--
+            Clear cookies / site-data. Moved here from the Connection Info
+            sheet (post-v0.5.14) so destructive site-scoped actions live
+            next to the per-permission toggles the user is already
+            inspecting. Guarded by a confirmation dialog.
+        -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/clear_cookies_button"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:text="@string/clear_cookies_and_site_data"
+            android:textAllCaps="false"
+            style="@style/Widget.Material3.Button.OutlinedButton"
+            app:icon="@drawable/ic_baseline_lock_open"
+            app:iconGravity="start" />
+
         <com.google.android.material.button.MaterialButton
             android:id="@+id/close_button"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="20dp"
+            android:layout_marginTop="8dp"
             android:text="@string/close"
             style="@style/Widget.Material3.Button.TextButton" />
 
