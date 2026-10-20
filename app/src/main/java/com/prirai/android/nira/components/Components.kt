@@ -507,7 +507,15 @@ open class Components(private val applicationContext: Context) {
         // registration map.
         webNotificationFeature
 
-        MediaSessionFeature(applicationContext, MediaSessionService::class.java, store).start()
+        // Keep the MediaSessionFeature reachable so callers can stop it
+        // explicitly on task-removal. AC's feature holds the bound-
+        // service connection to MediaSessionService internally - once
+        // started the only way to make that service exit is via
+        // feature.stop() (cancels the observing scope) PLUS
+        // handleNoMedia (unbinds). See BrowserActivity.onDestroy for
+        // the shutdown hook that triggers both when the user closes
+        // the task.
+        mediaSessionFeature.start()
 
         // Start the sleeping-tabs manager. It observes tab selection and
         // periodically suspends idle non-selected tabs.
@@ -546,6 +554,29 @@ open class Components(private val applicationContext: Context) {
 
     val sleepingTabsManager by lazy {
         com.prirai.android.nira.browser.tabs.sleep.SleepingTabsManager.getInstance(applicationContext)
+    }
+
+    /**
+     * Retained reference to the media-session feature so
+     * `BrowserActivity.onDestroy` can call `stop()` on task-removal.
+     *
+     * AC's `MediaSessionFeature.start()` binds `MediaSessionService`
+     * with `BIND_AUTO_CREATE` and holds the connection privately
+     * inside the feature. For a service that is bound-only (no
+     * explicit `startService`), `android:stopWithTask` in the
+     * manifest has no effect - Android only honors it for started
+     * services. The only way to make the service go away when the
+     * user swipes Nira from recents is to call `.stop()` on this
+     * feature (which cancels the state-observing scope so the next
+     * `showMediaStatus(null)` is the only path that would run) and
+     * then explicitly `stopService` + unbind.
+     *
+     * See `BrowserActivity.onDestroy` for the task-removal shutdown
+     * hook. Constructed lazily so the service bind happens only once
+     * the feature is actually started.
+     */
+    val mediaSessionFeature: MediaSessionFeature by lazy {
+        MediaSessionFeature(applicationContext, MediaSessionService::class.java, store)
     }
 
     val sessionUseCases by lazy { SessionUseCases(store) }

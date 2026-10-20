@@ -257,6 +257,54 @@ open class BrowserActivity : LocaleAwareAppCompatActivity(), ComponentCallbacks2
         updateToolbarAndStatusBarTheme()
     }
 
+    /**
+     * Detect task-removal shutdown and tear everything down so the
+     * process can actually exit.
+     *
+     * `isFinishing && isTaskRoot` triggers in exactly two cases:
+     *   - user swipes Nira from recents (whole task is destroyed)
+     *   - user hits the back-key on the root browser activity until
+     *     it finishes
+     *
+     * `isChangingConfigurations` is excluded so a rotation does not
+     * trip the shutdown. In those cases we:
+     *   1. Stop the retained `MediaSessionFeature`. This cancels the
+     *      store-observing scope so no further `showMediaStatus`
+     *      calls can re-bind the service.
+     *   2. Explicitly `stopService(MediaSessionService)` so AC's
+     *      bound-service connection is torn down. Without this the
+     *      service lingers because AC's `handleNoMedia` path only
+     *      triggers when `findActiveMediaTab()` returns null, which
+     *      doesn't happen on task-removal (the tab is still in the
+     *      store, just no longer visible).
+     *   3. `Process.killProcess(myPid())` as a final defensive step.
+     *      Without this the Gecko child services (tab_*, gpu_*,
+     *      utility_*, crashhelper) keep the UID group alive via
+     *      their own bindings. Explicitly killing our pid cascades
+     *      through those children.
+     */
+    override fun onDestroy() {
+        val taskGone = isFinishing && isTaskRoot && !isChangingConfigurations
+        super.onDestroy()
+        if (!taskGone) return
+
+        try {
+            components.mediaSessionFeature.stop()
+        } catch (t: Throwable) {
+            android.util.Log.w(TAG, "mediaSessionFeature.stop() failed", t)
+        }
+        try {
+            stopService(
+                Intent(this, com.prirai.android.nira.media.MediaSessionService::class.java),
+            )
+        } catch (t: Throwable) {
+            android.util.Log.w(TAG, "stopService(MediaSessionService) failed", t)
+        }
+
+        android.util.Log.i(TAG, "Task removed; killing process to force Gecko child-service teardown")
+        android.os.Process.killProcess(android.os.Process.myPid())
+    }
+
     override fun onTrimMemory(level: Int) {
         super.onTrimMemory(level)
 
@@ -696,5 +744,6 @@ open class BrowserActivity : LocaleAwareAppCompatActivity(), ComponentCallbacks2
 
     companion object {
         const val OPEN_TO_BROWSER = "open_to_browser"
+        private const val TAG = "NiraBrowserAct"
     }
 }
