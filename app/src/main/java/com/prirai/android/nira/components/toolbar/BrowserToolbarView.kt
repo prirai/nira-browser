@@ -256,11 +256,12 @@ class BrowserToolbarView(
      * Pins the address bar to a fixed position - it never scrolls off-screen.
      *
      * The address bar is always the user's one guaranteed anchor to tap into
-     * search, see the URL, and swipe to toggle minimal state. Previously this
-     * installed AC's `EngineViewScrollingGesturesBehavior` which translated
-     * the whole toolbar off-screen 1:1 with page scroll; that is intentionally
-     * removed so page scrolling now only toggles the auxiliary bars via the
-     * UnifiedToolbar's minimal state (see ModernScrollBehavior).
+     * search, see the URL, and tap the chevron to toggle minimal state.
+     * Previously this installed AC's `EngineViewScrollingGesturesBehavior`
+     * which translated the whole toolbar off-screen 1:1 with page scroll;
+     * that was removed in favour of a pinned address bar. Post-v0.5.14 the
+     * scroll-driven minimal toggle was also removed - the chevron button is
+     * the only remaining input (see ModernScrollBehavior kdoc).
      *
      * The @param is kept for source compatibility with existing call sites
      * but no longer influences behavior.
