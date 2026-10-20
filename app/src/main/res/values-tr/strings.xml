@@ -199,7 +199,6 @@
     <string name="ungrouped_tabs_header_description">Gruplandırılmamış sekmeler bölümü</string>
     <string name="browser_menu_open_in_nira">Nira Tarayıcı\'da aç</string>
     <string name="browser_menu_find_in_page">Sayfada bul</string>
-    <string name="powered_by_nira">Nira tarafından desteklenmektedir</string>
     <string name="skip">Atla</string>
     <string name="next">İleri</string>
     <string name="get_started">Başla</string>

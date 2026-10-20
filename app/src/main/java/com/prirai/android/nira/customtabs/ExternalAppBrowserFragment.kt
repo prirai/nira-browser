@@ -8,7 +8,6 @@ import android.view.ViewGroup
 import android.view.ViewStub
 import android.widget.ImageButton
 import android.widget.LinearLayout
-import android.widget.PopupMenu
 import android.widget.TextView
 import androidx.browser.customtabs.CustomTabsIntent
 import androidx.core.graphics.toColorInt
@@ -31,6 +30,7 @@ import mozilla.components.feature.downloads.DownloadsFeature
 import mozilla.components.feature.downloads.manager.FetchDownloadManager
 import mozilla.components.feature.media.fullscreen.MediaSessionFullscreenFeature
 import mozilla.components.feature.prompts.PromptFeature
+import mozilla.components.feature.session.PictureInPictureFeature
 import mozilla.components.feature.session.SessionFeature
 import mozilla.components.feature.session.SwipeRefreshFeature
 import mozilla.components.feature.sitepermissions.SitePermissionsFeature
@@ -60,7 +60,11 @@ class ExternalAppBrowserFragment : Fragment(), UserInteractionHandler, ActivityR
     private val contextMenuIntegration = ViewBoundFeatureWrapper<ContextMenuIntegration>()
     private val sitePermissionsFeature = ViewBoundFeatureWrapper<SitePermissionsFeature>()
     private val fullScreenMediaSessionFeature = ViewBoundFeatureWrapper<MediaSessionFullscreenFeature>()
-    
+
+    // Picture-in-picture: wired at onViewCreated once we have a session
+    // id, invoked from the overflow menu's "Minimize" action.
+    private var pipFeature: PictureInPictureFeature? = null
+
     private var customTabHeader: LinearLayout? = null
     private var customTabTitle: TextView? = null
     private var customTabUrl: TextView? = null
@@ -206,6 +210,16 @@ class ExternalAppBrowserFragment : Fragment(), UserInteractionHandler, ActivityR
             ),
             owner = this,
             view = binding.root
+        )
+
+        // Picture-in-picture: construct eagerly so the Minimize menu
+        // entry has a target without having to lazy-create. The feature
+        // is a thin wrapper around the host Activity's enterPipMode
+        // intents and does not retain references we need to tear down.
+        pipFeature = PictureInPictureFeature(
+            store = components.store,
+            activity = requireActivity(),
+            tabId = sessionId,
         )
         
         // Custom tab window feature - handles opening links in same window
@@ -397,44 +411,87 @@ class ExternalAppBrowserFragment : Fragment(), UserInteractionHandler, ActivityR
         customTabTitle?.text = if (tab.content.title.isNotEmpty()) {
             tab.content.title
         } else {
-            "Loading..."
+            getString(R.string.loading)
         }
-        
-        // Update URL with "Powered by Nira" branding
+
+        // Subtitle: just the origin / host. The old "Powered by Nira"
+        // branding was removed post-v0.5.14 - the user already knows
+        // which browser they're in, and the real domain is more useful
+        // for trust decisions on an unfamiliar page.
         customTabUrl?.text = if (tab.content.url.isNotEmpty()) {
-            val domain = try {
+            try {
                 java.net.URL(tab.content.url).host
             } catch (e: Exception) {
                 tab.content.url
             }
-            "Powered by Nira  •  $domain"
         } else {
-            "Powered by Nira"
+            ""
         }
     }
-    
+
+    /**
+     * Renders the overflow menu using the same [Material3BrowserMenu]
+     * widget as the main browser, so the two surfaces share a visual
+     * language. The item set is intentionally filtered to the
+     * custom-tab-appropriate subset:
+     *   - Find in page
+     *   - Share
+     *   - Minimize (picture-in-picture)
+     *   - Open in Nira (promotes the current URL into a full browser
+     *     tab)
+     *
+     * Material3BrowserMenu accepts a `preferBottom = false` flag so the
+     * menu appears below the top-mounted anchor; if we later move the
+     * custom-tab toolbar to the bottom (see
+     * UserPreferences.toolbarPosition), the same call-site keeps
+     * working - the widget flips its anchor logic automatically.
+     */
     private fun showCustomTabMenu(anchor: View) {
-        val popup = PopupMenu(requireContext(), anchor)
-        popup.menuInflater.inflate(R.menu.custom_tab_menu, popup.menu)
-        
-        popup.setOnMenuItemClickListener { item ->
-            when (item.itemId) {
-                R.id.menu_find_in_page -> {
-                    findInPageIntegration.get()?.launch()
-                    true
-                }
-                R.id.menu_share -> {
-                    shareCurrentUrl()
-                    true
-                }
-                R.id.menu_open_in_browser -> {
-                    openInBrowser()
-                    true
-                }
-                else -> false
-            }
+        val menuItems = buildList {
+            add(
+                com.prirai.android.nira.components.menu.Material3BrowserMenu.MenuItem.Action(
+                    id = "find_in_page",
+                    title = getString(R.string.browser_menu_find_in_page),
+                    iconRes = R.drawable.ic_baseline_find_in_page,
+                    onClick = { findInPageIntegration.get()?.launch() },
+                ),
+            )
+            add(
+                com.prirai.android.nira.components.menu.Material3BrowserMenu.MenuItem.Action(
+                    id = "share",
+                    title = getString(R.string.share),
+                    iconRes = R.drawable.ios_share_24,
+                    onClick = { shareCurrentUrl() },
+                ),
+            )
+            // Minimize = enter picture-in-picture. The feature is only
+            // instantiated once we have a sessionId, so if the user
+            // taps the menu before the session is live we silently
+            // skip rather than crash on a null pipFeature.
+            add(
+                com.prirai.android.nira.components.menu.Material3BrowserMenu.MenuItem.Action(
+                    id = "minimize",
+                    title = getString(R.string.custom_tab_menu_minimize),
+                    iconRes = mozilla.components.ui.icons.R.drawable.mozac_ic_chevron_down_24,
+                    onClick = { pipFeature?.enterPipModeCompat() },
+                ),
+            )
+            add(com.prirai.android.nira.components.menu.Material3BrowserMenu.MenuItem.Divider)
+            add(
+                com.prirai.android.nira.components.menu.Material3BrowserMenu.MenuItem.Action(
+                    id = "open_in_browser",
+                    title = getString(R.string.browser_menu_open_in_nira),
+                    iconRes = mozilla.components.ui.icons.R.drawable.mozac_ic_external_link_24,
+                    onClick = { openInBrowser() },
+                ),
+            )
         }
-        popup.show()
+
+        val preferBottom = UserPreferences(requireContext()).shouldUseBottomToolbar
+        com.prirai.android.nira.components.menu.Material3BrowserMenu(
+            requireContext(),
+            menuItems,
+        ).show(anchor, preferBottom = preferBottom)
     }
     
     private fun applyCustomTabTheming() {
@@ -569,6 +626,17 @@ class ExternalAppBrowserFragment : Fragment(), UserInteractionHandler, ActivityR
 
     override fun onActivityResult(requestCode: Int, data: Intent?, resultCode: Int): Boolean {
         return promptsFeature.onActivityResult(requestCode, data, resultCode)
+    }
+
+    /**
+     * Forwards the OS Picture-in-Picture lifecycle callback to
+     * [PictureInPictureFeature] so AC can update its media-session
+     * controls when the user flips in and out of PiP via the overflow
+     * menu's "Minimize" entry (or the system-provided PiP gesture).
+     */
+    override fun onPictureInPictureModeChanged(isInPictureInPictureMode: Boolean) {
+        super.onPictureInPictureModeChanged(isInPictureInPictureMode)
+        pipFeature?.onPictureInPictureModeChanged(isInPictureInPictureMode)
     }
     
     override fun onRequestPermissionsResult(

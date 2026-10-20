@@ -48,12 +48,16 @@
             android:maxLines="1"
             android:ellipsize="end" />
 
-        <!-- URL with "Powered by Nira" -->
+        <!--
+            URL / domain subtitle. Populated from Kotlin in
+            updateHeaderDisplay(). The "Powered by Nira" subtitle was
+            removed post-v0.5.14 - the branding was superfluous and ate
+            screen real estate better spent on the real URL.
+        -->
         <TextView
             android:id="@+id/customTabUrl"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/powered_by_nira"
             android:textSize="12sp"
             android:textColor="?android:attr/textColorSecondary"
             android:maxLines="1"
