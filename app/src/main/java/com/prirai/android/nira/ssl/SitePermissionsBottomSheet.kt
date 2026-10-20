@@ -14,6 +14,7 @@ import androidx.appcompat.app.AlertDialog
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import com.google.android.material.button.MaterialButton
+import com.google.android.material.chip.Chip
 import com.google.android.material.materialswitch.MaterialSwitch
 import com.prirai.android.nira.R
 import com.prirai.android.nira.ext.components
@@ -98,13 +99,13 @@ class SitePermissionsBottomSheet : BottomSheetDialogFragment() {
             showClearCookiesConfirmation(url)
         }
 
-        // Automatic cookie retention: a status pill on the right of
-        // the "Cookie Policy" label. The pill text IS the current
+        // Automatic cookie retention: a status chip on the right of
+        // the "Cookie Policy" label. The chip text IS the current
         // policy ("Never" / "6 h" / "24 h" / "7 d" / "30 d"); tapping
         // it opens the chooser dialog. CookiePolicyWorker sweeps every
         // ~hour and clears cookies for any origin whose window has
         // elapsed.
-        val retentionPill = view.findViewById<MaterialButton>(R.id.cookie_retention_pill)
+        val retentionPill = view.findViewById<Chip>(R.id.cookie_retention_pill)
         retentionPill.setOnClickListener {
             showCookieRetentionChooser(retentionPill)
         }
@@ -419,7 +420,7 @@ class SitePermissionsBottomSheet : BottomSheetDialogFragment() {
      * row. After writing we refresh the pill text so the user sees the
      * new state without re-opening the sheet.
      */
-    private fun showCookieRetentionChooser(pill: MaterialButton) {
+    private fun showCookieRetentionChooser(pill: Chip) {
         val labels = arrayOf(
             getString(R.string.cookie_retention_option_never),
             getString(R.string.cookie_retention_option_6h),
@@ -451,12 +452,12 @@ class SitePermissionsBottomSheet : BottomSheetDialogFragment() {
 
     /**
      * Reads the stored [CookiePolicy] for the current origin and sets
-     * the pill text to the human-readable retention window ("Never"
+     * the chip text to the human-readable retention window ("Never"
      * when no row exists, otherwise e.g. "24 h" / "7 d"). Called from
      * [onViewCreated] on initial render and from
      * [showCookieRetentionChooser] after the user picks a new value.
      */
-    private fun refreshCookieRetentionPill(pill: MaterialButton) {
+    private fun refreshCookieRetentionPill(pill: Chip) {
         val repo = CookiePolicyRepository.getInstance(requireContext())
         viewLifecycleOwner.lifecycleScope.launch {
             val current = withContext(Dispatchers.IO) { repo.get(origin) }

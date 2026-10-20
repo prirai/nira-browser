@@ -338,20 +338,48 @@ class ExternalAppBrowserFragment : Fragment(), UserInteractionHandler, ActivityR
      * tab header. The side on which padding is applied follows the
      * header's mount position (top vs. bottom), which in turn follows
      * [UserPreferences.shouldUseBottomToolbar].
+     *
+     * Previously this was a single `browserWindow.post {}` snapshot
+     * of `headerWrapper.height` taken after the first layout pass.
+     * That meant the engine view measured once at full-height, then
+     * re-measured with padding on the next frame - a visible
+     * reflow + white flash on first paint on cheap devices. Rewired
+     * to a `OnLayoutChangeListener` that keeps padding in sync any
+     * time the header's measured height changes (status-bar inset
+     * late-arriving, nav-bar inset late-arriving, rotation). The
+     * first callback fires before the first content frame so the
+     * engine view measures with the correct available area from the
+     * start.
      */
     private fun setupCustomTabContentPadding(view: View) {
         val browserWindow = view.findViewById<ViewGroup>(R.id.browserWindow) ?: return
         val browserLayout = binding.browserLayout
+        val bottom = UserPreferences(requireContext()).shouldUseBottomToolbar
 
-        browserWindow.post {
-            val headerWrapper = browserWindow.findViewWithTag<View>("customTabHeaderWrapper")
-                ?: return@post
-            val headerHeight = headerWrapper.height
-            val bottom = UserPreferences(requireContext()).shouldUseBottomToolbar
+        // Apply a safe initial padding synchronously from the known
+        // design height (56 dp content + ~24 dp status bar guess, or
+        // nav-bar bottom guess) so the engine view measures correctly
+        // on the first pass without waiting for a post().
+        val density = resources.displayMetrics.density
+        val initialPadPx = ((56f + 24f) * density).toInt()
+        if (bottom) {
+            browserLayout.setPadding(0, 0, 0, initialPadPx)
+        } else {
+            browserLayout.setPadding(0, initialPadPx, 0, 0)
+        }
+
+        val headerWrapper = browserWindow.findViewWithTag<View>("customTabHeaderWrapper")
+            ?: return
+        headerWrapper.addOnLayoutChangeListener { v, _, _, _, _, _, _, _, _ ->
+            val h = v.height
             if (bottom) {
-                browserLayout.setPadding(0, 0, 0, headerHeight)
+                if (browserLayout.paddingBottom != h) {
+                    browserLayout.setPadding(0, 0, 0, h)
+                }
             } else {
-                browserLayout.setPadding(0, headerHeight, 0, 0)
+                if (browserLayout.paddingTop != h) {
+                    browserLayout.setPadding(0, h, 0, 0)
+                }
             }
         }
     }
@@ -440,54 +468,55 @@ class ExternalAppBrowserFragment : Fragment(), UserInteractionHandler, ActivityR
     }
     
     /**
-     * Mirror of upstream `CustomTabSessionTitleObserver` applied to
-     * our custom header's two labels. Rules:
-     *   - When a non-empty title arrives, show it as the title line and
-     *     latch `showedTitleOnce`.
-     *   - When an empty title arrives but we have shown one before,
-     *     fall back to the URL as the title line (to avoid the layout
-     *     bouncing). This is the key difference from the previous
-     *     implementation, which overwrote with "Loading..." every time
-     *     the title momentarily emptied and left the user stuck on
-     *     that string when the next non-empty title update was debounced
-     *     by `flow.ifAnyChanged` elsewhere.
-     *   - If we have never shown a title, keep the title line blank
-     *     (we show the real URL/origin on the subtitle line, which is
-     *     enough signal while the page starts loading).
-     *   - The subtitle line is always the parsed host.
+     * Keep the title + subtitle synced to the custom tab's current
+     * state. Semantics mirror upstream `CustomTabSessionTitleObserver`
+     * for the title-latch (once a real title has been shown we never
+     * blank it, only replace with URL on subsequent empty-title
+     * frames), but with one deliberate difference: before the first
+     * real title arrives we **show the display URL on the title line
+     * immediately** so the user sees something recognisable instead of
+     * a blank header while GeckoView is still fetching the page.
      *
-     * Only mutate the TextView when the underlying string actually
+     *   title line  : realTitle (when non-empty) else toDisplayUrl(url)
+     *   subtitle    : toDisplayUrl(url)  -- same stripping used by the
+     *                 main browser address bar via
+     *                 `mozilla.components.support.ktx.util.URLStringUtils`
+     *                 (removes http(s)://, leading www., trailing /).
+     *
+     * The TextView is only mutated when the underlying string actually
      * changes to avoid redundant layout passes.
      */
     private fun updateHeaderDisplay(tab: SessionState) {
         val newTitle = tab.content.title
         val newUrl = tab.content.url
+        val displayUrl = if (newUrl.isNotEmpty()) {
+            mozilla.components.support.ktx.util.URLStringUtils
+                .toDisplayUrl(newUrl).toString()
+        } else {
+            ""
+        }
 
         if (newTitle != observedTitle) {
             if (newTitle.isNotEmpty()) {
                 customTabTitle?.text = newTitle
                 showedTitleOnce = true
-            } else if (showedTitleOnce) {
-                customTabTitle?.text = newUrl
+            } else {
+                // No real title yet (or lost mid-load). Fall back to the
+                // display URL on the title line so the user is never
+                // staring at a blank header.
+                customTabTitle?.text = displayUrl
             }
             observedTitle = newTitle
         }
 
         if (newUrl != observedUrl) {
-            // If we already showed a title and the title is still empty,
-            // keep the title line in sync with the URL fallback.
-            if (showedTitleOnce && newTitle.isEmpty()) {
-                customTabTitle?.text = newUrl
+            // Keep the title in sync when it is still empty (same
+            // fallback as above - URL changed under us without the
+            // title updating).
+            if (!showedTitleOnce || newTitle.isEmpty()) {
+                customTabTitle?.text = displayUrl
             }
-            customTabUrl?.text = if (newUrl.isNotEmpty()) {
-                try {
-                    java.net.URL(newUrl).host
-                } catch (e: Exception) {
-                    newUrl
-                }
-            } else {
-                ""
-            }
+            customTabUrl?.text = displayUrl
             observedUrl = newUrl
         }
     }

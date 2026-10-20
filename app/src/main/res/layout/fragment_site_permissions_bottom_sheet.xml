@@ -104,17 +104,25 @@
                 android:textAppearance="?attr/textAppearanceBodyLarge"
                 android:textColor="?attr/colorOnSurface" />
 
-            <com.google.android.material.button.MaterialButton
+            <!--
+                Material 3 Assist Chip. Corner radius comes from the
+                M3 chip shape (8 dp small-component) which is far less
+                rounded than the previous button-with-cornerRadius=18dp
+                look, matching the rest of the app's chip surfaces.
+                The chip is non-checkable (plain tap-to-open) and the
+                `app:chipIcon` slot is used for the current status's
+                history glyph.
+            -->
+            <com.google.android.material.chip.Chip
                 android:id="@+id/cookie_retention_pill"
-                style="@style/Widget.Material3.Button.TonalButton"
+                style="@style/Widget.Material3.Chip.Assist"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:minHeight="36dp"
-                android:paddingVertical="4dp"
-                android:paddingStart="16dp"
-                android:paddingEnd="16dp"
-                android:textAllCaps="false"
-                app:cornerRadius="18dp"
+                android:checkable="false"
+                android:clickable="true"
+                android:focusable="true"
+                app:chipIcon="@drawable/ic_baseline_history"
+                app:chipIconVisible="true"
                 tools:text="Never" />
 
         </LinearLayout>

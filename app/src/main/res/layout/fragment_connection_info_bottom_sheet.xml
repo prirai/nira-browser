@@ -212,9 +212,11 @@
             non-default state. Tapping opens `SitePermissionsBottomSheet`.
             Hidden when the current origin has no stored permissions.
 
-            The pill mimics a Material 3 outlined chip but keeps the
-            same button widget family as the other actions so the touch
-            feedback stays consistent.
+            Rendered as a Material 3 outlined-card row (not a chip -
+            it's a full-width list entry pointing into the Site
+            Permissions sheet). The 12 dp corner radius matches other
+            M3 small-component surfaces in the app and reads as a
+            tappable row rather than an exaggerated pill.
         -->
         <com.google.android.material.card.MaterialCardView
             android:id="@+id/site_permissions_pill"
@@ -224,7 +226,7 @@
             android:clickable="true"
             android:focusable="true"
             app:cardBackgroundColor="?attr/colorSurfaceContainer"
-            app:cardCornerRadius="20dp"
+            app:cardCornerRadius="12dp"
             app:cardElevation="0dp"
             app:strokeColor="?attr/colorOutlineVariant"
             app:strokeWidth="1dp">

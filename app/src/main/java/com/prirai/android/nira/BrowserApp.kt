@@ -5,7 +5,6 @@ import android.content.Context
 import android.content.Context.MODE_PRIVATE
 import android.view.Choreographer
 import com.prirai.android.nira.components.Components
-import com.prirai.android.nira.permissions.NiraBgPlayAllowlistBridge
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -20,8 +19,6 @@ import mozilla.components.support.ktx.android.content.isMainProcess
 import mozilla.components.support.ktx.android.content.runOnlyInMainProcess
 import mozilla.components.support.webextensions.WebExtensionSupport
 import java.util.concurrent.TimeUnit
-
-private const val NIRA_BG_PLAY_EXTENSION_ID = "nira-bg-play@prirai.android.nira"
 
 class BrowserApp : Application() {
 
@@ -198,17 +195,17 @@ class BrowserApp : Application() {
             }
         }
 
-        // Install the Nira background-playback content script once, up
-        // front. Per-origin gating is enforced inside the extension
-        // (content.js calls runtime.sendMessage to the background
-        // script, which checks the current allow-list). The allow-list
-        // is pushed from here into the extension via a persistent
-        // native-messaging port named "nira.bgplay.allowlist".
+        // Background-playback extension: install/uninstall is reactive
+        // to BackgroundPlaybackAllowlist.origins. Empty allow-list ->
+        // extension not installed (nothing is injected into any page);
+        // non-empty allow-list -> extension installed and the
+        // per-origin bridge pushes the current set.
         //
-        // The content_scripts matcher is <all_urls> so the extension
-        // can gate per-origin instead of per-host-glob. See
+        // See NiraBgPlayController for the state machine; see
         // assets/extensions/nira-bg-play/{manifest.json,background.js,
-        // content.js} for the extension side.
+        // content.js} for the extension side (content.js gates per
+        // window.location.origin via a background.js query, fail-closed
+        // with a 250 ms timeout).
         applicationScope.launch(Dispatchers.Main) {
             try {
                 val allowlist =
@@ -221,31 +218,14 @@ class BrowserApp : Application() {
                     .UserPreferences(this@BrowserApp).backgroundPlaybackYoutube
                 allowlist.migrateFromLegacyGlobalPref(enabledBefore = legacyPref)
 
-                components.engine.installBuiltInWebExtension(
-                    url = "resource://android/assets/extensions/nira-bg-play/",
-                    id = NIRA_BG_PLAY_EXTENSION_ID,
-                    onSuccess = { extension ->
-                        logger.info("nira-bg-play extension installed")
-                        // The extension's background.js calls
-                        // browser.runtime.connectNative("nira.bgplay.allowlist")
-                        // on startup. We register a handler for that port
-                        // name so we can push allow-list updates to it.
-                        try {
-                            NiraBgPlayAllowlistBridge.attach(
-                                extension = extension,
-                                allowlist = allowlist,
-                                scope = applicationScope,
-                            )
-                        } catch (t: Throwable) {
-                            android.util.Log.w("NiraBgPlay", "allowlist bridge attach failed", t)
-                        }
-                    },
-                    onError = { err ->
-                        android.util.Log.w("NiraBgPlay", "install FAILED", err)
-                    },
-                )
+                com.prirai.android.nira.permissions.NiraBgPlayController(
+                    applicationContext = this@BrowserApp,
+                    engine = components.engine,
+                    allowlist = allowlist,
+                    scope = applicationScope,
+                ).start()
             } catch (e: Exception) {
-                android.util.Log.w("NiraBgPlay", "install exception", e)
+                android.util.Log.w("NiraBgPlay", "controller setup exception", e)
             }
         }
 
