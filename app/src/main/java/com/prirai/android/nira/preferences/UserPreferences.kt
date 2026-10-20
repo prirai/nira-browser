@@ -29,10 +29,15 @@ class UserPreferences(appContext: Context) : mozilla.components.support.ktx.andr
     var firstLaunch by booleanPreference("first_launch", true)
 
     /**
-     * Marks that the one-time "empty profile" -> default-profile tab migration has run
-     * on this install. When false, [DefaultProfileTabMigration] rewrites the contextId
-     * on any tab restored with a null/empty contextId to "profile_default", moves the
-     * corresponding tab groups, and forces the active profile to the built-in default.
+     * Marks that the current default-profile tab migration has run on this
+     * install. When false, [DefaultProfileTabMigration] clears the legacy
+     * `"profile_default"` contextId sentinel from every restored tab (and
+     * every corresponding tab group row) back to `null`, so the default
+     * profile shares Gecko's default partition with custom tabs.
+     *
+     * The pref key is bumped to `*.v2` so installs that completed the
+     * previous migration (which moved `null -> "profile_default"`) run this
+     * one exactly once.
      *
      * See browser/profile/DefaultProfileTabMigration.kt.
      */
@@ -287,11 +292,15 @@ class UserPreferences(appContext: Context) : mozilla.components.support.ktx.andr
 
         // One-time migration flags (nira.* namespace). Keys are literal so they survive
         // future refactors and can be inspected directly in `scw_preferences.xml`.
-        const val NIRA_TABS_PROFILE_DEFAULT_MIGRATE = "nira.tabs.profile.defaultMigrate"
+        // Bumped from `.defaultMigrate` to `.defaultMigrate.v2` so installs
+        // that completed the previous null -> "profile_default" migration
+        // re-run and perform the inverse (profile_default -> null) exactly
+        // once.
+        const val NIRA_TABS_PROFILE_DEFAULT_MIGRATE = "nira.tabs.profile.defaultMigrate.v2"
         const val NIRA_TABS_PROFILE_DEFAULT_MIGRATE_PENDING_POPUP =
-            "nira.tabs.profile.defaultMigrate.pendingPopup"
+            "nira.tabs.profile.defaultMigrate.v2.pendingPopup"
         const val NIRA_TABS_PROFILE_DEFAULT_MIGRATE_TAB_COUNT =
-            "nira.tabs.profile.defaultMigrate.tabCount"
+            "nira.tabs.profile.defaultMigrate.v2.tabCount"
 
         const val HTTPS_ONLY_OFF = 0
         const val HTTPS_ONLY_PRIVATE = 1

@@ -43,11 +43,12 @@ interface TabGroupDao {
     suspend fun getTabIdsInGroup(groupId: String): List<String>
 
     /**
-     * One-time migration helper: rewrite all rows whose contextId is null or the empty
-     * string to [newContextId]. Used by
-     * `com.prirai.android.nira.browser.profile.DefaultProfileTabMigration`.
+     * One-time migration helper: rewrite all rows whose `contextId == :from` to
+     * `:to`. Used by
+     * `com.prirai.android.nira.browser.profile.DefaultProfileTabMigration` to
+     * flip legacy `"profile_default"` rows to `null`. Pass `to = null` to clear.
      * Returns the number of rows updated.
      */
-    @Query("UPDATE tab_groups SET contextId = :newContextId WHERE contextId IS NULL OR contextId = ''")
-    suspend fun reassignEmptyContextIdGroups(newContextId: String): Int
+    @Query("UPDATE tab_groups SET contextId = :to WHERE contextId = :from")
+    suspend fun reassignContextIdGroups(from: String, to: String?): Int
 }

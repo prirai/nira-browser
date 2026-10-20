@@ -330,13 +330,16 @@ open class Components(private val applicationContext: Context) {
     }
 
     /**
-     * One-time migration that rewrites [mozilla.components.browser.state.state.TabSessionState.contextId]
-     * on any tab restored with a null or empty contextId to `"profile_default"`. Runs
-     * exactly once per install, gated by the pref
-     * `nira.tabs.profile.defaultMigrate` (see [UserPreferences.defaultProfileMigrationDone]).
-     * Placed first in the middleware chain so it can intercept
-     * [mozilla.components.browser.state.action.TabListAction.RestoreAction] before the
-     * reducer applies it.
+     * One-time migration that clears the legacy
+     * `"profile_default"` sentinel from
+     * [mozilla.components.browser.state.state.TabSessionState.contextId] back
+     * to `null` on every restored tab, so the default profile shares Gecko's
+     * default partition with custom tabs. Runs exactly once per install,
+     * gated by the pref `nira.tabs.profile.defaultMigrate.v2` (see
+     * [UserPreferences.defaultProfileMigrationDone]). Placed first in the
+     * middleware chain so it can intercept
+     * [mozilla.components.browser.state.action.TabListAction.RestoreAction]
+     * before the reducer applies it.
      */
     val defaultProfileTabMigration by lazy {
         com.prirai.android.nira.browser.profile.DefaultProfileTabMigration(applicationContext)

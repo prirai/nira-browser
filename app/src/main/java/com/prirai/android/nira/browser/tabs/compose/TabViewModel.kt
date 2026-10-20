@@ -60,6 +60,34 @@ class TabViewModel(
      */
     var onTabRemove: ((String) -> Unit)? = null
 
+    /**
+     * Canonical mapping from the internal `profileId` string to the
+     * `contextId` persisted on `TabGroup` / `TabSessionState`. Matches
+     * `BrowserProfile.contextIdFor`.
+     *
+     * Default profile => null (shared Gecko partition with custom tabs).
+     * Private mode   => "private".
+     * Named profile  => "profile_<id>".
+     */
+    private fun contextIdForProfile(profileId: String): String? =
+        com.prirai.android.nira.browser.profile.BrowserProfile.contextIdFor(
+            profileId = profileId,
+            isPrivate = profileId == "private",
+        )
+
+    /**
+     * Does [group] belong to the given [profileId]?
+     *
+     * The default profile accepts groups with `contextId == null` (new
+     * canonical) OR `"profile_default"` (legacy sentinel for installs
+     * mid-migration). All other profiles match on exact contextId.
+     */
+    private fun groupMatchesProfile(group: TabGroupData, profileId: String): Boolean =
+        when (profileId) {
+            "default" -> group.contextId == null || group.contextId == "profile_default"
+            else -> group.contextId == contextIdForProfile(profileId)
+        }
+
     init {
         // Observe group events and refresh when groups change
         viewModelScope.launch {
@@ -85,21 +113,9 @@ class TabViewModel(
     private suspend fun refreshGroupsForProfile(profileId: String) {
         val allGroups = groupManager.getAllGroups()
 
-        // Determine the expected contextId for this profile
-        val profileContextId = when (profileId) {
-            "private" -> "private"
-            "default" -> "profile_default"
-            else -> "profile_$profileId"
-        }
-
-        // Filter groups to only show those matching the current profile's contextId
+        // Filter groups to only show those matching the current profile.
         val groupsList = allGroups.filter { group ->
-            when {
-                // Default profile shows groups with "profile_default" OR null (backwards compat)
-                profileId == "default" -> group.contextId == "profile_default" || group.contextId == null
-                // Private and other profiles show only groups matching their contextId
-                else -> group.contextId == profileContextId
-            }
+            groupMatchesProfile(group, profileId)
         }.filter { group ->
             // Additionally, only show groups that have tabs in the current tab list
             group.tabIds.any { tabId -> _tabs.value.any { it.id == tabId } }
@@ -141,23 +157,9 @@ class TabViewModel(
             // Load groups from UnifiedTabGroupManager, filtered by contextId
             val allGroups = groupManager.getAllGroups()
 
-            // Determine the expected contextId for this profile
-            // Private mode uses "private", default profile uses "profile_default", others use "profile_{id}"
-            val profileContextId = when (profileId) {
-                "private" -> "private"
-                "default" -> "profile_default"
-                else -> "profile_$profileId"
-            }
-
-            // Filter groups to only show those matching the current profile's contextId
-            // For backwards compatibility, default profile also accepts null contextId
+            // Filter groups to only show those matching the current profile.
             val groupsList = allGroups.filter { group ->
-                when {
-                    // Default profile shows groups with "profile_default" OR null (backwards compat)
-                    profileId == "default" -> group.contextId == "profile_default" || group.contextId == null
-                    // Private and other profiles show only groups matching their contextId
-                    else -> group.contextId == profileContextId
-                }
+                groupMatchesProfile(group, profileId)
             }.filter { group ->
                 // Additionally, only show groups that have tabs in the current tab list
                 group.tabIds.any { tabId -> tabs.any { it.id == tabId } }
@@ -211,20 +213,9 @@ class TabViewModel(
                 // Reload groups from UnifiedTabGroupManager to get latest state
                 val allGroups = groupManager.getAllGroups()
 
-                // Determine the expected contextId for this profile
-                val profileContextId = when (profileId) {
-                    "private" -> "private"
-                    "default" -> "profile_default"
-                    else -> "profile_$profileId"
-                }
-
-                // Filter groups to only show those matching the current profile's contextId
+                // Filter groups to only show those matching the current profile.
                 val groupsList = allGroups.filter { group ->
-                    when {
-                        // Default profile shows groups with null OR "profile_default" contextId
-                        profileId == "default" -> group.contextId == null || group.contextId == "profile_default"
-                        else -> group.contextId == profileContextId
-                    }
+                    groupMatchesProfile(group, profileId)
                 }.filter { group ->
                     // Only show groups that have tabs in the current tab list
                     group.tabIds.any { tabId -> tabs.any { it.id == tabId } }
@@ -368,19 +359,14 @@ class TabViewModel(
 
                     // Can only group if contextIds match (both null or both same value)
                     if (contextId1 == contextId2) {
-                        // Normalize contextId: if null and default profile, use "profile_default"
-                        val normalizedContextId = if (contextId1 == null && profileId == "default") {
-                            "profile_default"
-                        } else {
-                            contextId1
-                        }
-
-                        // Create new group with both tabs
+                        // Create new group with both tabs. The group's contextId is
+                        // the tab's contextId verbatim - default profile tabs are
+                        // null, named profile tabs are "profile_<id>".
                         groupManager.createGroup(
                             tabIds = listOf(tab1Id, tab2Id),
                             name = "New Group",
                             color = generateRandomGroupColor(),
-                            contextId = normalizedContextId
+                            contextId = contextId1
                         )
 
                         // Save new order after group creation completes
@@ -404,17 +390,17 @@ class TabViewModel(
                 val targetGroup = groupManager.getGroup(groupId)
 
                 if (tab != null && targetGroup != null) {
-                    // Normalize contextIds for comparison
+                    // Normalize contextIds (treat empty string as null) and allow
+                    // either `null` or legacy `"profile_default"` to match for the
+                    // default profile. All other profiles require an exact match.
                     val tabContextId = tab.contextId?.takeIf { it.isNotEmpty() }
-                        ?: if (profileId == "default") "profile_default" else null
                     val groupContextId = targetGroup.contextId?.takeIf { it.isNotEmpty() }
-                        ?: if (profileId == "default") "profile_default" else null
 
-                    // Validate contextId - tab must have same contextId as group
-                    if (tabContextId == groupContextId ||
-                        (profileId == "default" && (tabContextId == null || tabContextId == "profile_default") &&
-                                (groupContextId == null || groupContextId == "profile_default"))
-                    ) {
+                    val defaultProfileMatch = profileId == "default" &&
+                        (tabContextId == null || tabContextId == "profile_default") &&
+                        (groupContextId == null || groupContextId == "profile_default")
+
+                    if (tabContextId == groupContextId || defaultProfileMatch) {
                         // Add tab to group
                         groupManager.addTabToGroup(
                             tabId = tabId,
@@ -1001,9 +987,11 @@ class TabViewModel(
     }
 
     /**
-     * Create a new tab in a specific group
+     * Create a new tab in a specific group. `contextId` is nullable so
+     * default-profile groups (contextId == null post-migration) can create
+     * tabs without being force-stamped with a profile sentinel.
      */
-    fun createNewTabInGroup(groupId: String, contextId: String) {
+    fun createNewTabInGroup(groupId: String, contextId: String?) {
         viewModelScope.launch {
             try {
                 // Create a new tab with the group's context
@@ -1031,12 +1019,9 @@ class TabViewModel(
         viewModelScope.launch {
             val group = groupManager.getGroup(groupId) ?: return@launch
 
-            // Update the group's contextId to match the new profile
-            val newContextId = when (profileId) {
-                "private" -> "private"
-                "default" -> "profile_default"
-                else -> "profile_$profileId"
-            }
+            // Update the group's contextId to match the new profile.
+            // Default profile => null (shared with custom tabs' Gecko partition).
+            val newContextId = contextIdForProfile(profileId)
 
             // Update the group
             groupManager.updateGroup(

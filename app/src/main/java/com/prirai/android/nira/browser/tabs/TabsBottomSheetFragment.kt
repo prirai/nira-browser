@@ -447,7 +447,8 @@ class TabsBottomSheetFragment : DialogFragment() {
         lifecycleScope.launch {
             val isPrivate = browsingModeManager.mode.isPrivate
             val currentProfile = browsingModeManager.currentProfile
-            val contextId = if (isPrivate) "private" else "profile_${currentProfile.id}"
+            val contextId = com.prirai.android.nira.browser.profile.BrowserProfile
+                .contextIdFor(currentProfile, isPrivate)
 
             requireContext().components.tabsUseCases.addTab(
                 url = "about:homepage",

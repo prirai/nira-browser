@@ -181,7 +181,8 @@ class ComposeTabBarWithProfileSwitcher @JvmOverloads constructor(
                 val newTabId = components.tabsUseCases.addTab(
                     url = request.url,
                     private = isPrivateMode,
-                    contextId = if (isPrivateMode) "private" else "profile_${currentProfile.id}",
+                    contextId = com.prirai.android.nira.browser.profile.BrowserProfile
+                        .contextIdFor(currentProfile, isPrivateMode),
                     selectTab = false,
                 )
 

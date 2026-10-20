@@ -269,7 +269,10 @@ class ProfileManager(private val context: Context) {
         val store = context.components.store
         val tab = store.state.tabs.find { it.id == tabId } ?: return false
 
-        val targetContextId = if (targetProfileId == "private") "private" else "profile_$targetProfileId"
+        val targetContextId = BrowserProfile.contextIdFor(
+            profileId = targetProfileId,
+            isPrivate = targetProfileId == "private",
+        )
         if (tab.contextId == targetContextId) return false
 
         val isTargetPrivate = targetProfileId == "private"

@@ -559,24 +559,28 @@ open class BrowserActivity : LocaleAwareAppCompatActivity(), ComponentCallbacks2
     }
 
     /**
-     * Get the appropriate contextId for new tabs based on browsing mode and current profile.
-     * This ensures tabs are properly grouped and visible in tab bar/sheet.
+     * Get the appropriate contextId for new tabs based on browsing mode and
+     * current profile. The default profile returns `null` so new tabs share
+     * Gecko's default partition with custom tabs (external VIEW intents).
      */
-    private fun getContextIdForNewTab(isPrivateMode: Boolean, selectedTab: SessionState?): String {
-        return if (isPrivateMode) {
-            "private"
-        } else {
-            // Try to use contextId from selected tab if available
-            val tabContextId = selectedTab?.contextId
-            if (tabContextId != null && tabContextId.startsWith("profile_")) {
-                tabContextId
-            } else {
-                // Fall back to active profile
-                val profileManager = com.prirai.android.nira.browser.profile.ProfileManager.getInstance(this)
-                val currentProfile = profileManager.getActiveProfile()
-                "profile_${currentProfile.id}"
-            }
+    private fun getContextIdForNewTab(isPrivateMode: Boolean, selectedTab: SessionState?): String? {
+        if (isPrivateMode) return "private"
+
+        // Try to use contextId from selected tab if available. Legacy
+        // "profile_default" also triggers the default-profile fallback below.
+        val tabContextId = selectedTab?.contextId
+        if (tabContextId != null && tabContextId.startsWith("profile_") &&
+            tabContextId != "profile_default"
+        ) {
+            return tabContextId
         }
+
+        val profileManager = com.prirai.android.nira.browser.profile.ProfileManager.getInstance(this)
+        val currentProfile = profileManager.getActiveProfile()
+        return com.prirai.android.nira.browser.profile.BrowserProfile.contextIdFor(
+            profile = currentProfile,
+            isPrivate = false,
+        )
     }
 
     override fun attachBaseContext(base: Context) {

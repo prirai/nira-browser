@@ -245,7 +245,9 @@ class AppRequestInterceptor(val context: Context) : RequestInterceptor {
             // Open URL in a new tab in the main browser
             // Profile switching needs to be done through the BrowserActivity's browsingModeManager
             CoroutineScope(Dispatchers.Main).launch {
-                context.components.tabsUseCases.addTab(url, selectTab = true, contextId = "profile_$profileId")
+                val contextId = com.prirai.android.nira.browser.profile.BrowserProfile
+                    .contextIdFor(profileId, isPrivate = false)
+                context.components.tabsUseCases.addTab(url, selectTab = true, contextId = contextId)
                 
                 // Bring the main browser to foreground
                 val intent = Intent(context, com.prirai.android.nira.BrowserActivity::class.java).apply {

@@ -401,8 +401,9 @@ class ComposeHomeFragment : Fragment() {
                 val profileManager = com.prirai.android.nira.browser.profile.ProfileManager.getInstance(requireContext())
                 val isPrivateMode = components.store.state.selectedTab?.content?.private ?: browsingModeManager.mode.isPrivate
                 val currentProfile = profileManager.getActiveProfile()
-                val contextId = if (isPrivateMode) "private" else "profile_${currentProfile.id}"
-                
+                val contextId = com.prirai.android.nira.browser.profile.BrowserProfile
+                    .contextIdFor(currentProfile, isPrivateMode)
+
                 // Create new tab with about:homepage
                 components.tabsUseCases.addTab(
                     url = "about:homepage",
@@ -735,7 +736,8 @@ class ComposeHomeFragment : Fragment() {
                 onClick = {
                     // Ensure we're using the current active profile
                     val activeProfile = profileManager.getActiveProfile()
-                    val contextId = "profile_${activeProfile.id}"
+                    val contextId = com.prirai.android.nira.browser.profile.BrowserProfile
+                        .contextIdFor(activeProfile, isPrivate = false)
                     components.tabsUseCases.addTab(
                         url = "about:homepage",
                         selectTab = true,
@@ -860,23 +862,22 @@ class ComposeHomeFragment : Fragment() {
         val isPrivateMode = selectedTab?.content?.private ?: browsingModeManager.mode.isPrivate
         val currentProfile = profileManager.getActiveProfile()
         
-        val expectedContextId = if (isPrivateMode) {
-            "private"
-        } else {
-            // Use active profile to determine context
-            "profile_${currentProfile.id}"
-        }
-        
+        val expectedContextId: String? = com.prirai.android.nira.browser.profile.BrowserProfile
+            .contextIdFor(currentProfile, isPrivateMode)
+
         return store.tabs.count { tab ->
             val tabIsPrivate = tab.content.private
-            
+
             if (tabIsPrivate != isPrivateMode) {
                 false
             } else if (isPrivateMode) {
                 tab.contextId == "private"
             } else {
-                // Include tabs with matching contextId OR guest tabs (null contextId for backward compatibility)
-                (tab.contextId == expectedContextId) || (tab.contextId == null && expectedContextId == "profile_default")
+                // Default profile (expectedContextId == null) also matches the
+                // legacy "profile_default" sentinel for installs that still
+                // have un-migrated tabs mid-session.
+                tab.contextId == expectedContextId ||
+                    (expectedContextId == null && tab.contextId == "profile_default")
             }
         }
     }

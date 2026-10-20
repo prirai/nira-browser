@@ -184,8 +184,9 @@ class TabSearchFragment : BottomSheetDialogFragment() {
                         val activity = requireActivity() as BrowserActivity
                         val isPrivate = activity.browsingModeManager.mode.isPrivate
                         val currentProfile = activity.browsingModeManager.currentProfile
-                        val contextId = if (isPrivate) "private" else "profile_${currentProfile.id}"
-                        
+                        val contextId = com.prirai.android.nira.browser.profile.BrowserProfile
+                            .contextIdFor(currentProfile, isPrivate)
+
                         requireContext().components.tabsUseCases.addTab(
                             url = item.url,
                             private = isPrivate,
@@ -199,8 +200,9 @@ class TabSearchFragment : BottomSheetDialogFragment() {
                         val activity = requireActivity() as BrowserActivity
                         val isPrivate = activity.browsingModeManager.mode.isPrivate
                         val currentProfile = activity.browsingModeManager.currentProfile
-                        val contextId = if (isPrivate) "private" else "profile_${currentProfile.id}"
-                        
+                        val contextId = com.prirai.android.nira.browser.profile.BrowserProfile
+                            .contextIdFor(currentProfile, isPrivate)
+
                         requireContext().components.tabsUseCases.addTab(
                             url = item.url,
                             private = isPrivate,
