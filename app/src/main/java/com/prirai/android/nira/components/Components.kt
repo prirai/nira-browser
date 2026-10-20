@@ -656,6 +656,27 @@ open class Components(private val applicationContext: Context) {
         FileUploadsDirCleaner { applicationContext.cacheDir }
     }
 
+    /**
+     * Cold-start note (field logcat, 2026-10-20):
+     *
+     * `geckoview-omni` 156.0.20260921121718 declares every child
+     * process in its own `AndroidManifest.xml` with the suffix
+     * `_disable_art_image_` (e.g. `:crashhelper_disable_art_image_`,
+     * `:gpu_disable_art_image_`, `:tab_disable_art_image_<N>`). This
+     * is a GeckoView-side build decision - the ART boot image is
+     * disabled on all content/tab/gpu/utility child processes, so
+     * each one has to re-link `libmozglue.so`, `libnss3.so`,
+     * `libfreebl3.so`, `libsoftokn3.so`, `libjnidispatch.so` from
+     * scratch (observed ~1.2 s per child spawn in device logs).
+     *
+     * Not a Nira-side bug and not configurable from here - the only
+     * fix would be a GeckoView-side build change (or forking the
+     * omni variant). Documented so future contributors do not spend
+     * time trying to toggle this from the Nira Gradle layer.
+     *
+     * Reference: `geckoview-omni` cached AAR under
+     * `~/.gradle/caches/.../transformed/geckoview-omni-<version>/AndroidManifest.xml`.
+     */
     private val runtime by lazy {
         val builder = GeckoRuntimeSettings.Builder()
 
