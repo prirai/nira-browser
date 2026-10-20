@@ -6,7 +6,6 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import mozilla.components.browser.state.selector.findCustomTabOrSelectedTab
 import mozilla.components.browser.state.store.BrowserStore
-import mozilla.components.browser.toolbar.BrowserToolbar
 import mozilla.components.concept.engine.EngineView
 import mozilla.components.feature.findinpage.FindInPageFeature
 import mozilla.components.feature.findinpage.view.FindInPageView
@@ -71,11 +70,19 @@ class FindInPageIntegration(
 
     /**
      * Holder of all details needed about the Toolbar.
-     * Used to modify the layout of BrowserToolbar while the find in page bar is shown.
+     *
+     * `toolbar` is accepted as a plain `View` rather than a
+     * `BrowserToolbar` so the custom-tabs path - which mounts a
+     * `LinearLayout` header, not an AC toolbar - can reuse this
+     * integration without having to spin up a hidden BrowserToolbar
+     * just to satisfy a type bound. The only property we read off
+     * `toolbar` is its measured [View.getHeight] (see
+     * [onLaunch]: `view.layoutParams.height = toolbarInfo.toolbar.height`),
+     * which every View exposes.
      */
     data class ToolbarInfo(
-        val toolbar: BrowserToolbar,
+        val toolbar: View,
         val isToolbarDynamic: Boolean,
-        val isToolbarPlacedAtTop: Boolean
+        val isToolbarPlacedAtTop: Boolean,
     )
 }

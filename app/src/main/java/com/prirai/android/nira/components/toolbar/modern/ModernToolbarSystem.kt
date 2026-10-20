@@ -233,12 +233,13 @@ class ModernToolbarSystem @JvmOverloads constructor(
     
     /**
      * Formerly updated GeckoView's dynamic-toolbar reservation as the
-     * toolbar translated during scroll. The toolbar is now pinned - and
-     * post-v0.5.14, scroll-driven minimising was removed entirely (see
-     * ModernScrollBehavior kdoc). The chevron button on the address bar
-     * is the only remaining way to toggle minimal state. Chrome
-     * reservation is a static swipeRefresh.bottomMargin on the fragment
-     * side, so GeckoView's dynamic-toolbar reservation stays at 0.
+     * toolbar translated during scroll. The toolbar is now pinned; only
+     * the aux bars (tab bar + contextual bar) toggle via UnifiedToolbar's
+     * minimal state. Scroll-DOWN enters minimal (ModernScrollBehavior);
+     * the chevron button on the address bar toggles both directions and
+     * is the sole exit path. Chrome reservation is a static
+     * swipeRefresh.bottomMargin on the fragment side, so GeckoView's
+     * dynamic-toolbar reservation stays at 0.
      *
      * Kept as a no-op so the existing `updateEngineViewClipping()`
      * call sites inside this file (addComponent, removeComponent,

@@ -98,15 +98,17 @@ class SitePermissionsBottomSheet : BottomSheetDialogFragment() {
             showClearCookiesConfirmation(url)
         }
 
-        // Automatic cookie retention: let the user pick a window; the
-        // CookiePolicyWorker then sweeps every ~hour and clears cookies
-        // for any origin whose window has elapsed.
-        val retentionButton = view.findViewById<MaterialButton>(R.id.cookie_retention_button)
-        val retentionSubtitle = view.findViewById<TextView>(R.id.cookie_retention_subtitle)
-        retentionButton.setOnClickListener {
-            showCookieRetentionChooser(retentionSubtitle)
+        // Automatic cookie retention: a status pill on the right of
+        // the "Cookie Policy" label. The pill text IS the current
+        // policy ("Never" / "6 h" / "24 h" / "7 d" / "30 d"); tapping
+        // it opens the chooser dialog. CookiePolicyWorker sweeps every
+        // ~hour and clears cookies for any origin whose window has
+        // elapsed.
+        val retentionPill = view.findViewById<MaterialButton>(R.id.cookie_retention_pill)
+        retentionPill.setOnClickListener {
+            showCookieRetentionChooser(retentionPill)
         }
-        refreshCookieRetentionSubtitle(retentionSubtitle)
+        refreshCookieRetentionPill(retentionPill)
 
         val listContainer = view.findViewById<LinearLayout>(R.id.permissions_list)
         val emptyHint = view.findViewById<TextView>(R.id.empty_hint)
@@ -414,11 +416,10 @@ class SitePermissionsBottomSheet : BottomSheetDialogFragment() {
      * Pop up a single-choice dialog letting the user pick a retention
      * window for the current origin. Writing a value calls
      * `CookiePolicyRepository.setPolicy`; picking "Never" removes the
-     * row. After writing we refresh the subtitle on the retention
-     * button so the user sees the new state without re-opening the
-     * sheet.
+     * row. After writing we refresh the pill text so the user sees the
+     * new state without re-opening the sheet.
      */
-    private fun showCookieRetentionChooser(subtitleView: TextView) {
+    private fun showCookieRetentionChooser(pill: MaterialButton) {
         val labels = arrayOf(
             getString(R.string.cookie_retention_option_never),
             getString(R.string.cookie_retention_option_6h),
@@ -441,24 +442,28 @@ class SitePermissionsBottomSheet : BottomSheetDialogFragment() {
                             4 -> repo.setPolicy(origin, hoursUntilClear = 24 * 30)
                         }
                     }
-                    refreshCookieRetentionSubtitle(subtitleView)
+                    refreshCookieRetentionPill(pill)
                 }
             }
             .setNegativeButton(android.R.string.cancel, null)
             .show()
     }
 
-    private fun refreshCookieRetentionSubtitle(subtitleView: TextView) {
+    /**
+     * Reads the stored [CookiePolicy] for the current origin and sets
+     * the pill text to the human-readable retention window ("Never"
+     * when no row exists, otherwise e.g. "24 h" / "7 d"). Called from
+     * [onViewCreated] on initial render and from
+     * [showCookieRetentionChooser] after the user picks a new value.
+     */
+    private fun refreshCookieRetentionPill(pill: MaterialButton) {
         val repo = CookiePolicyRepository.getInstance(requireContext())
         viewLifecycleOwner.lifecycleScope.launch {
             val current = withContext(Dispatchers.IO) { repo.get(origin) }
-            subtitleView.text = if (current == null) {
+            pill.text = if (current == null) {
                 getString(R.string.cookie_retention_none)
             } else {
-                getString(
-                    R.string.cookie_retention_configured,
-                    formatRetentionHours(current.hoursUntilClear),
-                )
+                formatRetentionHours(current.hoursUntilClear)
             }
         }
     }

@@ -421,16 +421,16 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
                 requireContext().components.tabsUseCases.selectTab(tabId)
             }
 
-            // Minimal state is driven by a single input: the chevron
-            // toggle button to the right of the URL pill (down chevron
-            // while expanded, up chevron while minimal). See
-            // MinimalStateToggleIntegration below.
-            //
-            // Scroll-driven minimising was removed post-v0.5.14 - it
-            // produced false positives on short pages and sites with
-            // internal scroll containers. The address bar itself never
-            // scrolls off; only the aux bars (tab bar + contextual bar)
-            // animate in and out when the user taps the chevron.
+            // Minimal state has two inputs:
+            //  - scrolling DOWN past the threshold (56 dp sustained)
+            //    enters minimal state - see ModernScrollBehavior.
+            //  - the chevron toggle button to the right of the URL pill
+            //    toggles both directions and is the only way to EXIT
+            //    minimal (scroll-up intentionally does not auto-exit,
+            //    which avoids the oscillation bug on sites with
+            //    internal scroll containers).
+            // The address bar itself never scrolls off; only the aux
+            // bars (tab bar + contextual bar) animate in and out.
             val minimalToggle = unifiedToolbar?.getBrowserToolbar()?.let { browserToolbar ->
                 unifiedToolbar?.let { toolbar ->
                     com.prirai.android.nira.integration

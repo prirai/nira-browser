@@ -5,39 +5,46 @@ import android.util.AttributeSet
 import android.view.View
 import androidx.coordinatorlayout.widget.CoordinatorLayout
 import androidx.core.view.ViewCompat
+import com.prirai.android.nira.components.toolbar.unified.UnifiedToolbar
 
 /**
- * CoordinatorLayout behavior that wires the active EngineView into
- * [UnifiedToolbar] / [ModernToolbarSystem] on layout.
+ * CoordinatorLayout behavior that:
+ *   1. wires the active EngineView into [UnifiedToolbar] /
+ *      [ModernToolbarSystem] on layout,
+ *   2. enters the toolbar's minimal state when the user scrolls the
+ *      page **downwards** past a threshold.
  *
- * # History
- * Earlier revisions used this behavior to **toggle the toolbar's minimal
- * state** based on page scroll direction (scroll down -> hide aux bars,
- * scroll up -> show). That behaviour was removed in favour of a single
- * explicit affordance: the chevron button on the address bar (see
- * [UnifiedToolbar.toggleMinimalState]). Scroll-driven minimising
- * produced false positives on short pages, websites with internal
- * scroll containers, and media galleries, and the oscillation was
- * disliked.
+ * # Scroll contract (post-v0.5.14)
+ * Only the enter path is scroll-driven. Exiting minimal state is a
+ * deliberate affordance: the user taps the chevron button on the
+ * address bar (see
+ * `MinimalStateToggleIntegration`). The reasoning:
+ *   - Scroll-down -> minimise is cheap and expected: the user wants
+ *     more vertical real estate for reading content and the aux bars
+ *     (tab bar + contextual bar) are the natural thing to collapse.
+ *   - Scroll-up -> auto-exit was the source of jitter on sites with
+ *     internal scroll containers (horizontal carousels, sticky
+ *     grids), and on short pages the aux bars oscillated in and out
+ *     on tiny gestures. The chevron tap is a precise, user-initiated
+ *     restore that avoids this entirely.
  *
- * The behavior is retained because:
- *   - `UnifiedToolbar.layoutParams.behavior` is read back at
- *     [enableScrolling] / [disableScrolling] sites.
- *   - [onLayoutChild] still has to discover the EngineView and attach
- *     it to the toolbar for the toolbar's own scroll-position
- *     observations (download notifier, URL updates, etc.).
- *
- * [enableScrolling] / [disableScrolling] no longer influence toolbar
- * minimising; they are kept as a plumbed-through gate for any future
- * scroll-coupled behaviour so callers do not have to be rewritten.
+ * The 56 dp threshold matches the previous iteration and the heuristic
+ * Chrome/Firefox use. A direction change resets the accumulator so a
+ * small up-flick in the middle of a long down-scroll does not stall
+ * entry; only a sustained scroll in one direction trips the state.
  */
 class ModernScrollBehavior(
     context: Context,
     attrs: AttributeSet? = null,
 ) : CoordinatorLayout.Behavior<View>(context, attrs) {
 
-    @Suppress("unused")
     private var isScrollingEnabled = true
+
+    private var scrollYAccumulator = 0
+
+    // 56 dp - same threshold previously used, matches Chrome/Firefox.
+    private val scrollThresholdPx: Int =
+        (56 * context.resources.displayMetrics.density).toInt()
 
     override fun onLayoutChild(
         parent: CoordinatorLayout,
@@ -47,10 +54,8 @@ class ModernScrollBehavior(
         // Find and connect to the EngineView for UnifiedToolbar or ModernToolbarSystem.
         findEngineView(parent)?.let { engine ->
             when (child) {
-                is com.prirai.android.nira.components.toolbar.unified.UnifiedToolbar ->
-                    child.setEngineView(engine)
-                is ModernToolbarSystem ->
-                    child.setEngineView(engine)
+                is UnifiedToolbar -> child.setEngineView(engine)
+                is ModernToolbarSystem -> child.setEngineView(engine)
             }
         }
         return super.onLayoutChild(parent, child, layoutDirection)
@@ -64,12 +69,7 @@ class ModernScrollBehavior(
         axes: Int,
         type: Int,
     ): Boolean {
-        // We still return true for vertical axes so the CoordinatorLayout
-        // routes nested scrolls to us - some child views rely on the
-        // behavior being an active participant in the dispatch chain
-        // (e.g. for inset propagation). We simply do not act on dy
-        // anymore.
-        return axes and ViewCompat.SCROLL_AXIS_VERTICAL != 0
+        return isScrollingEnabled && axes and ViewCompat.SCROLL_AXIS_VERTICAL != 0
     }
 
     override fun onNestedPreScroll(
@@ -81,7 +81,8 @@ class ModernScrollBehavior(
         consumed: IntArray,
         type: Int,
     ) {
-        // No-op: scroll-driven minimising removed. See class kdoc.
+        if (!isScrollingEnabled) return
+        accumulateAndMaybeEnterMinimal(child, dy)
     }
 
     override fun onNestedScroll(
@@ -95,7 +96,9 @@ class ModernScrollBehavior(
         type: Int,
         consumed: IntArray,
     ) {
-        // No-op: scroll-driven minimising removed. See class kdoc.
+        if (!isScrollingEnabled) return
+        // Covers overscroll / fling residue the target view did not consume.
+        accumulateAndMaybeEnterMinimal(child, dyUnconsumed)
     }
 
     override fun onStopNestedScroll(
@@ -104,7 +107,35 @@ class ModernScrollBehavior(
         target: View,
         type: Int,
     ) {
-        // No-op: minimal state does not need to settle on gesture end.
+        // No-op: minimal state does not settle on gesture end.
+    }
+
+    /**
+     * Accumulate scroll deltas and enter minimal state when the user
+     * has scrolled down more than [scrollThresholdPx] in a single
+     * sustained gesture. Scroll-up never exits minimal here (chevron
+     * button handles exit; see class kdoc).
+     */
+    private fun accumulateAndMaybeEnterMinimal(child: View, dy: Int) {
+        val toolbar = child as? UnifiedToolbar ?: return
+        when {
+            dy > 0 -> {
+                // Finger moving upward -> reading further down the page.
+                if (scrollYAccumulator < 0) scrollYAccumulator = 0
+                scrollYAccumulator += dy
+                if (!toolbar.isMinimal() && scrollYAccumulator >= scrollThresholdPx) {
+                    toolbar.enterMinimalState()
+                    scrollYAccumulator = 0
+                }
+            }
+            dy < 0 -> {
+                // Scroll-up: do not auto-exit. Reset the downward
+                // accumulator so a down-scroll preceded by an up-flick
+                // still needs threshold-worth of sustained downward
+                // scroll to minimise.
+                scrollYAccumulator = 0
+            }
+        }
     }
 
     private fun findEngineView(coordinatorLayout: CoordinatorLayout): mozilla.components.concept.engine.EngineView? {
@@ -133,16 +164,12 @@ class ModernScrollBehavior(
         return null
     }
 
-    /**
-     * Legacy no-op kept so callers that previously flipped scroll on/off
-     * (e.g. during pull-to-refresh, picture-in-picture) do not have to be
-     * rewritten. See class kdoc for context.
-     */
+    /** Reinstates scroll-driven enter-minimal. Pair with [disableScrolling]. */
     fun enableScrolling() {
         isScrollingEnabled = true
     }
 
-    /** @see enableScrolling */
+    /** Suspends scroll-driven enter-minimal (e.g. during PiP / fullscreen / pull-to-refresh). */
     fun disableScrolling() {
         isScrollingEnabled = false
     }

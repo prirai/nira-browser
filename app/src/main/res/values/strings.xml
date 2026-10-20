@@ -606,10 +606,8 @@
   <string name="clear_cookies_dialog_positive">Clear</string>
   <string name="clear_cookies_toast">Cookies and site data cleared</string>
   <string name="cookie_retention_button">Automatic cookie retention</string>
-  <string name="cookie_retention_none">No automatic retention</string>
-  <string
-        name="cookie_retention_configured"
-    >Clearing cookies every %1$s</string>
+  <string name="cookie_policy_label">Cookie Policy</string>
+  <string name="cookie_retention_none">Never</string>
   <string name="cookie_retention_dialog_title">Clear cookies for this site every…</string>
   <string name="cookie_retention_option_never">Never</string>
   <string name="cookie_retention_option_6h">6 hours</string>
@@ -786,7 +784,9 @@
          backed by `BackgroundPlaybackAllowlist`. See SitePermissionsBottomSheet
          for rationale. -->
     <string name="permission_background_playback">Background playback</string>
-    <string name="permission_background_playback_subtitle">Keeps audio playing when the tab or app is in the background. Currently takes effect only on YouTube.</string>
+    <string
+        name="permission_background_playback_subtitle"
+    >Keeps audio playing when the tab is backgrounded, the screen is off, or the app has been swiped from recents.</string>
 
     <!-- Minimal-state toggle button (right of the URL pill in the address bar).
          Down chevron while expanded (tap to minimize); up chevron while

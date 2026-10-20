@@ -2,20 +2,25 @@
   "manifest_version": 2,
   "name": "Nira Background Playback",
   "short_name": "NiraBgPlay",
-  "description": "Keeps audio playing on YouTube when the tab is backgrounded by neutralising the Page Visibility API on youtube.com and monkey-patching HTMLVideoElement.pause.",
-  "version": "1.10.0",
+  "description": "Keeps audio playing on allow-listed sites when the tab is backgrounded by neutralising the Page Visibility API and auto-resuming <video> pauses that are not user-initiated.",
+  "version": "2.0.0",
   "browser_specific_settings": {
     "gecko": {
       "id": "nira-bg-play@prirai.android.nira"
     }
   },
+  "permissions": [
+    "nativeMessaging",
+    "storage"
+  ],
+  "background": {
+    "scripts": ["background.js"],
+    "persistent": true
+  },
   "content_scripts": [
     {
       "matches": [
-        "*://youtube.com/*",
-        "*://*.youtube.com/*",
-        "*://youtube-nocookie.com/*",
-        "*://*.youtube-nocookie.com/*"
+        "<all_urls>"
       ],
       "js": ["content.js"],
       "run_at": "document_start",

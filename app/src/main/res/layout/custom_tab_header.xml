@@ -1,80 +1,108 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+    Custom-tab header. Mounts at the top or the bottom of the fragment
+    depending on UserPreferences.shouldUseBottomToolbar - the padding
+    for status-bar / navigation-bar insets is applied programmatically
+    on whichever side is attached. See
+    ExternalAppBrowserFragment.addCustomHeader.
+
+    Buttons (left-to-right):
+      - Close (X)
+      - Title + URL stack
+      - Minimize (chevron-down, enters picture-in-picture)
+      - Overflow menu (three dots)
+-->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:background="?android:attr/colorBackground">
 
-<LinearLayout
-    android:id="@+id/customTabHeader"
-    android:layout_width="match_parent"
-    android:layout_height="56dp"
-    android:orientation="horizontal"
-    android:background="?android:attr/colorBackground"
-    android:paddingStart="8dp"
-    android:paddingEnd="8dp"
-    android:gravity="center_vertical">
-
-    <!-- Close button -->
-    <ImageButton
-        android:id="@+id/customTabCloseButton"
-        android:layout_width="48dp"
-        android:layout_height="48dp"
-        android:src="@drawable/ic_round_close"
-        android:background="?attr/selectableItemBackgroundBorderless"
-        android:contentDescription="@string/close"
-        android:padding="12dp"
-        app:tint="?android:attr/textColorPrimary" />
-
-    <!-- Page info container -->
     <LinearLayout
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_weight="1"
-        android:orientation="vertical"
-        android:layout_marginStart="8dp"
-        android:layout_marginEnd="8dp"
+        android:id="@+id/customTabHeader"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:orientation="horizontal"
+        android:background="?android:attr/colorBackground"
+        android:paddingStart="8dp"
+        android:paddingEnd="8dp"
         android:gravity="center_vertical">
 
-        <!-- Page Title -->
-        <TextView
-            android:id="@+id/customTabTitle"
-            android:layout_width="match_parent"
+        <!-- Close button -->
+        <ImageButton
+            android:id="@+id/customTabCloseButton"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:src="@drawable/ic_round_close"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/close"
+            android:padding="12dp"
+            app:tint="?android:attr/textColorPrimary" />
+
+        <!-- Page info container -->
+        <LinearLayout
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:text="@string/loading"
-            android:textSize="15sp"
-            android:textStyle="bold"
-            android:textColor="?android:attr/textColorPrimary"
-            android:maxLines="1"
-            android:ellipsize="end" />
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:layout_marginStart="8dp"
+            android:layout_marginEnd="8dp"
+            android:gravity="center_vertical">
+
+            <!-- Page Title -->
+            <TextView
+                android:id="@+id/customTabTitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textSize="15sp"
+                android:textStyle="bold"
+                android:textColor="?android:attr/textColorPrimary"
+                android:maxLines="1"
+                android:ellipsize="end" />
+
+            <!--
+                URL / origin subtitle. Populated from Kotlin in
+                updateHeaderDisplay(). Deliberately not using a
+                `tools:text` here because an empty value during
+                layout preview is the desired initial state.
+            -->
+            <TextView
+                android:id="@+id/customTabUrl"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textSize="12sp"
+                android:textColor="?android:attr/textColorSecondary"
+                android:maxLines="1"
+                android:ellipsize="middle" />
+
+        </LinearLayout>
 
         <!--
-            URL / domain subtitle. Populated from Kotlin in
-            updateHeaderDisplay(). The "Powered by Nira" subtitle was
-            removed post-v0.5.14 - the branding was superfluous and ate
-            screen real estate better spent on the real URL.
+            Minimize (picture-in-picture) button. Previously lived in
+            the overflow menu; moved onto the header post-v0.5.14 so
+            the one-tap minimize matches the main browser's chevron
+            affordance.
         -->
-        <TextView
-            android:id="@+id/customTabUrl"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:textSize="12sp"
-            android:textColor="?android:attr/textColorSecondary"
-            android:maxLines="1"
-            android:ellipsize="middle" />
+        <ImageButton
+            android:id="@+id/customTabMinimizeButton"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/custom_tab_menu_minimize"
+            android:padding="12dp"
+            android:src="@drawable/mozac_ic_chevron_down_24"
+            app:tint="?android:attr/textColorPrimary" />
+
+        <!-- Three dot menu button -->
+        <ImageButton
+            android:id="@+id/customTabMenuButton"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:src="@drawable/ic_more_vert"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/menu"
+            android:padding="12dp"
+            app:tint="?android:attr/textColorPrimary" />
 
     </LinearLayout>
-
-    <!-- Three dot menu button -->
-    <ImageButton
-        android:id="@+id/customTabMenuButton"
-        android:layout_width="48dp"
-        android:layout_height="48dp"
-        android:src="@drawable/ic_more_vert"
-        android:background="?attr/selectableItemBackgroundBorderless"
-        android:contentDescription="@string/menu"
-        android:padding="12dp"
-        app:tint="?android:attr/textColorPrimary" />
-
-</LinearLayout>
 </FrameLayout>
