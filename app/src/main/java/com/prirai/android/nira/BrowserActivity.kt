@@ -308,12 +308,32 @@ open class BrowserActivity : LocaleAwareAppCompatActivity(), ComponentCallbacks2
     override fun onTrimMemory(level: Int) {
         super.onTrimMemory(level)
 
-        // Delegate engine-session suspension to SleepingTabsManager, which
-        // dispatches SuspendEngineSessionAction (saves state, unlinks, closes).
-        // The previous implementation called engineSession.close() directly,
-        // which left dangling references in the store and caused tab ghosting
-        // (see fix for tab ghosting bug on release builds).
-        components.sleepingTabsManager.onTrimMemory(components.store, level)
+        // Only touch the heavy singletons when the signal actually matters.
+        // `TRIM_MEMORY_UI_HIDDEN` (20) fires on every HOME press, lock, and
+        // app-switch - 2-3 times per minute during normal use. The previous
+        // implementation called `components.sleepingTabsManager.onTrimMemory`
+        // unconditionally, which:
+        //   - triggered the `by lazy` construction of SleepingTabsManager on
+        //     the very first HOME press, pulling in UserPreferences and
+        //     constructing a singleton for a code path that then early-exits.
+        //   - still ran two pref reads + an int compare inside the function
+        //     body even when the level was non-actionable.
+        // The field logcat showed battery-uevent noise waking the trim path
+        // 2x per 10s on charge; gating here removes that CPU cost.
+        //
+        // The thresholds match SleepingTabsManager.onTrimMemory's internal
+        // gating so we're never shadowing a decision - just moving it
+        // outward.
+        if (level >= ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW ||
+            level == ComponentCallbacks2.TRIM_MEMORY_RUNNING_CRITICAL
+        ) {
+            // Delegate engine-session suspension to SleepingTabsManager, which
+            // dispatches SuspendEngineSessionAction (saves state, unlinks, closes).
+            // The previous implementation called engineSession.close() directly,
+            // which left dangling references in the store and caused tab ghosting
+            // (see fix for tab ghosting bug on release builds).
+            components.sleepingTabsManager.onTrimMemory(components.store, level)
+        }
 
         when {
             level >= ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW -> {
