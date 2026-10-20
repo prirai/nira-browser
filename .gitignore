@@ -12,6 +12,9 @@ inspection_xml/
 bm/
 docs/
 .kotlin/
+# Logcat captures left behind by field tests on the branch.
+bg-play.txt
+*-logcat.txt
 # Crowdin
 crowdin.properties
 
