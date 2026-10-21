@@ -225,6 +225,26 @@
         name="settings_about_explain"
     >App version, open source licenses…</string>
 
+  <!-- Auto-updater (release-only; see `com.prirai.android.nira.update`). -->
+  <string name="settings_updates">Updates</string>
+  <string name="settings_update_checks_enabled_title">Check for updates</string>
+  <string
+        name="settings_update_checks_enabled_summary"
+    >Check GitHub for new Nira releases once a day on Wi-Fi.</string>
+  <string name="settings_update_check_now_title">Check for updates now</string>
+  <string
+        name="settings_update_check_now_summary"
+    >Run an immediate check without waiting for the next scheduled tick.</string>
+  <string name="settings_update_last_check_title">Last checked</string>
+  <string name="settings_update_last_check_never">Never</string>
+  <string name="settings_update_check_in_progress">Checking for updates…</string>
+  <string name="settings_update_check_up_to_date">You are on the latest release</string>
+  <string name="settings_update_check_available">A newer release is available</string>
+  <string name="settings_update_check_error">Could not reach GitHub right now</string>
+  <string
+        name="settings_update_check_unsupported"
+    >No update is published for this device\'s architecture</string>
+
     <string name="javascript_enabled">Enable JavaScript</string>
 
   <string name="clear_tabs">Clear open tabs</string>
