@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Narrow FileProvider path configuration for the auto-updater.
+    Grants URI access to exactly the cacheDir/updates/ subtree so
+    the system package installer can read a downloaded APK.
+
+    Scoped intentionally - we do NOT share the entire cacheDir with
+    the installer, only the directory our UpdateDownloader writes
+    into. See `com.prirai.android.nira.update.UpdateDownloader.UPDATES_DIR`.
+-->
+<paths xmlns:android="http://schemas.android.com/apk/res/android">
+    <cache-path
+        name="updates"
+        path="updates/" />
+</paths>
