@@ -2,6 +2,7 @@ package com.prirai.android.nira.toolbar
 
 import android.content.Context
 import android.util.AttributeSet
+import android.view.HapticFeedbackConstants
 import android.view.LayoutInflater
 import android.widget.FrameLayout
 import android.widget.ImageButton
@@ -29,6 +30,16 @@ class ContextualBottomToolbar @JvmOverloads constructor(
         fun onTabCountClicked()
         fun onMenuClicked()
         fun onBookmarksClicked()
+
+        /**
+         * Long-press on the back button. Only called when the button is
+         * actually showing the back glyph - on the homepage the back slot
+         * is the bookmarks button and the long-press is swallowed.
+         */
+        fun onBackLongClicked() {}
+
+        /** Long-press on the forward button. */
+        fun onForwardLongClicked() {}
     }
 
     private lateinit var backButton: ImageButton
@@ -138,6 +149,22 @@ class ContextualBottomToolbar @JvmOverloads constructor(
         newTabButton.setOnClickListener { listener?.onNewTabClicked() }
         tabCountButton.setOnClickListener { listener?.onTabCountClicked() }
         menuButton.setOnClickListener { listener?.onMenuClicked() }
+
+        // Long-press on back opens the tab-history popup (Chrome/Fenix
+        // style). Swallowed when the back slot is showing the bookmark
+        // glyph (homepage context) - that button has no history to show.
+        backButton.setOnLongClickListener { view ->
+            if (!isShowingBookmarkIcon) {
+                view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+                listener?.onBackLongClicked()
+            }
+            true
+        }
+        forwardButton.setOnLongClickListener { view ->
+            view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+            listener?.onForwardLongClicked()
+            true
+        }
     }
 
     fun updateForContext(
