@@ -245,6 +245,27 @@
         name="settings_update_check_unsupported"
     >No update is published for this device\'s architecture</string>
 
+  <!-- Update bottom sheet (shown by BrowserActivity when the periodic
+       worker has written a pending manifest; see
+       UpdateAvailableBottomSheet.kt). -->
+  <string name="update_sheet_title">A new Nira release is available</string>
+  <string name="update_sheet_release_notes_label">Release notes</string>
+  <string
+        name="update_sheet_no_release_notes"
+    >(No release notes were published for this version.)</string>
+  <string name="update_sheet_install">Install</string>
+  <string name="update_sheet_later">Later</string>
+  <string name="update_sheet_skip_this_version">Skip this version</string>
+  <string name="update_sheet_status_starting">Starting download…</string>
+  <string name="update_sheet_status_downloading">Downloading… %1$d%%</string>
+  <string name="update_sheet_status_installing">Opening installer…</string>
+  <string
+        name="update_sheet_status_install_failed"
+    >Could not open the system installer</string>
+  <string
+        name="update_sheet_status_download_error"
+    >Download failed: %1$s</string>
+
     <string name="javascript_enabled">Enable JavaScript</string>
 
   <string name="clear_tabs">Clear open tabs</string>
