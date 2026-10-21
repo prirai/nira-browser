@@ -37,6 +37,34 @@
 
     </PreferenceCategory>
 
+    <!--
+        Updates category - populated by AboutSettingsFragment at
+        runtime. Switch + manual check + last-check summary. Debug
+        builds hide the whole category because the auto-updater is
+        no-op in dev (release-signing-key only).
+    -->
+    <PreferenceCategory
+        android:key="pref_cat_updates"
+        android:title="@string/settings_updates">
+
+        <com.prirai.android.nira.settings.MaterialSwitchPreference
+            android:key="pref_update_checks_enabled"
+            android:title="@string/settings_update_checks_enabled_title"
+            android:summary="@string/settings_update_checks_enabled_summary"
+            android:defaultValue="false" />
+
+        <Preference
+            android:key="pref_update_check_now"
+            android:title="@string/settings_update_check_now_title"
+            android:summary="@string/settings_update_check_now_summary" />
+
+        <Preference
+            android:key="pref_update_last_check"
+            android:title="@string/settings_update_last_check_title"
+            android:selectable="false" />
+
+    </PreferenceCategory>
+
     <PreferenceCategory android:title="@string/licenses">
 
         <Preference
