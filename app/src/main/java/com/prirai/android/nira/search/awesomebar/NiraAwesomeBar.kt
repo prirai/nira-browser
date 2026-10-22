@@ -67,7 +67,9 @@ fun NiraAwesomeBar(
             sections = emptyList()
             return@LaunchedEffect
         }
-        sections = fetchSections(text, providers)
+        fetchSections(text, providers) { fetched ->
+            sections = fetched
+        }
     }
 
     val visibleSections = remember(sections, hiddenSuggestions) {
@@ -197,10 +199,22 @@ private fun SuggestionCardRow(
     }
 }
 
+/**
+ * Fetches suggestions from [providers] for [text], emitting the currently
+ * completed sections to [onSections] each time a group finishes.
+ *
+ * Emission is incremental: fast local providers (tabs, history, bookmarks)
+ * render their results immediately instead of waiting for the slowest
+ * group - network search suggestions - which previously gated the whole
+ * list behind its round-trip and made typing feel laggy. All async blocks
+ * run inside the caller's (main) coroutine context, so the completed map
+ * needs no synchronization.
+ */
 private suspend fun fetchSections(
     text: String,
     providers: List<SuggestionProvider>,
-): List<SuggestionSection> = coroutineScope {
+    onSections: (List<SuggestionSection>) -> Unit,
+): Unit = coroutineScope {
     val groups = providers
         .groupBy { it.groupTitle() ?: it.id }
         .map { (title, groupedProviders) ->
@@ -211,6 +225,11 @@ private suspend fun fetchSections(
             )
         }
         .sortedByDescending { it.priority }
+
+    val completed = LinkedHashMap<String, SuggestionSection>()
+    fun emit() {
+        onSections(completed.values.sortedByDescending { it.group.priority })
+    }
 
     groups.map { group ->
         async {
@@ -223,9 +242,13 @@ private suspend fun fetchSections(
                 .awaitAll()
                 .flatten()
                 .sortedByDescending { it.score }
-            SuggestionSection(group, suggestions)
+            if (suggestions.isNotEmpty()) {
+                completed[group.id] = SuggestionSection(group, suggestions)
+                emit()
+            }
         }
-    }.awaitAll().filter { it.suggestions.isNotEmpty() }
+    }.awaitAll()
+    emit()
 }
 
 internal class HeaderedSuggestionProvider(
