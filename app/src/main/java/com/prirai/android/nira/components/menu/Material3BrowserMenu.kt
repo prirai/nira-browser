@@ -1,6 +1,7 @@
 package com.prirai.android.nira.components.menu
 
 import android.content.Context
+import android.view.HapticFeedbackConstants
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -46,7 +47,10 @@ class Material3BrowserMenu(
             val onReloadClick: () -> Unit,
             val onShareClick: () -> Unit,
             val backEnabled: Boolean = true,
-            val forwardEnabled: Boolean = true
+            val forwardEnabled: Boolean = true,
+            /** Optional long-press affordance: opens the tab-history popup. */
+            val onBackLongClick: (() -> Unit)? = null,
+            val onForwardLongClick: (() -> Unit)? = null
         ) : MenuItem()
         
         data class PillRow(
@@ -321,6 +325,15 @@ class Material3BrowserMenu(
                         onDismiss()
                     }
                 }
+                backButton.setOnLongClickListener { view ->
+                    val longClick = item.onBackLongClick
+                    if (item.backEnabled && longClick != null) {
+                        view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+                        longClick()
+                        onDismiss()
+                    }
+                    true
+                }
                 
                 forwardButton.isEnabled = item.forwardEnabled
                 forwardButton.alpha = if (item.forwardEnabled) 1.0f else 0.5f
@@ -329,6 +342,15 @@ class Material3BrowserMenu(
                         item.onForwardClick()
                         onDismiss()
                     }
+                }
+                forwardButton.setOnLongClickListener { view ->
+                    val longClick = item.onForwardLongClick
+                    if (item.forwardEnabled && longClick != null) {
+                        view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+                        longClick()
+                        onDismiss()
+                    }
+                    true
                 }
                 
                 reloadButton.setOnClickListener {

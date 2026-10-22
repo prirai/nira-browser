@@ -545,6 +545,10 @@
   <string name="menu">Menu</string>
   <string name="tabs_count_description">%d tabs open</string>
 
+  <!-- Tab history popup strings -->
+  <string name="tab_history_current_page">Current page</string>
+  <string name="tab_history_new_tab">New Tab</string>
+
   <!-- Bookmarks Bottom Sheet strings -->
   <string name="sort_by_name">Sort by Name</string>
   <string name="sort_by_url">Sort by URL</string>

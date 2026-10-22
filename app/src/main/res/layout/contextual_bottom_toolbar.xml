@@ -77,41 +77,18 @@
         android:visibility="gone"
         app:tint="?android:attr/textColorPrimary" />
 
-    <!-- Tab Count Button -->
-    <FrameLayout
-        android:id="@+id/tab_count_button"
+    <!-- Extensions Button -->
+    <ImageButton
+        android:id="@+id/extensions_button"
         android:layout_width="0dp"
         android:layout_height="48dp"
         android:layout_weight="1"
         android:background="?android:attr/selectableItemBackgroundBorderless"
-        android:padding="4dp"
-        android:contentDescription="@string/tabs">
-
-        <!-- Tab Count Background (Square) -->
-        <ImageView
-            android:id="@+id/tab_count_background"
-            android:layout_width="28dp"
-            android:layout_height="28dp"
-            android:layout_gravity="center"
-            android:contentDescription="@string/tab_count_background"
-            android:src="@drawable/tab_number_background"
-            android:scaleType="fitXY"
-            app:tint="?android:attr/textColorPrimary" />
-
-        <!-- Tab Count Text -->
-        <TextView
-            android:id="@+id/tab_count_text"
-            android:layout_width="28dp"
-            android:layout_height="28dp"
-            android:layout_gravity="center"
-            android:gravity="center"
-            android:textSize="13sp"
-            android:textStyle="bold"
-            android:textColor="?android:attr/textColorPrimary"
-            android:maxLines="1"
-            android:ellipsize="none" />
-
-    </FrameLayout>
+        android:src="@drawable/mozac_ic_extension_24"
+        android:contentDescription="@string/extensions"
+        android:scaleType="fitCenter"
+        android:padding="10dp"
+        app:tint="?android:attr/textColorPrimary" />
 
     <!-- Menu Button (Three Dots) -->
     <ImageButton

@@ -10,7 +10,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
+import com.prirai.android.nira.browser.history.TabHistoryBottomSheet
+import com.prirai.android.nira.browser.history.TabHistoryMode
 import com.prirai.android.nira.browser.home.compose.jumpBackInItems
+import com.prirai.android.nira.browser.tabs.NewTabCreator
 import com.prirai.android.nira.browser.home.compose.recentlyClosedItems
 import com.prirai.android.nira.browser.toolbar.ToolbarGestureHandler
 import com.prirai.android.nira.components.toolbar.ToolbarMenu
@@ -471,7 +474,30 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
                 }
 
                 override fun onForwardClicked() {
-                    requireContext().components.sessionUseCases.goForward()
+                    goForwardOrFromNewTab()
+                }
+
+                // Long-press back/forward: open the tab-history popup in
+                // the matching direction. The toolbar already gave the
+                // long-press haptic; showIfAvailable is a silent no-op when
+                // the direction has no entries (disabled buttons never
+                // deliver the long-press either).
+                override fun onBackLongClicked() {
+                    TabHistoryBottomSheet.showIfAvailable(
+                        parentFragmentManager,
+                        requireContext().components.store,
+                        TabHistoryMode.Back,
+                        null
+                    )
+                }
+
+                override fun onForwardLongClicked() {
+                    TabHistoryBottomSheet.showIfAvailable(
+                        parentFragmentManager,
+                        requireContext().components.store,
+                        TabHistoryMode.Forward,
+                        null
+                    )
                 }
 
                 override fun onBookmarksClicked() {
@@ -502,6 +528,19 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
                         )
                     } catch (e: Exception) {
                         // Silently handle tab sheet opening failure
+                    }
+                }
+
+                override fun onExtensionsClicked() {
+                    try {
+                        val extensionsBottomSheet =
+                            com.prirai.android.nira.addons.ExtensionsBottomSheetFragment.newInstance()
+                        extensionsBottomSheet.show(
+                            parentFragmentManager,
+                            com.prirai.android.nira.addons.ExtensionsBottomSheetFragment.TAG
+                        )
+                    } catch (e: Exception) {
+                        // Silently handle extensions sheet opening failure
                     }
                 }
 
@@ -612,7 +651,6 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
                         tab = currentSelectedTab,
                         canGoBack = currentSelectedTab?.content?.canGoBack ?: false,
                         canGoForward = currentSelectedTab?.content?.canGoForward ?: false,
-                        tabCount = filteredTabs.size,  // Use filtered tabs count
                         isHomepage = currentIsHomepage
                     )
                 }
@@ -624,27 +662,6 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
         // Initialize the modern toolbar with the current tab state immediately
         val state = requireContext().components.store.state
 
-        // Apply same filtering logic as in observeTabChangesForModernToolbar
-        val activity = activity as? BrowserActivity
-        val isPrivateMode = activity?.browsingModeManager?.mode?.isPrivate ?: false
-        val profileManager = com.prirai.android.nira.browser.profile.ProfileManager.getInstance(requireContext())
-        val currentProfile = profileManager.getActiveProfile()
-        val currentProfileContextId = if (isPrivateMode) {
-            "private"
-        } else {
-            "profile_${currentProfile.id}"
-        }
-
-        val filteredTabs = state.tabs.filter { tab ->
-            // Match private mode first
-            if (tab.content.private != isPrivateMode) {
-                false
-            } else {
-                // Include tabs with matching contextId OR guest tabs (null contextId)
-                (tab.contextId == currentProfileContextId) || (tab.contextId == null)
-            }
-        }
-
         val selectedTab = state.tabs.find { it.id == state.selectedTabId }
         val currentUrl = selectedTab?.content?.url ?: ""
         // Properly detect homepage - both empty URL and about:homepage
@@ -654,7 +671,6 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
             tab = selectedTab,
             canGoBack = selectedTab?.content?.canGoBack ?: false,
             canGoForward = selectedTab?.content?.canGoForward ?: false,
-            tabCount = filteredTabs.size,  // Use filtered tabs count
             isHomepage = isHomepage
         )
 
@@ -1032,7 +1048,7 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
                     requireContext().components.sessionUseCases.goBack()
                 },
                 onForwardClick = {
-                    requireContext().components.sessionUseCases.goForward()
+                    goForwardOrFromNewTab()
                 },
                 onReloadClick = {
                     requireContext().components.sessionUseCases.reload()
@@ -1043,7 +1059,20 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
                     )
                 },
                 backEnabled = selectedTab?.content?.canGoBack ?: false,
-                forwardEnabled = selectedTab?.content?.canGoForward ?: false
+                forwardEnabled = selectedTab?.content?.canGoForward ?: false,
+                // Long-press back/forward opens the tab-history popup,
+                // routed through the menu controller like every other
+                // toolbar-row action (Chrome/Fenix behaviour).
+                onBackLongClick = {
+                    browserInteractor.onBrowserToolbarMenuItemTapped(
+                        ToolbarMenu.Item.Back(viewHistory = true)
+                    )
+                },
+                onForwardLongClick = {
+                    browserInteractor.onBrowserToolbarMenuItemTapped(
+                        ToolbarMenu.Item.Forward(viewHistory = true)
+                    )
+                }
             )
         )
         
@@ -1074,6 +1103,30 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
         }
     }
 
+    /**
+     * Forward navigation for the contextual toolbar and the overflow menu.
+     *
+     * From the tab's synthetic new tab page the engine is already at the
+     * newest entry, so a plain goForward() would no-op even though the
+     * whole session history is forward of that position - forward jumps
+     * to the first page instead, mirroring what the tab-history popup's
+     * forward rows do.
+     */
+    private fun goForwardOrFromNewTab() {
+        val store = requireContext().components.store
+        val selectedTab = store.state.tabs.find { it.id == store.state.selectedTabId }
+        if (selectedTab != null &&
+            selectedTab.content.url == "about:homepage" &&
+            selectedTab.content.history.currentIndex == NewTabCreator.NEW_TAB_INDEX
+        ) {
+            store.let {
+                requireContext().components.sessionUseCases.goToHistoryIndex(0)
+            }
+        } else {
+            requireContext().components.sessionUseCases.goForward()
+        }
+    }
+
     override fun onBackPressed(): Boolean {
         // First, try the default back handling (reader mode, find in page, fullscreen, etc.)
         val handled = super.onBackPressed()
@@ -1083,8 +1136,51 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
             val store = requireContext().components.store
             val selectedTab = store.state.tabs.find { it.id == store.state.selectedTabId }
             
-            // If we can't go back in history, navigate to home fragment
+            // If we can't go back in history...
             if (selectedTab != null && !selectedTab.content.canGoBack) {
+                // ...and the tab is sitting on the new tab page, the tab is
+                // "done": close it and switch to the most recently used
+                // other tab (Chrome closes the tab at the NTP on back; the
+                // app itself is never closed from here). With no other tab
+                // in the same profile/partition, stay on the new tab page -
+                // back is consumed either way.
+                if (selectedTab.content.url == "about:homepage" ||
+                    selectedTab.content.url == "about:blank"
+                ) {
+                    val lastUsedTab = store.state.tabs
+                        .filter {
+                            it.id != selectedTab.id &&
+                                it.content.private == selectedTab.content.private &&
+                                it.contextId == selectedTab.contextId
+                        }
+                        .maxByOrNull { it.lastAccess }
+                    if (lastUsedTab != null) {
+                        // Select first so the store never sits without a
+                        // selection between the two dispatches.
+                        requireContext().components.tabsUseCases.selectTab(lastUsedTab.id)
+                        requireContext().components.tabsUseCases.removeTab(selectedTab.id)
+                    }
+                    return true
+                }
+
+                // Walking back past the oldest entry lands on the tab's new
+                // tab page, like Chrome's NTP. The engine has no history
+                // entry for it, so this is a state transition: the
+                // BrowserFragment homepage overlay takes over and the tab
+                // pill follows ("New Tab") instead of desyncing to the page
+                // that was left behind.
+                val url = selectedTab.content.url
+                val isInternalPage = url.startsWith("about:") ||
+                    url.startsWith("chrome:") ||
+                    url.startsWith("moz-extension:")
+                if (!selectedTab.content.private && !isInternalPage) {
+                    com.prirai.android.nira.browser.tabs.NewTabCreator.setTabToNewTabPage(
+                        store, selectedTab.id
+                    )
+                    return true
+                }
+
+                // Internal/private pages keep the home-fragment fallback.
                 try {
                     val navController = androidx.navigation.fragment.NavHostFragment.findNavController(this)
                     // Only navigate if we're not already on home fragment

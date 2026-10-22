@@ -37,6 +37,11 @@ object UserJsPreferences {
         // Disables navigator.sendBeacon — prevents silent background data leakage
         "beacon.enabled" to false,
         // Classic fingerprint resistance (letterboxing, uniform UA, etc.)
+        // NOTE: while RFP is enabled, Gecko forces content
+        // `prefers-color-scheme: light` (a uniform fingerprint, bug
+        // 1535189) - the "Web theme" setting cannot reach pages. This is
+        // an accepted trade-off of the hardening; see about:config if it
+        // ever needs to be reconsidered.
         "privacy.resistFingerprinting" to true,
         // Send Do-Not-Track request header
         "privacy.donottrackheader.enabled" to true,
@@ -95,6 +100,14 @@ object UserJsPreferences {
         "content.notify.interval" to 100000,
         // Disable session-history content-viewer cache to reduce memory usage
         "browser.sessionhistory.max_total_viewers" to 0,
+        // ── Best WebGL support ──
+        // Never silently disable WebGL on blocklisted drivers - attempt
+        // hardware WebGL everywhere rather than falling back to "no WebGL"
+        "webgl.force-enabled" to true,
+        // Do not fail context creation when only a software rasterizer is
+        // available (the "major performance caveat") - sites get a working
+        // context instead of none
+        "webgl.disable-fail-if-major-performance-caveat" to true,
     )
 
     // ── Config file writing ──────────────────────────────────────────────────
