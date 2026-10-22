@@ -428,6 +428,15 @@ class ComposeHomeFragment : Fragment() {
                 )
             }
 
+            override fun onExtensionsClicked() {
+                val extensionsBottomSheet =
+                    com.prirai.android.nira.addons.ExtensionsBottomSheetFragment.newInstance()
+                extensionsBottomSheet.show(
+                    parentFragmentManager,
+                    com.prirai.android.nira.addons.ExtensionsBottomSheetFragment.TAG
+                )
+            }
+
             override fun onMenuClicked() {
                 showNativeMenu()
             }
@@ -443,7 +452,6 @@ class ComposeHomeFragment : Fragment() {
             tab = null,
             canGoBack = false,
             canGoForward = false,
-            tabCount = getFilteredTabCount(),
             isHomepage = true
         )
 
@@ -516,7 +524,6 @@ class ComposeHomeFragment : Fragment() {
                         tab = null,
                         canGoBack = false,
                         canGoForward = false,
-                        tabCount = getFilteredTabCount(),
                         isHomepage = true
                     )
                     
@@ -629,7 +636,6 @@ class ComposeHomeFragment : Fragment() {
             tab = null,
             canGoBack = false,
             canGoForward = false,
-            tabCount = getFilteredTabCount(),
             isHomepage = true
         )
     }
