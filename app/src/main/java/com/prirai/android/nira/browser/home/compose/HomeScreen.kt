@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalMaterial3ExpressiveApi::class)
+
 package com.prirai.android.nira.browser.home.compose
 
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -5,6 +7,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -35,6 +38,7 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -54,7 +58,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
@@ -66,6 +70,7 @@ import coil.request.ImageRequest
 import com.prirai.android.nira.R
 import com.prirai.android.nira.browser.tabs.compose.FaviconImageFromUrl
 import com.prirai.android.nira.settings.HomepageChoice
+import com.prirai.android.nira.ui.components.pressScale
 import mozilla.components.browser.state.state.BrowserState
 
 data class ProfileInfo(
@@ -177,7 +182,7 @@ fun HomeScreen(
                     .data(backgroundImageUrl)
                     .crossfade(true)
                     .build(),
-                contentDescription = "Homepage background",
+                contentDescription = stringResource(R.string.homepage_background),
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Crop
             )
@@ -294,16 +299,15 @@ fun LogoSection(
             // App icon
             Icon(
                 painter = painterResource(id = R.mipmap.ic_launcher_foreground),
-                contentDescription = "App Icon",
+                contentDescription = stringResource(R.string.app_icon),
                 modifier = Modifier.size(80.dp),
                 tint = Color.Unspecified
             )
 
             // App name
             Text(
-                text = "Nira",
-                style = MaterialTheme.typography.displaySmall,
-                fontWeight = FontWeight.Bold,
+                text = stringResource(R.string.app_name_display),
+                style = MaterialTheme.typography.displaySmallEmphasized,
                 color = MaterialTheme.colorScheme.onBackground
             )
 
@@ -347,10 +351,9 @@ fun LogoSection(
                         modifier = Modifier.size(16.dp)
                     )
                     Text(
-                        text = "Private Browsing",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = Color.White,
-                        fontWeight = FontWeight.SemiBold
+                        text = stringResource(R.string.private_browsing),
+                        style = MaterialTheme.typography.labelMediumEmphasized,
+                        color = Color.White
                     )
                 }
             }
@@ -363,28 +366,30 @@ fun SearchBar(
     onSearchClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val interactionSource = remember { MutableInteractionSource() }
     Surface(
         modifier = modifier
             .fillMaxWidth()
-            .clickable(onClick = onSearchClick),
+            .pressScale(interactionSource, pressedScale = 0.98f),
         shape = RoundedCornerShape(16.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
         tonalElevation = 1.dp
     ) {
         Row(
             modifier = Modifier
+                .clickable(interactionSource = interactionSource, onClick = onSearchClick)
                 .padding(horizontal = 16.dp, vertical = 14.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Icon(
                 imageVector = Icons.Default.Search,
-                contentDescription = "Search",
+                contentDescription = null,
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(24.dp)
             )
             Text(
-                text = "Search or enter address",
+                text = stringResource(R.string.search),
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -408,16 +413,15 @@ fun ShortcutsSection(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "Favorites",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
+                text = stringResource(R.string.favorites),
+                style = MaterialTheme.typography.titleMediumEmphasized,
                 color = MaterialTheme.colorScheme.onBackground
             )
 
             IconButton(onClick = onAddClick) {
                 Icon(
                     imageVector = Icons.Default.Add,
-                    contentDescription = "Add Shortcut",
+                    contentDescription = stringResource(R.string.add_shortcut),
                     tint = MaterialTheme.colorScheme.primary
                 )
             }
@@ -434,7 +438,7 @@ fun ShortcutsSection(
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = "Add your go-to sites here",
+                    text = stringResource(R.string.add_go_to_sites),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                     textAlign = TextAlign.Center
@@ -468,11 +472,14 @@ fun ShortcutItem(
     onLongClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val interactionSource = remember { MutableInteractionSource() }
     Column(
         modifier = modifier
+            .pressScale(interactionSource)
             .combinedClickable(
                 onClick = onClick,
-                onLongClick = onLongClick
+                onLongClick = onLongClick,
+                interactionSource = interactionSource
             )
             .padding(8.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -531,13 +538,13 @@ fun LibraryLinksRow(
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         LibraryLinkButton(
-            label = "History",
+            label = stringResource(R.string.action_history),
             icon = mozilla.components.ui.icons.R.drawable.mozac_ic_history_24,
             onClick = onHistoryClick,
             modifier = Modifier.weight(1f)
         )
         LibraryLinkButton(
-            label = "Bookmarks",
+            label = stringResource(R.string.action_bookmarks),
             icon = mozilla.components.ui.icons.R.drawable.mozac_ic_bookmark_24,
             onClick = onBookmarksClick,
             modifier = Modifier.weight(1f)
@@ -552,10 +559,13 @@ private fun LibraryLinkButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val interactionSource = remember { MutableInteractionSource() }
     Surface(
-        modifier = modifier.clickable(onClick = onClick),
+        modifier = modifier
+            .pressScale(interactionSource)
+            .clickable(interactionSource = interactionSource, onClick = onClick),
         shape = RoundedCornerShape(16.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f)
+        color = MaterialTheme.colorScheme.surfaceContainerHigh
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
@@ -570,8 +580,7 @@ private fun LibraryLinkButton(
             )
             Text(
                 text = label,
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold,
+                style = MaterialTheme.typography.titleSmallEmphasized,
                 color = MaterialTheme.colorScheme.onSurface
             )
         }
@@ -590,9 +599,8 @@ fun JumpBackInSection(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "Jump Back In",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
+                text = stringResource(R.string.jump_back_in),
+                style = MaterialTheme.typography.titleMediumEmphasized,
                 color = MaterialTheme.colorScheme.onBackground
             )
         }
@@ -644,9 +652,8 @@ fun RecentlyClosedSection(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "Recently Closed",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
+                text = stringResource(R.string.recently_closed),
+                style = MaterialTheme.typography.titleMediumEmphasized,
                 color = MaterialTheme.colorScheme.onBackground
             )
         }
@@ -700,25 +707,24 @@ fun PrivateBrowsingInfo(modifier: Modifier = Modifier) {
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             Text(
-                text = "Private Browsing",
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold,
+                text = stringResource(R.string.private_browsing),
+                style = MaterialTheme.typography.headlineSmallEmphasized,
                 color = MaterialTheme.colorScheme.primary
             )
 
             PrivateInfoSection(
-                title = "What Private Browsing Does",
-                description = "Your browsing history, cookies, and site data won't be saved after you close all private tabs."
+                title = stringResource(R.string.private_browsing_does),
+                description = stringResource(R.string.private_browsing_does_desc)
             )
 
             PrivateInfoSection(
-                title = "Downloads and Bookmarks",
-                description = "Files you download and bookmarks you create will be kept even after closing private tabs."
+                title = stringResource(R.string.private_downloads_bookmarks),
+                description = stringResource(R.string.private_downloads_bookmarks_desc)
             )
 
             PrivateInfoSection(
-                title = "Your Activity is Still Visible To",
-                description = "Websites you visit, your internet service provider, and your network administrator can still see your browsing activity."
+                title = stringResource(R.string.private_activity_visible),
+                description = stringResource(R.string.private_activity_visible_desc)
             )
 
             Surface(
@@ -740,7 +746,7 @@ fun PrivateBrowsingInfo(modifier: Modifier = Modifier) {
                         tint = MaterialTheme.colorScheme.primary
                     )
                     Text(
-                        text = "Note: Private browsing doesn't make you anonymous online. For enhanced privacy, consider using a VPN.",
+                        text = stringResource(R.string.private_browsing_note),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurface
                     )
@@ -762,8 +768,7 @@ fun PrivateInfoSection(
     ) {
         Text(
             text = title,
-            style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.SemiBold,
+            style = MaterialTheme.typography.titleSmallEmphasized,
             color = MaterialTheme.colorScheme.onBackground
         )
         Text(
@@ -784,11 +789,12 @@ fun AddShortcutDialog(
     var url by remember { mutableStateOf(initialUrl) }
     var title by remember { mutableStateOf(initialTitle) }
     var urlError by remember { mutableStateOf(false) }
+    val untitledLabel = stringResource(R.string.untitled)
 
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
-            Text("Add Shortcut")
+            Text(stringResource(R.string.add_shortcut_dialog))
         },
         text = {
             Column(
@@ -800,11 +806,11 @@ fun AddShortcutDialog(
                         url = it
                         urlError = false
                     },
-                    label = { Text("URL") },
+                    label = { Text(stringResource(R.string.url)) },
                     placeholder = { Text("https://example.com") },
                     isError = urlError,
                     supportingText = if (urlError) {
-                        { Text("Please enter a valid URL") }
+                        { Text(stringResource(R.string.url_invalid)) }
                     } else null,
                     keyboardOptions = KeyboardOptions(
                         keyboardType = KeyboardType.Uri,
@@ -817,7 +823,7 @@ fun AddShortcutDialog(
                 OutlinedTextField(
                     value = title,
                     onValueChange = { title = it },
-                    label = { Text("Title") },
+                    label = { Text(stringResource(R.string.title)) },
                     placeholder = { Text("My Website") },
                     keyboardOptions = KeyboardOptions(
                         imeAction = ImeAction.Done
@@ -847,19 +853,19 @@ fun AddShortcutDialog(
                         try {
                             java.net.URL(validUrl).host.replace("www.", "")
                         } catch (e: Exception) {
-                            "Untitled"
+                            untitledLabel
                         }
                     }
 
                     onSave(validUrl, finalTitle)
                 }
             ) {
-                Text("Save")
+                Text(stringResource(R.string.save))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text(stringResource(R.string.cancel))
             }
         }
     )

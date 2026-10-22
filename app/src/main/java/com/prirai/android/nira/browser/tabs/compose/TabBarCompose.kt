@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalMaterial3ExpressiveApi::class)
+
 package com.prirai.android.nira.browser.tabs.compose
 
 import androidx.compose.foundation.BorderStroke
@@ -35,6 +37,7 @@ import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -54,10 +57,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.zIndex
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import com.prirai.android.nira.R
 import mozilla.components.browser.state.state.TabSessionState
 import kotlin.math.abs
 import kotlin.math.roundToInt
@@ -582,10 +586,14 @@ private fun TabPill(
 
             // Title
             Text(
-                text = getTabDisplayTitle(tab),
-                style = MaterialTheme.typography.labelSmall,
-                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                color = if (isDragging) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface,
+                text = getTabDisplayTitle(tab, stringResource(R.string.tab_history_new_tab)),
+                style =
+                    if (isSelected) {
+                        MaterialTheme.typography.labelSmallEmphasized
+                    } else {
+                        MaterialTheme.typography.labelSmall
+                    },
+                color = MaterialTheme.colorScheme.onSurface,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f)
@@ -720,7 +728,7 @@ private fun GroupPill(
             // Collapse/Expand icon
             Icon(
                 imageVector = if (expanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
-                contentDescription = if (expanded) "Collapse" else "Expand",
+                contentDescription = stringResource(if (expanded) R.string.collapse else R.string.expand),
                 tint = Color(group.color),
                 modifier = Modifier.size(20.dp)
             )
@@ -746,9 +754,8 @@ private fun GroupPill(
                 ) {
                     Text(
                         text = "${group.tabs.size}",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = Color(group.color),
-                        fontWeight = FontWeight.Bold
+                        style = MaterialTheme.typography.labelSmallEmphasized,
+                        color = Color(group.color)
                     )
                 }
             }
@@ -838,7 +845,7 @@ private fun GroupPill(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Add,
-                            contentDescription = "Add tab to group",
+                            contentDescription = stringResource(R.string.add_tab_to_group),
                             tint = Color(group.color),
                             modifier = Modifier.size(18.dp)
                         )

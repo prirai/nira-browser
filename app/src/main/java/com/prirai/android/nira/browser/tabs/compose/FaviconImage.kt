@@ -76,14 +76,14 @@ fun FaviconImage(
         if (faviconBitmap != null) {
             Image(
                 bitmap = faviconBitmap!!.asImageBitmap(),
-                contentDescription = "Favicon for ${tab.content.title}",
+                contentDescription = null,
                 modifier = Modifier.size(size)
             )
         } else {
             // Fallback icon
             Icon(
                 imageVector = Icons.Default.Language,
-                contentDescription = "Default favicon",
+                contentDescription = null,
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(size)
             )
@@ -159,13 +159,13 @@ fun FaviconImageFromUrl(
         if (faviconBitmap != null) {
             Image(
                 bitmap = faviconBitmap!!.asImageBitmap(),
-                contentDescription = "Favicon for $title",
+                contentDescription = null,
                 modifier = Modifier.size(size)
             )
         } else {
             Icon(
                 imageVector = Icons.Default.Language,
-                contentDescription = "Default favicon",
+                contentDescription = null,
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(size)
             )

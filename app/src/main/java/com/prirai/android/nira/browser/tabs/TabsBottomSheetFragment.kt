@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalMaterial3ExpressiveApi::class)
+
 package com.prirai.android.nira.browser.tabs
 
 import android.graphics.Color
@@ -20,6 +22,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.fragment.app.DialogFragment
 import androidx.lifecycle.lifecycleScope
@@ -761,7 +764,7 @@ class TabsBottomSheetFragment : DialogFragment() {
                             },
                             shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2)
                         ) {
-                            Icon(Icons.Rounded.ViewList, contentDescription = "List view")
+                            Icon(Icons.Rounded.ViewList, contentDescription = stringResource(R.string.list_view))
                         }
                         SegmentedButton(
                             selected = isGridView,
@@ -771,7 +774,7 @@ class TabsBottomSheetFragment : DialogFragment() {
                             },
                             shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2)
                         ) {
-                            Icon(Icons.Rounded.GridView, contentDescription = "Grid view")
+                            Icon(Icons.Rounded.GridView, contentDescription = stringResource(R.string.grid_view))
                         }
                     }
                 }
@@ -957,8 +960,8 @@ class TabsBottomSheetFragment : DialogFragment() {
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Text(
-                            text = tab.content.title.ifEmpty { "Tab" },
-                            style = MaterialTheme.typography.titleMedium,
+                            text = tab.content.title.ifEmpty { stringResource(R.string.tab) },
+                            style = MaterialTheme.typography.titleMediumEmphasized,
                             maxLines = 1,
                             overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
                             modifier = Modifier.weight(1f)
@@ -967,7 +970,7 @@ class TabsBottomSheetFragment : DialogFragment() {
                         IconButton(onClick = onDismiss) {
                             Icon(
                                 imageVector = androidx.compose.material.icons.Icons.Default.Close,
-                                contentDescription = "Close menu"
+                                contentDescription = stringResource(R.string.close_menu)
                             )
                         }
                     }
@@ -980,20 +983,20 @@ class TabsBottomSheetFragment : DialogFragment() {
                     if (isInGroup) {
                         MenuOption(
                             icon = androidx.compose.material.icons.Icons.Default.Clear,
-                            text = "Remove from Group",
+                            text = stringResource(R.string.remove_from_island),
                             onClick = onRemoveFromGroup
                         )
                     }
 
                     MenuOption(
                         icon = androidx.compose.material.icons.Icons.Default.AccountCircle,
-                        text = "Move to Profile",
+                        text = stringResource(R.string.move_to_profile),
                         onClick = onMoveToProfile
                     )
 
                     MenuOption(
                         icon = androidx.compose.material.icons.Icons.Default.Close,
-                        text = "Close Tab",
+                        text = stringResource(R.string.menu_close_tab),
                         onClick = {
                             handleTabCloseCompose(tab.id)
                             onDismiss()

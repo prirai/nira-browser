@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalMaterial3ExpressiveApi::class)
+
 package com.prirai.android.nira.browser.tabs.compose
 
 import androidx.compose.foundation.Image
@@ -19,6 +21,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.prirai.android.nira.R
 import kotlinx.coroutines.CoroutineScope
@@ -158,8 +161,8 @@ fun TabContextMenu(
             HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
             TabMenuItem(
-                icon = { Icon(painterResource(R.drawable.control_point_duplicate_24px), "Duplicate") },
-                text = "Duplicate Tab",
+                icon = { Icon(painterResource(R.drawable.control_point_duplicate_24px), null) },
+                text = stringResource(R.string.duplicate_tab),
                 onClick = {
                     scope.launch {
                         viewModel.duplicateTab(tab.id)
@@ -172,8 +175,8 @@ fun TabContextMenu(
                 HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
 
                 TabMenuItem(
-                    icon = { Icon(painterResource(R.drawable.ungroup_24px), "Remove from Island") },
-                    text = "Remove from Island",
+                    icon = { Icon(painterResource(R.drawable.ungroup_24px), null) },
+                    text = stringResource(R.string.remove_from_island),
                     onClick = {
                         scope.launch {
                             viewModel.removeTabFromGroup(tab.id)
@@ -189,11 +192,11 @@ fun TabContextMenu(
                 icon = {
                     Icon(
                         painterResource(R.drawable.ic_close_small),
-                        "Close Tab",
+                        null,
                         modifier = Modifier.size(32.dp)
                     )
                 },
-                text = "Close Tab",
+                text = stringResource(R.string.menu_close_tab),
                 contentColor = MaterialTheme.colorScheme.error,
                 onClick = {
                     scope.launch {
@@ -315,7 +318,7 @@ fun GroupContextMenu(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Check,
-                            contentDescription = "Confirm rename",
+                            contentDescription = stringResource(R.string.confirm_rename),
                             tint = if (editedName.isNotBlank() && editedName != groupName) {
                                 MaterialTheme.colorScheme.onPrimary
                             } else {
@@ -332,19 +335,19 @@ fun GroupContextMenu(
                 icon = {
                     Icon(
                         painterResource(R.drawable.ic_palette),
-                        "Change Color",
+                        null,
                         tint = groupAccentColor
                     )
                 },
-                text = "Change Color",
+                text = stringResource(R.string.change_color),
                 onClick = {
                     showColorPicker = true
                 }
             )
 
             TabMenuItem(
-                icon = { Icon(painterResource(R.drawable.ic_expand_more), "Collapse") },
-                text = "Collapse/Expand",
+                icon = { Icon(painterResource(R.drawable.ic_expand_more), null) },
+                text = stringResource(R.string.collapse_expand),
                 onClick = {
                     scope.launch {
                         viewModel.toggleGroupExpanded(groupId)
@@ -354,8 +357,8 @@ fun GroupContextMenu(
             )
 
             TabMenuItem(
-                icon = { Icon(painterResource(R.drawable.ic_pin_outline), "Pin Island") },
-                text = "Pin Island",
+                icon = { Icon(painterResource(R.drawable.ic_pin_outline), null) },
+                text = stringResource(R.string.pin_island),
                 onClick = {
                     scope.launch {
                         viewModel.pinGroup(groupId)
@@ -367,8 +370,8 @@ fun GroupContextMenu(
             HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
 
             TabMenuItem(
-                icon = { Icon(painterResource(R.drawable.ungroup_24px), "Ungroup") },
-                text = "Ungroup All Tabs",
+                icon = { Icon(painterResource(R.drawable.ungroup_24px), null) },
+                text = stringResource(R.string.ungroup_all_tabs),
                 onClick = {
                     scope.launch {
                         viewModel.ungroupAllTabs(groupId)
@@ -378,8 +381,8 @@ fun GroupContextMenu(
             )
 
             TabMenuItem(
-                icon = { Icon(painterResource(R.drawable.ic_close_small), "Close All") },
-                text = "Close All Tabs",
+                icon = { Icon(painterResource(R.drawable.ic_close_small), null) },
+                text = stringResource(R.string.close_all_tabs),
                 contentColor = MaterialTheme.colorScheme.error,
                 onClick = {
                     scope.launch {
@@ -390,8 +393,8 @@ fun GroupContextMenu(
             )
 
             TabMenuItem(
-                icon = { Icon(painterResource(R.drawable.ic_profile), "Move to Profile") },
-                text = "Move to Profile",
+                icon = { Icon(painterResource(R.drawable.ic_profile), null) },
+                text = stringResource(R.string.move_to_profile),
                 onClick = {
                     showProfilePicker = true
                 }
@@ -476,8 +479,8 @@ private fun TabMenuHeader(tab: TabSessionState) {
 
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = tab.content.title.ifEmpty { "New Tab" },
-                style = MaterialTheme.typography.titleSmall,
+                text = tab.content.title.ifEmpty { stringResource(R.string.tab_history_new_tab) },
+                style = MaterialTheme.typography.titleSmallEmphasized,
                 maxLines = 1
             )
             Text(

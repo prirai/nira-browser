@@ -159,7 +159,7 @@ fun TabGridCard(
                             size = 14.dp
                         )
                         Text(
-                            text = getTabDisplayTitle(tab),
+                            text = getTabDisplayTitle(tab, stringResource(R.string.tab_history_new_tab)),
                             style =
                                 if (isSelected) {
                                     MaterialTheme.typography.labelSmallEmphasized

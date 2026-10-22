@@ -1,9 +1,9 @@
+@file:OptIn(ExperimentalMaterial3ExpressiveApi::class)
+
 package com.prirai.android.nira.browser.tabs.compose
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.spring
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.BorderStroke
@@ -33,6 +33,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -50,9 +51,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.prirai.android.nira.R
 import mozilla.components.browser.state.state.TabSessionState
 
 /**
@@ -80,13 +82,14 @@ fun GroupContainerListItem(
     modifier: Modifier = Modifier
 ) {
     val scale = remember { Animatable(1f) }
+    val hoverSpec = MaterialTheme.motionScheme.defaultSpatialSpec<Float>()
 
     // Apply zoom effect when dragging ungrouped tab over this container
     LaunchedEffect(hoveredGroupId) {
         if (hoveredGroupId == groupId) {
-            scale.animateTo(1.05f, spring(stiffness = Spring.StiffnessMediumLow))
+            scale.animateTo(1.05f, hoverSpec)
         } else {
-            scale.animateTo(1f, spring(stiffness = Spring.StiffnessMediumLow))
+            scale.animateTo(1f, hoverSpec)
         }
     }
 
@@ -160,7 +163,7 @@ fun GroupContainerListItem(
                     // Expand/Collapse icon
                     Icon(
                         imageVector = if (isExpanded) Icons.Default.KeyboardArrowDown else Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                        contentDescription = if (isExpanded) "Collapse" else "Expand",
+                        contentDescription = stringResource(if (isExpanded) R.string.collapse else R.string.expand),
                         tint = Color(color),
                         modifier = Modifier.size(24.dp)
                     )
@@ -168,8 +171,7 @@ fun GroupContainerListItem(
                     // Group name
                     Text(
                         text = title,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.titleMediumEmphasized,
                         color = MaterialTheme.colorScheme.onSurface,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
@@ -190,9 +192,8 @@ fun GroupContainerListItem(
                         ) {
                             Text(
                                 text = children.size.toString(),
-                                style = MaterialTheme.typography.labelMedium,
-                                color = Color(color),
-                                fontWeight = FontWeight.Bold
+                                style = MaterialTheme.typography.labelMediumEmphasized,
+                                color = Color(color)
                             )
                         }
                     }
@@ -205,7 +206,7 @@ fun GroupContainerListItem(
                 ) {
                     Icon(
                         imageVector = Icons.Default.MoreVert,
-                        contentDescription = "Options",
+                        contentDescription = stringResource(R.string.options),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(24.dp)
                     )
@@ -215,8 +216,8 @@ fun GroupContainerListItem(
             // Child tabs wrapped in extension-list style Surface — shown when expanded
             AnimatedVisibility(
                 visible = isExpanded,
-                enter = expandVertically(),
-                exit = shrinkVertically()
+                enter = expandVertically(MaterialTheme.motionScheme.defaultSpatialSpec()),
+                exit = shrinkVertically(MaterialTheme.motionScheme.fastSpatialSpec())
             ) {
                 Surface(
                     modifier = Modifier
@@ -353,7 +354,7 @@ private fun GroupedTabListItem(
                     SwipeToDismissBoxValue.EndToStart -> {
                         Icon(
                             imageVector = Icons.Default.Delete,
-                            contentDescription = "Close",
+                            contentDescription = stringResource(R.string.close),
                             tint = MaterialTheme.colorScheme.onErrorContainer
                         )
                     }
@@ -361,7 +362,7 @@ private fun GroupedTabListItem(
                     SwipeToDismissBoxValue.StartToEnd -> {
                         Icon(
                             imageVector = Icons.Default.MoreVert,
-                            contentDescription = "Menu",
+                            contentDescription = stringResource(R.string.more_options),
                             tint = MaterialTheme.colorScheme.onPrimaryContainer
                         )
                     }
@@ -441,9 +442,13 @@ private fun GroupedTabRow(
             verticalArrangement = Arrangement.spacedBy(2.dp)
         ) {
             Text(
-                text = tab.content.title.ifEmpty { "New Tab" },
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                text = tab.content.title.ifEmpty { stringResource(R.string.tab_history_new_tab) },
+                style =
+                    if (isSelected) {
+                        MaterialTheme.typography.bodyMediumEmphasized
+                    } else {
+                        MaterialTheme.typography.bodyMedium
+                    },
                 color = MaterialTheme.colorScheme.onSurface,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
@@ -466,7 +471,7 @@ private fun GroupedTabRow(
         ) {
             Icon(
                 imageVector = Icons.Default.Close,
-                contentDescription = "Close tab",
+                contentDescription = stringResource(R.string.menu_close_tab),
                 modifier = Modifier.size(16.dp),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -567,7 +572,7 @@ fun GroupContainerGridItem(
                     // Expand/Collapse icon
                     Icon(
                         imageVector = if (isExpanded) Icons.Default.KeyboardArrowDown else Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                        contentDescription = if (isExpanded) "Collapse" else "Expand",
+                        contentDescription = stringResource(if (isExpanded) R.string.collapse else R.string.expand),
                         tint = Color(color),
                         modifier = Modifier.size(24.dp)
                     )
@@ -575,8 +580,7 @@ fun GroupContainerGridItem(
                     // Group name
                     Text(
                         text = title,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.titleMediumEmphasized,
                         color = MaterialTheme.colorScheme.onSurface,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
@@ -597,9 +601,8 @@ fun GroupContainerGridItem(
                         ) {
                             Text(
                                 text = children.size.toString(),
-                                style = MaterialTheme.typography.labelMedium,
-                                color = Color(color),
-                                fontWeight = FontWeight.Bold
+                                style = MaterialTheme.typography.labelMediumEmphasized,
+                                color = Color(color)
                             )
                         }
                     }
@@ -612,7 +615,7 @@ fun GroupContainerGridItem(
                 ) {
                     Icon(
                         imageVector = Icons.Default.MoreVert,
-                        contentDescription = "Options",
+                        contentDescription = stringResource(R.string.options),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(24.dp)
                     )
@@ -622,8 +625,8 @@ fun GroupContainerGridItem(
             // Child tabs grid — shown when expanded
             AnimatedVisibility(
                 visible = isExpanded,
-                enter = expandVertically(),
-                exit = shrinkVertically()
+                enter = expandVertically(MaterialTheme.motionScheme.defaultSpatialSpec()),
+                exit = shrinkVertically(MaterialTheme.motionScheme.fastSpatialSpec())
             ) {
                 GroupTabsGridRow(
                     groupId = groupId,
