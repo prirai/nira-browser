@@ -62,6 +62,7 @@ import com.prirai.android.nira.R
 import com.prirai.android.nira.ext.components
 import com.prirai.android.nira.preferences.UserPreferences
 import com.prirai.android.nira.theme.ThemeManager
+import com.prirai.android.nira.ui.components.NiraLoadingIndicator
 import com.prirai.android.nira.ui.theme.NiraTheme
 import mozilla.components.browser.state.selector.selectedTab
 import mozilla.components.feature.addons.Addon
@@ -253,10 +254,9 @@ fun ExtensionsBottomSheetContent(
                 when {
                     isLoading -> {
                         Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center
+                            modifier = Modifier.fillMaxSize()
                         ) {
-                            CircularProgressIndicator()
+                            NiraLoadingIndicator()
                         }
                     }
                     addons.isEmpty() -> {

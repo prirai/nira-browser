@@ -29,6 +29,7 @@ import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import com.prirai.android.nira.R
 import com.prirai.android.nira.ext.components
 import com.prirai.android.nira.preferences.UserPreferences
+import com.prirai.android.nira.ui.components.NiraLoadingIndicator
 import com.prirai.android.nira.ui.theme.NiraTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -188,10 +189,9 @@ fun SearchExtensionsContent(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(200.dp),
-                    contentAlignment = Alignment.Center
+                        .height(200.dp)
                 ) {
-                    CircularProgressIndicator()
+                    NiraLoadingIndicator()
                 }
             } else {
                 LazyColumn(
