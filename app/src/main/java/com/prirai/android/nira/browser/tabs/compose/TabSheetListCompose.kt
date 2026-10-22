@@ -1,11 +1,9 @@
+@file:OptIn(ExperimentalMaterial3ExpressiveApi::class)
+
 package com.prirai.android.nira.browser.tabs.compose
 
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -13,7 +11,6 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.shape.CircleShape
@@ -21,21 +18,18 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
-import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.boundsInRoot
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.prirai.android.nira.R
 import mozilla.components.browser.state.state.TabSessionState
 import kotlinx.coroutines.launch
 import com.prirai.android.nira.browser.tabs.compose.DragLayer
@@ -43,7 +37,6 @@ import com.prirai.android.nira.browser.tabs.compose.DraggableItemType
 import com.prirai.android.nira.browser.tabs.compose.DropTargetType
 import com.prirai.android.nira.browser.tabs.compose.InsertionIndicator
 import com.prirai.android.nira.browser.tabs.compose.draggableItem
-import com.prirai.android.nira.browser.tabs.compose.dragVisualFeedback
 import com.prirai.android.nira.browser.tabs.compose.dropTarget
 import com.prirai.android.nira.browser.tabs.compose.rememberDragCoordinator
 
@@ -329,7 +322,7 @@ fun TabSheetListView(
                                         SwipeToDismissBoxValue.EndToStart -> {
                                             Icon(
                                                 imageVector = Icons.Default.Delete,
-                                                contentDescription = "Ungroup",
+                                                contentDescription = stringResource(R.string.ungroup),
                                                 tint = MaterialTheme.colorScheme.onErrorContainer
                                             )
                                         }
@@ -337,7 +330,7 @@ fun TabSheetListView(
                                         SwipeToDismissBoxValue.StartToEnd -> {
                                             Icon(
                                                 imageVector = Icons.Default.MoreVert,
-                                                contentDescription = "Menu",
+                                                contentDescription = stringResource(R.string.more_options),
                                                 tint = MaterialTheme.colorScheme.onPrimaryContainer
                                             )
                                         }
@@ -430,7 +423,7 @@ fun TabSheetListView(
                                         SwipeToDismissBoxValue.EndToStart -> {
                                             Icon(
                                                 imageVector = Icons.Default.Delete,
-                                                contentDescription = "Delete",
+                                                contentDescription = stringResource(R.string.delete),
                                                 tint = MaterialTheme.colorScheme.onErrorContainer
                                             )
                                         }
@@ -438,7 +431,7 @@ fun TabSheetListView(
                                         SwipeToDismissBoxValue.StartToEnd -> {
                                             Icon(
                                                 imageVector = Icons.Default.MoreVert,
-                                                contentDescription = "Menu",
+                                                contentDescription = stringResource(R.string.more_options),
                                                 tint = MaterialTheme.colorScheme.onPrimaryContainer
                                             )
                                         }
@@ -538,7 +531,7 @@ fun TabSheetListView(
                                         SwipeToDismissBoxValue.EndToStart -> {
                                             Icon(
                                                 imageVector = Icons.Default.Delete,
-                                                contentDescription = "Delete",
+                                                contentDescription = stringResource(R.string.delete),
                                                 tint = MaterialTheme.colorScheme.onErrorContainer
                                             )
                                         }
@@ -546,7 +539,7 @@ fun TabSheetListView(
                                         SwipeToDismissBoxValue.StartToEnd -> {
                                             Icon(
                                                 imageVector = Icons.Default.MoreVert,
-                                                contentDescription = "Menu",
+                                                contentDescription = stringResource(R.string.more_options),
                                                 tint = MaterialTheme.colorScheme.onPrimaryContainer
                                             )
                                         }
@@ -751,7 +744,7 @@ fun TabSheetListView(
     if (showGroupMenu && menuGroupId != null) {
         GroupContextMenu(
             groupId = menuGroupId!!,
-            groupName = menuGroupName ?: "Group",
+            groupName = menuGroupName ?: stringResource(R.string.group),
             onDismiss = { showGroupMenu = false },
             viewModel = viewModel,
             scope = scope
@@ -773,17 +766,10 @@ private fun GroupHeaderItem(
     onOptionsClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val scope = rememberCoroutineScope()
-    val scale = remember { Animatable(1f) }
-
-    // Swipe state for horizontal drag (show menu)
-    val offsetX = remember { Animatable(0f) }
-
     Surface(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 8.dp, vertical = 4.dp)
-            .scale(scale.value),
+            .padding(horizontal = 8.dp, vertical = 4.dp),
         shape = RoundedCornerShape(12.dp),
         color = Color(color).copy(alpha = 0.1f),
         tonalElevation = 2.dp,
@@ -808,7 +794,7 @@ private fun GroupHeaderItem(
                 // Expand/Collapse icon
                 Icon(
                     imageVector = if (isExpanded) Icons.Default.KeyboardArrowDown else Icons.Default.KeyboardArrowRight,
-                    contentDescription = if (isExpanded) "Collapse" else "Expand",
+                    contentDescription = stringResource(if (isExpanded) R.string.collapse else R.string.expand),
                     tint = Color(color),
                     modifier = Modifier.size(24.dp)
                 )
@@ -816,8 +802,7 @@ private fun GroupHeaderItem(
                 // Group name
                 Text(
                     text = title,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.titleMediumEmphasized,
                     color = Color(color),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -838,9 +823,8 @@ private fun GroupHeaderItem(
                     ) {
                         Text(
                             text = tabCount.toString(),
-                            style = MaterialTheme.typography.labelMedium,
-                            color = Color(color),
-                            fontWeight = FontWeight.Bold
+                            style = MaterialTheme.typography.labelMediumEmphasized,
+                            color = Color(color)
                         )
                     }
                 }
@@ -849,7 +833,7 @@ private fun GroupHeaderItem(
             // Drag handle
             Icon(
                 imageVector = Icons.Default.DragHandle,
-                contentDescription = "Drag to reorder",
+                contentDescription = stringResource(R.string.drag_to_reorder),
                 tint = Color(color).copy(alpha = 0.6f),
                 modifier = Modifier.size(24.dp)
             )
@@ -874,12 +858,6 @@ private fun TabListItem(
     isDragging: Boolean = false,
     modifier: Modifier = Modifier
 ) {
-    val scope = rememberCoroutineScope()
-    val scale = remember { Animatable(1f) }
-
-    // Swipe state for horizontal drag
-    val offsetX = remember { Animatable(0f) }
-
     val effectiveIsInGroup = isInGroup && groupId != null
     val effectiveIsLastInGroup = effectiveIsInGroup && isLastInGroup
 
@@ -904,8 +882,7 @@ private fun TabListItem(
             .padding(
                 horizontal = if (effectiveIsInGroup) 16.dp else 8.dp,
                 vertical = 2.dp
-            )
-            .scale(scale.value),
+            ),
         shape = shape,
         color = backgroundColor,
         tonalElevation = if (isSelected) 2.dp else 0.dp,
@@ -946,9 +923,13 @@ private fun TabListItem(
                     verticalArrangement = Arrangement.spacedBy(2.dp)
                 ) {
                     Text(
-                        text = tab.content.title.ifEmpty { "New Tab" },
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                        text = tab.content.title.ifEmpty { stringResource(R.string.tab_history_new_tab) },
+                        style =
+                            if (isSelected) {
+                                MaterialTheme.typography.bodyLargeEmphasized
+                            } else {
+                                MaterialTheme.typography.bodyLarge
+                            },
                         color = MaterialTheme.colorScheme.onSurface,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
@@ -970,7 +951,7 @@ private fun TabListItem(
             // Drag handle - drag is handled by draggableItem modifier on parent
             Icon(
                 imageVector = Icons.Default.DragHandle,
-                contentDescription = "Long press to drag",
+                contentDescription = stringResource(R.string.drag_to_reorder),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
                 modifier = Modifier.size(24.dp)
             )

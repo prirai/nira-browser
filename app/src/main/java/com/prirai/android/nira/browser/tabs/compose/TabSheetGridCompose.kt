@@ -1,9 +1,9 @@
+@file:OptIn(ExperimentalMaterial3ExpressiveApi::class)
+
 package com.prirai.android.nira.browser.tabs.compose
 
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.spring
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -28,9 +28,12 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.prirai.android.nira.R
+import com.prirai.android.nira.ui.components.animateNiraGridItem
 import mozilla.components.browser.state.state.TabSessionState
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.boundsInRoot
@@ -166,7 +169,7 @@ fun TabSheetGridView(
                             coordinator = coordinator,
                             hoverState = hoverState,
                             hoveredGroupId = hoveredGroupId,
-                            modifier = Modifier.animateItem()
+                            modifier = animateNiraGridItem()
                         )
                     }
 
@@ -214,7 +217,7 @@ fun TabSheetGridView(
                                         SwipeToDismissBoxValue.EndToStart -> {
                                             Icon(
                                                 imageVector = Icons.Default.Delete,
-                                                contentDescription = "Ungroup",
+                                                contentDescription = stringResource(R.string.ungroup),
                                                 tint = MaterialTheme.colorScheme.onErrorContainer
                                             )
                                         }
@@ -222,7 +225,7 @@ fun TabSheetGridView(
                                         SwipeToDismissBoxValue.StartToEnd -> {
                                             Icon(
                                                 imageVector = Icons.Default.MoreVert,
-                                                contentDescription = "Menu",
+                                                contentDescription = stringResource(R.string.more_options),
                                                 tint = MaterialTheme.colorScheme.onPrimaryContainer
                                             )
                                         }
@@ -248,7 +251,7 @@ fun TabSheetGridView(
                                     onGroupOptionsClick(item.groupId)
                                 },
                                 modifier = Modifier
-                                    .animateItem()
+                                    .then(animateNiraGridItem())
                                     .draggableItem(
                                         itemType = DraggableItemType.Group(item.groupId),
                                         coordinator = coordinator
@@ -275,14 +278,14 @@ fun TabSheetGridView(
                         GroupTabsRow(
                             groupId = item.groupId,
                             tabs = item.tabs,
-                            groupColor = group?.color ?: 0xFF2196F3.toInt(),
+                            groupColor = group?.color ?: MaterialTheme.colorScheme.primary.toArgb(),
                             selectedTabId = selectedTabId,
                             onTabClick = onTabClick,
                             onTabClose = onTabClose,
                             onTabLongPress = { tab ->
                                 // Long press now only used for drag - use tap/click for menu
                             },
-                            modifier = Modifier.animateItem(),
+                            modifier = animateNiraGridItem(),
                             coordinator = coordinator,
                             isGroupHovered = isGroupHovered,
                             hoverState = hoverState
@@ -304,7 +307,7 @@ fun TabSheetGridView(
                                 // Long press now only used for drag - use tap/click for menu
                             },
                             modifier = Modifier
-                                .animateItem()
+                                .then(animateNiraGridItem())
                                 .draggableItem(
                                     itemType = DraggableItemType.Tab(
                                         item.tab.id,
@@ -340,7 +343,7 @@ fun TabSheetGridView(
                                 // Long press now only used for drag - use tap/click for menu
                             },
                             modifier = Modifier
-                                .animateItem()
+                                .then(animateNiraGridItem())
                                 .draggableItem(
                                     itemType = DraggableItemType.Tab(item.tab.id),
                                     coordinator = coordinator
@@ -437,7 +440,7 @@ fun TabSheetGridView(
     if (showGroupMenu && menuGroupId != null) {
         GroupContextMenu(
             groupId = menuGroupId!!,
-            groupName = menuGroupName ?: "Group",
+            groupName = menuGroupName ?: stringResource(R.string.group),
             onDismiss = { showGroupMenu = false },
             viewModel = viewModel,
             scope = scope
@@ -487,7 +490,7 @@ private fun GroupHeaderGridItem(
                 // Expand/Collapse icon
                 Icon(
                     imageVector = if (isExpanded) Icons.Default.KeyboardArrowDown else Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                    contentDescription = if (isExpanded) "Collapse" else "Expand",
+                    contentDescription = stringResource(if (isExpanded) R.string.collapse else R.string.expand),
                     tint = Color(color),
                     modifier = Modifier.size(20.dp)
                 )
@@ -495,8 +498,7 @@ private fun GroupHeaderGridItem(
                 // Group name
                 Text(
                     text = title,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.titleMediumEmphasized,
                     color = Color(color),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -517,9 +519,8 @@ private fun GroupHeaderGridItem(
                     ) {
                         Text(
                             text = tabCount.toString(),
-                            style = MaterialTheme.typography.labelMedium,
-                            color = Color(color),
-                            fontWeight = FontWeight.Bold
+                            style = MaterialTheme.typography.labelMediumEmphasized,
+                            color = Color(color)
                         )
                     }
                 }
@@ -532,7 +533,7 @@ private fun GroupHeaderGridItem(
             ) {
                 Icon(
                     imageVector = Icons.Default.MoreVert,
-                    contentDescription = "Group options",
+                    contentDescription = stringResource(R.string.more_options),
                     tint = Color(color)
                 )
             }
@@ -557,13 +558,10 @@ fun GroupTabsRow(
     isGroupHovered: Boolean = false,
     hoverState: TabSheetHoverState? = null
 ) {
-    // Animate scale for the entire group row when hovered
+    // Animate scale for the entire group row when hovered, on the theme's spatial spring
     val scale by animateFloatAsState(
         targetValue = if (isGroupHovered) 1.05f else 1f,
-        animationSpec = spring(
-            stiffness = Spring.StiffnessHigh,
-            dampingRatio = Spring.DampingRatioMediumBouncy
-        ),
+        animationSpec = MaterialTheme.motionScheme.defaultSpatialSpec(),
         label = "groupRowScale"
     )
 

@@ -5,7 +5,10 @@ import android.content.Context
 import android.content.ContextWrapper
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ColorScheme
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.MaterialExpressiveTheme
+import androidx.compose.material3.MotionScheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
@@ -84,6 +87,65 @@ private val PrivateAmoledColorScheme = darkColorScheme(
     surfaceContainerHighest = AmoledSurfaceDim
 )
 
+/**
+ * The single source of truth for the color scheme the app shows, shared by every
+ * [NiraTheme] so all surfaces render in the exact palette the user selected.
+ */
+@Composable
+private fun resolveNiraColorScheme(
+    darkTheme: Boolean,
+    isPrivateMode: Boolean,
+    amoledMode: Boolean,
+    dynamicColor: Boolean
+) = when {
+    // Private mode with AMOLED
+    isPrivateMode && darkTheme && amoledMode -> PrivateAmoledColorScheme
+    // Private mode without AMOLED
+    isPrivateMode && darkTheme -> PrivateDarkColorScheme
+    isPrivateMode && !darkTheme -> PrivateLightColorScheme
+    // Dynamic colors (Android 12+)
+    dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
+        val context = LocalContext.current
+        if (darkTheme) {
+            val baseDynamic = dynamicDarkColorScheme(context)
+            if (amoledMode) {
+                baseDynamic.withBlackSurfaces()
+            } else {
+                baseDynamic
+            }
+        } else {
+            dynamicLightColorScheme(context)
+        }
+    }
+    // Static colors with AMOLED
+    darkTheme && amoledMode -> AmoledDarkColorScheme
+    darkTheme -> DarkColorScheme
+    else -> LightColorScheme
+}
+
+/**
+ * The dynamic scheme is already a complete, tuned Material 3 scheme, so it is used
+ * as the system delivers it. Only the AMOLED variant changes it, taking the surface
+ * ladder to the same near-black steps every static AMOLED palette uses, while
+ * keeping the dynamic accents and containers.
+ */
+private fun ColorScheme.withBlackSurfaces() =
+    copy(
+        background = AmoledBlack,
+        surface = AmoledBlack,
+        surfaceContainerLowest = AmoledBlack,
+        surfaceContainerLow = AmoledSurfaceVariant,
+        surfaceContainer = AmoledSurfaceVariant,
+        surfaceContainerHigh = AmoledSurfaceDim,
+        surfaceContainerHighest = AmoledSurfaceDim,
+    )
+
+/**
+ * Nira's Material 3 Expressive theme: [MaterialExpressiveTheme] with the expressive
+ * motion scheme, so every component that reads [MotionScheme] specs moves the way
+ * Material 3 Expressive defines. All UI surfaces must be wrapped in this theme.
+ */
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun NiraTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
@@ -92,41 +154,8 @@ fun NiraTheme(
     dynamicColor: Boolean = true,
     content: @Composable () -> Unit
 ) {
-    val colorScheme = when {
-        // Private mode with AMOLED
-        isPrivateMode && darkTheme && amoledMode -> PrivateAmoledColorScheme
-        // Private mode without AMOLED
-        isPrivateMode && darkTheme -> PrivateDarkColorScheme
-        isPrivateMode && !darkTheme -> PrivateLightColorScheme
-        // Dynamic colors (Android 12+)
-        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-            val context = LocalContext.current
-            if (darkTheme) {
-                // Apply AMOLED modifications to dynamic colors
-                val baseDynamic = dynamicDarkColorScheme(context)
-                if (amoledMode) {
-                    baseDynamic.copy(
-                        surface = AmoledBlack,
-                        background = AmoledBlack,
-                        surfaceVariant = AmoledSurfaceVariant,
-                        surfaceContainer = AmoledSurfaceVariant,
-                        surfaceContainerLow = AmoledBlack,
-                        surfaceContainerHigh = AmoledSurfaceDim,
-                        surfaceContainerHighest = AmoledSurfaceDim
-                    )
-                } else {
-                    baseDynamic
-                }
-            } else {
-                dynamicLightColorScheme(context)
-            }
-        }
-        // Static colors with AMOLED
-        darkTheme && amoledMode -> AmoledDarkColorScheme
-        darkTheme -> DarkColorScheme
-        else -> LightColorScheme
-    }
-    
+    val colorScheme = resolveNiraColorScheme(darkTheme, isPrivateMode, amoledMode, dynamicColor)
+
     val view = LocalView.current
     if (!view.isInEditMode) {
         SideEffect {
@@ -150,8 +179,9 @@ fun NiraTheme(
         }
     }
 
-    MaterialTheme(
+    MaterialExpressiveTheme(
         colorScheme = colorScheme,
+        motionScheme = MotionScheme.expressive(),
         typography = Typography,
         content = content
     )
