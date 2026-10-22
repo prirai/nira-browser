@@ -7,6 +7,8 @@ import com.prirai.android.nira.ext.components
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import mozilla.components.browser.state.action.ContentAction
+import mozilla.components.browser.state.store.BrowserStore
 import mozilla.components.browser.state.selector.selectedTab
 
 /**
@@ -90,5 +92,23 @@ object NewTabCreator {
             profile = profileManager.getActiveProfile(),
             isPrivate = false,
         )
+    }
+
+    /**
+     * Lands [tabId] on its new tab page.
+     *
+     * `about:homepage` is a custom about-URL that GeckoView cannot actually
+     * load, so the new tab page can never be an entry in the engine's
+     * session history - it is a state transition: the BrowserFragment
+     * homepage overlay takes over (driven by the content url observer) and
+     * the tab pill shows "New Tab" (empty title + about:homepage), exactly
+     * like a freshly created tab.
+     *
+     * Used when back navigation walks past the oldest history entry and
+     * when the tab-history popup's synthetic "New Tab" row is tapped.
+     */
+    fun setTabToNewTabPage(store: BrowserStore, tabId: String) {
+        store.dispatch(ContentAction.UpdateUrlAction(tabId, "about:homepage"))
+        store.dispatch(ContentAction.UpdateTitleAction(tabId, ""))
     }
 }

@@ -1148,9 +1148,24 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
                     return true
                 }
 
-                // Otherwise navigate to home fragment (tabs whose history
-                // has no new tab page entry - e.g. restored or
-                // externally-opened tabs)
+                // Walking back past the oldest entry lands on the tab's new
+                // tab page, like Chrome's NTP. The engine has no history
+                // entry for it, so this is a state transition: the
+                // BrowserFragment homepage overlay takes over and the tab
+                // pill follows ("New Tab") instead of desyncing to the page
+                // that was left behind.
+                val url = selectedTab.content.url
+                val isInternalPage = url.startsWith("about:") ||
+                    url.startsWith("chrome:") ||
+                    url.startsWith("moz-extension:")
+                if (!selectedTab.content.private && !isInternalPage) {
+                    com.prirai.android.nira.browser.tabs.NewTabCreator.setTabToNewTabPage(
+                        store, selectedTab.id
+                    )
+                    return true
+                }
+
+                // Internal/private pages keep the home-fragment fallback.
                 try {
                     val navController = androidx.navigation.fragment.NavHostFragment.findNavController(this)
                     // Only navigate if we're not already on home fragment
