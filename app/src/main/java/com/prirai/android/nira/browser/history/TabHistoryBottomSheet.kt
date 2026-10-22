@@ -11,9 +11,14 @@ import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import com.prirai.android.nira.R
 import com.prirai.android.nira.ext.components
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.mapNotNull
+import mozilla.components.browser.state.action.EngineAction
 import mozilla.components.browser.state.selector.findCustomTabOrSelectedTab
 import mozilla.components.browser.state.state.content.HistoryState
 import mozilla.components.browser.state.store.BrowserStore
+import mozilla.components.lib.state.ext.flowScoped
 
 /**
  * Which direction of the current tab's session history the popup shows.
@@ -46,12 +51,16 @@ sealed class TabHistoryMode {
  * disabled). Tapping an entry jumps there via
  * `sessionUseCases.goToHistoryIndex`.
  *
- * The callers only open the sheet when there is at least one entry in
- * the requested direction; the empty guard here is defence in depth.
+ * The stored [HistoryState] can lag behind the engine's real session
+ * history, so - like upstream Fenix (Bug 1970055) - the sheet first
+ * dispatches [EngineAction.FlushEngineSessionStateAction] to force a
+ * re-sync, then collects `content.history` reactively and re-submits the
+ * rows when the flushed state lands.
  */
 class TabHistoryBottomSheet : BottomSheetDialogFragment() {
 
     private val mode by lazy { TabHistoryMode.fromName(arguments?.getString(KEY_MODE)) }
+    private val sessionId get() = arguments?.getString(KEY_SESSION_ID)
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -62,16 +71,7 @@ class TabHistoryBottomSheet : BottomSheetDialogFragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        val tab = requireContext().components.store.state
-            .findCustomTabOrSelectedTab(arguments?.getString(KEY_SESSION_ID))
-        val rows = buildRows(tab?.content?.history)
-
-        // The entry points check this before showing; bail out silently in
-        // case the history became empty between the check and render.
-        if (rows.isEmpty()) {
-            dismissAllowingStateLoss()
-            return
-        }
+        val components = requireContext().components
 
         view.findViewById<TextView>(R.id.tabHistorySheetTitle).setText(
             if (mode is TabHistoryMode.Back) R.string.back else R.string.forward
@@ -79,10 +79,43 @@ class TabHistoryBottomSheet : BottomSheetDialogFragment() {
 
         val recyclerView = view.findViewById<RecyclerView>(R.id.tabHistoryRecyclerView)
         recyclerView.layoutManager = LinearLayoutManager(context)
-        recyclerView.adapter = TabHistoryAdapter { row ->
-            tab?.let { requireContext().components.sessionUseCases.goToHistoryIndex(row.index, it.id) }
+        val adapter = TabHistoryAdapter { row ->
+            components.store.state.findCustomTabOrSelectedTab(sessionId)?.let {
+                components.sessionUseCases.goToHistoryIndex(row.index, it.id)
+            }
             dismiss()
-        }.also { it.submitRows(rows) }
+        }
+        recyclerView.adapter = adapter
+
+        // Force the engine to re-sync its session history into the store;
+        // the flushed state is picked up by the flow below.
+        components.store.state.findCustomTabOrSelectedTab(sessionId)?.let {
+            components.store.dispatch(EngineAction.FlushEngineSessionStateAction(it.id))
+        }
+
+        // Collect history reactively: the first emission uses the current
+        // (possibly stale) store state, the next one carries the flushed
+        // state with the full, correct entry list.
+        var hasShownRows = false
+        components.store.flowScoped(viewLifecycleOwner, Dispatchers.Main) { flow ->
+            flow.mapNotNull { state -> state.findCustomTabOrSelectedTab(sessionId)?.content?.history }
+                .distinctUntilChanged()
+                .collect { history ->
+                    val rows = buildRows(history)
+                    if (rows.isEmpty()) {
+                        // Empty before anything was shown: the flush may not
+                        // have landed yet - keep waiting. Empty after rows
+                        // were shown (tab navigated/closed while open):
+                        // dismiss.
+                        if (hasShownRows) {
+                            dismissAllowingStateLoss()
+                        }
+                        return@collect
+                    }
+                    hasShownRows = true
+                    adapter.submitRows(rows)
+                }
+        }
     }
 
     private fun buildRows(history: HistoryState?): List<TabHistoryRow> {
@@ -92,7 +125,13 @@ class TabHistoryBottomSheet : BottomSheetDialogFragment() {
 
         fun row(index: Int, isCurrent: Boolean) = TabHistoryRow(
             index = index,
-            title = items[index].title,
+            title = if (items[index].uri == "about:homepage") {
+                // The new tab page entry shows up as "New Tab", matching
+                // the tab pill's title for homepage tabs.
+                getString(R.string.tab_history_new_tab)
+            } else {
+                items[index].title
+            },
             uri = items[index].uri,
             isCurrent = isCurrent
         )
@@ -127,6 +166,11 @@ class TabHistoryBottomSheet : BottomSheetDialogFragment() {
          * tab resolved from [sessionId] - an empty direction shows nothing,
          * matching Chrome (the caller's long-press haptic still fires).
          *
+         * [TabSessionState.content.canGoBack]/[canGoForward] are used as
+         * the emptiness signal: they are maintained by the engine on every
+         * navigation and are more reliable than the [HistoryState] indexes,
+         * which can be stale until the sheet flushes the engine state.
+         *
          * @return whether the sheet was shown.
          */
         fun showIfAvailable(
@@ -135,11 +179,10 @@ class TabHistoryBottomSheet : BottomSheetDialogFragment() {
             mode: TabHistoryMode,
             sessionId: String?
         ): Boolean {
-            val history = store.state.findCustomTabOrSelectedTab(sessionId)?.content?.history
-                ?: return false
+            val tab = store.state.findCustomTabOrSelectedTab(sessionId) ?: return false
             val hasEntries = when (mode) {
-                TabHistoryMode.Back -> history.currentIndex > 0
-                TabHistoryMode.Forward -> history.currentIndex < history.items.lastIndex
+                TabHistoryMode.Back -> tab.content.canGoBack
+                TabHistoryMode.Forward -> tab.content.canGoForward
             }
             if (!hasEntries) return false
 
