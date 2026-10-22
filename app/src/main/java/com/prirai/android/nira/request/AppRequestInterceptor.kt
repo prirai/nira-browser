@@ -18,6 +18,7 @@ import mozilla.components.browser.errorpages.ErrorType
 import mozilla.components.concept.engine.EngineSession
 import mozilla.components.concept.engine.request.RequestInterceptor
 import mozilla.components.concept.engine.request.RequestInterceptor.InterceptionResponse
+import mozilla.components.browser.state.selector.selectedTab
 import java.lang.ref.WeakReference
 
 
@@ -141,15 +142,23 @@ class AppRequestInterceptor(val context: Context) : RequestInterceptor {
                 // free-form phrase like "how to bake bread", GeckoView normalises
                 // it to "http://how%20to%20bake%20bread/", records that garbage
                 // URL as a VisitInfo in PlacesHistoryStorage, then fails to
-                // load. Route through `searchUseCases.newTabSearch` instead,
-                // which resolves the current default engine (with correct
+                // load. Route through the search use cases instead,
+                // which resolve the current default engine (with correct
                 // `{searchTerms}` template - see SearchEngineList) and only
                 // loads a real result URL.
-                context.components.searchUseCases.newTabSearch.invoke(
-                    searchTerms = decodedQuery,
-                    source = mozilla.components.browser.state.state.SessionState.Source.Internal.UserEntered,
-                    selected = true,
-                )
+                //
+                // Chrome parity: the new tab is created at the new tab page
+                // first (about:homepage), so it becomes the tab's first
+                // engine history entry - the long-press back popup then
+                // lists "New Tab" and back gestures walk down to it as a
+                // real navigation (with the tab pill staying in sync).
+                val isPrivate =
+                    context.components.store.state.selectedTab?.content?.private ?: false
+                com.prirai.android.nira.browser.tabs.NewTabCreator.createHomeTabAndLoad(
+                    context, isPrivate
+                ) {
+                    context.components.searchUseCases.defaultSearch.invoke(decodedQuery)
+                }
             }
             uri == "nira://focus-search" -> {
                 // Navigation to search dialog will be handled by navController
