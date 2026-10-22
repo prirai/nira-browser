@@ -174,6 +174,8 @@ class SearchDialogFragment : AppCompatDialogFragment(), UserInteractionHandler {
                 tabsUseCases = components.tabsUseCases,
                 fragmentStore = store,
                 navController = findNavController(),
+                openedFromHome =
+                    findNavController().previousBackStackEntry?.destination?.id == R.id.homeFragment,
                 dismissDialog = {
                     dialogHandledAction = true
                     dismissAllowingStateLoss()
@@ -327,7 +329,12 @@ class SearchDialogFragment : AppCompatDialogFragment(), UserInteractionHandler {
             * */
             if (it.url != it.query) firstUpdate = false
             binding.awesomeBar.visibility = if (shouldShowAwesomebar(it)) View.VISIBLE else View.INVISIBLE
-            updateClipboardSuggestion(it, requireContext().components.clipboardHandler.containsURL())
+            // The clipboard check is a binder call; pass it lazily so it
+            // only runs when the result can matter (empty query, clipboard
+            // suggestions enabled) instead of on every keystroke.
+            updateClipboardSuggestion(it) {
+                requireContext().components.clipboardHandler.containsURL()
+            }
             updateToolbarContentDescription(it)
             updateSearchShortcutsIcon(it)
             toolbarView.update(it)
@@ -402,10 +409,15 @@ class SearchDialogFragment : AppCompatDialogFragment(), UserInteractionHandler {
         }
     }
 
-    private fun updateClipboardSuggestion(searchState: SearchFragmentState, containsUrl: Boolean) {
+    private fun updateClipboardSuggestion(
+        searchState: SearchFragmentState,
+        containsUrl: () -> Boolean
+    ) {
+        // Lazy evaluation order matters: the binder read is skipped unless
+        // the query is empty and clipboard suggestions can show at all.
         val shouldShowView = searchState.showClipboardSuggestions &&
                 searchState.query.isEmpty() &&
-                !containsUrl
+                !containsUrl()
 
         binding.fillLinkFromClipboard.isVisible = shouldShowView
         binding.fillLinkDivider.isVisible = shouldShowView

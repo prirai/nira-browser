@@ -40,6 +40,15 @@ class ToolbarView(
     @VisibleForTesting
     internal var isInitialized = false
 
+    /**
+     * The engine whose icon was last scaled and installed. Scaling the
+     * engine icon bitmap is real main-thread work; doing it per keystroke
+     * (update() runs on every store emission) contributed to address-bar
+     * typing lag. The icon only changes when the engine does.
+     */
+    @VisibleForTesting
+    internal var lastIconEngine: mozilla.components.browser.state.search.SearchEngine? = null
+
     init {
         view.apply {
             editMode()
@@ -107,7 +116,9 @@ class ToolbarView(
 
         val searchEngine = searchState.searchEngineSource.searchEngine
 
-        if (searchEngine != null) {
+        if (searchEngine != null && searchEngine != lastIconEngine) {
+            lastIconEngine = searchEngine
+
             val iconSize =
                 context.resources.getDimensionPixelSize(R.dimen.icon_width)
 
