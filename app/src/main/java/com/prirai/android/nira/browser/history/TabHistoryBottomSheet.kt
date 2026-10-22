@@ -5,6 +5,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
+import androidx.fragment.app.FragmentManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
@@ -12,6 +13,7 @@ import com.prirai.android.nira.R
 import com.prirai.android.nira.ext.components
 import mozilla.components.browser.state.selector.findCustomTabOrSelectedTab
 import mozilla.components.browser.state.state.content.HistoryState
+import mozilla.components.browser.state.store.BrowserStore
 
 /**
  * Which direction of the current tab's session history the popup shows.
@@ -118,6 +120,31 @@ class TabHistoryBottomSheet : BottomSheetDialogFragment() {
                     putString(KEY_SESSION_ID, sessionId)
                 }
             }
+        }
+
+        /**
+         * Opens the sheet only when [mode] has at least one entry for the
+         * tab resolved from [sessionId] - an empty direction shows nothing,
+         * matching Chrome (the caller's long-press haptic still fires).
+         *
+         * @return whether the sheet was shown.
+         */
+        fun showIfAvailable(
+            fragmentManager: FragmentManager,
+            store: BrowserStore,
+            mode: TabHistoryMode,
+            sessionId: String?
+        ): Boolean {
+            val history = store.state.findCustomTabOrSelectedTab(sessionId)?.content?.history
+                ?: return false
+            val hasEntries = when (mode) {
+                TabHistoryMode.Back -> history.currentIndex > 0
+                TabHistoryMode.Forward -> history.currentIndex < history.items.lastIndex
+            }
+            if (!hasEntries) return false
+
+            newInstance(mode, sessionId).show(fragmentManager, TAG)
+            return true
         }
     }
 }

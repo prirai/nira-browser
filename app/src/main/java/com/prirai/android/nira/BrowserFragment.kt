@@ -1043,7 +1043,20 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
                     )
                 },
                 backEnabled = selectedTab?.content?.canGoBack ?: false,
-                forwardEnabled = selectedTab?.content?.canGoForward ?: false
+                forwardEnabled = selectedTab?.content?.canGoForward ?: false,
+                // Long-press back/forward opens the tab-history popup,
+                // routed through the menu controller like every other
+                // toolbar-row action (Chrome/Fenix behaviour).
+                onBackLongClick = {
+                    browserInteractor.onBrowserToolbarMenuItemTapped(
+                        ToolbarMenu.Item.Back(viewHistory = true)
+                    )
+                },
+                onForwardLongClick = {
+                    browserInteractor.onBrowserToolbarMenuItemTapped(
+                        ToolbarMenu.Item.Forward(viewHistory = true)
+                    )
+                }
             )
         )
         
