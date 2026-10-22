@@ -161,6 +161,13 @@
 
   <string name="tabs">Tabs</string>
 <string name="close">Close</string>
+<string name="retry">Retry</string>
+<string name="group">Group</string>
+<string name="delete">Delete</string>
+<string name="drag_to_reorder">Drag to reorder</string>
+<string name="ungroup">Ungroup</string>
+<string name="expand">Expand</string>
+<string name="collapse">Collapse</string>
 
   <string name="tab_grid">Show tabs in grid</string>
 
