@@ -10,6 +10,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
+import com.prirai.android.nira.browser.history.TabHistoryBottomSheet
+import com.prirai.android.nira.browser.history.TabHistoryMode
 import com.prirai.android.nira.browser.home.compose.jumpBackInItems
 import com.prirai.android.nira.browser.home.compose.recentlyClosedItems
 import com.prirai.android.nira.browser.toolbar.ToolbarGestureHandler
@@ -472,6 +474,29 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
 
                 override fun onForwardClicked() {
                     requireContext().components.sessionUseCases.goForward()
+                }
+
+                // Long-press back/forward: open the tab-history popup in
+                // the matching direction. The toolbar already gave the
+                // long-press haptic; showIfAvailable is a silent no-op when
+                // the direction has no entries (disabled buttons never
+                // deliver the long-press either).
+                override fun onBackLongClicked() {
+                    TabHistoryBottomSheet.showIfAvailable(
+                        parentFragmentManager,
+                        requireContext().components.store,
+                        TabHistoryMode.Back,
+                        null
+                    )
+                }
+
+                override fun onForwardLongClicked() {
+                    TabHistoryBottomSheet.showIfAvailable(
+                        parentFragmentManager,
+                        requireContext().components.store,
+                        TabHistoryMode.Forward,
+                        null
+                    )
                 }
 
                 override fun onBookmarksClicked() {
