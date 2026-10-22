@@ -38,7 +38,6 @@ import com.prirai.android.nira.utils.Utils
 import kotlinx.coroutines.launch
 import mozilla.components.browser.state.action.AppLifecycleAction
 import mozilla.components.browser.state.search.SearchEngine
-import mozilla.components.browser.state.state.SessionState
 import mozilla.components.browser.state.state.WebExtensionState
 import mozilla.components.browser.state.state.selectedOrDefaultSearchEngine
 import mozilla.components.concept.engine.EngineSession
@@ -625,25 +624,20 @@ open class BrowserActivity : LocaleAwareAppCompatActivity(), ComponentCallbacks2
 
         if (resolvedEngine == null || (!forceSearch && searchTermOrURL.isUrl())) {
             if (newTab) {
-                val contextId = getContextIdForNewTab(isPrivateMode, selectedTab)
-                components.tabsUseCases.addTab.invoke(
-                    searchTermOrURL.toNormalizedUrl(),
-                    flags = flags,
-                    private = isPrivateMode,
-                    contextId = contextId
-                )
+                // Chrome parity: the new tab starts at the new tab page so
+                // the URL becomes its second history entry (the back popup
+                // then lists "New Tab" as the oldest entry).
+                com.prirai.android.nira.browser.tabs.NewTabCreator.createHomeTabAndLoad(this, isPrivateMode) {
+                    components.sessionUseCases.loadUrl.invoke(searchTermOrURL.toNormalizedUrl(), flags)
+                }
             } else {
                 components.sessionUseCases.loadUrl.invoke(searchTermOrURL.toNormalizedUrl(), flags)
             }
         } else {
             if (newTab) {
-                components.searchUseCases.newTabSearch
-                    .invoke(
-                        searchTermOrURL,
-                        SessionState.Source.Internal.UserEntered,
-                        isPrivateMode,
-                        searchEngine = resolvedEngine
-                    )
+                com.prirai.android.nira.browser.tabs.NewTabCreator.createHomeTabAndLoad(this, isPrivateMode) {
+                    components.searchUseCases.defaultSearch.invoke(searchTermOrURL, resolvedEngine)
+                }
             } else {
                 components.searchUseCases.defaultSearch.invoke(searchTermOrURL, resolvedEngine)
             }
@@ -657,31 +651,6 @@ open class BrowserActivity : LocaleAwareAppCompatActivity(), ComponentCallbacks2
         } catch (_: Exception) {
             null
         }
-    }
-
-    /**
-     * Get the appropriate contextId for new tabs based on browsing mode and
-     * current profile. The default profile returns `null` so new tabs share
-     * Gecko's default partition with custom tabs (external VIEW intents).
-     */
-    private fun getContextIdForNewTab(isPrivateMode: Boolean, selectedTab: SessionState?): String? {
-        if (isPrivateMode) return "private"
-
-        // Try to use contextId from selected tab if available. Legacy
-        // "profile_default" also triggers the default-profile fallback below.
-        val tabContextId = selectedTab?.contextId
-        if (tabContextId != null && tabContextId.startsWith("profile_") &&
-            tabContextId != "profile_default"
-        ) {
-            return tabContextId
-        }
-
-        val profileManager = com.prirai.android.nira.browser.profile.ProfileManager.getInstance(this)
-        val currentProfile = profileManager.getActiveProfile()
-        return com.prirai.android.nira.browser.profile.BrowserProfile.contextIdFor(
-            profile = currentProfile,
-            isPrivate = false,
-        )
     }
 
     override fun attachBaseContext(base: Context) {
