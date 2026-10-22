@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalMaterial3ExpressiveApi::class)
+
 package com.prirai.android.nira.browser.profile
 
 import android.content.Context
@@ -18,7 +20,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import com.prirai.android.nira.R
@@ -49,9 +51,8 @@ fun ProfileCreateDialog(
                     .padding(24.dp)
             ) {
                 Text(
-                    text = "Create Profile",
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold
+                    text = stringResource(R.string.create_profile),
+                    style = MaterialTheme.typography.headlineSmallEmphasized
                 )
                 
                 Spacer(modifier = Modifier.height(24.dp))
@@ -59,8 +60,8 @@ fun ProfileCreateDialog(
                 OutlinedTextField(
                     value = profileName,
                     onValueChange = { profileName = it },
-                    label = { Text("Profile Name") },
-                    placeholder = { Text("Work, Personal, etc.") },
+                    label = { Text(stringResource(R.string.profile_name)) },
+                    placeholder = { Text(stringResource(R.string.profile_name_placeholder)) },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true
                 )
@@ -68,9 +69,8 @@ fun ProfileCreateDialog(
                 Spacer(modifier = Modifier.height(24.dp))
                 
                 Text(
-                    text = "Choose Style",
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Medium
+                    text = stringResource(R.string.choose_style),
+                    style = MaterialTheme.typography.titleSmallEmphasized
                 )
                 
                 Spacer(modifier = Modifier.height(12.dp))
@@ -106,12 +106,12 @@ fun ProfileCreateDialog(
                 ) {
                     if (onImport != null) {
                         TextButton(onClick = onImport) {
-                            Text("Import ZIP")
+                            Text(stringResource(R.string.import_zip))
                         }
                     }
                     Row {
                         TextButton(onClick = onDismiss) {
-                            Text("Cancel")
+                            Text(stringResource(R.string.cancel))
                         }
                         
                         Spacer(modifier = Modifier.width(8.dp))
@@ -128,7 +128,7 @@ fun ProfileCreateDialog(
                             },
                             enabled = profileName.isNotBlank()
                         ) {
-                            Text("Create")
+                            Text(stringResource(R.string.create_action))
                         }
                     }
                 }
@@ -244,9 +244,8 @@ fun ProfileEditDialog(
                 modifier = Modifier.padding(24.dp)
             ) {
                 Text(
-                    text = "Edit Profile",
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold
+                    text = stringResource(R.string.edit_profile),
+                    style = MaterialTheme.typography.headlineSmallEmphasized
                 )
                 
                 Spacer(modifier = Modifier.height(24.dp))
@@ -254,7 +253,7 @@ fun ProfileEditDialog(
                 OutlinedTextField(
                     value = profileName,
                     onValueChange = { profileName = it },
-                    label = { Text("Profile Name") },
+                    label = { Text(stringResource(R.string.profile_name)) },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                     enabled = !profile.isDefault
@@ -263,9 +262,8 @@ fun ProfileEditDialog(
                 Spacer(modifier = Modifier.height(24.dp))
                 
                 Text(
-                    text = "Choose Style",
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Medium
+                    text = stringResource(R.string.choose_style),
+                    style = MaterialTheme.typography.titleSmallEmphasized
                 )
                 
                 Spacer(modifier = Modifier.height(12.dp))
@@ -306,7 +304,7 @@ fun ProfileEditDialog(
                             modifier = Modifier.size(18.dp)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("Export Profile as ZIP")
+                        Text(stringResource(R.string.export_profile_zip))
                     }
                     Spacer(modifier = Modifier.height(16.dp))
                 }
@@ -323,7 +321,7 @@ fun ProfileEditDialog(
                                 contentColor = MaterialTheme.colorScheme.error
                             )
                         ) {
-                            Text("Delete")
+                            Text(stringResource(R.string.delete))
                         }
                     } else {
                         Spacer(modifier = Modifier.width(1.dp))
@@ -331,7 +329,7 @@ fun ProfileEditDialog(
                     
                     Row {
                         TextButton(onClick = onDismiss) {
-                            Text("Cancel")
+                            Text(stringResource(R.string.cancel))
                         }
                         
                         Spacer(modifier = Modifier.width(8.dp))
@@ -348,7 +346,7 @@ fun ProfileEditDialog(
                             },
                             enabled = profileName.isNotBlank()
                         ) {
-                            Text("Save")
+                            Text(stringResource(R.string.save))
                         }
                     }
                 }

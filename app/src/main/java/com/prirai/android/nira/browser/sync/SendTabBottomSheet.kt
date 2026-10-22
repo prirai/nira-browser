@@ -36,6 +36,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import com.prirai.android.nira.R
@@ -110,6 +111,7 @@ fun SendTabBottomSheet(
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false)
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
+    val tabSentMessage = stringResource(R.string.tab_sent)
 
     var devices by remember { mutableStateOf<List<Device>?>(null) }
     var isLoading by remember { mutableStateOf(true) }
@@ -133,7 +135,7 @@ fun SendTabBottomSheet(
 
         ListItem(
             headlineContent = {
-                Text(text = "Send tab to\u2026")
+                Text(text = stringResource(R.string.send_tab_to))
             }
         )
 
@@ -152,7 +154,7 @@ fun SendTabBottomSheet(
             devices.isNullOrEmpty() -> {
                 ListItem(
                     headlineContent = {
-                        Text(text = "No other devices signed in to this Firefox Account")
+                        Text(text = stringResource(R.string.no_other_devices))
                     }
                 )
             }
@@ -175,7 +177,7 @@ fun SendTabBottomSheet(
                             trailingContent = {
                                 Icon(
                                     imageVector = Icons.AutoMirrored.Rounded.Send,
-                                    contentDescription = "Send"
+                                    contentDescription = stringResource(R.string.send_action)
                                 )
                             },
                             modifier = Modifier.clickable {
@@ -186,7 +188,7 @@ fun SendTabBottomSheet(
                                             device.id,
                                             DeviceCommandOutgoing.SendTab(title, url, TabPrivacy.Normal)
                                         )
-                                    snackbarHostState.showSnackbar("Tab sent!")
+                                    snackbarHostState.showSnackbar(tabSentMessage)
                                     onDismiss()
                                 }
                             }
