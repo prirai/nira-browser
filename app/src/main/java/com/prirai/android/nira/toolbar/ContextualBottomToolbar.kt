@@ -32,6 +32,12 @@ class ContextualBottomToolbar @JvmOverloads constructor(
         fun onBookmarksClicked()
 
         /**
+         * Extensions button on the contextual toolbar - opens the
+         * extensions (add-ons) bottom sheet.
+         */
+        fun onExtensionsClicked()
+
+        /**
          * Long-press on the back button. Only called when the button is
          * actually showing the back glyph - on the homepage the back slot
          * is the bookmarks button and the long-press is swallowed.
@@ -47,8 +53,7 @@ class ContextualBottomToolbar @JvmOverloads constructor(
     private lateinit var shareButton: ImageView
     private lateinit var searchButton: ImageButton
     private lateinit var newTabButton: ImageButton
-    private lateinit var tabCountButton: FrameLayout
-    private lateinit var tabCountText: TextView
+    private lateinit var extensionsButton: ImageButton
     private lateinit var menuButton: ImageButton
 
     var listener: ContextualToolbarListener? = null
@@ -82,8 +87,7 @@ class ContextualBottomToolbar @JvmOverloads constructor(
         shareButton = findViewById(R.id.share_button)
         searchButton = findViewById(R.id.search_button)
         newTabButton = findViewById(R.id.new_tab_button)
-        tabCountButton = findViewById(R.id.tab_count_button)
-        tabCountText = findViewById(R.id.tab_count_text)
+        extensionsButton = findViewById(R.id.extensions_button)
         menuButton = findViewById(R.id.menu_button)
 
         // Apply icon size scale
@@ -94,45 +98,23 @@ class ContextualBottomToolbar @JvmOverloads constructor(
     
     private fun applyIconScale() {
         val iconScale = com.prirai.android.nira.preferences.UserPreferences(context).toolbarIconSize
-        
+
         val baseHeight = (48 * context.resources.displayMetrics.density).toInt()
         val scaledHeight = (baseHeight * iconScale).toInt()
-        
+
         val basePadding = (10 * context.resources.displayMetrics.density).toInt()
         val scaledPadding = (basePadding / iconScale).toInt()
-        
-        val buttons = listOf(backButton, forwardButton, shareButton, searchButton, newTabButton, menuButton)
+
+        val buttons = listOf(
+            backButton, forwardButton, shareButton, searchButton,
+            newTabButton, extensionsButton, menuButton
+        )
         buttons.forEach { button ->
             val params = button.layoutParams
             params.height = scaledHeight
             button.layoutParams = params
             button.setPadding(scaledPadding, scaledPadding, scaledPadding, scaledPadding)
         }
-        
-        // Update tab count button height and scale the icon inside
-        val tabCountParams = tabCountButton.layoutParams
-        tabCountParams.height = scaledHeight
-        tabCountButton.layoutParams = tabCountParams
-        
-        // Scale the tab count icon and text
-        val baseIconSize = (28 * context.resources.displayMetrics.density).toInt()
-        val scaledIconSize = (baseIconSize * iconScale).toInt()
-        
-        val tabCountBackground = tabCountButton.findViewById<ImageView>(R.id.tab_count_background)
-        val tabCountTextParams = tabCountText.layoutParams
-        val tabCountBgParams = tabCountBackground?.layoutParams
-        
-        tabCountTextParams?.width = scaledIconSize
-        tabCountTextParams?.height = scaledIconSize
-        tabCountText.layoutParams = tabCountTextParams
-        
-        tabCountBgParams?.width = scaledIconSize
-        tabCountBgParams?.height = scaledIconSize
-        tabCountBackground?.layoutParams = tabCountBgParams
-        
-        // Scale text size
-        val baseTextSize = 13f
-        tabCountText.textSize = baseTextSize * iconScale
     }
 
     private fun setupClickListeners() {
@@ -147,7 +129,7 @@ class ContextualBottomToolbar @JvmOverloads constructor(
         shareButton.setOnClickListener { listener?.onShareClicked() }
         searchButton.setOnClickListener { listener?.onSearchClicked() }
         newTabButton.setOnClickListener { listener?.onNewTabClicked() }
-        tabCountButton.setOnClickListener { listener?.onTabCountClicked() }
+        extensionsButton.setOnClickListener { listener?.onExtensionsClicked() }
         menuButton.setOnClickListener { listener?.onMenuClicked() }
 
         // Long-press on back opens the tab-history popup (Chrome/Fenix
@@ -171,7 +153,6 @@ class ContextualBottomToolbar @JvmOverloads constructor(
         tab: TabSessionState?,
         canGoBack: Boolean,
         canGoForward: Boolean,
-        tabCount: Int,
         isHomepage: Boolean
     ) {
         val showContextualToolbar =
@@ -181,126 +162,111 @@ class ContextualBottomToolbar @JvmOverloads constructor(
             this.visibility = GONE
             return
         }
-        
+
         when {
-            isHomepage -> showHomepageContext(tabCount, canGoForward)
-            canGoForward -> showFullNavigationContext(tabCount)
-            tab != null && !isHomepage -> showWebsiteContext(canGoBack, tabCount)
-            else -> showDefaultContext(tabCount)
+            isHomepage -> showHomepageContext(canGoForward)
+            canGoForward -> showFullNavigationContext()
+            tab != null && !isHomepage -> showWebsiteContext(canGoBack)
+            else -> showDefaultContext()
         }
-        
-        updateTabCount(tabCount)
     }
 
-    private fun showHomepageContext(tabCount: Int, canGoForward: Boolean = false) {
+    private fun showHomepageContext(canGoForward: Boolean = false) {
         this.visibility = VISIBLE
-        
+
         backButton.visibility = VISIBLE
         backButton.setImageResource(mozilla.components.ui.icons.R.drawable.mozac_ic_bookmark_24)
         backButton.isEnabled = true
         backButton.alpha = 1.0f
-        
+
         isShowingBookmarkIcon = true
-        
+
         forwardButton.visibility = VISIBLE
         forwardButton.setImageResource(mozilla.components.ui.icons.R.drawable.mozac_ic_forward_24)
         forwardButton.isEnabled = canGoForward
         forwardButton.alpha = if (canGoForward) 1.0f else 0.4f
-        
+
         shareButton.visibility = GONE
-        
+
         searchButton.visibility = VISIBLE
         searchButton.isEnabled = true
         searchButton.alpha = 1.0f
-        
+
         newTabButton.visibility = GONE
-        
-        tabCountButton.visibility = VISIBLE
+
+        extensionsButton.visibility = VISIBLE
         menuButton.visibility = VISIBLE
-        
-        updateTabCount(tabCount)
     }
 
-    private fun showWebsiteContext(canGoBack: Boolean, tabCount: Int) {
+    private fun showWebsiteContext(canGoBack: Boolean) {
         backButton.visibility = VISIBLE
         backButton.setImageResource(mozilla.components.ui.icons.R.drawable.mozac_ic_back_24)
         backButton.isEnabled = canGoBack
         backButton.alpha = if (canGoBack) 1.0f else 0.4f
-        
+
         isShowingBookmarkIcon = false
-        
+
         forwardButton.visibility = GONE
-        
+
         shareButton.visibility = VISIBLE
         shareButton.isEnabled = true
         shareButton.alpha = 1.0f
-        
+
         searchButton.visibility = GONE
-        
+
         newTabButton.visibility = VISIBLE
         newTabButton.isEnabled = true
         newTabButton.alpha = 1.0f
-        
-        tabCountButton.visibility = VISIBLE
+
+        extensionsButton.visibility = VISIBLE
         menuButton.visibility = VISIBLE
-        
-        updateTabCount(tabCount)
     }
 
-    private fun showFullNavigationContext(tabCount: Int) {
+    private fun showFullNavigationContext() {
         backButton.visibility = VISIBLE
         backButton.setImageResource(mozilla.components.ui.icons.R.drawable.mozac_ic_back_24)
         backButton.isEnabled = true
         backButton.alpha = 1.0f
-        
+
         isShowingBookmarkIcon = false
-        
+
         forwardButton.visibility = VISIBLE
         forwardButton.setImageResource(mozilla.components.ui.icons.R.drawable.mozac_ic_forward_24)
         forwardButton.isEnabled = true
         forwardButton.alpha = 1.0f
-        
+
         shareButton.visibility = GONE
-        
+
         searchButton.visibility = GONE
-        
+
         newTabButton.visibility = VISIBLE
         newTabButton.isEnabled = true
         newTabButton.alpha = 1.0f
-        
-        tabCountButton.visibility = VISIBLE
+
+        extensionsButton.visibility = VISIBLE
         menuButton.visibility = VISIBLE
-        
-        updateTabCount(tabCount)
     }
 
-    private fun showDefaultContext(tabCount: Int) {
+    private fun showDefaultContext() {
         backButton.visibility = VISIBLE
         backButton.setImageResource(mozilla.components.ui.icons.R.drawable.mozac_ic_back_24)
         backButton.isEnabled = true
         backButton.alpha = 1.0f
-        
+
         isShowingBookmarkIcon = false
-        
+
         forwardButton.visibility = GONE
-        
+
         shareButton.visibility = VISIBLE
         shareButton.isEnabled = true
         shareButton.alpha = 1.0f
-        
-        searchButton.visibility = GONE
-        
-        newTabButton.visibility = VISIBLE
-        
-        tabCountButton.visibility = VISIBLE
-        menuButton.visibility = VISIBLE
-        
-        updateTabCount(tabCount)
-    }
 
-    private fun updateTabCount(count: Int) {
-        tabCountText.text = if (count > 99) "99+" else count.toString()
-        tabCountButton.contentDescription = context.getString(R.string.tabs_count_description, count)
+        searchButton.visibility = GONE
+
+        newTabButton.visibility = VISIBLE
+
+        extensionsButton.visibility = VISIBLE
+        menuButton.visibility = VISIBLE
     }
 
     /**

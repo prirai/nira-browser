@@ -276,7 +276,8 @@ class UnifiedToolbar @JvmOverloads constructor(
                 addAddressBar(parent, lifecycleOwner, interactor, customTabSession, store)
                 // Create bottom components (they will be retrieved separately)
                 addBottomComponentsForTopToolbar(store, lifecycleOwner)
-                // Add browser actions to address bar if contextual toolbar is disabled
+                // Menu button on the address bar only when there is no
+                // contextual toolbar to carry it
                 if (!showContextualToolbar) {
                     addBrowserActionsToAddressBar()
                 }
@@ -286,12 +287,16 @@ class UnifiedToolbar @JvmOverloads constructor(
                 addContextualToolbar()
                 addAddressBar(parent, lifecycleOwner, interactor, customTabSession, store)
                 addTabGroupBar(store, lifecycleOwner)
-                // Add browser actions to address bar if contextual toolbar is disabled
                 if (!showContextualToolbar) {
                     addBrowserActionsToAddressBar()
                 }
             }
         }
+
+        // The tab count lives on the rightmost of the address bar, beside
+        // the chevron - regardless of whether the contextual toolbar is
+        // enabled (it no longer carries the count).
+        addTabCountBadgeToAddressBar()
 
         // Always setup scroll behavior (always enabled now)
         setupScrollBehavior(parent)
@@ -578,6 +583,7 @@ class UnifiedToolbar @JvmOverloads constructor(
     
     // Store tab count view reference to update the count
     private var tabCountBadgeView: android.widget.TextView? = null
+    private var tabCountBadgeContainer: android.widget.FrameLayout? = null
     
     /**
      * Get the toolbar view for anchoring popups
@@ -585,12 +591,12 @@ class UnifiedToolbar @JvmOverloads constructor(
     fun getToolbarView(): View? = browserToolbar?.asView()
     
     /**
-     * Add browser actions (tab count, menu) to address bar when contextual toolbar is disabled
+     * Add the menu button to the address bar. Only used when the
+     * contextual toolbar is disabled - otherwise it carries the menu.
      */
     private fun addBrowserActionsToAddressBar() {
         val toolbar = browserToolbar ?: return
-        
-        // Add menu button first
+
         val menuAction = BrowserToolbar.Button(
             imageDrawable = ContextCompat.getDrawable(context, mozilla.components.ui.icons.R.drawable.mozac_ic_ellipsis_vertical_24)!!,
             contentDescription = "Menu",
@@ -599,8 +605,17 @@ class UnifiedToolbar @JvmOverloads constructor(
             }
         )
         toolbar.addBrowserAction(menuAction)
-        
-        // Create custom tab count button - exact replica of ContextualBottomToolbar's tab count
+    }
+
+    /**
+     * Add the tab count badge to the address bar - always, at the
+     * rightmost beside the chevron (the contextual toolbar no longer
+     * carries the count). Exact replica of the old ContextualBottomToolbar
+     * tab count.
+     */
+    private fun addTabCountBadgeToAddressBar() {
+        val toolbar = browserToolbar ?: return
+
         val tabCountContainer = android.widget.FrameLayout(context).apply {
             layoutParams = ViewGroup.LayoutParams(
                 (48 * context.resources.displayMetrics.density).toInt(),
@@ -608,14 +623,14 @@ class UnifiedToolbar @JvmOverloads constructor(
             )
             val padding = (4 * context.resources.displayMetrics.density).toInt()
             setPadding(padding, padding, padding, padding)
-            
+
             // Add ripple effect (unbounded for circular feedback)
             val outValue = android.util.TypedValue()
             context.theme.resolveAttribute(android.R.attr.selectableItemBackgroundBorderless, outValue, true)
             setBackgroundResource(outValue.resourceId)
             isClickable = true
             isFocusable = true
-            
+
             // Add square background (same as ContextualBottomToolbar)
             val backgroundView = android.widget.ImageView(context).apply {
                 setImageDrawable(ContextCompat.getDrawable(context, com.prirai.android.nira.R.drawable.tab_number_background))
@@ -633,7 +648,7 @@ class UnifiedToolbar @JvmOverloads constructor(
                 )
             }
             addView(backgroundView)
-            
+
             // Add count text (same as ContextualBottomToolbar)
             val countText = android.widget.TextView(context).apply {
                 val size = (28 * context.resources.displayMetrics.density).toInt()
@@ -654,23 +669,25 @@ class UnifiedToolbar @JvmOverloads constructor(
             }
             addView(countText)
             tabCountBadgeView = countText
-            
+
             setOnClickListener {
                 contextualToolbarListener?.onTabCountClicked()
             }
         }
-        
-        // Add tab count view directly to browser actions container at the beginning
+        tabCountBadgeContainer = tabCountContainer
+
+        // Add at the beginning of the browser actions container, so the
+        // badge appears leftmost of the cluster - immediately beside the
+        // chevron at the rightmost of the address bar.
         toolbar.asView().post {
             val browserActions = toolbar.asView().findViewById<ViewGroup>(
                 mozilla.components.browser.toolbar.R.id.mozac_browser_toolbar_browser_actions
             )
             if (browserActions != null) {
-                // Add at index 0 so it appears before the menu button
                 browserActions.addView(tabCountContainer, 0)
             }
         }
-        
+
         // Start observing tab count to update the text
         observeTabCountForBadge()
     }
@@ -695,10 +712,19 @@ class UnifiedToolbar @JvmOverloads constructor(
                     }
                     
                     val filteredTabCount = state.tabs.count { tab ->
-                        tab.content.private == isPrivateMode && tab.contextId == expectedContextId
+                        tab.content.private == isPrivateMode &&
+                            // Include tabs with matching contextId OR guest tabs
+                            // (null contextId - the default profile's partition),
+                            // mirroring the fragment-side tab filters
+                            ((tab.contextId == expectedContextId) || (tab.contextId == null))
                     }
-                    
+
                     tabCountBadgeView?.text = if (filteredTabCount > 99) "99+" else filteredTabCount.toString()
+                    tabCountBadgeContainer?.contentDescription =
+                        context.getString(
+                            com.prirai.android.nira.R.string.tabs_count_description,
+                            filteredTabCount
+                        )
                 }
             }
         }
@@ -738,14 +764,12 @@ class UnifiedToolbar @JvmOverloads constructor(
         tab: TabSessionState?,
         canGoBack: Boolean,
         canGoForward: Boolean,
-        tabCount: Int,
         isHomepage: Boolean = false
     ) {
         contextualToolbar?.updateForContext(
             tab = tab,
             canGoBack = canGoBack,
             canGoForward = canGoForward,
-            tabCount = tabCount,
             isHomepage = isHomepage
         )
     }

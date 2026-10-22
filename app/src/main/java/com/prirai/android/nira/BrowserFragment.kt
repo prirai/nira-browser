@@ -531,6 +531,19 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
                     }
                 }
 
+                override fun onExtensionsClicked() {
+                    try {
+                        val extensionsBottomSheet =
+                            com.prirai.android.nira.addons.ExtensionsBottomSheetFragment.newInstance()
+                        extensionsBottomSheet.show(
+                            parentFragmentManager,
+                            com.prirai.android.nira.addons.ExtensionsBottomSheetFragment.TAG
+                        )
+                    } catch (e: Exception) {
+                        // Silently handle extensions sheet opening failure
+                    }
+                }
+
                 override fun onMenuClicked() {
                     // Show custom Material 3 menu
                     // Use try-catch to handle cases where view might not be ready
@@ -638,7 +651,6 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
                         tab = currentSelectedTab,
                         canGoBack = currentSelectedTab?.content?.canGoBack ?: false,
                         canGoForward = currentSelectedTab?.content?.canGoForward ?: false,
-                        tabCount = filteredTabs.size,  // Use filtered tabs count
                         isHomepage = currentIsHomepage
                     )
                 }
@@ -650,27 +662,6 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
         // Initialize the modern toolbar with the current tab state immediately
         val state = requireContext().components.store.state
 
-        // Apply same filtering logic as in observeTabChangesForModernToolbar
-        val activity = activity as? BrowserActivity
-        val isPrivateMode = activity?.browsingModeManager?.mode?.isPrivate ?: false
-        val profileManager = com.prirai.android.nira.browser.profile.ProfileManager.getInstance(requireContext())
-        val currentProfile = profileManager.getActiveProfile()
-        val currentProfileContextId = if (isPrivateMode) {
-            "private"
-        } else {
-            "profile_${currentProfile.id}"
-        }
-
-        val filteredTabs = state.tabs.filter { tab ->
-            // Match private mode first
-            if (tab.content.private != isPrivateMode) {
-                false
-            } else {
-                // Include tabs with matching contextId OR guest tabs (null contextId)
-                (tab.contextId == currentProfileContextId) || (tab.contextId == null)
-            }
-        }
-
         val selectedTab = state.tabs.find { it.id == state.selectedTabId }
         val currentUrl = selectedTab?.content?.url ?: ""
         // Properly detect homepage - both empty URL and about:homepage
@@ -680,7 +671,6 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
             tab = selectedTab,
             canGoBack = selectedTab?.content?.canGoBack ?: false,
             canGoForward = selectedTab?.content?.canGoForward ?: false,
-            tabCount = filteredTabs.size,  // Use filtered tabs count
             isHomepage = isHomepage
         )
 
