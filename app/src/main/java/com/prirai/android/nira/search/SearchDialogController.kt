@@ -6,6 +6,7 @@ import com.prirai.android.nira.BrowserDirection
 import com.prirai.android.nira.browser.SearchEngineList
 import com.prirai.android.nira.preferences.UserPreferences
 import mozilla.components.browser.state.search.SearchEngine
+import mozilla.components.browser.state.selector.findTab
 import mozilla.components.browser.state.state.selectedOrDefaultSearchEngine
 import mozilla.components.browser.state.store.BrowserStore
 import mozilla.components.feature.tabs.TabsUseCases
@@ -31,6 +32,7 @@ class SearchDialogController(
     private val tabsUseCases: TabsUseCases,
     private val fragmentStore: SearchFragmentStore,
     private val navController: NavController,
+    private val openedFromHome: Boolean,
     private val dismissDialog: () -> Unit,
     private val clearToolbarFocus: () -> Unit,
     private val focusToolbar: () -> Unit
@@ -73,15 +75,30 @@ class SearchDialogController(
     }
 
     /**
-     * Creates a new tab ONLY when no tab is selected.
-     * Otherwise, reuses the current tab (including homepage tabs).
+     * Decides whether a submitted search starts a new tab.
+     *
+     * - No tab in the dialog context: new tab.
+     * - Opened over a content page (the browser fragment address bar):
+     *   reuse the current tab - the omnibox navigates it, like Chrome.
+     * - Opened from the home screen: reuse the tab only when it is sitting
+     *   on the new tab page (the search then appends to it, keeping the
+     *   new tab page as the tab's history root). A home search with a
+     *   CONTENT tab still selected behind the home screen must NOT load
+     *   into that tab - it would bury the search inside the old tab's
+     *   history (no "New Tab" entry in the back popup, tab pill left
+     *   showing the old page) - so it starts a fresh tab instead.
      */
     private fun shouldCreateNewTabForSearch(): Boolean {
-        val tabId = fragmentStore.state.tabId
-        
-        // Only create new tab if no tab is selected
-        // Otherwise, always reuse the current tab (even if it's showing homepage)
-        return tabId == null
+        val tabId = fragmentStore.state.tabId ?: return true
+
+        if (!openedFromHome) return false
+
+        val tab = store.state.findTab(tabId) ?: return true
+        return tab.content.url !in NEW_TAB_PAGE_URLS
+    }
+
+    private companion object {
+        val NEW_TAB_PAGE_URLS = setOf("about:homepage", "about:blank")
     }
 
     override fun handleEditingCancelled() {

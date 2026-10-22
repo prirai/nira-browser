@@ -174,6 +174,8 @@ class SearchDialogFragment : AppCompatDialogFragment(), UserInteractionHandler {
                 tabsUseCases = components.tabsUseCases,
                 fragmentStore = store,
                 navController = findNavController(),
+                openedFromHome =
+                    findNavController().previousBackStackEntry?.destination?.id == R.id.homeFragment,
                 dismissDialog = {
                     dialogHandledAction = true
                     dismissAllowingStateLoss()
