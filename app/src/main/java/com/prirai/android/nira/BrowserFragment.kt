@@ -1121,8 +1121,36 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
             val store = requireContext().components.store
             val selectedTab = store.state.tabs.find { it.id == store.state.selectedTabId }
             
-            // If we can't go back in history, navigate to home fragment
+            // If we can't go back in history...
             if (selectedTab != null && !selectedTab.content.canGoBack) {
+                // ...and the tab is sitting on the new tab page, the tab is
+                // "done": close it and switch to the most recently used
+                // other tab (Chrome closes the tab at the NTP on back; the
+                // app itself is never closed from here). With no other tab
+                // in the same profile/partition, stay on the new tab page -
+                // back is consumed either way.
+                if (selectedTab.content.url == "about:homepage" ||
+                    selectedTab.content.url == "about:blank"
+                ) {
+                    val lastUsedTab = store.state.tabs
+                        .filter {
+                            it.id != selectedTab.id &&
+                                it.content.private == selectedTab.content.private &&
+                                it.contextId == selectedTab.contextId
+                        }
+                        .maxByOrNull { it.lastAccess }
+                    if (lastUsedTab != null) {
+                        // Select first so the store never sits without a
+                        // selection between the two dispatches.
+                        requireContext().components.tabsUseCases.selectTab(lastUsedTab.id)
+                        requireContext().components.tabsUseCases.removeTab(selectedTab.id)
+                    }
+                    return true
+                }
+
+                // Otherwise navigate to home fragment (tabs whose history
+                // has no new tab page entry - e.g. restored or
+                // externally-opened tabs)
                 try {
                     val navController = androidx.navigation.fragment.NavHostFragment.findNavController(this)
                     // Only navigate if we're not already on home fragment
