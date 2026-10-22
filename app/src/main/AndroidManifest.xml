@@ -29,6 +29,15 @@
   <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
   <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
   <uses-permission android:name="android.permission.VIBRATE" />
+  <!--
+      Required so the in-app auto-updater can hand a downloaded APK
+      to the system package installer via ACTION_VIEW. Android shows
+      a one-time per-app "Allow this source" sheet the first time
+      the user taps Install; after that no additional prompt. Only
+      the system installer actually swaps the APK bytes; this
+      permission just allows us to initiate the request.
+  -->
+  <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
   <application
         android:name=".BrowserApp"
@@ -283,6 +292,25 @@
       <meta-data
               android:name="android.support.FILE_PROVIDER_PATHS"
               android:resource="@xml/file_paths"
+          />
+    </provider>
+
+    <!--
+        Dedicated FileProvider for the in-app auto-updater's downloaded
+        APKs under cacheDir/updates/. Scoped to its own authority so the
+        existing `${applicationId}.fileprovider` entry doesn't need its
+        paths file broadened; keeps the trust surface small.
+        See `com.prirai.android.nira.update.UpdateInstaller`.
+    -->
+    <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.updateprovider"
+            android:exported="false"
+            android:grantUriPermissions="true"
+        >
+      <meta-data
+              android:name="android.support.FILE_PROVIDER_PATHS"
+              android:resource="@xml/file_provider_paths_update"
           />
     </provider>
 
