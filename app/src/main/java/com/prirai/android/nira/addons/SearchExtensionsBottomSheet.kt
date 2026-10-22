@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalMaterial3ExpressiveApi::class)
+
 package com.prirai.android.nira.addons
 
 import android.content.Intent
@@ -19,11 +21,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.ViewCompositionStrategy
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
+import com.prirai.android.nira.R
 import com.prirai.android.nira.ext.components
 import com.prirai.android.nira.preferences.UserPreferences
 import com.prirai.android.nira.ui.theme.NiraTheme
@@ -140,15 +143,14 @@ fun SearchExtensionsContent(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Search Extensions",
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold
+                    text = stringResource(R.string.search_extensions),
+                    style = MaterialTheme.typography.headlineSmallEmphasized
                 )
                 
                 IconButton(onClick = onDismiss) {
                     Icon(
                         imageVector = Icons.Default.Close,
-                        contentDescription = "Close"
+                        contentDescription = stringResource(R.string.close)
                     )
                 }
             }
@@ -160,11 +162,11 @@ fun SearchExtensionsContent(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(bottom = 16.dp),
-                placeholder = { Text("Search by name or description") },
+                placeholder = { Text(stringResource(R.string.search_by_name_or_description)) },
                 leadingIcon = {
                     Icon(
                         imageVector = Icons.Default.Search,
-                        contentDescription = "Search"
+                        contentDescription = null
                     )
                 },
                 trailingIcon = {
@@ -172,7 +174,7 @@ fun SearchExtensionsContent(
                         IconButton(onClick = { searchQuery.value = "" }) {
                             Icon(
                                 imageVector = Icons.Default.Close,
-                                contentDescription = "Clear"
+                                contentDescription = stringResource(R.string.clear)
                             )
                         }
                     }
@@ -207,7 +209,7 @@ fun SearchExtensionsContent(
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
-                                    text = "Type at least 2 characters to search",
+                                    text = stringResource(R.string.type_to_search_extensions),
                                     style = MaterialTheme.typography.bodyLarge,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -222,7 +224,7 @@ fun SearchExtensionsContent(
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
-                                    text = "No extensions found",
+                                    text = stringResource(R.string.no_extensions_found),
                                     style = MaterialTheme.typography.bodyLarge,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -319,15 +321,14 @@ fun SearchExtensionItem(
             ) {
                 Text(
                     text = addon.translateName(context),
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Medium,
+                    style = MaterialTheme.typography.bodyMediumEmphasized,
                     maxLines = 1,
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 
                 if (addon.isInstalled()) {
                     Text(
-                        text = "Installed",
+                        text = stringResource(R.string.status_installed),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.primary
                     )

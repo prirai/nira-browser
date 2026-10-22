@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalMaterial3ExpressiveApi::class)
+
 package com.prirai.android.nira.addons
 
 import android.content.Intent
@@ -28,6 +30,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -46,7 +49,7 @@ import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
@@ -225,7 +228,7 @@ fun AddonsScreen(
                 if (filteredEnabled.isNotEmpty()) {
                     item {
                         AddonSection(
-                            title = "Enabled (${filteredEnabled.size})",
+                            title = stringResource(R.string.enabled_section, filteredEnabled.size),
                             addons = filteredEnabled,
                             onAddonClick = { addon ->
                                 val intent = Intent(context, InstalledAddonDetailsActivity::class.java)
@@ -240,7 +243,7 @@ fun AddonsScreen(
                 if (filteredRecommended.isNotEmpty()) {
                     item {
                         AddonSection(
-                            title = "Recommended (${filteredRecommended.size})",
+                            title = stringResource(R.string.recommended_section, filteredRecommended.size),
                             addons = filteredRecommended,
                             onAddonClick = { addon ->
                                 val intent = Intent(context, AddonDetailsActivity::class.java)
@@ -262,7 +265,7 @@ fun AddonsScreen(
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Text(
-                            text = "All extensions",
+                            text = stringResource(R.string.all_extensions),
                             style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.primary
                         )
@@ -279,7 +282,7 @@ fun AddonsScreen(
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                text = "No extensions available",
+                                text = stringResource(R.string.no_extensions_available),
                                 style = MaterialTheme.typography.bodyLarge,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -302,7 +305,15 @@ fun AddonsScreen(
             ) {
                 listOf("Name", "Rating", "Recently Updated").forEach { sort ->
                     DropdownMenuItem(
-                        text = { Text(sort) },
+                        text = {
+                            Text(
+                                when (sort) {
+                                    "Name" -> stringResource(R.string.sort_name)
+                                    "Rating" -> stringResource(R.string.sort_rating)
+                                    else -> stringResource(R.string.sort_recently_updated)
+                                }
+                            )
+                        },
                         onClick = {
                             selectedSort.value = sort
                             showSortMenu.value = false
@@ -335,8 +346,7 @@ fun AddonSection(
         // Section title
         Text(
             text = title,
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold,
+            style = MaterialTheme.typography.titleMediumEmphasized,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(start = 16.dp, bottom = 8.dp)
         )
@@ -444,8 +454,7 @@ fun AddonListItem(
             ) {
                 Text(
                     text = addon.translateName(context),
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Medium,
+                    style = MaterialTheme.typography.bodyLargeEmphasized,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     color = MaterialTheme.colorScheme.onSurface

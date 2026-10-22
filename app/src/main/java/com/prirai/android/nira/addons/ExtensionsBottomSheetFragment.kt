@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalMaterial3ExpressiveApi::class)
+
 package com.prirai.android.nira.addons
 
 import android.content.Context
@@ -33,6 +35,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -51,7 +54,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
@@ -236,9 +239,8 @@ fun ExtensionsBottomSheetContent(
             
             // Title
             Text(
-                text = "Extensions",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.SemiBold,
+                text = stringResource(R.string.extensions),
+                style = MaterialTheme.typography.titleLargeEmphasized,
                 modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp)
             )
             
@@ -273,17 +275,18 @@ fun ExtensionsBottomSheetContent(
                                     tint = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                                 Text(
-                                    text = "No extensions installed",
+                                    text = stringResource(R.string.no_extensions_installed),
                                     style = MaterialTheme.typography.titleMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                                 Button(
                                     onClick = onManageAddonsClick,
+                                    shapes = ButtonDefaults.shapes(),
                                     colors = ButtonDefaults.buttonColors(
                                         containerColor = MaterialTheme.colorScheme.primary
                                     )
                                 ) {
-                                    Text("Browse Add-ons")
+                                    Text(stringResource(R.string.manage_addons))
                                 }
                             }
                         }
@@ -383,15 +386,14 @@ fun ExtensionItem(
             ) {
                 Text(
                     text = addon.translateName(context),
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Medium,
+                    style = MaterialTheme.typography.bodyLargeEmphasized,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
-                
+
                 if (addon.version.isNotEmpty()) {
                     Text(
-                        text = "Version ${addon.version}",
+                        text = stringResource(R.string.extension_version, addon.version),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1
@@ -441,9 +443,8 @@ fun ManageAddonsButton(onClick: () -> Unit) {
             )
             Spacer(modifier = Modifier.width(12.dp))
             Text(
-                text = "Manage Add-ons",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
+                text = stringResource(R.string.manage_addons),
+                style = MaterialTheme.typography.titleMediumEmphasized,
                 color = MaterialTheme.colorScheme.onPrimaryContainer
             )
         }
