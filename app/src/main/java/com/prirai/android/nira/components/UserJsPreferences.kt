@@ -36,16 +36,26 @@ object UserJsPreferences {
     private val privacyPrefs = mapOf<String, Any>(
         // Disables navigator.sendBeacon — prevents silent background data leakage
         "beacon.enabled" to false,
-        // Classic fingerprint resistance (letterboxing, uniform UA, etc.)
-        "privacy.resistFingerprinting" to true,
         // Send Do-Not-Track request header
         "privacy.donottrackheader.enabled" to true,
         // Clear cookies and HTTP sessions on browser shutdown
         "privacy.clearOnShutdown.cookies" to true,
+        // Clear cookies and HTTP sessions on browser shutdown
         "privacy.clearOnShutdown.sessions" to true,
         // Auto-reject cookie consent banners (normal + private browsing)
         "cookiebanners.service.mode" to 1,
         "cookiebanners.service.mode.privateBrowsing" to 1,
+        // NOTE: "privacy.resistFingerprinting" was previously enabled here
+        // (arkenfox-style hardening). RFP forces content
+        // `prefers-color-scheme: light` by design (a uniform fingerprint,
+        // bug 1535189), which made the "Web theme" setting a no-op for
+        // every site regardless of the engine's preferred-color-scheme
+        // override or the system dark mode. Nira uses the modern
+        // Fingerprinting Protection instead - already enabled via
+        // GeckoRuntimeSettings.setFingerprintingProtection in
+        // [applyTypedSettings] - which covers the same protection surface
+        // without freezing the color scheme. Users who prefer full RFP can
+        // still re-enable it via about:config; these are only defaults.
     )
 
     private val telemetryPrefs = mapOf<String, Any>(
@@ -95,6 +105,14 @@ object UserJsPreferences {
         "content.notify.interval" to 100000,
         // Disable session-history content-viewer cache to reduce memory usage
         "browser.sessionhistory.max_total_viewers" to 0,
+        // ── Best WebGL support ──
+        // Never silently disable WebGL on blocklisted drivers - attempt
+        // hardware WebGL everywhere rather than falling back to "no WebGL"
+        "webgl.force-enabled" to true,
+        // Do not fail context creation when only a software rasterizer is
+        // available (the "major performance caveat") - sites get a working
+        // context instead of none
+        "webgl.disable-fail-if-major-performance-caveat" to true,
     )
 
     // ── Config file writing ──────────────────────────────────────────────────
