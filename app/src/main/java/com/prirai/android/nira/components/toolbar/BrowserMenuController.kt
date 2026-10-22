@@ -7,6 +7,8 @@ import com.prirai.android.nira.BrowserActivity
 import com.prirai.android.nira.BrowserAnimator
 import com.prirai.android.nira.R
 import com.prirai.android.nira.browser.sync.SendTabBottomSheetFragment
+import com.prirai.android.nira.browser.history.TabHistoryBottomSheet
+import com.prirai.android.nira.browser.history.TabHistoryMode
 import com.prirai.android.nira.ext.components
 import com.prirai.android.nira.history.HistoryActivity
 import com.prirai.android.nira.settings.activity.SettingsActivity
@@ -42,14 +44,35 @@ class DefaultBrowserToolbarMenuController(
 
         when (item) {
             is ToolbarMenu.Item.Back -> {
-                currentSession?.let {
-                    sessionUseCases.goBack.invoke(it.id)
+                if (item.viewHistory) {
+                    // Long-press on back: open the tab-history popup (the
+                    // long-press view already gave haptic feedback). Shown
+                    // only when there is at least one back entry.
+                    TabHistoryBottomSheet.showIfAvailable(
+                        activity.supportFragmentManager,
+                        store,
+                        TabHistoryMode.Back,
+                        customTabSessionId
+                    )
+                } else {
+                    currentSession?.let {
+                        sessionUseCases.goBack.invoke(it.id)
+                    }
                 }
             }
 
             is ToolbarMenu.Item.Forward -> {
-                currentSession?.let {
-                    sessionUseCases.goForward.invoke(it.id)
+                if (item.viewHistory) {
+                    TabHistoryBottomSheet.showIfAvailable(
+                        activity.supportFragmentManager,
+                        store,
+                        TabHistoryMode.Forward,
+                        customTabSessionId
+                    )
+                } else {
+                    currentSession?.let {
+                        sessionUseCases.goForward.invoke(it.id)
+                    }
                 }
             }
 
