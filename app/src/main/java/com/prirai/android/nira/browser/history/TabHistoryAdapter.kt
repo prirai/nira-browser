@@ -83,8 +83,13 @@ class TabHistoryAdapter(
         ) {
             titleView.text = row.title.ifBlank { row.uri.tryGetHostFromUrl() }
 
+            // Reversed rendering (oldest at the bottom): each row's divider
+            // sits between it and the visually NEXT row downwards (adapter
+            // position - 1), so the visually BOTTOM row (position 0) is the
+            // group's bottom edge and must not draw one - same mirror as
+            // the corner logic.
             applyCardShape(cardView, isFirst = position == 0, isLast = position == count - 1)
-            divider.visibility = if (position == count - 1) View.GONE else View.VISIBLE
+            divider.visibility = if (position == 0) View.GONE else View.VISIBLE
 
             if (row.isCurrent) {
                 // Current page: filled dot + grayed-out title; tapping no-ops.
