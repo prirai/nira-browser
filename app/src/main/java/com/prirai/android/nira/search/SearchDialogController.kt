@@ -110,17 +110,25 @@ class SearchDialogController(
         val textMatchesCurrentSearch = fragmentStore.state.searchTerms == text
 
         fragmentStore.dispatch(SearchFragmentAction.UpdateQuery(text))
-        fragmentStore.dispatch(
-            SearchFragmentAction.ShowSearchShortcutEnginePicker(
-                (textMatchesCurrentUrl || textMatchesCurrentSearch || text.isEmpty())
+
+        // Only dispatch when the value actually changes: this runs on every
+        // keystroke, and each dispatch re-runs the dialog's full update
+        // chain (toolbar icon, clipboard check, providers) - the redundant
+        // emissions showed up as input lag while holding backspace.
+        val showPicker =
+            (textMatchesCurrentUrl || textMatchesCurrentSearch || text.isEmpty()) &&
+                fragmentStore.state.areShortcutsAvailable
+        if (fragmentStore.state.showSearchShortcuts != showPicker) {
+            fragmentStore.dispatch(SearchFragmentAction.ShowSearchShortcutEnginePicker(showPicker))
+        }
+
+        val allowSuggestionsPrompt =
+            text.isNotEmpty() && activity.browsingModeManager.mode.isPrivate
+        if (fragmentStore.state.showSearchSuggestionsHint != allowSuggestionsPrompt) {
+            fragmentStore.dispatch(
+                SearchFragmentAction.AllowSearchSuggestionsInPrivateModePrompt(allowSuggestionsPrompt)
             )
-        )
-        fragmentStore.dispatch(
-            SearchFragmentAction.AllowSearchSuggestionsInPrivateModePrompt(
-                text.isNotEmpty() &&
-                        activity.browsingModeManager.mode.isPrivate
-            )
-        )
+        }
     }
 
     override fun handleUrlTapped(url: String) {

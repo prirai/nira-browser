@@ -37,6 +37,7 @@ import com.prirai.android.nira.R
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
 import mozilla.components.concept.awesomebar.AwesomeBar
 import mozilla.components.concept.awesomebar.AwesomeBar.GroupedSuggestion
 import mozilla.components.concept.awesomebar.AwesomeBar.Suggestion
@@ -45,6 +46,9 @@ import mozilla.components.concept.awesomebar.AwesomeBar.SuggestionProviderGroup
 
 private val GroupCornerRadius = 24.dp
 private val CardHorizontalPadding = 8.dp
+
+/** Delay before provider queries run, coalescing rapid input changes. */
+private const val INPUT_DEBOUNCE_MS = 120L
 
 private data class SuggestionSection(
     val group: SuggestionProviderGroup,
@@ -67,6 +71,14 @@ fun NiraAwesomeBar(
             sections = emptyList()
             return@LaunchedEffect
         }
+        // Debounce: every input round cancels the in-flight provider
+        // queries and restarts their favicon loads, which is what made the
+        // list flicker and janked the input while typing fast or holding
+        // backspace. Coalescing rapid input changes into one query round
+        // per pause keeps the suggestions responsive without the churn -
+        // restarting this effect on each text change cancels the pending
+        // round automatically.
+        delay(INPUT_DEBOUNCE_MS)
         fetchSections(text, providers) { fetched ->
             sections = fetched
         }
