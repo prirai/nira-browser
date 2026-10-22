@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalMaterial3ExpressiveApi::class)
+
 package com.prirai.android.nira.settings.fragment
 
 import android.content.Intent
@@ -35,6 +37,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
@@ -61,11 +64,13 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.ViewCompositionStrategy
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.prirai.android.nira.BrowserActivity
+import com.prirai.android.nira.R
 import com.prirai.android.nira.ext.components
 import com.prirai.android.nira.preferences.UserPreferences
 import com.prirai.android.nira.theme.ThemeManager
@@ -370,9 +375,8 @@ private fun SyncSettingsScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Text(
-                text = "Firefox Sync",
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.SemiBold,
+                text = stringResource(R.string.firefox_sync),
+                style = MaterialTheme.typography.headlineSmallEmphasized,
                 modifier = Modifier.padding(vertical = 8.dp)
             )
 
@@ -415,7 +419,7 @@ private fun SyncSettingsScreen(
                     contentColor = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             ) {
-                Text("📋 Export Diagnostics")
+                Text(stringResource(R.string.export_diagnostics))
             }
         }
     }
@@ -459,22 +463,20 @@ private fun SignedInContent(
                 ) {
                     Text(
                         text = initial,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.titleMediumEmphasized,
                         color = MaterialTheme.colorScheme.onPrimary
                     )
                 }
                 Spacer(modifier = Modifier.width(12.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "Firefox Account",
+                        text = stringResource(R.string.firefox_account),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
                     )
                     Text(
                         text = accountEmail ?: "—",
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Medium,
+                        style = MaterialTheme.typography.bodyMediumEmphasized,
                         color = MaterialTheme.colorScheme.onPrimaryContainer
                     )
                     val formatted = remember(lastSyncTime) {
@@ -484,7 +486,12 @@ private fun SignedInContent(
                         } else null
                     }
                     Text(
-                        text = if (formatted != null) "Last synced: $formatted" else "Never synced",
+                        text =
+                            if (formatted != null) {
+                                stringResource(R.string.last_synced, formatted)
+                            } else {
+                                stringResource(R.string.never_synced)
+                            },
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
                     )
@@ -497,7 +504,7 @@ private fun SignedInContent(
                 Spacer(modifier = Modifier.width(8.dp))
                 SuggestionChip(
                     onClick = {},
-                    label = { Text("Active", style = MaterialTheme.typography.labelSmall) },
+                    label = { Text(stringResource(R.string.sync_status_active), style = MaterialTheme.typography.labelSmall) },
                     colors = SuggestionChipDefaults.suggestionChipColors(
                         containerColor = MaterialTheme.colorScheme.tertiaryContainer,
                         labelColor = MaterialTheme.colorScheme.onTertiaryContainer
@@ -508,7 +515,7 @@ private fun SignedInContent(
 
             if (deviceCount != null && deviceCount > 0) {
                 Text(
-                    text = "Connected to $deviceCount other device${if (deviceCount == 1) "" else "s"}",
+                    text = pluralStringResource(R.plurals.connected_devices, deviceCount, deviceCount),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
                 )
@@ -557,7 +564,7 @@ private fun SignedInContent(
                 )
             }
             Spacer(modifier = Modifier.width(6.dp))
-            Text(if (isSyncing) "Syncing…" else "Sync Now")
+            Text(if (isSyncing) stringResource(R.string.syncing) else stringResource(R.string.sync_now))
         }
 
         OutlinedButton(
@@ -567,7 +574,7 @@ private fun SignedInContent(
                 contentColor = MaterialTheme.colorScheme.error
             )
         ) {
-            Text("Sign Out")
+            Text(stringResource(R.string.sign_out))
         }
     }
 
@@ -582,7 +589,7 @@ private fun SignedInContent(
             modifier = Modifier.size(16.dp)
         )
         Spacer(modifier = Modifier.width(8.dp))
-        Text("Manage Account")
+        Text(stringResource(R.string.manage_account))
     }
 }
 
@@ -611,7 +618,7 @@ private fun SignedOutContent(
                 tint = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Text(
-                text = "Sync your browsing data across devices using a Firefox Account.",
+                text = stringResource(R.string.sync_pitch),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -654,7 +661,7 @@ private fun SignedOutContent(
             )
         }
         Spacer(modifier = Modifier.width(8.dp))
-        Text(if (isSigningIn) "Opening sign-in…" else "Sign in to Firefox")
+        Text(if (isSigningIn) stringResource(R.string.opening_sign_in) else stringResource(R.string.sign_in_to_firefox))
     }
 }
 
@@ -667,9 +674,8 @@ private fun SyncEnginesCard(
     onEngineToggle: (SyncEngine, Boolean) -> Unit
 ) {
     Text(
-        text = "What syncs",
-        style = MaterialTheme.typography.titleSmall,
-        fontWeight = FontWeight.Medium,
+        text = stringResource(R.string.what_syncs),
+        style = MaterialTheme.typography.titleSmallEmphasized,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp)
     )
@@ -681,21 +687,21 @@ private fun SyncEnginesCard(
         Column(modifier = Modifier.padding(4.dp)) {
             SyncEngineRow(
                 icon = { Icon(Icons.Rounded.History, contentDescription = null, modifier = Modifier.size(20.dp)) },
-                label = "History",
+                label = stringResource(R.string.action_history),
                 enabled = syncHistoryEnabled,
                 showToggle = isSignedIn,
                 onToggleChange = if (isSignedIn) ({ onEngineToggle(SyncEngine.History, it) }) else null
             )
             SyncEngineRow(
                 icon = { Icon(Icons.Rounded.Tab, contentDescription = null, modifier = Modifier.size(20.dp)) },
-                label = "Open tabs",
+                label = stringResource(R.string.open_tabs),
                 enabled = syncTabsEnabled,
                 showToggle = isSignedIn,
                 onToggleChange = if (isSignedIn) ({ onEngineToggle(SyncEngine.Tabs, it) }) else null
             )
             SyncEngineRow(
                 icon = { Icon(Icons.Rounded.Bookmark, contentDescription = null, modifier = Modifier.size(20.dp)) },
-                label = "Bookmarks",
+                label = stringResource(R.string.action_bookmarks),
                 enabled = syncBookmarksEnabled,
                 showToggle = isSignedIn,
                 onToggleChange = if (isSignedIn) ({ onEngineToggle(SyncEngine.Bookmarks, it) }) else null
@@ -772,7 +778,7 @@ private fun SyncEngineRow(
             if (enabled) {
                 Icon(
                     imageVector = Icons.Rounded.Check,
-                    contentDescription = "Enabled",
+                    contentDescription = stringResource(R.string.enabled),
                     modifier = Modifier.size(18.dp),
                     tint = MaterialTheme.colorScheme.primary
                 )
