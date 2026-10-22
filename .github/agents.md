@@ -136,6 +136,7 @@ History page (separate from suggestions): `history/HistoryActivity.kt` + `Histor
 - **Toolbar**: `components/toolbar/modern/` (Compose-based)
 - **Topsites**: `components/topsites/` (Homepage shortcuts)
 - **Theme**: `theme/ColorConstants.kt`, `theme/Theme.kt`
+- **Material 3 Expressive (since feat/m3e)**: `ui/theme/` + `ui/components/` — see the section below
 
 ### Settings
 - `settings/` - All settings screens
@@ -185,6 +186,20 @@ History page (separate from suggestions): `history/HistoryActivity.kt` + `Histor
 - `theme/` - Color constants, Material 3 theming
 - `components/toolbar/` - Toolbar customization
 - Check for Compose vs View-based UI conflicts
+
+## Material 3 Expressive system (since feat/m3e)
+
+Nira's Compose stack is the **compose BOM alpha** (`compose-bom-alpha` 2026.08.00 → material3 1.5.0-alpha26 + compose 1.13.0-alpha01), the same stack the Flow app builds on. All Expressive APIs live behind `@OptIn(ExperimentalMaterial3ExpressiveApi::class)`; most UI files declare it with a `@file:OptIn(...)` annotation.
+
+**Rules:**
+1. `NiraTheme` (`ui/theme/Theme.kt`) wraps **`MaterialExpressiveTheme` with `MotionScheme.expressive()`** — never use plain `MaterialTheme` for new surfaces. All color modes (dynamic, private, AMOLED) still resolve inside it; the signature is unchanged.
+2. **Motion comes from `MaterialTheme.motionScheme`** (`defaultSpatialSpec`, `fastSpatialSpec`, `slowSpatialSpec`, `defaultEffectsSpec`, `fastEffectsSpec`, `slowEffectsSpec`). Do not hand-roll `tween`/`spring` constants at call sites. Specs must be read in a composable context — hoist them into a `val` before non-composable lambdas (`transitionSpec`, click callbacks) and watch the type parameter (`expandVertically` needs `FiniteAnimationSpec<IntSize>`).
+3. **Emphasized typography** replaces manual `fontWeight` overrides: use `*Emphasized` styles (e.g. `titleMediumEmphasized`, `bodyLargeEmphasized`, `labelSmallEmphasized`) instead of `style = X, fontWeight = FontWeight.Bold`.
+4. **Shared components live in `ui/components/`** and must be reused before writing new ones: `pressScale` (press feedback), `animateNiraListItem`/`animateNiraGridItem` (item animation specs), `thumbnailGradientOverlay` (legibility scrim), `rememberNiraSheetState`, `NiraAlertDialog`, `NiraActionButton`, `NiraSheetHeader`, `NiraEmptyState`/`NiraErrorState`/`NiraStateIcon`, `NiraLoadingIndicator`/`NiraListProgress` (expressive `LoadingIndicator`), `niraStateShape` (MaterialShapes cookie).
+5. **Item-animation call syntax gotcha**: `animateNiraGridItem()`/`animateNiraListItem()` are scope extensions that take no `Modifier` parameter — call them **bare** (`modifier = animateNiraGridItem()`) or via `.then(animateNiraGridItem())`, never `Modifier.animateNiraGridItem()`. Also note the list variant needs `LazyItemScope` and the grid variant `LazyGridItemScope` — pick the one matching the container.
+6. Buttons that act as primary confirmations can pass `shapes = ButtonDefaults.shapes()` for Expressive shape morphing.
+7. **No hardcoded UI strings** — everything user-facing is in `values/strings.xml` (default English file only). Decorative icons (favicons, thumbnails, icons adjacent to text) use `contentDescription = null`.
+8. **No inline hex colors** at call sites — theme roles only (`colorScheme.primary`, `surfaceContainerHigh`, `tertiary` for success, `errorContainer` for failure states).
 
 ## Code Patterns and Best Practices
 
@@ -395,6 +410,6 @@ Common Mozilla components used:
 
 ---
 
-**Last Updated**: October 2026 (v0.5.16: tab history chart, back-UX rework, toolbar rework, address-bar perf, automated release process)
+**Last Updated**: October 2026 (feat/m3e: Material 3 Expressive — BOM alpha stack, MaterialExpressiveTheme + MotionScheme, emphasized typography, shared `ui/components` library; v0.5.16: tab history chart, back-UX rework, toolbar rework, address-bar perf, automated release process)
 
 For questions or updates to this guide, please open an issue or discussion on GitHub.

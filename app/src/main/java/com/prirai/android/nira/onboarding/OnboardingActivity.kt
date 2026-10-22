@@ -8,9 +8,7 @@ import androidx.activity.compose.setContent
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.spring
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -258,6 +256,7 @@ fun OnboardingScreen(
             }
         }
 
+        val pageTurnSpec = MaterialTheme.motionScheme.defaultSpatialSpec<Float>()
         OnboardingBottomBar(
             currentPage = pagerState.currentPage,
             pageCount = pageCount,
@@ -267,7 +266,7 @@ fun OnboardingScreen(
                 scope.launch {
                     pagerState.animateScrollToPage(
                         pagerState.currentPage + 1,
-                        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy)
+                        animationSpec = pageTurnSpec
                     )
                 }
             },
@@ -307,7 +306,7 @@ private fun OnboardingBottomBar(
                     val isActive = index == currentPage
                     val width by animateDpAsState(
                         targetValue = if (isActive) 28.dp else 8.dp,
-                        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy),
+                        animationSpec = MaterialTheme.motionScheme.fastSpatialSpec(),
                         label = "dot_width"
                     )
                     Box(
@@ -324,10 +323,15 @@ private fun OnboardingBottomBar(
 
             Spacer(modifier = Modifier.height(16.dp))
 
+            val contentFadeIn = MaterialTheme.motionScheme.defaultEffectsSpec<Float>()
+            val contentExpand = MaterialTheme.motionScheme.fastSpatialSpec<androidx.compose.ui.unit.IntSize>()
+            val contentFadeOut = MaterialTheme.motionScheme.fastEffectsSpec<Float>()
+            val contentShrink = MaterialTheme.motionScheme.fastSpatialSpec<androidx.compose.ui.unit.IntSize>()
             AnimatedContent(
                 targetState = isLastPage,
                 transitionSpec = {
-                    (fadeIn() + expandVertically()).togetherWith(fadeOut() + shrinkVertically())
+                    (fadeIn(contentFadeIn) + expandVertically(contentExpand))
+                        .togetherWith(fadeOut(contentFadeOut) + shrinkVertically(contentShrink))
                 },
                 label = "bottom_buttons"
             ) { lastPage ->
@@ -524,8 +528,10 @@ private fun ThemePage(
 
         AnimatedVisibility(
             visible = appThemeChoice == ThemeChoice.DARK.ordinal,
-            enter = fadeIn() + expandVertically(),
-            exit = fadeOut() + shrinkVertically()
+            enter = fadeIn(MaterialTheme.motionScheme.defaultEffectsSpec()) +
+                expandVertically(MaterialTheme.motionScheme.fastSpatialSpec()),
+            exit = fadeOut(MaterialTheme.motionScheme.fastEffectsSpec()) +
+                shrinkVertically(MaterialTheme.motionScheme.fastSpatialSpec())
         ) {
             Column {
                 Spacer(modifier = Modifier.height(20.dp))
@@ -1229,8 +1235,10 @@ private fun ContextualToolbarPage(
 
         AnimatedVisibility(
             visible = showContextualToolbar,
-            enter = fadeIn() + expandVertically(),
-            exit = fadeOut() + shrinkVertically()
+            enter = fadeIn(MaterialTheme.motionScheme.defaultEffectsSpec()) +
+                expandVertically(MaterialTheme.motionScheme.fastSpatialSpec()),
+            exit = fadeOut(MaterialTheme.motionScheme.fastEffectsSpec()) +
+                shrinkVertically(MaterialTheme.motionScheme.fastSpatialSpec())
         ) {
             Column(modifier = Modifier.padding(top = 20.dp)) {
                 Text(
