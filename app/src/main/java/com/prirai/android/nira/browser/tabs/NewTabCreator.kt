@@ -8,6 +8,7 @@ import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import mozilla.components.browser.state.action.ContentAction
+import mozilla.components.browser.state.selector.findTab
 import mozilla.components.browser.state.store.BrowserStore
 import mozilla.components.browser.state.selector.selectedTab
 
@@ -27,6 +28,14 @@ import mozilla.components.browser.state.selector.selectedTab
  * against the new tab.
  */
 object NewTabCreator {
+
+    /**
+     * Position of the new tab page in the tab's history chart: before the
+     * first entry, with the entire session history forward of it. Used as
+     * `HistoryState.currentIndex` while a tab sits on its new tab page and
+     * as the row index of the "New Tab" row in the tab-history popup.
+     */
+    const val NEW_TAB_INDEX = -1
 
     private const val WAIT_STEP_MS = 50L
     private const val WAIT_STEPS = 20 // 1s total
@@ -99,16 +108,33 @@ object NewTabCreator {
      *
      * `about:homepage` is a custom about-URL that GeckoView cannot actually
      * load, so the new tab page can never be an entry in the engine's
-     * session history - it is a state transition: the BrowserFragment
+     * session history - it is a state transition: the tab's whole session
+     * history becomes FORWARD of it ([NEW_TAB_INDEX]), the BrowserFragment
      * homepage overlay takes over (driven by the content url observer) and
      * the tab pill shows "New Tab" (empty title + about:homepage), exactly
      * like a freshly created tab.
      *
+     * The navigation flags are synced to the new position so the forward
+     * button works from the new tab page: hold forward opens the
+     * tab-history popup with every site forward of the new tab page, tap
+     * forward jumps to the first one. Back is disabled - there is nothing
+     * before the new tab page; a back gesture there closes the tab.
+     *
      * Used when back navigation walks past the oldest history entry and
-     * when the tab-history popup's synthetic "New Tab" row is tapped.
+     * when the tab-history popup's "New Tab" row is tapped.
      */
     fun setTabToNewTabPage(store: BrowserStore, tabId: String) {
+        val items = store.state.findTab(tabId)?.content?.history?.items ?: emptyList()
+        store.dispatch(
+            ContentAction.UpdateHistoryStateAction(
+                sessionId = tabId,
+                historyList = items,
+                currentIndex = NEW_TAB_INDEX,
+            )
+        )
         store.dispatch(ContentAction.UpdateUrlAction(tabId, "about:homepage"))
         store.dispatch(ContentAction.UpdateTitleAction(tabId, ""))
+        store.dispatch(ContentAction.UpdateBackNavigationStateAction(tabId, canGoBack = false))
+        store.dispatch(ContentAction.UpdateForwardNavigationStateAction(tabId, canGoForward = true))
     }
 }
