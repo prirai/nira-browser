@@ -108,12 +108,24 @@ Address-bar stack:
 - `search/SearchFragmentStore.kt` — selected engine for the dialog
 - `search/awesomebar/AwesomeBarView.kt` — provider wiring
 - `search/awesomebar/AwesomeBarWrapper.kt` — Compose host; **must invoke** click / remove callbacks
-- `search/awesomebar/NiraAwesomeBar.kt` — grouped rounded-card list (title only, no edit arrow)
-- `search/awesomebar/SearchForQueryProvider.kt` — standalone `Search for "query"` row
+- `search/awesomebar/NiraAwesomeBar.kt` — grouped rounded-card list (title only, no edit arrow); provider queries are **debounced 120 ms** (each round cancels in-flight provider queries and favicon loads — removing the debounce reintroduces list flicker and held-backspace lag)
 - `search/awesomebar/NiraHistorySuggestionProvider.kt` — history rows + favicons
+- ~~`search/awesomebar/SearchForQueryProvider.kt`~~ — **removed** (it re-rendered a top-priority section on every keystroke, causing typing lag). The typed-query echo is suppressed via `SearchSuggestionProvider(filterExactMatch = true)`; Enter still submits the exact typed text through `BrowserActivity.load()`
 - `browser/SearchEngineList.kt` — Nira's default engines and `{searchTerms}` templates
 
 History page (separate from suggestions): `history/HistoryActivity.kt` + `HistoryItemRecyclerViewAdapter.kt`. Use `FaviconLoader.loadFavicon()`, not cache-only.
+
+### Tab History Chart (long-press back/forward) & Back Navigation
+- `browser/history/TabHistoryBottomSheet.kt` + `TabHistoryAdapter.kt`: Firefox-style **full chart** (sites before + current page + sites forward), rendered with `reverseLayout` (oldest at the bottom, current page centered with a filled dot). Corners/dividers must follow the reversed rendering (`isFirst` = visually bottom).
+- **`about:homepage` cannot be an engine history entry** — GeckoView cannot load it; the homepage is the Compose overlay over a blank engine page. The new tab page is a *state position*, not a navigation: `browser/tabs/NewTabCreator.setTabToNewTabPage()` dispatches `ContentAction.UpdateHistoryStateAction(currentIndex = NEW_TAB_INDEX = -1)` + url/title + navigation flags (`canGoBack=false`, `canGoForward=true`), so the whole session history becomes forward of it.
+- `tab.content.history` (`HistoryState`) can be **stale** — dispatch `EngineAction.FlushEngineSessionStateAction(tabId)` first and collect the state reactively (port of upstream Fenix Bug 1970055). Skip the flush while on the synthetic new tab page (`currentIndex == -1`).
+- Back walking past the oldest entry lands the tab on its new tab page via that state transition (`BrowserFragment.onBackPressed`) — do **not** nav to `homeFragment` for normal content tabs (the fragment swap desynced the tab pill). Back on the new tab page **closes the tab** and selects the LRU last-used tab (AC `lastAccess`, filtered by privacy + profile partition).
+- New-tab semantics: home search over a content tab starts a **fresh tab** (`NewTabCreator.createHomeTabAndLoad` — Chrome NTP parity); address-bar search on a content page reuses the tab (omnibox behaviour). Decision: `SearchDialogController.shouldCreateNewTabForSearch` + `openedFromHome` (previous nav destination == `homeFragment`).
+
+### Toolbar Layout (since v0.5.16)
+- Contextual toolbar (`toolbar/ContextualBottomToolbar.kt` + `contextual_bottom_toolbar.xml`): back-slot (bookmark glyph on homepage) / forward / share / search / new tab / **extensions** / menu. The extensions button opens `ExtensionsBottomSheetFragment`. There is **no tab count** on this toolbar anymore.
+- The tab count is a badge on the **address bar**, inserted at index 0 of the browser-actions container (left of the chevron), built by `UnifiedToolbar.addTabCountBadgeToAddressBar()` — always added, while the menu button is contextual-toolbar-disabled-only. The badge counts guest/default-partition tabs (`contextId == null`) as well.
+- `updateContextualToolbar(tab, canGoBack, canGoForward, isHomepage)` — no tabCount parameter. Long-press back/forward on the contextual toolbar and the overflow-menu toolbar row open the tab-history sheet.
 
 ### Progressive Web Apps (PWAs)
 - `webapp/WebAppManager.kt` - PWA management
@@ -160,7 +172,7 @@ History page (separate from suggestions): `history/HistoryActivity.kt` + `Histor
 3. `SearchMiddleware` + `RegionMiddleware` load bundled engines **asynchronously**. `selectedOrDefaultSearchEngine` is often null on first search. Seed from `UserPreferences` / `SearchEngineList`.
 4. `setupSearchEngines()` is deferred with `view.post` — do not assume engines are selected at Activity `onCreate`.
 5. Engine `suggestUrl` must be a real OpenSearch template containing `{searchTerms}` (e.g. Google `complete/search?client=firefox&q={searchTerms}`). Homepage URLs produce zero suggestions.
-6. `SearchSuggestionProvider` with `filterExactMatch = true` excludes the typed query. The typed query belongs in `SearchForQueryProvider` (`Search for "%s"`), **above** the suggestions group, not inside it.
+6. `SearchSuggestionProvider` with `filterExactMatch = true` excludes the typed query from the engine suggestions. The standalone `Search for "query"` row (`SearchForQueryProvider`) was **removed** for typing perf — do not reintroduce it without debouncing.
 7. Address-bar history/tab grouping by profile or date is **slow** (`getDetailedVisits`). Keep that only in unified search (`TabSearchFragment`).
 8. History X-delete: `historyStorage.deleteVisitsFor(url)` using `suggestion.description` (URL). Hide the row via `hiddenSuggestions`.
 
@@ -246,6 +258,13 @@ suspend fun getData() = withContext(Dispatchers.IO) {
 - `NiraTheme` must **not** cast `view.context as Activity`. Search dialogs wrap context in `ContextThemeWrapper`. Unwrap with a `ContextWrapper` loop (`findActivity()`).
 - `AwesomeBarWrapper` used to pass empty `{ }` click lambdas — Compose AwesomeBar does not call `Suggestion.onSuggestionClicked` unless the wrapper does.
 
+### GeckoView / Engine Gotchas
+- ⚠️ `privacy.resistFingerprinting` (a hardening default in `components/UserJsPreferences.kt`) **forces content `prefers-color-scheme: light`** by design (bug 1535189). The "Web theme" setting drives the engine's `preferredColorScheme` correctly, but pages cannot react while RFP is enabled — an accepted trade-off, documented inline in `UserJsPreferences.privacyPrefs`. Investigated end-to-end in v0.5.16; do not re-investigate without changing the RFP default.
+- AC `BrowserStore.dispatch` reduces state **synchronously** on the calling thread — reading `store.state` right after dispatch is safe (e.g. selectedTabId after `addTab(selectTab = true)`); engine side-effects are serialized in dispatch order.
+- The engine reports `canGoBack`/`canGoForward` reliably on every navigation; `HistoryState` indexes do **not** stay as current (see the flush note under Tab History). Use flags as truthiness signals, not history indexes.
+- `GeckoRuntimeSettings.writeToParcel` does **not** serialize `mPreferredColorScheme` to child processes — live `setPreferredColorScheme` changes reach content only via the LookAndFeel refresh push (`onDeviceChanged` → `NotifyChangedAllWindows`), not via the settings parcel.
+- Long-press on the Android **back gesture is impossible** (system-owned; no duration is exposed to apps). The tab-history sheet is reachable only from visible buttons (contextual toolbar, overflow menu) — do not attempt to wire gesture holds.
+
 ### Favicons
 - Suggestions / history page: `FaviconLoader.loadFavicon(context, url)` (memory → disk → `BrowserIcons`).
 - `FaviconCache.loadFavicon()` is cache-only and will miss most history icons.
@@ -266,6 +285,15 @@ suspend fun getData() = withContext(Dispatchers.IO) {
 - PWA profile binding
 - Cookie isolation between profiles
 - Theme changes with active tabs
+- Tab-history chart: contents from both entry points (contextual toolbar + overflow menu), corner/divider orientation in the reversed layout, New Tab row → hold forward flow, back-gesture → new tab page → pill sync → close + LRU switch
+
+### On-Device Debugging Techniques (adb)
+- **uiautomator cannot read GeckoView web content** — DOM text/fields inside pages are invisible to `uiautomator dump`. To probe page-visible state (e.g. `prefers-color-scheme`), load a data URL whose JS sets `document.title` from the value you need and read the title from the native tab pill.
+- Debug builds use the `.debug` application-id suffix and are `run-as`-able:
+  - `adb shell run-as com.prirai.android.nira.debug cat shared_prefs/scw_preferences.xml` — app prefs (`web_theme_choice`, etc.)
+  - Gecko profile prefs live under `files/mozilla/<profile>/prefs.js`
+- The contextual toolbar buttons: disabled buttons never receive long-press; the homepage back slot shows the bookmark glyph and its long-press is swallowed by design.
+- `adb shell input swipe X Y X Y <ms>` synthesizes a long-press for visible buttons. The Android back **gesture** cannot be held — only triggered (`input swipe` from the screen edge).
 
 ## Development Workflow
 
@@ -296,6 +324,17 @@ adb logcat | grep "Nira\|TabOrder\|TabGroup\|Profile"
 - `TabViewModel` - Tab state changes
 - `ProfileManager` - Profile operations
 - `WebAppManager` - PWA operations
+
+### Releases (automated)
+Releases are **tag-driven and fully automated** by `.github/workflows/apk-release.yml`. Do not build/upload release APKs manually.
+
+To cut a release (see `v0.5.15`/`v0.5.16` for the exact shape):
+1. Bump `versionCode` and `versionName` in `app/build.gradle` (base bump by 1; ABI APKs get `base*1000 + versionCode` — arm64-v8a=1, armeabi-v7a=2, x86_64=0).
+2. Commit: subject `Release vX.Y.Z`, body `versionCode A -> B, versionName x -> y.`.
+3. Create a **lightweight** tag on that commit: `git tag vX.Y.Z`.
+4. `git push origin main vX.Y.Z` — the workflow's `release` job checks out the **tag**, builds signed APKs (keystore from repo secrets) and publishes the GitHub release ("Release {tag}", "Automated release build") with the three ABI APK assets.
+
+The in-app updater (`update/UpdateChecker.kt`) reads GitHub releases and matches ABI + versionCode — a release is only discoverable once CI has attached the APKs. Dependent PRs must target their base branch (e.g. PR #121 targeted `feat/auto-update`) and be retargeted to `main` after the base merges.
 
 ## When to Ask for Clarification
 
@@ -356,6 +395,6 @@ Common Mozilla components used:
 
 ---
 
-**Last Updated**: August 2026
+**Last Updated**: October 2026 (v0.5.16: tab history chart, back-UX rework, toolbar rework, address-bar perf, automated release process)
 
 For questions or updates to this guide, please open an issue or discussion on GitHub.

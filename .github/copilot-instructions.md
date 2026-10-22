@@ -126,9 +126,16 @@ Always filter queries by `contextId`. The default profile must accept both `null
 - `String.isUrl()` is Mozilla's **lenient** `isURLLike` (spaces absent + `.` / `:` / `://` ⇒ URL).
 - `SearchMiddleware` loads engines asynchronously. `selectedOrDefaultSearchEngine` is often null at first type. Fall back to `SearchEngineList.getSelectedEngine(UserPreferences)`.
 - `setupSearchEngines()` is deferred (`view.post`). Do not assume a selected engine in `onCreate`.
-- Typed query belongs in `SearchForQueryProvider` (`Search for "term"`), **not** inside the suggestions group. `SearchSuggestionProvider(filterExactMatch = true)` already excludes the exact query.
+- `SearchForQueryProvider` was **removed** for typing perf — do not reintroduce without debouncing. `SearchSuggestionProvider(filterExactMatch = true)` suppresses the typed-query echo; Enter submits the exact text via `BrowserActivity.load()`.
+- `NiraAwesomeBar` debounces provider queries by **120 ms** — every input round cancels in-flight provider queries and favicon loads; removing it reintroduces list flicker + held-backspace lag.
 - Do **not** group address-bar history/tabs by profile or date — `getDetailedVisits` is too slow. That grouping lives only in unified search.
 - History delete from suggestions: `historyStorage.deleteVisitsFor(url)` using `suggestion.description`.
+
+### Tab history & back navigation (v0.5.16)
+- Long-press back/forward (contextual toolbar + overflow-menu toolbar row) opens the **full session chart** (`browser/history/TabHistoryBottomSheet.kt`) — reverseLayout, current page centered, dot row disabled.
+- `about:homepage` **cannot be an engine history entry** (GeckoView can't load it — homepage is a Compose overlay). The new tab page is a *state position*: `NewTabCreator.setTabToNewTabPage()` dispatches `HistoryState(currentIndex = NEW_TAB_INDEX = -1)` + url/title/navigation flags. Forward works from it; back on it closes the tab + LRU-switches (`BrowserFragment.onBackPressed`).
+- `tab.content.history` can be stale — dispatch `FlushEngineSessionStateAction` first, then collect reactively (Fenix Bug 1970055).
+- Home search over a content tab starts a fresh tab (`NewTabCreator`); omnibox on a content page reuses it (`SearchDialogController.shouldCreateNewTabForSearch` + `openedFromHome`).
 
 ### UI: Compose vs Views
 - `modern/` subdirectories → Compose implementations (prefer these)
@@ -142,6 +149,19 @@ Always filter queries by `contextId`. The default profile must accept both `null
 ### Favicons
 - Use `FaviconLoader.loadFavicon(context, url)` (cache + BrowserIcons). `FaviconCache.loadFavicon()` is cache-only and misses most history icons.
 
+### Toolbar layout (since v0.5.16)
+- Contextual toolbar has **no tab count** — the slot is an **extensions button** (opens `ExtensionsBottomSheetFragment`).
+- The tab count is a badge on the address bar's browser-actions (index 0, left of the chevron), built by `UnifiedToolbar.addTabCountBadgeToAddressBar()`; its filter must include `contextId == null` (default profile) tabs.
+
+### GeckoView / engine caveats
+- `privacy.resistFingerprinting` (hardening default in `components/UserJsPreferences.kt`) **forces content `prefers-color-scheme: light`** — the "Web theme" setting cannot reach pages while it is on. Accepted trade-off; documented inline. Do not re-investigate.
+- AC `BrowserStore.dispatch` reduces state **synchronously** — reading `store.state` right after dispatch is safe.
+- Trust `canGoBack`/`canGoForward` (engine-maintained) over `HistoryState` indexes (stale until flushed).
+- Long-press on the Android back **gesture** is impossible (system-owned) — the tab-history sheet is only reachable from visible buttons.
+
+### Releases (automated by `.github/workflows/apk-release.yml`)
+- Bump `versionCode`/`versionName` in `app/build.gradle` → commit `Release vX.Y.Z` → **lightweight** tag → `git push origin main vX.Y.Z`. CI builds signed APKs from the tag and publishes the GitHub release with ABI assets (arm64=1xxx, armeabi-v7a=2xxx, x86_64=base). The in-app updater reads GitHub releases — no manual APK uploads.
+
 ### Database schema changes
 Room migrations are required for any schema change. Ask before modifying entity classes.
 
@@ -154,6 +174,8 @@ Room migrations are required for any schema change. Ask before modifying entity 
 UnifiedTabGroupManager   TabOrderManager   TabViewModel
 ProfileManager           WebAppManager
 ```
+
+**On-device debugging**: uiautomator cannot read GeckoView web content — probe page-visible state via a data URL whose JS sets `document.title`, read from the native tab pill. Debug builds are `run-as`-able (`com.prirai.android.nira.debug`): app prefs in `shared_prefs/scw_preferences.xml`, Gecko prefs in `files/mozilla/<profile>/prefs.js`.
 
 ## Mozilla Components Reference
 
