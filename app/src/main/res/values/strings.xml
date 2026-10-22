@@ -547,6 +547,7 @@
 
   <!-- Tab history popup strings -->
   <string name="tab_history_current_page">Current page</string>
+  <string name="tab_history_new_tab">New Tab</string>
 
   <!-- Bookmarks Bottom Sheet strings -->
   <string name="sort_by_name">Sort by Name</string>
