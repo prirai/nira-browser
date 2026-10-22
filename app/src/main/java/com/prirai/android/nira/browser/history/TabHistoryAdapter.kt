@@ -123,15 +123,19 @@ class TabHistoryAdapter(
 
         /**
          * Flatten the grouped-card look: only the first and last rows keep
-         * the rounded corners, matching the grouped history list style.
+         * rounded corners, matching the grouped history list style. The
+         * list is rendered with reverseLayout (oldest at the bottom), so
+         * the FIRST adapter row is the visually BOTTOM one and the last is
+         * the visually top one - the corner assignment is flipped
+         * accordingly.
          */
         private fun applyCardShape(cardView: MaterialCardView, isFirst: Boolean, isLast: Boolean) {
             val radius = cardView.context.resources.getDimension(R.dimen.search_result_corner_radius)
             cardView.shapeAppearanceModel = cardView.shapeAppearanceModel.toBuilder()
-                .setTopLeftCornerSize(if (isFirst) radius else 0f)
-                .setTopRightCornerSize(if (isFirst) radius else 0f)
-                .setBottomLeftCornerSize(if (isLast) radius else 0f)
-                .setBottomRightCornerSize(if (isLast) radius else 0f)
+                .setBottomLeftCornerSize(if (isFirst) radius else 0f)
+                .setBottomRightCornerSize(if (isFirst) radius else 0f)
+                .setTopLeftCornerSize(if (isLast) radius else 0f)
+                .setTopRightCornerSize(if (isLast) radius else 0f)
                 .build()
         }
 
