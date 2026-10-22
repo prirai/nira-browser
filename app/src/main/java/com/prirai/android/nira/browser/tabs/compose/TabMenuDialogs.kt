@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalMaterial3ExpressiveApi::class)
+
 package com.prirai.android.nira.browser.tabs.compose
 
 import androidx.compose.animation.core.animateFloatAsState
@@ -18,7 +20,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.prirai.android.nira.R
 
 /**
  * Reusable Dialog Components for Tab Menu System
@@ -61,12 +65,12 @@ fun RenameGroupDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Rename Island") },
+        title = { Text(stringResource(R.string.rename_island)) },
         text = {
             OutlinedTextField(
                 value = name,
                 onValueChange = { name = it },
-                label = { Text("Island Name") },
+                label = { Text(stringResource(R.string.island_name)) },
                 leadingIcon = { Icon(Icons.Rounded.Edit, contentDescription = null) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth()
@@ -77,12 +81,12 @@ fun RenameGroupDialog(
                 onClick = { onConfirm(name) },
                 enabled = name.isNotBlank()
             ) {
-                Text("Rename")
+                Text(stringResource(R.string.rename_action))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text(stringResource(R.string.cancel))
             }
         }
     )
@@ -144,7 +148,7 @@ fun ColorPickerDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Choose Color") },
+        title = { Text(stringResource(R.string.choose_color)) },
         text = {
             LazyVerticalGrid(
                 columns = GridCells.Fixed(4),
@@ -156,6 +160,7 @@ fun ColorPickerDialog(
                     val isSelected = color == currentColor
                     val scale by animateFloatAsState(
                         targetValue = if (isSelected) 1.1f else 1f,
+                        animationSpec = MaterialTheme.motionScheme.fastSpatialSpec(),
                         label = "colorScale"
                     )
                     Box(
@@ -170,7 +175,7 @@ fun ColorPickerDialog(
                         if (isSelected) {
                             Icon(
                                 imageVector = Icons.Rounded.Check,
-                                contentDescription = "Selected",
+                                contentDescription = stringResource(R.string.selected),
                                 tint = Color.White,
                                 modifier = Modifier.size(20.dp)
                             )
@@ -181,7 +186,7 @@ fun ColorPickerDialog(
         },
         confirmButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text(stringResource(R.string.cancel))
             }
         }
     )
@@ -223,7 +228,7 @@ fun ProfilePickerDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Move to Profile") },
+        title = { Text(stringResource(R.string.move_to_profile)) },
         text = {
             Column(
                 modifier = Modifier.fillMaxWidth()
@@ -250,7 +255,7 @@ fun ProfilePickerDialog(
         },
         confirmButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text(stringResource(R.string.cancel))
             }
         }
     )
