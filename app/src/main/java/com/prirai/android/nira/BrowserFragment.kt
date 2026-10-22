@@ -13,6 +13,7 @@ import androidx.lifecycle.lifecycleScope
 import com.prirai.android.nira.browser.history.TabHistoryBottomSheet
 import com.prirai.android.nira.browser.history.TabHistoryMode
 import com.prirai.android.nira.browser.home.compose.jumpBackInItems
+import com.prirai.android.nira.browser.tabs.NewTabCreator
 import com.prirai.android.nira.browser.home.compose.recentlyClosedItems
 import com.prirai.android.nira.browser.toolbar.ToolbarGestureHandler
 import com.prirai.android.nira.components.toolbar.ToolbarMenu
@@ -473,7 +474,7 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
                 }
 
                 override fun onForwardClicked() {
-                    requireContext().components.sessionUseCases.goForward()
+                    goForwardOrFromNewTab()
                 }
 
                 // Long-press back/forward: open the tab-history popup in
@@ -1057,7 +1058,7 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
                     requireContext().components.sessionUseCases.goBack()
                 },
                 onForwardClick = {
-                    requireContext().components.sessionUseCases.goForward()
+                    goForwardOrFromNewTab()
                 },
                 onReloadClick = {
                     requireContext().components.sessionUseCases.reload()
@@ -1109,6 +1110,30 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
                 requireContext(),
                 menuItems
             ).show(it, preferBottom)
+        }
+    }
+
+    /**
+     * Forward navigation for the contextual toolbar and the overflow menu.
+     *
+     * From the tab's synthetic new tab page the engine is already at the
+     * newest entry, so a plain goForward() would no-op even though the
+     * whole session history is forward of that position - forward jumps
+     * to the first page instead, mirroring what the tab-history popup's
+     * forward rows do.
+     */
+    private fun goForwardOrFromNewTab() {
+        val store = requireContext().components.store
+        val selectedTab = store.state.tabs.find { it.id == store.state.selectedTabId }
+        if (selectedTab != null &&
+            selectedTab.content.url == "about:homepage" &&
+            selectedTab.content.history.currentIndex == NewTabCreator.NEW_TAB_INDEX
+        ) {
+            store.let {
+                requireContext().components.sessionUseCases.goToHistoryIndex(0)
+            }
+        } else {
+            requireContext().components.sessionUseCases.goForward()
         }
     }
 
