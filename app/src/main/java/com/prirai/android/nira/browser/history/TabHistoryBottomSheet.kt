@@ -10,6 +10,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import com.prirai.android.nira.R
+import com.prirai.android.nira.browser.tabs.NewTabCreator
 import com.prirai.android.nira.ext.components
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -80,8 +81,13 @@ class TabHistoryBottomSheet : BottomSheetDialogFragment() {
         val recyclerView = view.findViewById<RecyclerView>(R.id.tabHistoryRecyclerView)
         recyclerView.layoutManager = LinearLayoutManager(context)
         val adapter = TabHistoryAdapter { row ->
-            components.store.state.findCustomTabOrSelectedTab(sessionId)?.let {
-                components.sessionUseCases.goToHistoryIndex(row.index, it.id)
+            val tab = components.store.state.findCustomTabOrSelectedTab(sessionId)
+            if (row.index >= 0) {
+                tab?.let { components.sessionUseCases.goToHistoryIndex(row.index, it.id) }
+            } else {
+                // Synthetic "New Tab" entry: land the tab on its new tab
+                // page (the engine has no history entry for it).
+                tab?.let { NewTabCreator.setTabToNewTabPage(components.store, it.id) }
             }
             dismiss()
         }
@@ -123,9 +129,12 @@ class TabHistoryBottomSheet : BottomSheetDialogFragment() {
         val current = history.currentIndex
         if (items.isEmpty() || current !in items.indices) return emptyList()
 
+        val isPrivateTab =
+            components.store.state.findCustomTabOrSelectedTab(sessionId)?.content?.private == true
+
         fun row(index: Int, isCurrent: Boolean) = TabHistoryRow(
             index = index,
-            title = if (items[index].uri == "about:homepage") {
+            title = if (items[index].uri in NEW_TAB_PAGE_URLS) {
                 // The new tab page entry shows up as "New Tab", matching
                 // the tab pill's title for homepage tabs.
                 getString(R.string.tab_history_new_tab)
@@ -138,8 +147,25 @@ class TabHistoryBottomSheet : BottomSheetDialogFragment() {
 
         return when (mode) {
             // Current page first, then back entries newest -> oldest.
-            TabHistoryMode.Back -> listOf(row(current, isCurrent = true)) +
-                ((current - 1) downTo 0).map { row(it, isCurrent = false) }
+            TabHistoryMode.Back -> {
+                var rows = listOf(row(current, isCurrent = true)) +
+                    ((current - 1) downTo 0).map { row(it, isCurrent = false) }
+
+                // Chrome lists the new tab page as the oldest back entry
+                // even though the engine has no history entry for it
+                // (about:homepage cannot be an engine page) - synthesize
+                // it at the bottom. Normal tabs only; the private home is
+                // a different surface.
+                if (!isPrivateTab && items.firstOrNull()?.uri !in NEW_TAB_PAGE_URLS) {
+                    rows += TabHistoryRow(
+                        index = SYNTHETIC_NEW_TAB_INDEX,
+                        title = getString(R.string.tab_history_new_tab),
+                        uri = "about:homepage",
+                        isCurrent = false
+                    )
+                }
+                rows
+            }
 
             // Current page first, then forward entries oldest -> newest.
             TabHistoryMode.Forward -> listOf(row(current, isCurrent = true)) +
@@ -151,6 +177,10 @@ class TabHistoryBottomSheet : BottomSheetDialogFragment() {
         const val TAG = "TabHistoryBottomSheet"
         private const val KEY_MODE = "mode"
         private const val KEY_SESSION_ID = "sessionId"
+
+        /** Marks the synthesized "New Tab" row (not a real history index). */
+        private const val SYNTHETIC_NEW_TAB_INDEX = -1
+        private val NEW_TAB_PAGE_URLS = setOf("about:homepage", "about:blank")
 
         fun newInstance(mode: TabHistoryMode, sessionId: String? = null): TabHistoryBottomSheet {
             return TabHistoryBottomSheet().apply {
