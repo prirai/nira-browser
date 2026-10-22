@@ -238,6 +238,16 @@ class BrowserApp : Application() {
             }
         }
 
+        // Auto-updater: idempotent reconcile between the user pref
+        // and the WorkManager periodic request. ensureScheduled is a
+        // no-op on debug builds and on opted-out installs, so this
+        // call is cheap unconditionally.
+        try {
+            com.prirai.android.nira.update.UpdateScheduler.ensureScheduled(this@BrowserApp)
+        } catch (t: Throwable) {
+            android.util.Log.w("NiraUpdate", "UpdateScheduler.ensureScheduled failed", t)
+        }
+
         // fxaAuthFeature needs to be touched on Main before any FxA redirect
         // URL is processed by AppRequestInterceptor, because its lazy init
         // wires up `appRequestInterceptor.fxaInterceptor`. The old code did

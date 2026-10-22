@@ -225,6 +225,47 @@
         name="settings_about_explain"
     >App version, open source licenses…</string>
 
+  <!-- Auto-updater (release-only; see `com.prirai.android.nira.update`). -->
+  <string name="settings_updates">Updates</string>
+  <string name="settings_update_checks_enabled_title">Check for updates</string>
+  <string
+        name="settings_update_checks_enabled_summary"
+    >Check GitHub for new Nira releases once a day on Wi-Fi.</string>
+  <string name="settings_update_check_now_title">Check for updates now</string>
+  <string
+        name="settings_update_check_now_summary"
+    >Run an immediate check without waiting for the next scheduled tick.</string>
+  <string name="settings_update_last_check_title">Last checked</string>
+  <string name="settings_update_last_check_never">Never</string>
+  <string name="settings_update_check_in_progress">Checking for updates…</string>
+  <string name="settings_update_check_up_to_date">You are on the latest release</string>
+  <string name="settings_update_check_available">A newer release is available</string>
+  <string name="settings_update_check_error">Could not reach GitHub right now</string>
+  <string
+        name="settings_update_check_unsupported"
+    >No update is published for this device\'s architecture</string>
+
+  <!-- Update bottom sheet (shown by BrowserActivity when the periodic
+       worker has written a pending manifest; see
+       UpdateAvailableBottomSheet.kt). -->
+  <string name="update_sheet_title">A new Nira release is available</string>
+  <string name="update_sheet_release_notes_label">Release notes</string>
+  <string
+        name="update_sheet_no_release_notes"
+    >(No release notes were published for this version.)</string>
+  <string name="update_sheet_install">Install</string>
+  <string name="update_sheet_later">Later</string>
+  <string name="update_sheet_skip_this_version">Skip this version</string>
+  <string name="update_sheet_status_starting">Starting download…</string>
+  <string name="update_sheet_status_downloading">Downloading… %1$d%%</string>
+  <string name="update_sheet_status_installing">Opening installer…</string>
+  <string
+        name="update_sheet_status_install_failed"
+    >Could not open the system installer</string>
+  <string
+        name="update_sheet_status_download_error"
+    >Download failed: %1$s</string>
+
     <string name="javascript_enabled">Enable JavaScript</string>
 
   <string name="clear_tabs">Clear open tabs</string>

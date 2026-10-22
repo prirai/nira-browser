@@ -255,6 +255,39 @@ open class BrowserActivity : LocaleAwareAppCompatActivity(), ComponentCallbacks2
 
         // Update toolbar and status bar theme immediately
         updateToolbarAndStatusBarTheme()
+
+        maybeShowPendingUpdateSheet()
+    }
+
+    /**
+     * If the auto-updater's periodic worker has written a pending
+     * manifest, surface it as a bottom sheet. Idempotent per
+     * updatePendingNotify toggle; the sheet itself clears / updates
+     * the flag on install / later / skip.
+     *
+     * Release-only - the subsystem is a no-op on debug builds.
+     */
+    private fun maybeShowPendingUpdateSheet() {
+        if (BuildConfig.DEBUG) return
+        val prefs = UserPreferences(this)
+        if (!prefs.updateChecksEnabled) return
+        if (!prefs.updatePendingNotify) return
+        if (prefs.updatePendingManifestJson.isBlank()) return
+
+        val existing = supportFragmentManager
+            .findFragmentByTag(com.prirai.android.nira.update.UpdateAvailableBottomSheet.TAG)
+        if (existing != null) return
+
+        try {
+            com.prirai.android.nira.update.UpdateAvailableBottomSheet
+                .newInstance()
+                .show(
+                    supportFragmentManager,
+                    com.prirai.android.nira.update.UpdateAvailableBottomSheet.TAG,
+                )
+        } catch (t: Throwable) {
+            android.util.Log.w(TAG, "could not show update sheet", t)
+        }
     }
 
     /**
