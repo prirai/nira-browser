@@ -255,6 +255,10 @@
 <string name="last_synced">Last synced: %1$s</string>
 <string name="never_synced">Never synced</string>
 <string name="sync_status_active">Active</string>
+<plurals name="tab_count">
+    <item quantity="one">%1$d Tab</item>
+    <item quantity="other">%1$d Tabs</item>
+</plurals>
 <plurals name="connected_devices">
     <item quantity="one">Connected to %1$d other device</item>
     <item quantity="other">Connected to %1$d other devices</item>

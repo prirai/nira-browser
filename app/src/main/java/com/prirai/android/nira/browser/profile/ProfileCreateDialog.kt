@@ -22,7 +22,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
+import com.prirai.android.nira.ui.components.NiraAlertDialog
 import com.prirai.android.nira.R
 
 @Composable
@@ -38,25 +38,11 @@ fun ProfileCreateDialog(
     val colors = BrowserProfile.PROFILE_COLORS
     val emojis = BrowserProfile.PROFILE_EMOJIS
     
-    Dialog(onDismissRequest = onDismiss) {
-        Surface(
-            modifier = Modifier
-                .fillMaxWidth()
-                .wrapContentHeight(),
-            shape = RoundedCornerShape(24.dp),
-            tonalElevation = 6.dp
-        ) {
-            Column(
-                modifier = Modifier
-                    .padding(24.dp)
-            ) {
-                Text(
-                    text = stringResource(R.string.create_profile),
-                    style = MaterialTheme.typography.headlineSmallEmphasized
-                )
-                
-                Spacer(modifier = Modifier.height(24.dp))
-                
+    NiraAlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.create_profile)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 OutlinedTextField(
                     value = profileName,
                     onValueChange = { profileName = it },
@@ -65,16 +51,12 @@ fun ProfileCreateDialog(
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true
                 )
-                
-                Spacer(modifier = Modifier.height(24.dp))
-                
+
                 Text(
                     text = stringResource(R.string.choose_style),
                     style = MaterialTheme.typography.titleSmallEmphasized
                 )
-                
-                Spacer(modifier = Modifier.height(12.dp))
-                
+
                 LazyVerticalGrid(
                     columns = GridCells.Fixed(4),
                     modifier = Modifier
@@ -89,52 +71,43 @@ fun ProfileCreateDialog(
                             emoji = emojis[index],
                             color = Color(colors[index % colors.size]),
                             selected = selectedEmojiIndex == index,
-                            onClick = { 
+                            onClick = {
                                 selectedEmojiIndex = index
                                 selectedColorIndex = index % colors.size
                             }
                         )
                     }
                 }
-                
-                Spacer(modifier = Modifier.height(24.dp))
-                
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = if (onImport != null) Arrangement.SpaceBetween else Arrangement.End,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    if (onImport != null) {
-                        TextButton(onClick = onImport) {
-                            Text(stringResource(R.string.import_zip))
-                        }
-                    }
-                    Row {
-                        TextButton(onClick = onDismiss) {
-                            Text(stringResource(R.string.cancel))
-                        }
-                        
-                        Spacer(modifier = Modifier.width(8.dp))
-                        
-                        Button(
-                            onClick = {
-                                if (profileName.isNotBlank()) {
-                                    onConfirm(
-                                        profileName.trim(),
-                                        colors[selectedColorIndex],
-                                        emojis[selectedEmojiIndex]
-                                    )
-                                }
-                            },
-                            enabled = profileName.isNotBlank()
-                        ) {
-                            Text(stringResource(R.string.create_action))
-                        }
+
+                if (onImport != null) {
+                    TextButton(onClick = onImport, modifier = Modifier.fillMaxWidth()) {
+                        Text(stringResource(R.string.import_zip))
                     }
                 }
             }
-        }
-    }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    if (profileName.isNotBlank()) {
+                        onConfirm(
+                            profileName.trim(),
+                            colors[selectedColorIndex],
+                            emojis[selectedEmojiIndex]
+                        )
+                    }
+                },
+                enabled = profileName.isNotBlank()
+            ) {
+                Text(stringResource(R.string.create_action))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.cancel))
+            }
+        },
+    )
 }
 
 @Composable
@@ -168,52 +141,6 @@ fun CombinedEmojiColorOption(
 }
 
 @Composable
-fun ColorOption(
-    color: Color,
-    selected: Boolean,
-    onClick: () -> Unit
-) {
-    Box(
-        modifier = Modifier
-            .size(48.dp)
-            .clip(CircleShape)
-            .background(color)
-            .then(
-                if (selected) {
-                    Modifier.border(3.dp, MaterialTheme.colorScheme.primary, CircleShape)
-                } else {
-                    Modifier.border(2.dp, Color.Gray.copy(alpha = 0.3f), CircleShape)
-                }
-            )
-            .clickable(onClick = onClick)
-    )
-}
-
-@Composable
-fun EmojiOption(
-    emoji: String,
-    selected: Boolean,
-    onClick: () -> Unit
-) {
-    Box(
-        modifier = Modifier
-            .size(48.dp)
-            .clip(CircleShape)
-            .background(
-                if (selected) MaterialTheme.colorScheme.primaryContainer
-                else MaterialTheme.colorScheme.surfaceVariant
-            )
-            .clickable(onClick = onClick),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = emoji,
-            style = MaterialTheme.typography.headlineMedium
-        )
-    }
-}
-
-@Composable
 fun ProfileEditDialog(
     profile: BrowserProfile,
     onDismiss: () -> Unit,
@@ -232,24 +159,11 @@ fun ProfileEditDialog(
     val colors = BrowserProfile.PROFILE_COLORS
     val emojis = BrowserProfile.PROFILE_EMOJIS
     
-    Dialog(onDismissRequest = onDismiss) {
-        Surface(
-            modifier = Modifier
-                .fillMaxWidth()
-                .wrapContentHeight(),
-            shape = RoundedCornerShape(24.dp),
-            tonalElevation = 6.dp
-        ) {
-            Column(
-                modifier = Modifier.padding(24.dp)
-            ) {
-                Text(
-                    text = stringResource(R.string.edit_profile),
-                    style = MaterialTheme.typography.headlineSmallEmphasized
-                )
-                
-                Spacer(modifier = Modifier.height(24.dp))
-                
+    NiraAlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.edit_profile)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 OutlinedTextField(
                     value = profileName,
                     onValueChange = { profileName = it },
@@ -258,16 +172,12 @@ fun ProfileEditDialog(
                     singleLine = true,
                     enabled = !profile.isDefault
                 )
-                
-                Spacer(modifier = Modifier.height(24.dp))
-                
+
                 Text(
                     text = stringResource(R.string.choose_style),
                     style = MaterialTheme.typography.titleSmallEmphasized
                 )
-                
-                Spacer(modifier = Modifier.height(12.dp))
-                
+
                 LazyVerticalGrid(
                     columns = GridCells.Fixed(4),
                     modifier = Modifier
@@ -282,17 +192,14 @@ fun ProfileEditDialog(
                             emoji = emojis[index],
                             color = Color(colors[index % colors.size]),
                             selected = selectedEmojiIndex == index,
-                            onClick = { 
+                            onClick = {
                                 selectedEmojiIndex = index
                                 selectedColorIndex = index % colors.size
                             }
                         )
                     }
                 }
-                
-                Spacer(modifier = Modifier.height(24.dp))
-                
-                // Export button row (shown above the action buttons when onExport is provided)
+
                 if (onExport != null) {
                     OutlinedButton(
                         onClick = onExport,
@@ -306,51 +213,41 @@ fun ProfileEditDialog(
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(stringResource(R.string.export_profile_zip))
                     }
-                    Spacer(modifier = Modifier.height(16.dp))
                 }
 
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    if (!profile.isDefault) {
-                        TextButton(
-                            onClick = onDelete,
-                            colors = ButtonDefaults.textButtonColors(
-                                contentColor = MaterialTheme.colorScheme.error
-                            )
-                        ) {
-                            Text(stringResource(R.string.delete))
-                        }
-                    } else {
-                        Spacer(modifier = Modifier.width(1.dp))
-                    }
-                    
-                    Row {
-                        TextButton(onClick = onDismiss) {
-                            Text(stringResource(R.string.cancel))
-                        }
-                        
-                        Spacer(modifier = Modifier.width(8.dp))
-                        
-                        Button(
-                            onClick = {
-                                if (profileName.isNotBlank()) {
-                                    onConfirm(
-                                        profileName.trim(),
-                                        colors[selectedColorIndex],
-                                        emojis[selectedEmojiIndex]
-                                    )
-                                }
-                            },
-                            enabled = profileName.isNotBlank()
-                        ) {
-                            Text(stringResource(R.string.save))
-                        }
+                if (!profile.isDefault) {
+                    TextButton(
+                        onClick = onDelete,
+                        colors = ButtonDefaults.textButtonColors(
+                            contentColor = MaterialTheme.colorScheme.error
+                        ),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(stringResource(R.string.delete))
                     }
                 }
             }
-        }
-    }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    if (profileName.isNotBlank()) {
+                        onConfirm(
+                            profileName.trim(),
+                            colors[selectedColorIndex],
+                            emojis[selectedEmojiIndex]
+                        )
+                    }
+                },
+                enabled = profileName.isNotBlank()
+            ) {
+                Text(stringResource(R.string.save))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.cancel))
+            }
+        },
+    )
 }

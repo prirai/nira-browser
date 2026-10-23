@@ -819,7 +819,17 @@ class TabViewModel(
     }
 
     /**
-     * Duplicate a tab
+     * Duplicate a tab: creates a copy in the same profile partition (and the
+     * same group, if the source tab is grouped), then selects the copy.
+     *
+     * The new tab is created WITHOUT selecting it — selecting during creation
+     * triggers the tab bar's auto-scroll while the order is still stale (the
+     * new tab is briefly an ungrouped singleton before the group membership is
+     * applied). It is selected once, after the order is stable.
+     *
+     * Performed here, not via an event a host must collect: the tab bar and the
+     * tab sheet each own a TabViewModel instance, so an event emitted by one
+     * never reached the other's collector and the menu action was a no-op.
      */
     fun duplicateTab(tabId: String) {
         viewModelScope.launch {
@@ -829,28 +839,22 @@ class TabViewModel(
                 return@launch
             }
 
-            // Get group if tab is in a group
-            val groupId = _groups.value.find { group ->
-                group.tabIds.contains(tabId)
-            }?.id
-            // Note: Actual tab creation must be handled by the caller through:
-            // components.tabsUseCases.addTab(url = tab.content.url, private = tab.content.private)
-            // Then if groupId != null: addTabToGroup(newTabId, groupId)
+            val components = context.components
+            val newTabId = components.tabsUseCases.addTab(
+                url = tab.content.url,
+                private = tab.content.private,
+                contextId = tab.contextId,
+                selectTab = false,
+            )
 
-            // For now, we'll emit an event that can be observed
-            _duplicateTabEvent.emit(DuplicateTabRequest(tabId, tab.content.url, groupId))
+            // Keep the duplicate in the source tab's group, if any.
+            _groups.value.find { group -> group.tabIds.contains(tabId) }?.let { group ->
+                groupManager.addTabToGroup(group.id, newTabId)
+            }
+
+            components.tabsUseCases.selectTab(newTabId)
         }
     }
-
-    // Event flow for duplicate tab requests
-    private val _duplicateTabEvent = MutableSharedFlow<DuplicateTabRequest>()
-    val duplicateTabEvent: SharedFlow<DuplicateTabRequest> = _duplicateTabEvent.asSharedFlow()
-
-    data class DuplicateTabRequest(
-        val originalTabId: String,
-        val url: String,
-        val groupId: String?
-    )
 
     /**
      * Toggle pin status of a tab

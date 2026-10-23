@@ -170,36 +170,6 @@ class ComposeTabBarWithProfileSwitcher @JvmOverloads constructor(
             com.prirai.android.nira.browser.tabs.compose.GlobalSnackbarManager.getInstance().coroutineScope = scope
         }
 
-        // Observe duplicate tab events
-        LaunchedEffect(viewModel) {
-            viewModel.duplicateTabEvent.collect { request ->
-                // Create the new tab WITHOUT selecting it. Selecting during creation
-                // triggers the tab bar's auto-scroll while the order is still stale
-                // (the new tab is briefly an ungrouped singleton before the group
-                // membership is applied). We select once, after the order is stable.
-                val components = context.components
-                val newTabId = components.tabsUseCases.addTab(
-                    url = request.url,
-                    private = isPrivateMode,
-                    contextId = com.prirai.android.nira.browser.profile.BrowserProfile
-                        .contextIdFor(currentProfile, isPrivateMode),
-                    selectTab = false,
-                )
-
-                // If the original tab was in a group, put the duplicate in the same
-                // group before selecting it. For an ungrouped source tab,
-                // TabGroupMiddleware will auto-group the pair using the parent link
-                // when the new tab is added from the currently selected tab.
-                if (request.groupId != null) {
-                    val groupManager =
-                        com.prirai.android.nira.browser.tabgroups.UnifiedTabGroupManager.getInstance(context)
-                    groupManager.addTabToGroup(request.groupId, newTabId)
-                }
-
-                components.tabsUseCases.selectTab(newTabId)
-            }
-        }
-
         // Create a stable key for the tab bar based on profile
         val profileKey = remember(currentProfile, isPrivateMode) {
             if (isPrivateMode) "private" else "profile_${currentProfile.id}"

@@ -23,6 +23,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.prirai.android.nira.R
+import com.prirai.android.nira.ui.components.NiraAlertDialog
 
 /**
  * Reusable Dialog Components for Tab Menu System
@@ -63,7 +64,7 @@ fun RenameGroupDialog(
 ) {
     var name by remember { mutableStateOf(currentName) }
 
-    AlertDialog(
+    NiraAlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.rename_island)) },
         text = {
@@ -146,7 +147,7 @@ fun ColorPickerDialog(
         )
     }
 
-    AlertDialog(
+    NiraAlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.choose_color)) },
         text = {
@@ -226,7 +227,7 @@ fun ProfilePickerDialog(
             .map { it.id to it.name }
     }
 
-    AlertDialog(
+    NiraAlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.move_to_profile)) },
         text = {

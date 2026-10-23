@@ -74,16 +74,19 @@ fun TabGridCard(
                 },
         shape = RoundedCornerShape(12.dp),
         color = when {
-            isSelected && groupColor != null -> Color(groupColor).copy(alpha = 0.15f)
-            isSelected -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
+            isSelected && groupColor != null -> Color(groupColor).copy(alpha = 0.25f)
+            isSelected -> MaterialTheme.colorScheme.primaryContainer
             groupColor != null -> Color(groupColor).copy(alpha = 0.05f)
             else -> MaterialTheme.colorScheme.surfaceContainerHighest
         },
         tonalElevation = if (isSelected) 4.dp else 1.dp,
         border = when {
-            isSelected && groupColor != null -> BorderStroke(2.5.dp, Color(groupColor))
-            isSelected -> BorderStroke(2.5.dp, MaterialTheme.colorScheme.primary)
-            groupColor != null -> BorderStroke(1.dp, Color(groupColor).copy(alpha = 0.3f))
+            // Group color borders are functional identity, not decoration; the
+            // selected state itself speaks through its container color.
+            groupColor != null -> BorderStroke(
+                if (isSelected) 2.dp else 1.dp,
+                Color(groupColor).copy(alpha = if (isSelected) 0.9f else 0.3f)
+            )
             else -> null
         }
     ) {

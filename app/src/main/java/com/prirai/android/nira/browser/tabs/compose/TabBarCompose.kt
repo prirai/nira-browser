@@ -559,14 +559,9 @@ private fun TabPill(
             .width(100.dp),
         shape = RoundedCornerShape(12.dp),
         color = if (isSelected) {
-            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.55f)
+            MaterialTheme.colorScheme.primaryContainer
         } else {
             Color.Transparent
-        },
-        border = if (isSelected) {
-            BorderStroke(1.dp, MaterialTheme.colorScheme.primary)
-        } else {
-            null
         }
     ) {
         Row(

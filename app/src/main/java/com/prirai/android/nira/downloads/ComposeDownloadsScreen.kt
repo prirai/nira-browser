@@ -70,6 +70,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.prirai.android.nira.R
 import com.prirai.android.nira.ext.components
+import com.prirai.android.nira.ui.components.NiraAlertDialog
+import com.prirai.android.nira.ui.components.NiraEmptyState
+import com.prirai.android.nira.ui.components.NiraSearchField
+import com.prirai.android.nira.ui.components.NiraSheetHeader
 import mozilla.components.browser.state.action.DownloadAction
 import mozilla.components.browser.state.state.content.DownloadState
 import mozilla.components.lib.state.ext.observeAsComposableState
@@ -122,80 +126,38 @@ fun DownloadsScreen(onDismiss: () -> Unit) {
                 .fillMaxWidth()
                 .heightIn(min = 200.dp, max = 640.dp)
         ) {
-            // Handle
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 12.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Surface(
-                    modifier = Modifier
-                        .width(32.dp)
-                        .height(4.dp),
-                    shape = RoundedCornerShape(2.dp),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
-                ) {}
-            }
+            NiraSheetHeader(
+                title = stringResource(R.string.downloads_title),
+                onClose = onDismiss,
+                dividerAlpha = null,
+            )
 
-            // Header row
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 12.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = stringResource(R.string.downloads_title),
-                    style = MaterialTheme.typography.titleLargeEmphasized,
-                    modifier = Modifier.weight(1f)
-                )
-            }
-
-            OutlinedTextField(
-                value = query,
-                onValueChange = { query = it },
+            NiraSearchField(
+                query = query,
+                onQueryChange = { query = it },
+                placeholder = stringResource(R.string.search_downloads),
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Default.Search,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                },
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 4.dp),
-                singleLine = true,
-                placeholder = { Text(stringResource(R.string.search_downloads)) },
-                leadingIcon = {
-                    Icon(imageVector = Icons.Default.Search, contentDescription = null)
-                },
-                trailingIcon = {
-                    if (query.isNotEmpty()) {
-                        IconButton(onClick = { query = "" }) {
-                            Icon(imageVector = Icons.Default.Close, contentDescription = stringResource(R.string.clear_search))
-                        }
-                    }
-                }
             )
 
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
 
             if (downloads.isEmpty()) {
-                Box(
+                NiraEmptyState(
+                    title = stringResource(R.string.no_downloads_yet),
+                    icon = Icons.Default.InsertDriveFile,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(200.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(
-                            imageVector = Icons.Default.InsertDriveFile,
-                            contentDescription = null,
-                            modifier = Modifier.size(48.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
-                        )
-                        Spacer(Modifier.height(12.dp))
-                        Text(
-                            text = stringResource(R.string.no_downloads_yet),
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
+                        .height(220.dp),
+                )
             } else {
                 LazyColumn(
                     modifier = Modifier.fillMaxWidth(),
@@ -614,7 +576,7 @@ fun DownloadListItem(
     }
 
     if (showRenameDialog) {
-        AlertDialog(
+        NiraAlertDialog(
             onDismissRequest = { showRenameDialog = false },
             title = { Text(stringResource(R.string.rename_file)) },
             text = {

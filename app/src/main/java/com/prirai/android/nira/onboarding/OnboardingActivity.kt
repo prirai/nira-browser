@@ -88,6 +88,7 @@ import com.prirai.android.nira.components.toolbar.ToolbarPosition
 import com.prirai.android.nira.ext.enableEdgeToEdgeMode
 import com.prirai.android.nira.preferences.UserPreferences
 import com.prirai.android.nira.settings.ThemeChoice
+import com.prirai.android.nira.ui.components.NiraActionButton
 import com.prirai.android.nira.ui.theme.NiraTheme
 import kotlinx.coroutines.launch
 
@@ -336,24 +337,12 @@ private fun OnboardingBottomBar(
                 label = "bottom_buttons"
             ) { lastPage ->
                 if (lastPage) {
-                    Button(
+                    NiraActionButton(
+                        text = stringResource(R.string.start_browsing),
                         onClick = onStart,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(52.dp),
-                        shape = RoundedCornerShape(16.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Rounded.Star,
-                            contentDescription = null,
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = stringResource(R.string.start_browsing),
-                            style = MaterialTheme.typography.titleMediumEmphasized
-                        )
-                    }
+                        leading = Icons.Rounded.Star,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
                 } else {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -990,25 +979,14 @@ private fun GetStartedPage(
 
         Spacer(modifier = Modifier.height(32.dp))
 
-        Button(
+        NiraActionButton(
+            text = stringResource(R.string.start_browsing),
             onClick = onStart,
+            leading = Icons.Rounded.ArrowForward,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 24.dp)
-                .height(56.dp),
-            shape = RoundedCornerShape(16.dp)
-        ) {
-            Icon(
-                imageVector = Icons.Rounded.ArrowForward,
-                contentDescription = null,
-                modifier = Modifier.size(20.dp)
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(
-                text = stringResource(R.string.start_browsing),
-                style = MaterialTheme.typography.titleMediumEmphasized
-            )
-        }
+                .padding(horizontal = 24.dp),
+        )
 
         Spacer(modifier = Modifier.height(24.dp))
     }
