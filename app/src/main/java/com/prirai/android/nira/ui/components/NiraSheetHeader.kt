@@ -25,7 +25,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -38,7 +37,7 @@ object NiraSheetHeaderDefaults {
     val DividerAlpha: Float = 0.2f
 
     val titleStyle: TextStyle
-        @Composable get() = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
+        @Composable get() = MaterialTheme.typography.titleLargeEmphasized
 
     val subtitleStyle: TextStyle
         @Composable get() = MaterialTheme.typography.labelMedium

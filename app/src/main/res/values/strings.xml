@@ -188,6 +188,8 @@
 <string name="tab">Tab</string>
 <string name="favorites">Favorites</string>
 <string name="add_go_to_sites">Add your go-to sites here</string>
+<string name="my_website_placeholder">My Website</string>
+<string name="private_mode_short">Private</string>
 <string name="jump_back_in">Jump Back In</string>
 <string name="recently_closed">Recently Closed</string>
 <string name="private_browsing">Private Browsing</string>

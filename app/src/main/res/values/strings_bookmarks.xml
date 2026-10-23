@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Bookmarks bottom sheet (Compose) -->
+    <string name="bookmark_select_items">Select items</string>
+    <string name="bookmark_root_folder">Root</string>
+    <string name="bookmark_unnamed_folder">Unnamed folder</string>
+    <string name="bookmark_opened_tabs_background">Opened %1$d tabs in background</string>
+    <string name="bookmark_no_sites_selected">No bookmark sites selected</string>
+    <string name="bookmark_moved_to">Moved \"%1$s\" to \"%2$s\"</string>
+    <string name="bookmark_moved_items_to">Moved %1$d items to \"%2$s\"</string>
+    <string name="bookmark_deleted_items">Deleted %1$d items</string>
+    <string name="bookmark_delete_items_confirm">Delete %1$d items?</string>
+    <string name="bookmark_flattened">Flattened \"%1$s\"</string>
+    <string name="bookmark_error_moving">Error moving bookmark</string>
+    <string name="bookmark_error_moving_items">Error moving items</string>
+    <string name="bookmark_error_deleting">Error deleting bookmark</string>
+    <string name="bookmark_error_deleting_items">Error deleting items</string>
+    <string name="bookmark_error_flattening">Error flattening folder</string>
+</resources>
