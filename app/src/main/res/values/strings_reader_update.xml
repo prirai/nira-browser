@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Reader View appearance sheet (Compose) -->
+    <string name="reader_appearance_color_scheme">Color scheme</string>
+    <string name="reader_appearance_font">Font</string>
+    <string name="reader_appearance_light">Light</string>
+    <string name="reader_appearance_dark">Dark</string>
+    <string name="reader_appearance_sepia">Sepia</string>
+    <string name="reader_appearance_sans_serif">Sans-serif</string>
+    <string name="reader_appearance_serif">Serif</string>
+    <string name="reader_appearance_decrease_font_size">Decrease font size</string>
+    <string name="reader_appearance_increase_font_size">Increase font size</string>
+</resources>

@@ -1,29 +1,66 @@
+@file:OptIn(ExperimentalMaterial3ExpressiveApi::class)
+
 package com.prirai.android.nira.ssl
 
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.ImageView
-import android.widget.LinearLayout
-import android.widget.TextView
 import android.widget.Toast
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
-import androidx.appcompat.app.AlertDialog
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.LockOpen
+import androidx.compose.material3.AssistChip
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Switch
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.ViewCompositionStrategy
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
-import com.google.android.material.button.MaterialButton
-import com.google.android.material.chip.Chip
-import com.google.android.material.materialswitch.MaterialSwitch
 import com.prirai.android.nira.R
 import com.prirai.android.nira.ext.components
+import com.prirai.android.nira.permissions.BackgroundPlaybackAllowlist
+import com.prirai.android.nira.preferences.UserPreferences
+import com.prirai.android.nira.privacy.cookies.CookiePolicyRepository
+import com.prirai.android.nira.theme.ThemeManager
+import com.prirai.android.nira.ui.components.NiraAlertDialog
+import com.prirai.android.nira.ui.components.NiraCardRow
+import com.prirai.android.nira.ui.components.NiraSheetHeader
+import com.prirai.android.nira.ui.theme.NiraTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import com.prirai.android.nira.permissions.BackgroundPlaybackAllowlist
-import com.prirai.android.nira.privacy.cookies.CookiePolicyRepository
 import mozilla.components.browser.state.selector.selectedTab
+import mozilla.components.concept.engine.Engine
 import mozilla.components.concept.engine.permission.SitePermissions
 import mozilla.components.concept.engine.permission.SitePermissions.AutoplayStatus
 import mozilla.components.concept.engine.permission.SitePermissions.Status
@@ -32,40 +69,96 @@ import mozilla.components.support.ktx.kotlin.tryGetHostFromUrl
 import mozilla.components.ui.icons.R as iconsR
 
 /**
+ * Which AC permission a row flips. BACKGROUND_PLAYBACK is Nira-local (backed
+ * by [BackgroundPlaybackAllowlist], not AC's `SitePermissions`); every other
+ * kind maps 1:1 to an AC field.
+ */
+private enum class PermissionKind {
+    BACKGROUND_PLAYBACK,
+    LOCATION,
+    NOTIFICATION,
+    MICROPHONE,
+    CAMERA,
+    LOCAL_STORAGE,
+    MEDIA_KEY_SYSTEM_ACCESS,
+    CROSS_ORIGIN_STORAGE,
+    LOCAL_DEVICE,
+    LOCAL_NETWORK,
+    AUTOPLAY_AUDIBLE,
+    AUTOPLAY_INAUDIBLE,
+}
+
+private data class SitePermissionRowUi(
+    val kind: PermissionKind,
+    @StringRes val titleRes: Int,
+    @DrawableRes val iconRes: Int,
+    val checked: Boolean,
+)
+
+/**
  * Material 3 bottom sheet that lists every site-permission for the current
  * origin and lets the user flip each one.
  *
- * Opened from `ConnectionInfoBottomSheet`'s "Site permissions" pill. The
+ * Opened from `ConnectionInfoBottomSheet`'s "Site permissions" row. The
  * backing store is Nira's `components.permissionStorage`, which is the
  * same `GeckoSitePermissionsStorage` AC uses for its own prompt
  * decisions - so toggling here is immediately picked up by
  * `SitePermissionsFeature.shouldShowPrompt` and sites that previously
  * triggered a prompt will stop prompting (and vice versa).
  *
- * Row layout: icon + title + optional subtitle + MaterialSwitch. Rows are
- * built dynamically in `addPermissionRow(...)` so the layout file does not
- * have to repeat 12 near-identical blocks.
+ * Rows render with the shared grouped-card idiom: mozac icon + title +
+ * Material 3 Switch, rebuilt from the stored row after every flip so the
+ * switches always reflect storage.
  *
  * UX conventions:
  * - A `Status` field has three values (ALLOWED / NO_DECISION / BLOCKED).
  *   The M3 switch is boolean, so we treat NO_DECISION as off (user hasn't
  *   decided -> site will prompt) and ALLOWED as on. Flipping on writes
  *   ALLOWED; flipping off writes BLOCKED (so sites don't keep prompting).
- *   Subtitle text makes the tri-state visible.
  * - AutoplayStatus is already two-state (BLOCKED/ALLOWED); switch maps 1:1.
  */
 class SitePermissionsBottomSheet : BottomSheetDialogFragment() {
 
     private var current: SitePermissions? = null
-    private var origin: String = ""
     private var isPrivate: Boolean = false
+    private var siteUrl: String = ""
+
+    private val originState = mutableStateOf<String?>(null)
+    private val rowsState = mutableStateOf<List<SitePermissionRowUi>>(emptyList())
+    private val showEmptyHintState = mutableStateOf(false)
+    private val retentionLabelState = mutableStateOf<String?>(null)
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setStyle(STYLE_NORMAL, R.style.AppBottomSheetDialogTheme)
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
         savedInstanceState: Bundle?,
-    ): View? {
-        return inflater.inflate(R.layout.fragment_site_permissions_bottom_sheet, container, false)
+    ): View = ComposeView(requireContext()).apply {
+        setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
+        setContent {
+            val context = LocalContext.current
+            val prefs = UserPreferences(context)
+            NiraTheme(
+                darkTheme = ThemeManager.isDarkMode(context),
+                amoledMode = prefs.amoledMode,
+                dynamicColor = prefs.dynamicColors,
+            ) {
+                SitePermissionsSheetContent(
+                    origin = originState.value,
+                    rows = rowsState.value,
+                    showEmptyHint = showEmptyHintState.value,
+                    retentionLabel = retentionLabelState.value,
+                    onToggle = ::onPermissionToggled,
+                    onClearCookies = ::clearCookiesForCurrentSite,
+                    onRetentionPicked = ::onRetentionPicked,
+                    onDismiss = ::dismiss,
+                )
+            }
+        }
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -76,43 +169,19 @@ class SitePermissionsBottomSheet : BottomSheetDialogFragment() {
         // Site Exceptions screen in settings) so this sheet can be
         // reused for any origin, not just the currently selected tab.
         // Fall back to deriving from the selected tab for the normal
-        // "lock icon -> site permissions pill" entry point.
+        // "lock icon -> site permissions row" entry point.
         val argOrigin = arguments?.getString(ARG_ORIGIN)
         val argPrivate = arguments?.getBoolean(ARG_PRIVATE, false) ?: false
         val selectedTab = context.components.store.state.selectedTab
         val tabUrl = selectedTab?.content?.url.orEmpty()
-        val url = argOrigin ?: tabUrl
+        siteUrl = argOrigin ?: tabUrl
         isPrivate = argOrigin?.let { argPrivate } ?: (selectedTab?.content?.private == true)
-        origin = argOrigin ?: url.getOrigin() ?: run {
+        val origin = argOrigin ?: siteUrl.getOrigin() ?: run {
             // No valid origin (chrome:// / about:); nothing to show.
             dismiss()
             return
         }
-
-        view.findViewById<TextView>(R.id.origin_label).text = origin
-        view.findViewById<MaterialButton>(R.id.close_button).setOnClickListener { dismiss() }
-
-        // Destructive site-scoped action: wipe cookies + DOM storage for
-        // this origin and reload. Lives inside the permissions sheet so
-        // the user sees permissions and data controls together.
-        view.findViewById<MaterialButton>(R.id.clear_cookies_button).setOnClickListener {
-            showClearCookiesConfirmation(url)
-        }
-
-        // Automatic cookie retention: a status chip on the right of
-        // the "Cookie Policy" label. The chip text IS the current
-        // policy ("Never" / "6 h" / "24 h" / "7 d" / "30 d"); tapping
-        // it opens the chooser dialog. CookiePolicyWorker sweeps every
-        // ~hour and clears cookies for any origin whose window has
-        // elapsed.
-        val retentionPill = view.findViewById<Chip>(R.id.cookie_retention_pill)
-        retentionPill.setOnClickListener {
-            showCookieRetentionChooser(retentionPill)
-        }
-        refreshCookieRetentionPill(retentionPill)
-
-        val listContainer = view.findViewById<LinearLayout>(R.id.permissions_list)
-        val emptyHint = view.findViewById<TextView>(R.id.empty_hint)
+        originState.value = origin
 
         // Query storage on IO; render on Main.
         viewLifecycleOwner.lifecycleScope.launch {
@@ -123,15 +192,16 @@ class SitePermissionsBottomSheet : BottomSheetDialogFragment() {
                 )
             }
             current = stored
-            renderRows(listContainer, emptyHint, stored)
+            rebuildRows()
         }
+        refreshRetentionLabel()
     }
 
     /**
-     * Build the row list from the stored permissions. Only AC permissions
-     * the site has actually interacted with (non-default values) are
-     * shown so the sheet does not become a wall of twelve "Ask every
-     * time" entries for a page that never asked for anything.
+     * Rebuilds the row list from the stored permissions. Only AC permissions
+     * the site has actually interacted with (non-default values) are shown
+     * so the sheet does not become a wall of twelve "Ask every time"
+     * entries for a page that never asked for anything.
      *
      * Background playback is a Nira-local permission (not in AC's
      * `SitePermissions` enum). Its row is always rendered since the
@@ -142,177 +212,92 @@ class SitePermissionsBottomSheet : BottomSheetDialogFragment() {
      * non-null, since they are two-state and AC seeds them to concrete
      * values.
      */
-    private fun renderRows(
-        container: LinearLayout,
-        emptyHint: TextView,
-        stored: SitePermissions?,
-    ) {
-        container.removeAllViews()
+    private fun rebuildRows() {
+        val origin = originState.value ?: return
+        val rows = mutableListOf<SitePermissionRowUi>()
 
         // Background playback - always rendered because it is Nira-local
         // storage (BackgroundPlaybackAllowlist) and the user may want to
         // opt in before any AC permission has been touched.
-        addBackgroundPlaybackRow(container)
-
-        if (stored == null) {
-            // Hint stays visible because no AC permission has been
-            // interacted with yet, but the bg-playback row above is
-            // still there to toggle.
-            emptyHint.visibility = View.VISIBLE
-            return
-        }
-        emptyHint.visibility = View.GONE
-
-        // Standard (Status) permissions - skip NO_DECISION so the sheet
-        // stays focused on the site's actual decisions.
-        addStatusRow(
-            container, stored.location,
-            R.string.permission_location,
-            iconsR.drawable.mozac_ic_location_24,
-        ) { copy(location = it) }
-
-        addStatusRow(
-            container, stored.notification,
-            R.string.permission_notification,
-            iconsR.drawable.mozac_ic_notification_24,
-        ) { copy(notification = it) }
-
-        addStatusRow(
-            container, stored.microphone,
-            R.string.permission_microphone,
-            iconsR.drawable.mozac_ic_microphone_24,
-        ) { copy(microphone = it) }
-
-        addStatusRow(
-            container, stored.camera,
-            R.string.permission_camera,
-            iconsR.drawable.mozac_ic_camera_24,
-        ) { copy(camera = it) }
-
-        addStatusRow(
-            container, stored.localStorage,
-            R.string.permission_persistent_storage,
-            iconsR.drawable.mozac_ic_storage_24,
-        ) { copy(localStorage = it) }
-
-        addStatusRow(
-            container, stored.mediaKeySystemAccess,
-            R.string.permission_drm,
-            iconsR.drawable.mozac_ic_cookies_24,
-        ) { copy(mediaKeySystemAccess = it) }
-
-        addStatusRow(
-            container, stored.crossOriginStorageAccess,
-            R.string.permission_cross_origin_storage,
-            iconsR.drawable.mozac_ic_cookies_24,
-        ) { copy(crossOriginStorageAccess = it) }
-
-        addStatusRow(
-            container, stored.localDeviceAccess,
-            R.string.permission_local_device_access,
-            iconsR.drawable.mozac_ic_device_mobile_24,
-        ) { copy(localDeviceAccess = it) }
-
-        addStatusRow(
-            container, stored.localNetworkAccess,
-            R.string.permission_local_network_access,
-            iconsR.drawable.mozac_ic_local_network_24,
-        ) { copy(localNetworkAccess = it) }
-
-        // Autoplay rows - these are two-state so always meaningful once
-        // the origin has any stored permissions row.
-        addAutoplayRow(
-            container, stored.autoplayAudible,
-            R.string.permission_autoplay_audible,
-            iconsR.drawable.mozac_ic_autoplay_24,
-        ) { copy(autoplayAudible = it) }
-
-        addAutoplayRow(
-            container, stored.autoplayInaudible,
-            R.string.permission_autoplay_inaudible,
-            iconsR.drawable.mozac_ic_autoplay_24,
-        ) { copy(autoplayInaudible = it) }
-
-        if (container.childCount == 0) {
-            // Every Status permission was NO_DECISION and autoplay rows
-            // somehow failed to render - fall back to the empty hint.
-            emptyHint.visibility = View.VISIBLE
-        }
-    }
-
-    private fun addStatusRow(
-        container: LinearLayout,
-        value: Status,
-        @StringRes titleRes: Int,
-        @DrawableRes iconRes: Int,
-        apply: SitePermissions.(Status) -> SitePermissions,
-    ) {
-        // Hide permissions the site has not touched yet - keeps the sheet
-        // focused on actual decisions.
-        if (value == Status.NO_DECISION) return
-        val row = inflateRow(container, titleRes, iconRes)
-        val switch = row.findViewById<MaterialSwitch>(R.id.permission_switch)
-        val subtitle = row.findViewById<TextView>(R.id.permission_subtitle)
-
-        switch.isChecked = value.isAllowed()
-        bindSubtitle(subtitle, value)
-        switch.setOnCheckedChangeListener { _, isChecked ->
-            val newStatus = if (isChecked) Status.ALLOWED else Status.BLOCKED
-            bindSubtitle(subtitle, newStatus)
-            persist { apply(newStatus) }
-        }
-        container.addView(row)
-    }
-
-    private fun addAutoplayRow(
-        container: LinearLayout,
-        value: AutoplayStatus,
-        @StringRes titleRes: Int,
-        @DrawableRes iconRes: Int,
-        apply: SitePermissions.(AutoplayStatus) -> SitePermissions,
-    ) {
-        val row = inflateRow(container, titleRes, iconRes)
-        val switch = row.findViewById<MaterialSwitch>(R.id.permission_switch)
-        val subtitle = row.findViewById<TextView>(R.id.permission_subtitle)
-
-        switch.isChecked = value == AutoplayStatus.ALLOWED
-        subtitle.visibility = View.VISIBLE
-        subtitle.setText(
-            if (switch.isChecked) R.string.permission_status_allowed
-            else R.string.permission_status_blocked,
+        rows += SitePermissionRowUi(
+            kind = PermissionKind.BACKGROUND_PLAYBACK,
+            titleRes = R.string.permission_background_playback,
+            iconRes = iconsR.drawable.mozac_ic_autoplay_24,
+            checked = BackgroundPlaybackAllowlist.getInstance(requireContext()).isAllowed(origin),
         )
-        switch.setOnCheckedChangeListener { _, isChecked ->
-            val newStatus = if (isChecked) AutoplayStatus.ALLOWED else AutoplayStatus.BLOCKED
-            subtitle.setText(
-                if (isChecked) R.string.permission_status_allowed
-                else R.string.permission_status_blocked,
-            )
-            persist { apply(newStatus) }
+
+        val stored = current
+        if (stored != null) {
+            fun statusRow(
+                kind: PermissionKind,
+                value: Status,
+                @StringRes titleRes: Int,
+                @DrawableRes iconRes: Int,
+            ) {
+                // Hide permissions the site has not touched yet - keeps the
+                // sheet focused on actual decisions.
+                if (value == Status.NO_DECISION) return
+                rows += SitePermissionRowUi(kind, titleRes, iconRes, value.isAllowed())
+            }
+            statusRow(PermissionKind.LOCATION, stored.location, R.string.permission_location, iconsR.drawable.mozac_ic_location_24)
+            statusRow(PermissionKind.NOTIFICATION, stored.notification, R.string.permission_notification, iconsR.drawable.mozac_ic_notification_24)
+            statusRow(PermissionKind.MICROPHONE, stored.microphone, R.string.permission_microphone, iconsR.drawable.mozac_ic_microphone_24)
+            statusRow(PermissionKind.CAMERA, stored.camera, R.string.permission_camera, iconsR.drawable.mozac_ic_camera_24)
+            statusRow(PermissionKind.LOCAL_STORAGE, stored.localStorage, R.string.permission_persistent_storage, iconsR.drawable.mozac_ic_storage_24)
+            statusRow(PermissionKind.MEDIA_KEY_SYSTEM_ACCESS, stored.mediaKeySystemAccess, R.string.permission_drm, iconsR.drawable.mozac_ic_cookies_24)
+            statusRow(PermissionKind.CROSS_ORIGIN_STORAGE, stored.crossOriginStorageAccess, R.string.permission_cross_origin_storage, iconsR.drawable.mozac_ic_cookies_24)
+            statusRow(PermissionKind.LOCAL_DEVICE, stored.localDeviceAccess, R.string.permission_local_device_access, iconsR.drawable.mozac_ic_device_mobile_24)
+            statusRow(PermissionKind.LOCAL_NETWORK, stored.localNetworkAccess, R.string.permission_local_network_access, iconsR.drawable.mozac_ic_local_network_24)
+
+            // Autoplay rows - these are two-state so always meaningful once
+            // the origin has any stored permissions row.
+            fun autoplayRow(
+                kind: PermissionKind,
+                value: AutoplayStatus,
+                @StringRes titleRes: Int,
+                @DrawableRes iconRes: Int,
+            ) {
+                rows += SitePermissionRowUi(kind, titleRes, iconRes, value == AutoplayStatus.ALLOWED)
+            }
+            autoplayRow(PermissionKind.AUTOPLAY_AUDIBLE, stored.autoplayAudible, R.string.permission_autoplay_audible, iconsR.drawable.mozac_ic_autoplay_24)
+            autoplayRow(PermissionKind.AUTOPLAY_INAUDIBLE, stored.autoplayInaudible, R.string.permission_autoplay_inaudible, iconsR.drawable.mozac_ic_autoplay_24)
         }
-        container.addView(row)
+
+        rowsState.value = rows
+        showEmptyHintState.value = stored == null
     }
 
-    private fun inflateRow(
-        container: LinearLayout,
-        @StringRes titleRes: Int,
-        @DrawableRes iconRes: Int,
-    ): View {
-        val row = LayoutInflater.from(container.context)
-            .inflate(R.layout.item_site_permission_row, container, false)
-        row.findViewById<ImageView>(R.id.permission_icon).setImageResource(iconRes)
-        row.findViewById<TextView>(R.id.permission_title).setText(titleRes)
-        return row
+    private fun onPermissionToggled(kind: PermissionKind, checked: Boolean) {
+        val origin = originState.value ?: return
+        if (kind == PermissionKind.BACKGROUND_PLAYBACK) {
+            val allowlist = BackgroundPlaybackAllowlist.getInstance(requireContext())
+            if (checked) allowlist.allow(origin) else allowlist.block(origin)
+        } else {
+            persist { applyPermission(kind, checked) }
+        }
+        rebuildRows()
     }
 
-    private fun bindSubtitle(subtitle: TextView, value: Status) {
-        subtitle.visibility = View.VISIBLE
-        subtitle.setText(
-            when (value) {
-                Status.ALLOWED -> R.string.permission_status_allowed
-                Status.BLOCKED -> R.string.permission_status_blocked
-                Status.NO_DECISION -> R.string.permission_status_ask
-            },
-        )
+    private fun SitePermissions.applyPermission(
+        kind: PermissionKind,
+        checked: Boolean,
+    ): SitePermissions {
+        val status = if (checked) Status.ALLOWED else Status.BLOCKED
+        val autoplayStatus = if (checked) AutoplayStatus.ALLOWED else AutoplayStatus.BLOCKED
+        return when (kind) {
+            PermissionKind.LOCATION -> copy(location = status)
+            PermissionKind.NOTIFICATION -> copy(notification = status)
+            PermissionKind.MICROPHONE -> copy(microphone = status)
+            PermissionKind.CAMERA -> copy(camera = status)
+            PermissionKind.LOCAL_STORAGE -> copy(localStorage = status)
+            PermissionKind.MEDIA_KEY_SYSTEM_ACCESS -> copy(mediaKeySystemAccess = status)
+            PermissionKind.CROSS_ORIGIN_STORAGE -> copy(crossOriginStorageAccess = status)
+            PermissionKind.LOCAL_DEVICE -> copy(localDeviceAccess = status)
+            PermissionKind.LOCAL_NETWORK -> copy(localNetworkAccess = status)
+            PermissionKind.AUTOPLAY_AUDIBLE -> copy(autoplayAudible = autoplayStatus)
+            PermissionKind.AUTOPLAY_INAUDIBLE -> copy(autoplayInaudible = autoplayStatus)
+            PermissionKind.BACKGROUND_PLAYBACK -> this
+        }
     }
 
     /**
@@ -336,73 +321,28 @@ class SitePermissionsBottomSheet : BottomSheetDialogFragment() {
     }
 
     private fun freshRow(): SitePermissions = SitePermissions(
-        origin = origin,
+        origin = originState.value ?: "",
         savedAt = System.currentTimeMillis(),
     )
 
     /**
-     * Nira-local "Background playback" row. Backed by
-     * [BackgroundPlaybackAllowlist] (SharedPref `Set<String>` of origins)
-     * instead of AC's `SitePermissions`, because AC's data class is a
-     * closed set and does not include a background-playback field.
-     *
-     * The row is always rendered (unlike AC rows that are gated on a
-     * stored decision) so the user can opt in before interacting with
-     * the site in any other way. Subtitle hints that the extension
-     * currently only has an effect on YouTube hostnames; the toggle
-     * still writes to the allow-list uniformly so a future broadening
-     * of the extension's content-script match works without a schema
-     * migration.
-     */
-    private fun addBackgroundPlaybackRow(container: LinearLayout) {
-        val context = requireContext()
-        val allowlist = BackgroundPlaybackAllowlist.getInstance(context)
-        val row = inflateRow(
-            container,
-            R.string.permission_background_playback,
-            iconsR.drawable.mozac_ic_autoplay_24,
-        )
-        val switch = row.findViewById<MaterialSwitch>(R.id.permission_switch)
-        val subtitle = row.findViewById<TextView>(R.id.permission_subtitle)
-        subtitle.visibility = View.VISIBLE
-        subtitle.setText(R.string.permission_background_playback_subtitle)
-        switch.isChecked = allowlist.isAllowed(origin)
-        switch.setOnCheckedChangeListener { _, isChecked ->
-            if (isChecked) allowlist.allow(origin) else allowlist.block(origin)
-        }
-        container.addView(row)
-    }
-
-    /**
      * Confirm-before-clear flow for cookies + DOM storage scoped to the
-     * current site. The confirm dialog explicitly calls out that the
-     * user may have to sign in again, matching the previous behaviour
-     * in `ConnectionInfoBottomSheet` before this action was relocated
-     * here.
+     * current site, triggered by the "Clear cookies and site data" button.
+     * The confirm dialog explicitly calls out that the user may have to
+     * sign in again.
      */
-    private fun showClearCookiesConfirmation(url: String) {
-        AlertDialog.Builder(requireContext())
-            .setTitle(R.string.clear_cookies_dialog_title)
-            .setMessage(R.string.clear_cookies_dialog_message)
-            .setPositiveButton(R.string.clear_cookies_dialog_positive) { _, _ ->
-                clearCookiesForCurrentSite(url)
-            }
-            .setNegativeButton(android.R.string.cancel, null)
-            .show()
-    }
-
-    private fun clearCookiesForCurrentSite(url: String) {
-        if (url.isEmpty()) {
+    private fun clearCookiesForCurrentSite() {
+        if (siteUrl.isEmpty()) {
             dismiss()
             return
         }
         val context = requireContext()
         context.components.engine.clearData(
-            data = mozilla.components.concept.engine.Engine.BrowsingData.select(
-                mozilla.components.concept.engine.Engine.BrowsingData.COOKIES,
-                mozilla.components.concept.engine.Engine.BrowsingData.DOM_STORAGES,
+            data = Engine.BrowsingData.select(
+                Engine.BrowsingData.COOKIES,
+                Engine.BrowsingData.DOM_STORAGES,
             ),
-            host = url.tryGetHostFromUrl(),
+            host = siteUrl.tryGetHostFromUrl(),
         )
         Toast.makeText(
             context,
@@ -414,54 +354,41 @@ class SitePermissionsBottomSheet : BottomSheetDialogFragment() {
     }
 
     /**
-     * Pop up a single-choice dialog letting the user pick a retention
-     * window for the current origin. Writing a value calls
-     * `CookiePolicyRepository.setPolicy`; picking "Never" removes the
-     * row. After writing we refresh the pill text so the user sees the
-     * new state without re-opening the sheet.
+     * Writes the retention window picked in the chooser dialog. Picking
+     * "Never" removes the row; any other value calls
+     * `CookiePolicyRepository.setPolicy`. After writing we refresh the
+     * chip label so the user sees the new state without re-opening the
+     * sheet.
      */
-    private fun showCookieRetentionChooser(pill: Chip) {
-        val labels = arrayOf(
-            getString(R.string.cookie_retention_option_never),
-            getString(R.string.cookie_retention_option_6h),
-            getString(R.string.cookie_retention_option_24h),
-            getString(R.string.cookie_retention_option_7d),
-            getString(R.string.cookie_retention_option_30d),
-        )
-        AlertDialog.Builder(requireContext())
-            .setTitle(R.string.cookie_retention_dialog_title)
-            .setItems(labels) { _, index ->
-                val repo = CookiePolicyRepository.getInstance(requireContext())
-                val origin = origin
-                viewLifecycleOwner.lifecycleScope.launch {
-                    withContext(Dispatchers.IO) {
-                        when (index) {
-                            0 -> repo.remove(origin)
-                            1 -> repo.setPolicy(origin, hoursUntilClear = 6)
-                            2 -> repo.setPolicy(origin, hoursUntilClear = 24)
-                            3 -> repo.setPolicy(origin, hoursUntilClear = 24 * 7)
-                            4 -> repo.setPolicy(origin, hoursUntilClear = 24 * 30)
-                        }
-                    }
-                    refreshCookieRetentionPill(pill)
+    private fun onRetentionPicked(index: Int) {
+        val origin = originState.value ?: return
+        val repo = CookiePolicyRepository.getInstance(requireContext())
+        viewLifecycleOwner.lifecycleScope.launch {
+            withContext(Dispatchers.IO) {
+                when (index) {
+                    0 -> repo.remove(origin)
+                    1 -> repo.setPolicy(origin, hoursUntilClear = 6)
+                    2 -> repo.setPolicy(origin, hoursUntilClear = 24)
+                    3 -> repo.setPolicy(origin, hoursUntilClear = 24 * 7)
+                    4 -> repo.setPolicy(origin, hoursUntilClear = 24 * 30)
                 }
             }
-            .setNegativeButton(android.R.string.cancel, null)
-            .show()
+            refreshRetentionLabel()
+        }
     }
 
     /**
-     * Reads the stored [CookiePolicy] for the current origin and sets
-     * the chip text to the human-readable retention window ("Never"
-     * when no row exists, otherwise e.g. "24 h" / "7 d"). Called from
-     * [onViewCreated] on initial render and from
-     * [showCookieRetentionChooser] after the user picks a new value.
+     * Reads the stored [CookiePolicy] for the current origin into the chip
+     * label state ("Never" when no row exists, otherwise e.g. "24 h" /
+     * "7 d"). Called from [onViewCreated] on initial render and from
+     * [onRetentionPicked] after the user picks a new value.
      */
-    private fun refreshCookieRetentionPill(pill: Chip) {
+    private fun refreshRetentionLabel() {
+        val origin = originState.value ?: return
         val repo = CookiePolicyRepository.getInstance(requireContext())
         viewLifecycleOwner.lifecycleScope.launch {
             val current = withContext(Dispatchers.IO) { repo.get(origin) }
-            pill.text = if (current == null) {
+            retentionLabelState.value = if (current == null) {
                 getString(R.string.cookie_retention_none)
             } else {
                 formatRetentionHours(current.hoursUntilClear)
@@ -505,9 +432,9 @@ class SitePermissionsBottomSheet : BottomSheetDialogFragment() {
          * Icon references for the permissions currently in a non-default
          * state on the given stored row. Used by `ConnectionInfoBottomSheet`
          * to render the "icons of enabled permissions" visual next to the
-         * "Site permissions" pill.
+         * "Site permissions" row.
          *
-         * Returns up to 5 icons so the pill doesn't overflow; the full
+         * Returns up to 5 icons so the row doesn't overflow; the full
          * list is always available by tapping into the bottom sheet.
          */
         fun summaryIcons(stored: SitePermissions?): List<Int> {
@@ -531,4 +458,214 @@ class SitePermissionsBottomSheet : BottomSheetDialogFragment() {
             return out.take(5)
         }
     }
+}
+
+/**
+ * The Compose body of the site-permissions sheet: the permission rows of the
+ * origin, the cookie-policy chip row and the clear-cookies action, rendered
+ * with the shared grouped-card idiom. The two destructive/choice flows render
+ * as [NiraAlertDialog]s.
+ */
+@Composable
+private fun SitePermissionsSheetContent(
+    origin: String?,
+    rows: List<SitePermissionRowUi>,
+    showEmptyHint: Boolean,
+    retentionLabel: String?,
+    onToggle: (PermissionKind, Boolean) -> Unit,
+    onClearCookies: () -> Unit,
+    onRetentionPicked: (Int) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    if (origin == null) return
+
+    var showClearCookiesDialog by remember { mutableStateOf(false) }
+    var showRetentionChooser by remember { mutableStateOf(false) }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = 200.dp),
+    ) {
+        NiraSheetHeader(
+            title = stringResource(R.string.site_permissions_title),
+            subtitle = origin,
+            onClose = onDismiss,
+            dividerAlpha = null,
+        )
+
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f, fill = false)
+                .verticalScroll(rememberScrollState())
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(20.dp),
+        ) {
+            if (showEmptyHint) {
+                // No AC permission has been interacted with yet, but the
+                // background-playback row above is still there to toggle.
+                Text(
+                    text = stringResource(R.string.site_permissions_empty_hint),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+
+            if (rows.isNotEmpty()) {
+                Column {
+                    rows.forEachIndexed { index, row ->
+                        SitePermissionCardRow(
+                            row = row,
+                            isTopRow = index == 0,
+                            isBottomRow = index == rows.lastIndex,
+                            showDivider = index > 0,
+                            onToggle = onToggle,
+                        )
+                    }
+                }
+                // Hint for the Nira-local background-playback row (the
+                // first row of the card): the toggle writes to the
+                // allow-list uniformly so a future broadening of the
+                // extension's content-script match needs no migration.
+                Text(
+                    text = stringResource(R.string.permission_background_playback_subtitle),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+
+            NiraCardRow(
+                title = stringResource(R.string.cookie_policy_label),
+                isTopRow = true,
+                isBottomRow = true,
+                showDivider = false,
+                trailing = {
+                    AssistChip(
+                        onClick = { showRetentionChooser = true },
+                        label = { Text(retentionLabel.orEmpty()) },
+                        leadingIcon = {
+                            Icon(
+                                painter = painterResource(R.drawable.ic_baseline_history),
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp),
+                            )
+                        },
+                    )
+                },
+            )
+
+            OutlinedButton(
+                onClick = { showClearCookiesDialog = true },
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.LockOpen,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp),
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(stringResource(R.string.clear_cookies_and_site_data))
+            }
+        }
+    }
+
+    if (showClearCookiesDialog) {
+        NiraAlertDialog(
+            onDismissRequest = { showClearCookiesDialog = false },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showClearCookiesDialog = false
+                        onClearCookies()
+                    },
+                ) { Text(stringResource(R.string.clear_cookies_dialog_positive)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showClearCookiesDialog = false }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            },
+            title = { Text(stringResource(R.string.clear_cookies_dialog_title)) },
+            text = { Text(stringResource(R.string.clear_cookies_dialog_message)) },
+        )
+    }
+
+    if (showRetentionChooser) {
+        RetentionChooserDialog(
+            onDismiss = { showRetentionChooser = false },
+            onPicked = { index ->
+                showRetentionChooser = false
+                onRetentionPicked(index)
+            },
+        )
+    }
+}
+
+@Composable
+private fun RetentionChooserDialog(
+    onDismiss: () -> Unit,
+    onPicked: (Int) -> Unit,
+) {
+    val options = listOf(
+        R.string.cookie_retention_option_never,
+        R.string.cookie_retention_option_6h,
+        R.string.cookie_retention_option_24h,
+        R.string.cookie_retention_option_7d,
+        R.string.cookie_retention_option_30d,
+    )
+    NiraAlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
+        },
+        title = { Text(stringResource(R.string.cookie_retention_dialog_title)) },
+        text = {
+            Column {
+                options.forEachIndexed { index, optionRes ->
+                    Text(
+                        text = stringResource(optionRes),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onPicked(index) }
+                            .padding(vertical = 12.dp),
+                    )
+                }
+            }
+        },
+    )
+}
+
+@Composable
+private fun SitePermissionCardRow(
+    row: SitePermissionRowUi,
+    isTopRow: Boolean,
+    isBottomRow: Boolean,
+    showDivider: Boolean,
+    onToggle: (PermissionKind, Boolean) -> Unit,
+) {
+    val title = stringResource(row.titleRes)
+    NiraCardRow(
+        title = title,
+        isTopRow = isTopRow,
+        isBottomRow = isBottomRow,
+        showDivider = showDivider,
+        leading = {
+            Icon(
+                painter = painterResource(row.iconRes),
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(24.dp),
+            )
+        },
+        trailing = {
+            Switch(
+                checked = row.checked,
+                onCheckedChange = { onToggle(row.kind, it) },
+                modifier = Modifier.semantics { contentDescription = title },
+            )
+        },
+    )
 }
