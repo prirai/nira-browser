@@ -113,16 +113,13 @@ fun SearchExtensionsContent(
         }
     }
 
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        color = MaterialTheme.colorScheme.surface,
-        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
+    // The dialog theme's rounded_bottom_sheet provides the sheet chrome
+    // (28dp top corners, colorSurface); the content draws no second surface.
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp)
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
-        ) {
             NiraSheetHeader(
                 title = stringResource(R.string.search_extensions),
                 onClose = onDismiss,
@@ -194,7 +191,6 @@ fun SearchExtensionsContent(
                 }
             }
         }
-    }
 }
 
 @Composable
