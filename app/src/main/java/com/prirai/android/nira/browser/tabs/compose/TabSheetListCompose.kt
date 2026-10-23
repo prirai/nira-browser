@@ -73,27 +73,10 @@ fun TabSheetListView(
     )
 
     // Menu state
-    var menuTab by remember { mutableStateOf<TabSessionState?>(null) }
-    var menuIsInGroup by remember { mutableStateOf(false) }
-    var showTabMenu by remember { mutableStateOf(false) }
-    var showGroupMenu by remember { mutableStateOf(false) }
-    var menuGroupId by remember { mutableStateOf<String?>(null) }
-    var menuGroupName by remember { mutableStateOf<String?>(null) }
+    val menuState = rememberTabSheetMenuState()
 
-    // Build unified items - only when NOT dragging to prevent scroll jumps
-    val items = remember(tabs, groups, expandedGroups, currentOrder) {
-        UnifiedItemBuilder.buildItems(
-            order = currentOrder,
-            tabs = tabs,
-            groups = groups,
-            expandedGroups = expandedGroups
-        )
-    }
-
-    // Deduplicate items
-    val uniqueItems = remember(items) {
-        UnifiedItemBuilder.deduplicateItems(items)
-    }
+    // Build + deduplicate unified items
+    val uniqueItems = rememberUnifiedSheetItems(tabs, groups, expandedGroups, currentOrder)
 
     // Calculate position mapping for dividers
     // Maps UI item index to actual primary order position
@@ -252,17 +235,13 @@ fun TabSheetListView(
                             selectedTabId = selectedTabId,
                             onHeaderClick = { onGroupClick(item.groupId) },
                             onOptionsClick = {
-                                menuGroupId = item.groupId
-                                menuGroupName = item.title
-                                showGroupMenu = true
+                                menuState.openGroupMenu(item.groupId, item.title)
                                 onGroupOptionsClick(item.groupId)
                             },
                             onTabClick = onTabClick,
                             onTabClose = onTabClose,
                             onShowTabMenu = { tab, isInGroup ->
-                                menuTab = tab
-                                menuIsInGroup = isInGroup
-                                showTabMenu = true
+                                menuState.openTabMenu(tab, isInGroup)
                             },
                             isDragging = isDragging,
                             coordinator = coordinator,
@@ -272,86 +251,26 @@ fun TabSheetListView(
                     }
 
                     is UnifiedItem.GroupHeader -> {
-                        val dismissState = rememberSwipeToDismissBoxState(
-                            confirmValueChange = { dismissValue ->
-                                // Disable swipe during drag to prevent conflicts
-                                if (isDragging) {
-                                    false
-                                } else {
-                                    when (dismissValue) {
-                                        SwipeToDismissBoxValue.EndToStart -> {
-                                            // Swipe left - ungroup all tabs
-                                            viewModel.ungroupAll(item.groupId)
-                                            true
-                                        }
-
-                                        SwipeToDismissBoxValue.StartToEnd -> {
-                                            // Swipe right - show menu
-                                            menuGroupId = item.groupId
-                                            menuGroupName = item.title
-                                            showGroupMenu = true
-                                            false
-                                        }
-
-                                        else -> false
-                                    }
-                                }
-                            }
-                        )
-
-                        SwipeToDismissBox(
-                            state = dismissState,
-                            enableDismissFromStartToEnd = !isDragging,
-                            enableDismissFromEndToStart = !isDragging,
-                            backgroundContent = {
-                                val dismissDirection = dismissState.dismissDirection
-                                val color = when (dismissDirection) {
-                                    SwipeToDismissBoxValue.EndToStart -> MaterialTheme.colorScheme.errorContainer
-                                    SwipeToDismissBoxValue.StartToEnd -> MaterialTheme.colorScheme.primaryContainer
-                                    else -> Color.Transparent
-                                }
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .background(color)
-                                        .padding(horizontal = 20.dp),
-                                    contentAlignment = if (dismissDirection == SwipeToDismissBoxValue.EndToStart)
-                                        Alignment.CenterEnd else Alignment.CenterStart
-                                ) {
-                                    when (dismissDirection) {
-                                        SwipeToDismissBoxValue.EndToStart -> {
-                                            Icon(
-                                                imageVector = Icons.Default.Delete,
-                                                contentDescription = stringResource(R.string.ungroup),
-                                                tint = MaterialTheme.colorScheme.onErrorContainer
-                                            )
-                                        }
-
-                                        SwipeToDismissBoxValue.StartToEnd -> {
-                                            Icon(
-                                                imageVector = Icons.Default.MoreVert,
-                                                contentDescription = stringResource(R.string.more_options),
-                                                tint = MaterialTheme.colorScheme.onPrimaryContainer
-                                            )
-                                        }
-
-                                        else -> {}
-                                    }
-                                }
-                            }
+                        TabSwipeWrapper(
+                            isDragging = isDragging,
+                            onDismiss = { viewModel.ungroupAll(item.groupId) },
+                            onMenu = { menuState.openGroupMenu(item.groupId, item.title) },
+                            dismissIcon = Icons.Default.Delete,
+                            dismissIconLabel = stringResource(R.string.ungroup),
                         ) {
-                            GroupHeaderItem(
-                                groupId = item.groupId,
+                            GroupHeaderRow(
                                 title = item.title,
                                 color = item.color,
                                 tabCount = item.tabCount,
                                 isExpanded = item.isExpanded,
                                 onHeaderClick = { onGroupClick(item.groupId) },
-                                onOptionsClick = {
-                                    menuGroupId = item.groupId
-                                    menuGroupName = item.title
-                                    showGroupMenu = true
-                                    onGroupOptionsClick(item.groupId)
+                                trailing = {
+                                    Icon(
+                                        imageVector = Icons.Default.DragHandle,
+                                        contentDescription = stringResource(R.string.drag_to_reorder),
+                                        tint = Color(item.color).copy(alpha = 0.6f),
+                                        modifier = Modifier.size(24.dp)
+                                    )
                                 },
                                 modifier = Modifier
                                     .draggableItem(
@@ -375,71 +294,10 @@ fun TabSheetListView(
                     is UnifiedItem.GroupedTab -> {
                         val group = groups.find { it.id == item.groupId }
 
-                        val dismissState = rememberSwipeToDismissBoxState(
-                            confirmValueChange = { dismissValue ->
-                                // Disable swipe during drag to prevent conflicts
-                                if (isDragging) {
-                                    false
-                                } else {
-                                    when (dismissValue) {
-                                    SwipeToDismissBoxValue.EndToStart -> {
-                                        onTabClose(item.tab.id)
-                                        false
-                                    }
-
-                                        SwipeToDismissBoxValue.StartToEnd -> {
-                                            menuTab = item.tab
-                                            menuIsInGroup = true
-                                            showTabMenu = true
-                                            false
-                                        }
-
-                                        else -> false
-                                    }
-                                }
-                            }
-                        )
-
-                        SwipeToDismissBox(
-                            state = dismissState,
-                            enableDismissFromStartToEnd = !isDragging,
-                            enableDismissFromEndToStart = !isDragging,
-                            backgroundContent = {
-                                val dismissDirection = dismissState.dismissDirection
-                                val color = when (dismissDirection) {
-                                    SwipeToDismissBoxValue.EndToStart -> MaterialTheme.colorScheme.errorContainer
-                                    SwipeToDismissBoxValue.StartToEnd -> MaterialTheme.colorScheme.primaryContainer
-                                    else -> Color.Transparent
-                                }
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .background(color)
-                                        .padding(horizontal = 20.dp),
-                                    contentAlignment = if (dismissDirection == SwipeToDismissBoxValue.EndToStart)
-                                        Alignment.CenterEnd else Alignment.CenterStart
-                                ) {
-                                    when (dismissDirection) {
-                                        SwipeToDismissBoxValue.EndToStart -> {
-                                            Icon(
-                                                imageVector = Icons.Default.Delete,
-                                                contentDescription = stringResource(R.string.delete),
-                                                tint = MaterialTheme.colorScheme.onErrorContainer
-                                            )
-                                        }
-
-                                        SwipeToDismissBoxValue.StartToEnd -> {
-                                            Icon(
-                                                imageVector = Icons.Default.MoreVert,
-                                                contentDescription = stringResource(R.string.more_options),
-                                                tint = MaterialTheme.colorScheme.onPrimaryContainer
-                                            )
-                                        }
-
-                                        else -> {}
-                                    }
-                                }
-                            }
+                        TabSwipeWrapper(
+                            isDragging = isDragging,
+                            onDismiss = { onTabClose(item.tab.id) },
+                            onMenu = { menuState.openTabMenu(item.tab, inGroup = true) },
                         ) {
                             TabListItem(
                                 tab = item.tab,
@@ -483,71 +341,10 @@ fun TabSheetListView(
                     }
 
                     is UnifiedItem.SingleTab -> {
-                        val dismissState = rememberSwipeToDismissBoxState(
-                            confirmValueChange = { dismissValue ->
-                                // Disable swipe during drag to prevent conflicts
-                                if (isDragging) {
-                                    false
-                                } else {
-                                    when (dismissValue) {
-                                    SwipeToDismissBoxValue.EndToStart -> {
-                                        onTabClose(item.tab.id)
-                                        false
-                                    }
-
-                                        SwipeToDismissBoxValue.StartToEnd -> {
-                                            menuTab = item.tab
-                                            menuIsInGroup = false
-                                            showTabMenu = true
-                                            false
-                                        }
-
-                                        else -> false
-                                    }
-                                }
-                            }
-                        )
-
-                        SwipeToDismissBox(
-                            state = dismissState,
-                            enableDismissFromStartToEnd = !isDragging,
-                            enableDismissFromEndToStart = !isDragging,
-                            backgroundContent = {
-                                val dismissDirection = dismissState.dismissDirection
-                                val color = when (dismissDirection) {
-                                    SwipeToDismissBoxValue.EndToStart -> MaterialTheme.colorScheme.errorContainer
-                                    SwipeToDismissBoxValue.StartToEnd -> MaterialTheme.colorScheme.primaryContainer
-                                    else -> Color.Transparent
-                                }
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .background(color)
-                                        .padding(horizontal = 20.dp),
-                                    contentAlignment = if (dismissDirection == SwipeToDismissBoxValue.EndToStart)
-                                        Alignment.CenterEnd else Alignment.CenterStart
-                                ) {
-                                    when (dismissDirection) {
-                                        SwipeToDismissBoxValue.EndToStart -> {
-                                            Icon(
-                                                imageVector = Icons.Default.Delete,
-                                                contentDescription = stringResource(R.string.delete),
-                                                tint = MaterialTheme.colorScheme.onErrorContainer
-                                            )
-                                        }
-
-                                        SwipeToDismissBoxValue.StartToEnd -> {
-                                            Icon(
-                                                imageVector = Icons.Default.MoreVert,
-                                                contentDescription = stringResource(R.string.more_options),
-                                                tint = MaterialTheme.colorScheme.onPrimaryContainer
-                                            )
-                                        }
-
-                                        else -> {}
-                                    }
-                                }
-                            }
+                        TabSwipeWrapper(
+                            isDragging = isDragging,
+                            onDismiss = { onTabClose(item.tab.id) },
+                            onMenu = { menuState.openTabMenu(item.tab, inGroup = false) },
                         ) {
                             TabListItem(
                                 tab = item.tab,
@@ -697,27 +494,25 @@ fun TabSheetListView(
                     }
                     when (item) {
                         is UnifiedItem.GroupContainer -> {
-                            GroupHeaderItem(
-                                groupId = item.groupId,
+                            GroupHeaderRow(
                                 title = item.title,
                                 color = item.color,
                                 tabCount = item.tabCount,
                                 isExpanded = false,
                                 onHeaderClick = {},
-                                onOptionsClick = {},
+                                trailing = {},
                                 modifier = Modifier.width(350.dp)
                             )
                         }
 
                         is UnifiedItem.GroupHeader -> {
-                            GroupHeaderItem(
-                                groupId = item.groupId,
+                            GroupHeaderRow(
                                 title = item.title,
                                 color = item.color,
                                 tabCount = item.tabCount,
                                 isExpanded = false,
                                 onHeaderClick = {},
-                                onOptionsClick = {},
+                                trailing = {},
                                 modifier = Modifier.width(350.dp)
                             )
                         }
@@ -729,116 +524,8 @@ fun TabSheetListView(
         }
     }
 
-    // Show tab menu
-    if (showTabMenu && menuTab != null) {
-        TabContextMenu(
-            tab = menuTab!!,
-            isInGroup = menuIsInGroup,
-            onDismiss = { showTabMenu = false },
-            viewModel = viewModel,
-            scope = scope
-        )
-    }
-
-    // Show group menu
-    if (showGroupMenu && menuGroupId != null) {
-        GroupContextMenu(
-            groupId = menuGroupId!!,
-            groupName = menuGroupName ?: stringResource(R.string.group),
-            onDismiss = { showGroupMenu = false },
-            viewModel = viewModel,
-            scope = scope
-        )
-    }
-}
-
-/**
- * Group header item
- */
-@Composable
-private fun GroupHeaderItem(
-    groupId: String,
-    title: String,
-    color: Int,
-    tabCount: Int,
-    isExpanded: Boolean,
-    onHeaderClick: () -> Unit,
-    onOptionsClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Surface(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 8.dp, vertical = 4.dp),
-        shape = RoundedCornerShape(12.dp),
-        color = Color(color).copy(alpha = 0.1f),
-        tonalElevation = 2.dp,
-        border = BorderStroke(1.dp, Color(color).copy(alpha = 0.3f))
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable(
-                    indication = null,
-                    interactionSource = remember { MutableInteractionSource() }
-                ) { onHeaderClick() }
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                modifier = Modifier.weight(1f)
-            ) {
-                // Expand/Collapse icon
-                Icon(
-                    imageVector = if (isExpanded) Icons.Default.KeyboardArrowDown else Icons.Default.KeyboardArrowRight,
-                    contentDescription = stringResource(if (isExpanded) R.string.collapse else R.string.expand),
-                    tint = Color(color),
-                    modifier = Modifier.size(24.dp)
-                )
-
-                // Group name
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleMediumEmphasized,
-                    color = Color(color),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f)
-                )
-
-                // Tab count badge
-                Surface(
-                    shape = CircleShape,
-                    color = Color(color).copy(alpha = 0.2f),
-                    border = BorderStroke(2.dp, Color(color))
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .padding(horizontal = 12.dp, vertical = 4.dp)
-                            .defaultMinSize(minWidth = 24.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = tabCount.toString(),
-                            style = MaterialTheme.typography.labelMediumEmphasized,
-                            color = Color(color)
-                        )
-                    }
-                }
-            }
-
-            // Drag handle
-            Icon(
-                imageVector = Icons.Default.DragHandle,
-                contentDescription = stringResource(R.string.drag_to_reorder),
-                tint = Color(color).copy(alpha = 0.6f),
-                modifier = Modifier.size(24.dp)
-            )
-        }
-    }
+    // Show tab + group context menus
+    TabSheetMenuHost(menuState = menuState, viewModel = viewModel, scope = scope)
 }
 
 /**

@@ -58,6 +58,139 @@ import com.prirai.android.nira.R
 import mozilla.components.browser.state.state.TabSessionState
 
 /**
+ * The shell both group container variants (list and grid) share: the group
+ * Surface, the 4dp color accent strip, the expand/collapse header with the
+ * count badge and options button, and the motion-specified expand/collapse.
+ * The variants differ only in how their children lay out, which lands in
+ * [content].
+ *
+ * @param containerModifier view-specific drag wiring: the list variant adds
+ *   its hover-zoom scale and contextId drop-target metadata, the grid variant
+ *   adds drag visual feedback.
+ */
+@Composable
+private fun GroupContainerShell(
+    title: String,
+    color: Int,
+    isExpanded: Boolean,
+    tabCount: Int,
+    onHeaderClick: () -> Unit,
+    onOptionsClick: () -> Unit,
+    containerModifier: Modifier,
+    content: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit,
+) {
+    // Single container with group styling
+    Surface(
+        modifier = containerModifier
+            .fillMaxWidth()
+            .padding(horizontal = 8.dp, vertical = 4.dp),
+        shape = RoundedCornerShape(12.dp),
+        color = Color(color).copy(alpha = 0.1f),
+        tonalElevation = 2.dp
+    ) {
+        // IntrinsicSize.Min lets the left accent strip fill the container's full height
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(IntrinsicSize.Min)
+        ) {
+            // 4dp colored left strip matching group color
+            Box(
+                modifier = Modifier
+                    .width(4.dp)
+                    .fillMaxHeight()
+                    .background(
+                        Color(color),
+                        RoundedCornerShape(topStart = 12.dp, bottomStart = 12.dp)
+                    )
+            )
+
+            Column(modifier = Modifier.weight(1f)) {
+                // Header content integrated into container
+                // Use pointerInput instead of clickable to avoid interfering with drag gestures
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .pointerInput(Unit) {
+                            detectTapGestures(
+                                onTap = { onHeaderClick() }
+                            )
+                        }
+                        .padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        // Expand/Collapse icon
+                        Icon(
+                            imageVector = if (isExpanded) Icons.Default.KeyboardArrowDown else Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                            contentDescription = stringResource(if (isExpanded) R.string.collapse else R.string.expand),
+                            tint = Color(color),
+                            modifier = Modifier.size(24.dp)
+                        )
+
+                        // Group name
+                        Text(
+                            text = title,
+                            style = MaterialTheme.typography.titleMediumEmphasized,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f)
+                        )
+
+                        // Tab count badge
+                        Surface(
+                            shape = CircleShape,
+                            color = Color(color).copy(alpha = 0.2f),
+                            border = BorderStroke(2.dp, Color(color))
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .padding(horizontal = 12.dp, vertical = 4.dp)
+                                    .defaultMinSize(minWidth = 24.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = tabCount.toString(),
+                                    style = MaterialTheme.typography.labelMediumEmphasized,
+                                    color = Color(color)
+                                )
+                            }
+                        }
+                    }
+
+                    // Options button
+                    IconButton(
+                        onClick = onOptionsClick,
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.MoreVert,
+                            contentDescription = stringResource(R.string.options),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                }
+
+                AnimatedVisibility(
+                    visible = isExpanded,
+                    enter = expandVertically(MaterialTheme.motionScheme.defaultSpatialSpec()),
+                    exit = shrinkVertically(MaterialTheme.motionScheme.fastSpatialSpec())
+                ) {
+                    content()
+                }
+            } // end Column
+        } // end Row IntrinsicSize
+    }
+}
+
+/**
  * Group container for list view - container has the background with integrated header.
  * The parent Surface contains everything with group styling.
  */
@@ -93,11 +226,14 @@ fun GroupContainerListItem(
         }
     }
 
-    // Single container with group styling
-    Surface(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 8.dp, vertical = 4.dp)
+    GroupContainerShell(
+        title = title,
+        color = color,
+        isExpanded = isExpanded,
+        tabCount = children.size,
+        onHeaderClick = onHeaderClick,
+        onOptionsClick = onOptionsClick,
+        containerModifier = modifier
             .scale(scale.value)
             .then(
                 // Only make group draggable when collapsed to avoid conflict with child tab dragging
@@ -119,170 +255,69 @@ fun GroupContainerListItem(
                     "contextId" to (children.firstOrNull()?.contextId ?: "")
                 )
             ),
-        shape = RoundedCornerShape(12.dp),
-        color = Color(color).copy(alpha = 0.1f),
-        tonalElevation = 2.dp
     ) {
-        // IntrinsicSize.Min lets the left accent strip fill the container's full height
-        Row(
+        // Child tabs wrapped in extension-list style Surface — shown when expanded
+        Surface(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(IntrinsicSize.Min)
+                .padding(start = 8.dp, end = 8.dp, bottom = 8.dp),
+            shape = RoundedCornerShape(16.dp),
+            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+            tonalElevation = 1.dp
         ) {
-            // 4dp colored left strip matching group color
-            Box(
-                modifier = Modifier
-                    .width(4.dp)
-                    .fillMaxHeight()
-                    .background(
-                        Color(color),
-                        RoundedCornerShape(topStart = 12.dp, bottomStart = 12.dp)
-                    )
-            )
+            Column(modifier = Modifier.fillMaxWidth()) {
+                children.forEachIndexed { index, tab ->
+                    val isLastInGroup = index == children.size - 1
 
-            Column(modifier = Modifier.weight(1f)) {
-            // Header content integrated into container
-            // Use pointerInput instead of clickable to avoid interfering with drag gestures
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .pointerInput(Unit) {
-                        detectTapGestures(
-                            onTap = { onHeaderClick() }
-                        )
-                    }
-                    .padding(16.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    modifier = Modifier.weight(1f)
-                ) {
-                    // Expand/Collapse icon
-                    Icon(
-                        imageVector = if (isExpanded) Icons.Default.KeyboardArrowDown else Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                        contentDescription = stringResource(if (isExpanded) R.string.collapse else R.string.expand),
-                        tint = Color(color),
-                        modifier = Modifier.size(24.dp)
-                    )
-
-                    // Group name
-                    Text(
-                        text = title,
-                        style = MaterialTheme.typography.titleMediumEmphasized,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f)
-                    )
-
-                    // Tab count badge
-                    Surface(
-                        shape = CircleShape,
-                        color = Color(color).copy(alpha = 0.2f),
-                        border = BorderStroke(2.dp, Color(color))
-                    ) {
+                    // Drag insertion indicator
+                    if (isDragging && hoverState.isDraggingGroupedTab() && coordinator.isHoveringOver("divider_${tab.id}")) {
                         Box(
                             modifier = Modifier
-                                .padding(horizontal = 12.dp, vertical = 4.dp)
-                                .defaultMinSize(minWidth = 24.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = children.size.toString(),
-                                style = MaterialTheme.typography.labelMediumEmphasized,
-                                color = Color(color)
+                                .fillMaxWidth()
+                                .height(4.dp)
+                                .padding(horizontal = 16.dp)
+                                .background(Color(color), RoundedCornerShape(2.dp))
+                        )
+                    }
+
+                    Box(
+                        modifier = Modifier.dropTarget(
+                            id = "divider_${tab.id}",
+                            type = DropTargetType.TAB,
+                            coordinator = coordinator,
+                            metadata = mapOf(
+                                "tabId" to tab.id,
+                                "groupId" to groupId,
+                                "isInGroup" to true,
+                                "insertBefore" to true
                             )
-                        }
+                        )
+                    ) {
+                        GroupedTabListItem(
+                            tab = tab,
+                            groupId = groupId,
+                            groupColor = color,
+                            isSelected = tab.id == selectedTabId,
+                            isLastInGroup = isLastInGroup,
+                            onTabClick = { onTabClick(tab.id) },
+                            onTabClose = { onTabClose(tab.id) },
+                            onShowTabMenu = { onShowTabMenu(tab, true) },
+                            isDragging = isDragging,
+                            coordinator = coordinator,
+                            hoverState = hoverState,
+                            hoveredGroupId = hoveredGroupId
+                        )
                     }
-                }
 
-                // Options button
-                IconButton(
-                    onClick = onOptionsClick,
-                    modifier = Modifier.size(32.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.MoreVert,
-                        contentDescription = stringResource(R.string.options),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(24.dp)
-                    )
-                }
-            }
-
-            // Child tabs wrapped in extension-list style Surface — shown when expanded
-            AnimatedVisibility(
-                visible = isExpanded,
-                enter = expandVertically(MaterialTheme.motionScheme.defaultSpatialSpec()),
-                exit = shrinkVertically(MaterialTheme.motionScheme.fastSpatialSpec())
-            ) {
-                Surface(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(start = 8.dp, end = 8.dp, bottom = 8.dp),
-                    shape = RoundedCornerShape(16.dp),
-                    color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                    tonalElevation = 1.dp
-                ) {
-                    Column(modifier = Modifier.fillMaxWidth()) {
-                        children.forEachIndexed { index, tab ->
-                            val isLastInGroup = index == children.size - 1
-
-                            // Drag insertion indicator
-                            if (isDragging && hoverState.isDraggingGroupedTab() && coordinator.isHoveringOver("divider_${tab.id}")) {
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(4.dp)
-                                        .padding(horizontal = 16.dp)
-                                        .background(Color(color), RoundedCornerShape(2.dp))
-                                )
-                            }
-
-                            Box(
-                                modifier = Modifier.dropTarget(
-                                    id = "divider_${tab.id}",
-                                    type = DropTargetType.TAB,
-                                    coordinator = coordinator,
-                                    metadata = mapOf(
-                                        "tabId" to tab.id,
-                                        "groupId" to groupId,
-                                        "isInGroup" to true,
-                                        "insertBefore" to true
-                                    )
-                                )
-                            ) {
-                                GroupedTabListItem(
-                                    tab = tab,
-                                    groupId = groupId,
-                                    groupColor = color,
-                                    isSelected = tab.id == selectedTabId,
-                                    isLastInGroup = isLastInGroup,
-                                    onTabClick = { onTabClick(tab.id) },
-                                    onTabClose = { onTabClose(tab.id) },
-                                    onShowTabMenu = { onShowTabMenu(tab, true) },
-                                    isDragging = isDragging,
-                                    coordinator = coordinator,
-                                    hoverState = hoverState,
-                                    hoveredGroupId = hoveredGroupId
-                                )
-                            }
-
-                            if (index < children.lastIndex) {
-                                HorizontalDivider(
-                                    modifier = Modifier.padding(start = 72.dp),
-                                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                                )
-                            }
-                        }
+                    if (index < children.lastIndex) {
+                        HorizontalDivider(
+                            modifier = Modifier.padding(start = 72.dp),
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                        )
                     }
                 }
             }
-            } // end Column
-        } // end Row IntrinsicSize
+        }
     }
 }
 
@@ -307,70 +342,10 @@ private fun GroupedTabListItem(
     hoverState: TabSheetHoverState,
     hoveredGroupId: String?
 ) {
-    // Swipe to dismiss support
-    @Suppress("DEPRECATION")
-    val dismissState = rememberSwipeToDismissBoxState(
-        confirmValueChange = { dismissValue ->
-            if (isDragging) {
-                false
-            } else {
-                when (dismissValue) {
-                    SwipeToDismissBoxValue.EndToStart -> {
-                        onTabClose()
-                        false
-                    }
-
-                    SwipeToDismissBoxValue.StartToEnd -> {
-                        onShowTabMenu()  // Use unified menu system
-                        false
-                    }
-
-                    else -> false
-                }
-            }
-        }
-    )
-
-    SwipeToDismissBox(
-        state = dismissState,
-        enableDismissFromStartToEnd = !isDragging,
-        enableDismissFromEndToStart = !isDragging,
-        backgroundContent = {
-            val dismissDirection = dismissState.dismissDirection
-            val bgColor = when (dismissDirection) {
-                SwipeToDismissBoxValue.EndToStart -> MaterialTheme.colorScheme.errorContainer
-                SwipeToDismissBoxValue.StartToEnd -> MaterialTheme.colorScheme.primaryContainer
-                else -> Color.Transparent
-            }
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(bgColor)
-                    .padding(horizontal = 20.dp),
-                contentAlignment = if (dismissDirection == SwipeToDismissBoxValue.EndToStart)
-                    Alignment.CenterEnd else Alignment.CenterStart
-            ) {
-                when (dismissDirection) {
-                    SwipeToDismissBoxValue.EndToStart -> {
-                        Icon(
-                            imageVector = Icons.Default.Delete,
-                            contentDescription = stringResource(R.string.close),
-                            tint = MaterialTheme.colorScheme.onErrorContainer
-                        )
-                    }
-
-                    SwipeToDismissBoxValue.StartToEnd -> {
-                        Icon(
-                            imageVector = Icons.Default.MoreVert,
-                            contentDescription = stringResource(R.string.more_options),
-                            tint = MaterialTheme.colorScheme.onPrimaryContainer
-                        )
-                    }
-
-                    else -> {}
-                }
-            }
-        }
+    TabSwipeWrapper(
+        isDragging = isDragging,
+        onDismiss = onTabClose,
+        onMenu = onShowTabMenu,
     ) {
         // Inline tab row that lives inside the shared group Surface container
         GroupedTabRow(
@@ -502,14 +477,14 @@ fun GroupContainerGridItem(
     hoveredGroupId: String?,
     modifier: Modifier = Modifier
 ) {
-    val scale = remember { Animatable(1f) }
-
-    // Single container with group styling
-    Surface(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 8.dp, vertical = 4.dp)
-            .scale(scale.value)
+    GroupContainerShell(
+        title = title,
+        color = color,
+        isExpanded = isExpanded,
+        tabCount = children.size,
+        onHeaderClick = onHeaderClick,
+        onOptionsClick = onOptionsClick,
+        containerModifier = modifier
             .then(
                 // Only make group draggable when collapsed to avoid conflict with child tab dragging
                 if (!isExpanded) {
@@ -528,121 +503,19 @@ fun GroupContainerGridItem(
                 metadata = mapOf("groupId" to groupId)
             )
             .groupHeaderFeedback(groupId, coordinator, hoverState, draggedScale = 0.85f),
-        shape = RoundedCornerShape(12.dp),
-        color = Color(color).copy(alpha = 0.1f),
-        tonalElevation = 2.dp
     ) {
-        // IntrinsicSize.Min lets the left accent strip fill the container's full height
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(IntrinsicSize.Min)
-        ) {
-            // 4dp colored left strip matching group color
-            Box(
-                modifier = Modifier
-                    .width(4.dp)
-                    .fillMaxHeight()
-                    .background(
-                        Color(color),
-                        RoundedCornerShape(topStart = 12.dp, bottomStart = 12.dp)
-                    )
-            )
-
-            Column(modifier = Modifier.weight(1f)) {
-            // Header content integrated into container
-            // Use pointerInput instead of clickable to avoid interfering with drag gestures
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .pointerInput(Unit) {
-                        detectTapGestures(
-                            onTap = { onHeaderClick() }
-                        )
-                    }
-                    .padding(16.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    modifier = Modifier.weight(1f)
-                ) {
-                    // Expand/Collapse icon
-                    Icon(
-                        imageVector = if (isExpanded) Icons.Default.KeyboardArrowDown else Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                        contentDescription = stringResource(if (isExpanded) R.string.collapse else R.string.expand),
-                        tint = Color(color),
-                        modifier = Modifier.size(24.dp)
-                    )
-
-                    // Group name
-                    Text(
-                        text = title,
-                        style = MaterialTheme.typography.titleMediumEmphasized,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f)
-                    )
-
-                    // Tab count badge
-                    Surface(
-                        shape = CircleShape,
-                        color = Color(color).copy(alpha = 0.2f),
-                        border = BorderStroke(2.dp, Color(color))
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .padding(horizontal = 12.dp, vertical = 4.dp)
-                                .defaultMinSize(minWidth = 24.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = children.size.toString(),
-                                style = MaterialTheme.typography.labelMediumEmphasized,
-                                color = Color(color)
-                            )
-                        }
-                    }
-                }
-
-                // Options button
-                IconButton(
-                    onClick = onOptionsClick,
-                    modifier = Modifier.size(32.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.MoreVert,
-                        contentDescription = stringResource(R.string.options),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(24.dp)
-                    )
-                }
-            }
-
-            // Child tabs grid — shown when expanded
-            AnimatedVisibility(
-                visible = isExpanded,
-                enter = expandVertically(MaterialTheme.motionScheme.defaultSpatialSpec()),
-                exit = shrinkVertically(MaterialTheme.motionScheme.fastSpatialSpec())
-            ) {
-                GroupTabsGridRow(
-                    groupId = groupId,
-                    tabs = children,
-                    groupColor = color,
-                    selectedTabId = selectedTabId,
-                    onTabClick = onTabClick,
-                    onTabClose = onTabClose,
-                    onTabLongPress = { tab -> onTabLongPress(tab) },
-                    coordinator = coordinator,
-                    hoverState = hoverState,
-                    hoveredGroupId = hoveredGroupId
-                )
-            }
-            } // end Column
-        } // end Row IntrinsicSize
+        GroupTabsGridRow(
+            groupId = groupId,
+            tabs = children,
+            groupColor = color,
+            selectedTabId = selectedTabId,
+            onTabClick = onTabClick,
+            onTabClose = onTabClose,
+            onTabLongPress = { tab -> onTabLongPress(tab) },
+            coordinator = coordinator,
+            hoverState = hoverState,
+            hoveredGroupId = hoveredGroupId
+        )
     }
 }
 

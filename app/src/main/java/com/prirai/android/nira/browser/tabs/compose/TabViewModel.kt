@@ -808,17 +808,6 @@ class TabViewModel(
     // ========== Unified Menu Actions ==========
 
     /**
-     * Create a new tab in the current profile
-     */
-    fun createNewTab() {
-        viewModelScope.launch {
-            val profileId = _currentProfileId.value ?: return@launch
-            // This will be handled by the caller (e.g., BrowserActivity)
-            // through the components.tabsUseCases.addTab()
-        }
-    }
-
-    /**
      * Duplicate a tab: creates a copy in the same profile partition (and the
      * same group, if the source tab is grouped), then selects the copy.
      *
@@ -854,30 +843,6 @@ class TabViewModel(
 
             components.tabsUseCases.selectTab(newTabId)
         }
-    }
-
-    /**
-     * Toggle pin status of a tab
-     */
-    fun togglePinTab(tabId: String) {
-        viewModelScope.launch {
-            // This will be handled by the caller
-            // through components.tabsUseCases.pinTab() or unpinTab()
-        }
-    }
-
-    /**
-     * Show dialog to add tab to a group
-     */
-    fun showAddToGroupDialog(tabId: String) {
-        // This will be handled by the caller to show the group selection dialog
-    }
-
-    /**
-     * Enter multi-select mode for batch operations
-     */
-    fun enterMultiSelectMode() {
-        // This will be handled by the caller to enter multi-select mode
     }
 
     /**
