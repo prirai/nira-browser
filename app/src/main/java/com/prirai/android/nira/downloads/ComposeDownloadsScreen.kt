@@ -20,7 +20,6 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -114,18 +113,13 @@ fun DownloadsScreen(onDismiss: () -> Unit) {
         }
         .sortedByDescending { it.createdTime }
 
-    Surface(
+    // The dialog theme's rounded_bottom_sheet provides the sheet chrome
+    // (28dp top corners, colorSurface); the content draws no second surface.
+    Column(
         modifier = Modifier
             .fillMaxWidth()
-            .wrapContentHeight(),
-        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
-        color = MaterialTheme.colorScheme.surface
+            .heightIn(min = 200.dp, max = 640.dp)
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .heightIn(min = 200.dp, max = 640.dp)
-        ) {
             NiraSheetHeader(
                 title = stringResource(R.string.downloads_title),
                 onClose = onDismiss,
@@ -223,7 +217,6 @@ fun DownloadsScreen(onDismiss: () -> Unit) {
                 }
             }
         }
-    }
 }
 
 @Composable

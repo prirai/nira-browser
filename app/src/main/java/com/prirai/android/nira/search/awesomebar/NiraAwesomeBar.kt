@@ -37,6 +37,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.prirai.android.nira.R
+import com.prirai.android.nira.ui.components.NiraCardRow
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
@@ -139,79 +140,44 @@ private fun SuggestionCardRow(
     onClick: () -> Unit,
     onRemove: () -> Unit,
 ) {
-    val shape = RoundedCornerShape(
-        topStart = if (isFirst) GroupCornerRadius else 0.dp,
-        topEnd = if (isFirst) GroupCornerRadius else 0.dp,
-        bottomStart = if (isLast) GroupCornerRadius else 0.dp,
-        bottomEnd = if (isLast) GroupCornerRadius else 0.dp,
-    )
-
-    Surface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = CardHorizontalPadding)
-            .clip(shape)
-            .clickable(onClick = onClick),
-        shape = shape,
-        color = MaterialTheme.colorScheme.surfaceContainerHigh,
-        tonalElevation = 1.dp
-    ) {
-        Column {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(48.dp)
-                    .padding(horizontal = 12.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                val icon = suggestion.icon
-                if (icon != null) {
-                    Image(
-                        bitmap = icon.asImageBitmap(),
-                        contentDescription = null,
-                        modifier = Modifier
-                            .size(24.dp)
-                            .clip(RoundedCornerShape(4.dp)),
-                        contentScale = ContentScale.Crop
-                    )
-                } else {
-                    Spacer(modifier = Modifier.size(24.dp))
-                }
-
-                Text(
-                    text = suggestion.title?.ifBlank { null } ?: suggestion.description.orEmpty(),
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
+    NiraCardRow(
+        title = suggestion.title?.ifBlank { null } ?: suggestion.description.orEmpty(),
+        isTopRow = isFirst,
+        isBottomRow = isLast,
+        showDivider = !isLast,
+        cornerRadius = GroupCornerRadius,
+        onClick = onClick,
+        leading = {
+            val icon = suggestion.icon
+            if (icon != null) {
+                Image(
+                    bitmap = icon.asImageBitmap(),
+                    contentDescription = null,
                     modifier = Modifier
-                        .weight(1f)
-                        .padding(start = 12.dp, end = 8.dp)
+                        .size(24.dp)
+                        .clip(RoundedCornerShape(4.dp)),
+                    contentScale = ContentScale.Crop
                 )
-
-                if (suggestion.isRemovalAllowed) {
-                    IconButton(
-                        onClick = onRemove,
-                        modifier = Modifier.size(32.dp)
-                    ) {
-                        Icon(
-                            painter = painterResource(R.drawable.ic_close_small),
-                            contentDescription = stringResource(R.string.remove_history_item),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
+            } else {
+                Spacer(modifier = Modifier.size(24.dp))
+            }
+        },
+        trailing = {
+            if (suggestion.isRemovalAllowed) {
+                IconButton(
+                    onClick = onRemove,
+                    modifier = Modifier.size(32.dp)
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_close_small),
+                        contentDescription = stringResource(R.string.remove_history_item),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(18.dp)
+                    )
                 }
             }
-
-            if (!isLast) {
-                HorizontalDivider(
-                    modifier = Modifier.padding(start = 48.dp),
-                    color = MaterialTheme.colorScheme.outlineVariant
-                )
-            }
-        }
-    }
+        },
+    )
 }
 
 /**

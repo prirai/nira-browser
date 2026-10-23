@@ -25,7 +25,6 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -215,16 +214,11 @@ fun ExtensionsBottomSheetContent(
     onManageAddonsClick: () -> Unit,
     onDismiss: () -> Unit
 ) {
-    Surface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .wrapContentHeight(),
-        color = MaterialTheme.colorScheme.surface,
-        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
+    // The dialog theme's rounded_bottom_sheet provides the sheet chrome
+    // (28dp top corners, colorSurface); the content draws no second surface.
+    Column(
+        modifier = Modifier.fillMaxWidth()
     ) {
-        Column(
-            modifier = Modifier.fillMaxWidth()
-        ) {
             NiraSheetHeader(
                 title = stringResource(R.string.extensions),
                 onClose = onDismiss,
@@ -283,7 +277,6 @@ fun ExtensionsBottomSheetContent(
                 }
             }
         }
-    }
 }
 
 private const val EXTENSION_ICON_SIZE = 48
