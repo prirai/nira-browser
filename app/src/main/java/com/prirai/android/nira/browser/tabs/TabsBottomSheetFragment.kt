@@ -244,24 +244,8 @@ class TabsBottomSheetFragment : DialogFragment() {
             showTabSearch()
         }
 
-        // Hide XML view mode switcher — replaced by Compose SingleChoiceSegmentedButtonRow in header
-        binding.viewModeSwitcher.visibility = View.GONE
-
-        // Setup view mode switcher
-        setupViewModeSwitcher()
-    }
-
-    private fun setupViewModeSwitcher() {
         // Restore saved view preference; Compose header handles the toggle UI
         isGridViewState.value = viewPrefs.getBoolean("is_grid_view", false)
-    }
-
-    private fun handleSwitchToListView() {
-            setupComposeTabViews()
-    }
-
-    private fun handleSwitchToGridView() {
-            setupComposeTabViews()
     }
 
     private fun showTabSearch() {
@@ -502,8 +486,10 @@ class TabsBottomSheetFragment : DialogFragment() {
 
     private fun setupComposeTabViews() {
         // Hide RecyclerView
+        // Hide the RecyclerView anchors - the Compose tab sheet renders
+        // everything; tabsRecyclerView stays as the ComposeView's layout
+        // anchor (parent + LayoutParams).
         binding.tabsRecyclerView.visibility = View.GONE
-        binding.tabsGridRecyclerView.visibility = View.GONE
 
         // Find parent container
         val container = binding.tabsRecyclerView.parent as? ViewGroup ?: return

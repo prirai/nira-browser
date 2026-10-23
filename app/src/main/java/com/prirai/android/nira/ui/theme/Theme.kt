@@ -65,9 +65,9 @@ private val PrivateDarkColorScheme = darkColorScheme(
     onPrimaryContainer = Color.White,
     secondary = PrivatePurple40,
     surface = PrivateDarkSurface,
-    onSurface = Color(0xFFE0D5F0),
+    onSurface = PrivateOnDarkSurface,
     background = PrivateDarkBackground,
-    onBackground = Color(0xFFE0D5F0)
+    onBackground = PrivateOnDarkSurface
 )
 
 private val PrivateAmoledColorScheme = darkColorScheme(
@@ -77,9 +77,9 @@ private val PrivateAmoledColorScheme = darkColorScheme(
     onPrimaryContainer = Color.White,
     secondary = PrivatePurple40,
     surface = AmoledBlack,
-    onSurface = Color(0xFFE0D5F0),
+    onSurface = PrivateOnDarkSurface,
     background = AmoledBlack,
-    onBackground = Color(0xFFE0D5F0),
+    onBackground = PrivateOnDarkSurface,
     surfaceVariant = AmoledSurfaceVariant,
     surfaceContainer = AmoledSurfaceVariant,
     surfaceContainerLow = AmoledBlack,

@@ -18,6 +18,7 @@ val PrivatePurple40 = Color(0xFF5D2CB8)
 val PrivatePurple20 = Color(0xFF3D1C7A)
 val PrivatePurple10 = Color(0xFF2E1A47)
 val PrivatePurple5 = Color(0xFF1E0E34)
+val PrivateOnDarkSurface = Color(0xFFE0D5F0)
 
 val PrivateLightBackground = Color(0xFFF5F0FF)
 val PrivateLightSurface = Color(0xFFEBDCFF)

@@ -1,30 +1,27 @@
 package com.prirai.android.nira.history
 
 import android.content.Context
+import com.prirai.android.nira.R
 import java.util.concurrent.TimeUnit
 
 object HistoryTimeFormatter {
-    
+
     fun getRelativeTimeString(context: Context, timestamp: Long): String {
-        val now = System.currentTimeMillis()
-        val diff = now - timestamp
-        
+        val diff = System.currentTimeMillis() - timestamp
+
         val minutes = TimeUnit.MILLISECONDS.toMinutes(diff)
         val hours = TimeUnit.MILLISECONDS.toHours(diff)
         val days = TimeUnit.MILLISECONDS.toDays(diff)
-        
+
         return when {
-            minutes < 1 -> "Just now"
-            minutes < 60 -> "${minutes}m ago"
-            hours < 24 -> "${hours}h ago"
-            days < 7 -> "${days}d ago"
+            minutes < 1 -> context.getString(R.string.history_time_just_now)
+            minutes < 60 -> context.getString(R.string.history_time_minutes_ago, minutes)
+            hours < 24 -> context.getString(R.string.history_time_hours_ago, hours)
+            days < 7 -> context.getString(R.string.history_time_days_ago, days)
             else -> {
                 val weeks = days / 7
-                if (weeks < 4) "${weeks}w ago"
-                else {
-                    val months = days / 30
-                    "${months}mo ago"
-                }
+                if (weeks < 4) context.getString(R.string.history_time_weeks_ago, weeks)
+                else context.getString(R.string.history_time_months_ago, days / 30)
             }
         }
     }

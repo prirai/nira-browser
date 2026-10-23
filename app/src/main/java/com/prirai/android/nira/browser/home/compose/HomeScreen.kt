@@ -732,10 +732,10 @@ fun PrivateBrowsingInfo(modifier: Modifier = Modifier) {
 
             Surface(
                 shape = RoundedCornerShape(8.dp),
-                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
+                color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f),
                 modifier = Modifier.border(
-                    width = 2.dp,
-                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
+                    width = 1.dp,
+                    color = MaterialTheme.colorScheme.outlineVariant,
                     shape = RoundedCornerShape(8.dp)
                 )
             ) {
@@ -827,7 +827,7 @@ fun AddShortcutDialog(
                     value = title,
                     onValueChange = { title = it },
                     label = { Text(stringResource(R.string.title)) },
-                    placeholder = { Text("My Website") },
+                    placeholder = { Text(stringResource(R.string.my_website_placeholder)) },
                     keyboardOptions = KeyboardOptions(
                         imeAction = ImeAction.Done
                     ),

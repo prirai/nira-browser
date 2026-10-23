@@ -19,50 +19,14 @@
             android:background="@drawable/drag_handle_background" />
 
         <!-- View mode switcher (List/Grid) -->
-        <com.google.android.material.button.MaterialButtonToggleGroup
-            android:id="@+id/viewModeSwitcher"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_alignParentEnd="true"
-            android:layout_below="@id/dragHandle"
-            android:layout_marginEnd="16dp"
-            android:layout_marginTop="8dp"
-            app:singleSelection="true"
-            app:selectionRequired="true"
-            app:checkedButton="@id/listViewButton">
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/listViewButton"
-                style="@style/Widget.Material3.Button.OutlinedButton"
-                android:layout_width="wrap_content"
-                android:layout_height="36dp"
-                android:minWidth="48dp"
-                android:insetTop="0dp"
-                android:insetBottom="0dp"
-                app:icon="@drawable/ic_view_list"
-                app:iconPadding="0dp"
-                android:contentDescription="List View" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/gridViewButton"
-                style="@style/Widget.Material3.Button.OutlinedButton"
-                android:layout_width="wrap_content"
-                android:layout_height="36dp"
-                android:minWidth="48dp"
-                android:insetTop="0dp"
-                android:insetBottom="0dp"
-                app:icon="@drawable/ic_view_grid"
-                app:iconPadding="0dp"
-                android:contentDescription="Grid View" />
-
-        </com.google.android.material.button.MaterialButtonToggleGroup>
+        
 
         <!-- Tabs List RecyclerView -->
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/tabsRecyclerView"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:layout_below="@id/viewModeSwitcher"
+           
            
             android:layout_marginTop="8dp"
             android:paddingTop="8dp"
@@ -72,28 +36,14 @@
             android:clipToPadding="false"
             android:overScrollMode="never" />
 
-        <!-- Tabs Grid RecyclerView -->
-        <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/tabsGridRecyclerView"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:layout_below="@id/viewModeSwitcher"
-           
-            android:layout_marginTop="8dp"
-            android:paddingTop="8dp"
-            android:paddingBottom="8dp"
-            android:paddingStart="8dp"
-            android:paddingEnd="8dp"
-            android:clipToPadding="false"
-            android:overScrollMode="never"
-            android:visibility="gone" />
+        
 
         <!-- Empty state when no tabs -->
         <LinearLayout
             android:id="@+id/emptyStateLayout"
             android:layout_width="wrap_content"
             android:layout_height="match_parent"
-            android:layout_below="@id/viewModeSwitcher"
+           
            
             android:layout_centerHorizontal="true"
             android:layout_marginTop="32dp"
