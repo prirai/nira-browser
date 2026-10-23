@@ -60,6 +60,7 @@ import com.prirai.android.nira.R
 import com.prirai.android.nira.ext.components
 import com.prirai.android.nira.preferences.UserPreferences
 import com.prirai.android.nira.theme.ThemeManager
+import com.prirai.android.nira.ui.components.NiraEmptyState
 import com.prirai.android.nira.ui.components.NiraLoadingIndicator
 import com.prirai.android.nira.ui.theme.NiraTheme
 import kotlinx.coroutines.Dispatchers
@@ -275,18 +276,13 @@ fun AddonsScreen(
                 // Empty state
                 if (filteredEnabled.isEmpty() && filteredRecommended.isEmpty() && !isLoading.value) {
                     item {
-                        Box(
+                        NiraEmptyState(
+                            title = stringResource(R.string.no_extensions_available),
+                            icon = Icons.Default.Extension,
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(32.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = stringResource(R.string.no_extensions_available),
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
+                                .padding(vertical = 24.dp, horizontal = 32.dp),
+                        )
                     }
                 }
                 }

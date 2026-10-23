@@ -863,7 +863,7 @@ private fun TabListItem(
 
     // Background color - use group color for selected tabs in groups
     val backgroundColor = when {
-        isSelected && effectiveIsInGroup && groupColor != null -> Color(groupColor).copy(alpha = 0.2f)
+        isSelected && effectiveIsInGroup && groupColor != null -> Color(groupColor).copy(alpha = 0.25f)
         isSelected -> MaterialTheme.colorScheme.primaryContainer
         effectiveIsInGroup && groupColor != null -> Color(groupColor).copy(alpha = 0.05f)
         else -> MaterialTheme.colorScheme.surface
@@ -887,9 +887,12 @@ private fun TabListItem(
         color = backgroundColor,
         tonalElevation = if (isSelected) 2.dp else 0.dp,
         border = when {
-            isSelected && effectiveIsInGroup && groupColor != null -> BorderStroke(2.dp, Color(groupColor))
-            isSelected -> BorderStroke(2.dp, MaterialTheme.colorScheme.primary)
-            effectiveIsInGroup && groupColor != null -> BorderStroke(1.dp, Color(groupColor).copy(alpha = 0.2f))
+            // Group color borders are functional identity; the selected state
+            // speaks through its container color, never an accent stroke.
+            effectiveIsInGroup && groupColor != null -> BorderStroke(
+                if (isSelected) 2.dp else 1.dp,
+                Color(groupColor).copy(alpha = if (isSelected) 0.9f else 0.2f)
+            )
             else -> null
         }
     ) {

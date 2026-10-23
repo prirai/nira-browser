@@ -6,10 +6,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Error
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -20,49 +16,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.prirai.android.nira.R
 
 private val StateIconContainerSize = 96.dp
 private val StateIconSize = 44.dp
-
-/**
- * Failure state for any surface, with a single retry affordance.
- */
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
-@Composable
-fun NiraErrorState(
-    error: String,
-    onRetry: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Box(
-        modifier = modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center,
-    ) {
-        Column(
-            modifier = Modifier.padding(32.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-        ) {
-            NiraStateIcon(icon = Icons.Outlined.Error, tint = MaterialTheme.colorScheme.error)
-            Text(
-                text = error,
-                style = MaterialTheme.typography.bodyLarge,
-                textAlign = TextAlign.Center,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-            Button(
-                onClick = onRetry,
-                shapes = ButtonDefaults.shapes(),
-            ) {
-                Text(stringResource(R.string.retry))
-            }
-        }
-    }
-}
 
 /**
  * Empty state for any surface. [icon] and [subtitle] are optional so a bare

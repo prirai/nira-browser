@@ -186,14 +186,16 @@ fun SwipeableTabPill(
                 },
             shape = RoundedCornerShape(12.dp),
             color = when {
-                isSelected && groupColor != null -> Color(groupColor).copy(alpha = 0.3f)
-                isSelected -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.55f)
+                isSelected && groupColor != null -> Color(groupColor).copy(alpha = 0.35f)
+                isSelected -> MaterialTheme.colorScheme.primaryContainer
                 else -> Color.Transparent
             },
-            border = if (isSelected) {
+            border = if (groupColor != null) {
+                // Group color border is functional identity; the selected state
+                // speaks through its container color, never an accent stroke.
                 BorderStroke(
-                    1.dp,
-                    groupColor?.let { Color(it) } ?: MaterialTheme.colorScheme.primary
+                    if (isSelected) 2.dp else 1.dp,
+                    Color(groupColor).copy(alpha = if (isSelected) 0.9f else 0.3f)
                 )
             } else {
                 null

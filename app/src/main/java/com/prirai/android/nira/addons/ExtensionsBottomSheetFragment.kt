@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -62,7 +63,9 @@ import com.prirai.android.nira.R
 import com.prirai.android.nira.ext.components
 import com.prirai.android.nira.preferences.UserPreferences
 import com.prirai.android.nira.theme.ThemeManager
+import com.prirai.android.nira.ui.components.NiraEmptyState
 import com.prirai.android.nira.ui.components.NiraLoadingIndicator
+import com.prirai.android.nira.ui.components.NiraSheetHeader
 import com.prirai.android.nira.ui.theme.NiraTheme
 import mozilla.components.browser.state.selector.selectedTab
 import mozilla.components.feature.addons.Addon
@@ -222,34 +225,19 @@ fun ExtensionsBottomSheetContent(
         Column(
             modifier = Modifier.fillMaxWidth()
         ) {
-            // Drag handle
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 12.dp, bottom = 8.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Surface(
-                    modifier = Modifier
-                        .width(32.dp)
-                        .height(4.dp),
-                    shape = RoundedCornerShape(2.dp),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
-                ) {}
-            }
-            
-            // Title
-            Text(
-                text = stringResource(R.string.extensions),
-                style = MaterialTheme.typography.titleLargeEmphasized,
-                modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp)
+            NiraSheetHeader(
+                title = stringResource(R.string.extensions),
+                onClose = onDismiss,
+                
+                dividerAlpha = null,
+                contentPadding = PaddingValues(start = 24.dp, end = 16.dp, bottom = 6.dp),
             )
-            
+
             // Content
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .heightIn(max = 400.dp)
+                    .heightIn(min = 200.dp, max = 400.dp)
             ) {
                 when {
                     isLoading -> {
@@ -260,36 +248,19 @@ fun ExtensionsBottomSheetContent(
                         }
                     }
                     addons.isEmpty() -> {
-                        Box(
+                        NiraEmptyState(
+                            title = stringResource(R.string.no_extensions_installed),
+                            icon = Icons.Default.Extension,
                             modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.spacedBy(16.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Extension,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(64.dp),
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                                Text(
-                                    text = stringResource(R.string.no_extensions_installed),
-                                    style = MaterialTheme.typography.titleMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
+                            action = {
                                 Button(
                                     onClick = onManageAddonsClick,
                                     shapes = ButtonDefaults.shapes(),
-                                    colors = ButtonDefaults.buttonColors(
-                                        containerColor = MaterialTheme.colorScheme.primary
-                                    )
                                 ) {
                                     Text(stringResource(R.string.manage_addons))
                                 }
-                            }
-                        }
+                            },
+                        )
                     }
                     else -> {
                         LazyColumn(

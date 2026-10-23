@@ -70,6 +70,7 @@ import coil.request.ImageRequest
 import com.prirai.android.nira.R
 import com.prirai.android.nira.browser.tabs.compose.FaviconImageFromUrl
 import com.prirai.android.nira.settings.HomepageChoice
+import com.prirai.android.nira.ui.components.NiraAlertDialog
 import com.prirai.android.nira.ui.components.pressScale
 import mozilla.components.browser.state.state.BrowserState
 
@@ -371,14 +372,16 @@ fun SearchBar(
         modifier = modifier
             .fillMaxWidth()
             .pressScale(interactionSource, pressedScale = 0.98f),
-        shape = RoundedCornerShape(16.dp),
+        // The same pill the real search fields wear, so the homepage affordance
+        // reads as the same control as NiraSearchField before it is tapped.
+        shape = MaterialTheme.shapes.extraLarge,
         color = MaterialTheme.colorScheme.surfaceContainerHigh,
         tonalElevation = 1.dp
     ) {
         Row(
             modifier = Modifier
                 .clickable(interactionSource = interactionSource, onClick = onSearchClick)
-                .padding(horizontal = 16.dp, vertical = 14.dp),
+                .padding(horizontal = 16.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
@@ -791,7 +794,7 @@ fun AddShortcutDialog(
     var urlError by remember { mutableStateOf(false) }
     val untitledLabel = stringResource(R.string.untitled)
 
-    AlertDialog(
+    NiraAlertDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(stringResource(R.string.add_shortcut_dialog))

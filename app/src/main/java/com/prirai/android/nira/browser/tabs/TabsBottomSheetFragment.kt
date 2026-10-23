@@ -22,6 +22,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.fragment.app.DialogFragment
@@ -750,10 +751,9 @@ class TabsBottomSheetFragment : DialogFragment() {
                     verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    val tabWord = if (tabs.size == 1) "Tab" else "Tabs"
                     Text(
-                        text = "${tabs.size} $tabWord",
-                        style = MaterialTheme.typography.titleMedium
+                        text = pluralStringResource(R.plurals.tab_count, tabs.size, tabs.size),
+                        style = MaterialTheme.typography.titleMediumEmphasized
                     )
                     SingleChoiceSegmentedButtonRow {
                         SegmentedButton(
@@ -935,8 +935,12 @@ class TabsBottomSheetFragment : DialogFragment() {
     ) {
         androidx.compose.animation.AnimatedVisibility(
             visible = true,
-            enter = androidx.compose.animation.slideInVertically { it } + androidx.compose.animation.fadeIn(),
-            exit = androidx.compose.animation.slideOutVertically { it } + androidx.compose.animation.fadeOut(),
+            enter = androidx.compose.animation.slideInVertically(
+                animationSpec = MaterialTheme.motionScheme.fastSpatialSpec()
+            ) { it } + androidx.compose.animation.fadeIn(MaterialTheme.motionScheme.defaultEffectsSpec()),
+            exit = androidx.compose.animation.slideOutVertically(
+                animationSpec = MaterialTheme.motionScheme.fastSpatialSpec()
+            ) { it } + androidx.compose.animation.fadeOut(MaterialTheme.motionScheme.fastEffectsSpec()),
             modifier = modifier
         ) {
             Surface(

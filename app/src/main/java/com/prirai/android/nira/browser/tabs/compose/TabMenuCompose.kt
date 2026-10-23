@@ -24,6 +24,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.prirai.android.nira.R
+import com.prirai.android.nira.ui.components.rememberNiraSheetState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import mozilla.components.browser.state.state.TabSessionState
@@ -150,6 +151,7 @@ fun TabContextMenu(
 ) {
     ModalBottomSheet(
         onDismissRequest = onDismiss,
+        sheetState = rememberNiraSheetState(),
         modifier = modifier
     ) {
         Column(
@@ -253,6 +255,7 @@ fun GroupContextMenu(
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
+        sheetState = rememberNiraSheetState(),
         modifier = modifier
     ) {
         Column(
