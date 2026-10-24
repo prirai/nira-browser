@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Strings for the Material 3 Expressive Web Apps manager and Site
+     Exceptions screens (UnifiedWebAppFragment, SiteExceptionsFragment,
+     WebAppInstallDialog, WebAppDialogs). Reused strings live in
+     values/strings.xml; only genuinely new ones are declared here. -->
+<resources>
+    <!-- Installed web app row metadata -->
+    <string name="webapp_default_profile_name">Default</string>
+    <string name="webapp_last_used_today">Today</string>
+    <string name="webapp_last_used_one_day">1 day ago</string>
+    <string name="webapp_last_used_days">%1$d days ago</string>
+    <string name="webapp_never_used">Never used</string>
+    <string name="webapp_usage_info">Launches: %1$d · Last: %2$s</string>
+
+    <!-- Clone dialog pre-filled name -->
+    <string name="webapp_clone_name_suffix">%1$s (Clone)</string>
+</resources>
