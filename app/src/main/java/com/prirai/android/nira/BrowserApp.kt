@@ -20,7 +20,7 @@ import mozilla.components.support.ktx.android.content.runOnlyInMainProcess
 import mozilla.components.support.webextensions.WebExtensionSupport
 import java.util.concurrent.TimeUnit
 
-class BrowserApp : Application() {
+class BrowserApp : Application(), coil.ImageLoaderFactory {
 
     private val logger = Logger("BrowserApp")
 
@@ -418,8 +418,25 @@ class BrowserApp : Application() {
 
         runOnlyInMainProcess {
             components.icons.onTrimMemory(level)
+            com.prirai.android.nira.utils.FaviconCache.getInstance(this).onTrimMemory(level)
             components.store.dispatch(SystemAction.LowMemoryAction(level))
             components.sleepingTabsManager.onTrimMemory(components.store, level)
         }
     }
+
+    /**
+     * Coil's default memory cache is 25% of the app's max heap - a triple-digit
+     * MB allowance on this class of device. Nira only uses Coil for the homepage
+     * background and a few addon icons, so a fixed 24MB keeps every image the
+     * app actually shows resident while capping the bitmap floor.
+     */
+    override fun newImageLoader(): coil.ImageLoader =
+        coil.ImageLoader.Builder(this)
+            .memoryCache {
+                coil.memory.MemoryCache.Builder(this)
+                    .maxSizeBytes(24 * 1024 * 1024)
+                    .build()
+            }
+            .crossfade(true)
+            .build()
 }

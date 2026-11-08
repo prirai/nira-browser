@@ -36,13 +36,6 @@ object UserJsPreferences {
     private val privacyPrefs = mapOf<String, Any>(
         // Disables navigator.sendBeacon — prevents silent background data leakage
         "beacon.enabled" to false,
-        // Classic fingerprint resistance (letterboxing, uniform UA, etc.)
-        // NOTE: while RFP is enabled, Gecko forces content
-        // `prefers-color-scheme: light` (a uniform fingerprint, bug
-        // 1535189) - the "Web theme" setting cannot reach pages. This is
-        // an accepted trade-off of the hardening; see about:config if it
-        // ever needs to be reconsidered.
-        "privacy.resistFingerprinting" to true,
         // Send Do-Not-Track request header
         "privacy.donottrackheader.enabled" to true,
         // Clear cookies and HTTP sessions on browser shutdown
@@ -52,6 +45,19 @@ object UserJsPreferences {
         "cookiebanners.service.mode" to 1,
         "cookiebanners.service.mode.privateBrowsing" to 1,
     )
+
+    // Classic fingerprint resistance (letterboxing, uniform UA, canvas
+    // spoofing...). While RFP is enabled, Gecko forces content
+    // `prefers-color-scheme: light` (a uniform fingerprint, bug 1535189) and
+    // spoofs canvas/image readbacks, which breaks picture uploads/downloads
+    // on some sites (red-line renderings) and the "Web theme" setting. It is
+    // therefore user-controlled via Advanced settings and OFF by default.
+    private fun rfpPrefs(enabled: Boolean): Map<String, Any> =
+        if (enabled) {
+            mapOf("privacy.resistFingerprinting" to true)
+        } else {
+            emptyMap()
+        }
 
     private val telemetryPrefs = mapOf<String, Any>(
         "datareporting.healthreport.uploadEnabled" to false,
@@ -112,9 +118,9 @@ object UserJsPreferences {
 
     // ── Config file writing ──────────────────────────────────────────────────
 
-    private fun buildConfigJson(): String {
-        val allPrefs = privacyPrefs + telemetryPrefs + networkPrefs +
-                securityPrefs + mediaPrefs + performancePrefs
+    private fun buildConfigJson(resistFingerprinting: Boolean): String {
+        val allPrefs = privacyPrefs + rfpPrefs(resistFingerprinting) + telemetryPrefs +
+                networkPrefs + securityPrefs + mediaPrefs + performancePrefs
 
         return buildString {
             append("{\"prefs\":{")
@@ -155,8 +161,9 @@ object UserJsPreferences {
      * becomes read-only.
      */
     fun applyTo(context: Context, builder: GeckoRuntimeSettings.Builder) {
+        val rfpEnabled = com.prirai.android.nira.preferences.UserPreferences(context).resistFingerprinting
         val configFile = File(context.filesDir, CONFIG_FILE_NAME)
-        val desired = buildConfigJson()
+        val desired = buildConfigJson(rfpEnabled)
         val current = runCatching { if (configFile.exists()) configFile.readText() else null }.getOrNull()
         if (current != desired) {
             configFile.writeText(desired)
@@ -170,10 +177,19 @@ object UserJsPreferences {
      *
      * These typed setters are belt-and-suspenders on top of the config file approach:
      * they set the live runtime preference value directly, not just the Gecko default.
+     *
+     * Fingerprinting protection follows the same user preference as the config-file
+     * RFP pref; both are applied at engine construction, so toggling the setting in
+     * Advanced takes effect on the next app start.
      */
-    fun applyTypedSettings(settings: GeckoRuntimeSettings) {
+    fun applyTypedSettings(context: Context, settings: GeckoRuntimeSettings) {
         // Enhanced fingerprinting protection for both normal and private browsing
-        settings.setFingerprintingProtection(true)
-        settings.setFingerprintingProtectionPrivateBrowsing(true)
+        if (com.prirai.android.nira.preferences.UserPreferences(context).resistFingerprinting) {
+            settings.setFingerprintingProtection(true)
+            settings.setFingerprintingProtectionPrivateBrowsing(true)
+        } else {
+            settings.setFingerprintingProtection(false)
+            settings.setFingerprintingProtectionPrivateBrowsing(false)
+        }
     }
 }

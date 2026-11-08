@@ -14,7 +14,14 @@
     </PreferenceCategory>
 
     <PreferenceCategory android:title="Security">
-        
+
+        <com.prirai.android.nira.settings.MaterialSwitchPreference
+            app:key="@string/key_resist_fingerprinting"
+            app:title="@string/resist_fingerprinting"
+            app:summary="@string/resist_fingerprinting_summary"
+            app:singleLineTitle="false"
+            app:defaultValue="false" />
+
         <com.prirai.android.nira.settings.MaterialSwitchPreference
             app:key="@string/key_trust_third_party_certs"
             app:title="@string/trust_third_party_certs"
