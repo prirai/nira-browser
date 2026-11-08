@@ -768,12 +768,20 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
                         val lruManager = com.prirai.android.nira.browser.tabs.TabLRUManager.getInstance(requireContext())
                         val currentTabIds = store.state.tabs.map { it.id }
                         lruManager.synchronizeWithTabs(currentTabIds)
-                        
+
+                        // Read the CURRENT store state, not the emitted
+                        // snapshot: the tab-count observer below can receive
+                        // the very same empty-state emission and both must
+                        // not create a tab from it. Checking the live state
+                        // makes the creation idempotent - whichever collector
+                        // runs first dispatches addTab synchronously, and
+                        // the other sees the new tab and skips.
+                        val current = store.state
                         val tabs =
-                            store.state.getNormalOrPrivateTabs(
+                            current.getNormalOrPrivateTabs(
                                 activity.browsingModeManager.mode.isPrivate
                             )
-                        if (tabs.isEmpty() || store.state.selectedTabId == null) {
+                        if (tabs.isEmpty() || current.selectedTabId == null) {
                             // Navigate to home fragment first
                             try {
                                 if (navController.currentDestination?.id != R.id.homeFragment) {
@@ -782,34 +790,46 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
                             } catch (e: Exception) {
                                 // Navigation failed, create tab as fallback
                             }
-                            
+
                             // Then create a new tab based on homepage preference
-                            when (UserPreferences(requireContext()).homepageType) {
-                                HomepageChoice.VIEW.ordinal -> {
-                                    // Load about:homepage in BrowserFragment (HTML homepage)
-                                    components.tabsUseCases.addTab.invoke(
-                                        "about:homepage",
-                                        selectTab = true
-                                    )
-                                }
-
-                                HomepageChoice.BLANK_PAGE.ordinal -> {
-                                    components.tabsUseCases.addTab.invoke(
-                                        "about:blank",
-                                        selectTab = true
-                                    )
-                                }
-
-                                HomepageChoice.ONLY_SEARCH_BAR.ordinal -> {
-                                    components.tabsUseCases.addTab.invoke(
-                                        "about:homepage",
-                                        selectTab = true
-                                    )
-                                }
-                            }
+                            createHomepagePreferenceTab()
                         }
                     }
                 }
+        }
+    }
+
+    /**
+     * The single "make sure a tab exists" path both startup observers share:
+     * navigates to the home fragment and creates one tab per the user's
+     * homepage preference. Callers must re-check the CURRENT store state
+     * right before calling - the AC RestoreAction reducer ADDS restored
+     * tabs to whatever already exists, so a tab created before the session
+     * restore lands survives forever.
+     */
+    private fun createHomepagePreferenceTab() {
+        when (UserPreferences(requireContext()).homepageType) {
+            HomepageChoice.VIEW.ordinal -> {
+                // Load about:homepage in BrowserFragment (HTML homepage)
+                components.tabsUseCases.addTab.invoke(
+                    "about:homepage",
+                    selectTab = true
+                )
+            }
+
+            HomepageChoice.BLANK_PAGE.ordinal -> {
+                components.tabsUseCases.addTab.invoke(
+                    "about:blank",
+                    selectTab = true
+                )
+            }
+
+            HomepageChoice.ONLY_SEARCH_BAR.ordinal -> {
+                components.tabsUseCases.addTab.invoke(
+                    "about:homepage",
+                    selectTab = true
+                )
+            }
         }
     }
 
@@ -827,41 +847,43 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
                 }
         }
         
-        // Also observe when all tabs are closed
+        // Also observe when all tabs are closed. Gated on restoreComplete:
+        // before the session restore lands the store is legitimately empty,
+        // and creating a tab then permanently pollutes the session (the AC
+        // RestoreAction reducer ADDS restored tabs to whatever already
+        // exists - it never replaces). This was the "two new tabs on every
+        // start" bug: this collector and observeRestoreComplete could each
+        // receive the same empty-state emission and both create a tab.
+        // Reading the CURRENT state (not the emitted snapshot) at handling
+        // time makes the two observers idempotent against each other.
         val activity = activity as? BrowserActivity
         consumeFlow(store) { flow ->
-            flow.map { state -> 
-                state.getNormalOrPrivateTabs(
+            flow.map { state ->
+                state.restoreComplete to state.getNormalOrPrivateTabs(
                     activity?.browsingModeManager?.mode?.isPrivate ?: false
                 ).size
             }
-            .distinctUntilChanged()
-            .collect { tabCount ->
-                if (tabCount == 0 && isAdded && view != null) {
+                .distinctUntilChanged()
+                .collect { (restored, _) ->
+                    if (!restored || !isAdded || view == null) return@collect
+                    if (store.state.getNormalOrPrivateTabs(
+                            activity?.browsingModeManager?.mode?.isPrivate ?: false
+                        ).isNotEmpty()
+                    ) return@collect
+
                     // All tabs closed, navigate to home and create a new tab
                     try {
                         val navController = findNavController()
                         if (navController.currentDestination?.id != R.id.homeFragment) {
                             navController.navigate(R.id.homeFragment)
                         }
-                        
+
                         // Create a new tab
-                        when (UserPreferences(requireContext()).homepageType) {
-                            HomepageChoice.VIEW.ordinal -> {
-                                components.tabsUseCases.addTab.invoke("about:homepage", selectTab = true)
-                            }
-                            HomepageChoice.BLANK_PAGE.ordinal -> {
-                                components.tabsUseCases.addTab.invoke("about:blank", selectTab = true)
-                            }
-                            HomepageChoice.ONLY_SEARCH_BAR.ordinal -> {
-                                components.tabsUseCases.addTab.invoke("about:homepage", selectTab = true)
-                            }
-                        }
+                        createHomepagePreferenceTab()
                     } catch (e: Exception) {
                         // Ignore navigation errors
                     }
                 }
-            }
         }
     }
 

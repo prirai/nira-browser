@@ -297,10 +297,20 @@ class PrivacyAndSecuritySettingsFragment : BaseSettingsFragment() {
     }
 
     private fun showEtpLevelPicker(prefs: UserPreferences, customCategories: PreferenceCategory?) {
+        // The same radio-list picker every other mode option uses
+        // (HTTPS-Only, DoH, Sleeping tabs) - no bespoke card layout.
+        val labels = arrayOf(
+            getString(R.string.etp_none_title),
+            getString(R.string.etp_standard_title),
+            getString(R.string.etp_strict_title),
+            getString(R.string.etp_custom_title),
+        )
         showNiraDialog { onDismiss ->
-            EtpLevelDialog(
-                initialLevel = prefs.etpLevel,
-                onSelect = { level ->
+            ChoiceListDialog(
+                title = getString(R.string.etp_level_title),
+                items = labels,
+                initialSelection = prefs.etpLevel,
+                onChoice = { level ->
                     prefs.etpLevel = level
                     customCategories?.isVisible = level == 3
 
@@ -526,122 +536,6 @@ private fun CustomDohProviderDialog(
             }
         },
     )
-}
-
-private data class EtpLevelInfo(
-    val titleRes: Int,
-    val descriptionRes: Int,
-    val circleColor: Color,
-)
-
-@Composable
-private fun EtpLevelDialog(
-    initialLevel: Int,
-    onSelect: (Int) -> Unit,
-    onDismiss: () -> Unit,
-) {
-    var selected by remember { mutableIntStateOf(initialLevel) }
-    val levels = listOf(
-        EtpLevelInfo(R.string.etp_none_title, R.string.etp_none_desc, MaterialTheme.colorScheme.surfaceVariant),
-        EtpLevelInfo(R.string.etp_standard_title, R.string.etp_standard_desc, MaterialTheme.colorScheme.primaryContainer),
-        EtpLevelInfo(R.string.etp_strict_title, R.string.etp_strict_desc, MaterialTheme.colorScheme.tertiaryContainer),
-        EtpLevelInfo(R.string.etp_custom_title, R.string.etp_custom_desc, MaterialTheme.colorScheme.surfaceVariant),
-    )
-    NiraAlertDialog(
-        onDismissRequest = onDismiss,
-        title = {
-            Text(
-                text = stringResource(R.string.etp_level_title),
-                style = MaterialTheme.typography.headlineSmallEmphasized,
-            )
-        },
-        text = {
-            Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
-                levels.forEachIndexed { index, info ->
-                    EtpLevelCard(
-                        info = info,
-                        isTopRow = index == 0,
-                        isBottomRow = index == levels.lastIndex,
-                        isSelected = index == selected,
-                        onClick = {
-                            selected = index
-                            onDismiss()
-                            onSelect(index)
-                        },
-                    )
-                }
-            }
-        },
-        confirmButton = {},
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(android.R.string.cancel))
-            }
-        },
-    )
-}
-
-@Composable
-private fun EtpLevelCard(
-    info: EtpLevelInfo,
-    isTopRow: Boolean,
-    isBottomRow: Boolean,
-    isSelected: Boolean,
-    onClick: () -> Unit,
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(
-                RoundedCornerShape(
-                    topStart = if (isTopRow) 16.dp else 0.dp,
-                    topEnd = if (isTopRow) 16.dp else 0.dp,
-                    bottomStart = if (isBottomRow) 16.dp else 0.dp,
-                    bottomEnd = if (isBottomRow) 16.dp else 0.dp,
-                ),
-            )
-            .background(
-                if (isSelected) {
-                    MaterialTheme.colorScheme.primaryContainer
-                } else {
-                    MaterialTheme.colorScheme.surface
-                },
-            )
-            .clickable(onClick = onClick)
-            .padding(16.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Box(
-            modifier = Modifier
-                .size(48.dp)
-                .clip(CircleShape)
-                .background(info.circleColor),
-        )
-        Column(
-            modifier = Modifier
-                .weight(1f)
-                .padding(start = 16.dp),
-        ) {
-            Text(
-                text = stringResource(info.titleRes),
-                style = MaterialTheme.typography.titleMediumEmphasized,
-            )
-            Text(
-                text = stringResource(info.descriptionRes),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        if (isSelected) {
-            Spacer(modifier = Modifier.width(12.dp))
-            Icon(
-                painter = painterResource(R.drawable.ic_check_circle),
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(24.dp),
-            )
-        }
-    }
 }
 
 @Composable
