@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalMaterial3ExpressiveApi::class)
+
 package com.prirai.android.nira.addons
 
 import android.content.Intent
@@ -11,6 +13,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Extension
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -19,13 +22,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.ViewCompositionStrategy
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
+import com.prirai.android.nira.R
 import com.prirai.android.nira.ext.components
 import com.prirai.android.nira.preferences.UserPreferences
+import com.prirai.android.nira.ui.components.NiraEmptyState
+import com.prirai.android.nira.ui.components.NiraLoadingIndicator
+import com.prirai.android.nira.ui.components.NiraSearchField
+import com.prirai.android.nira.ui.components.NiraSheetHeader
 import com.prirai.android.nira.ui.theme.NiraTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -105,80 +113,35 @@ fun SearchExtensionsContent(
         }
     }
 
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        color = MaterialTheme.colorScheme.surface,
-        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
+    // The dialog theme's rounded_bottom_sheet provides the sheet chrome
+    // (28dp top corners, colorSurface); the content draws no second surface.
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp)
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
-        ) {
-            // Handle bar
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 16.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Surface(
-                    modifier = Modifier
-                        .width(32.dp)
-                        .height(4.dp),
-                    shape = RoundedCornerShape(2.dp),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
-                ) {}
-            }
-
-            // Title and close button
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 16.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "Search Extensions",
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold
-                )
+            NiraSheetHeader(
+                title = stringResource(R.string.search_extensions),
+                onClose = onDismiss,
                 
-                IconButton(onClick = onDismiss) {
-                    Icon(
-                        imageVector = Icons.Default.Close,
-                        contentDescription = "Close"
-                    )
-                }
-            }
+                dividerAlpha = null,
+            )
 
             // Search field
-            OutlinedTextField(
-                value = searchQuery.value,
-                onValueChange = { searchQuery.value = it },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 16.dp),
-                placeholder = { Text("Search by name or description") },
+            NiraSearchField(
+                query = searchQuery.value,
+                onQueryChange = { searchQuery.value = it },
+                placeholder = stringResource(R.string.search_by_name_or_description),
                 leadingIcon = {
                     Icon(
                         imageVector = Icons.Default.Search,
-                        contentDescription = "Search"
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 },
-                trailingIcon = {
-                    if (searchQuery.value.isNotEmpty()) {
-                        IconButton(onClick = { searchQuery.value = "" }) {
-                            Icon(
-                                imageVector = Icons.Default.Close,
-                                contentDescription = "Clear"
-                            )
-                        }
-                    }
-                },
-                singleLine = true,
-                shape = RoundedCornerShape(12.dp)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp),
             )
 
             // Results
@@ -186,10 +149,9 @@ fun SearchExtensionsContent(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(200.dp),
-                    contentAlignment = Alignment.Center
+                        .height(200.dp)
                 ) {
-                    CircularProgressIndicator()
+                    NiraLoadingIndicator()
                 }
             } else {
                 LazyColumn(
@@ -200,33 +162,23 @@ fun SearchExtensionsContent(
                 ) {
                     if (query.length < 2) {
                         item {
-                            Box(
+                            NiraEmptyState(
+                                title = stringResource(R.string.type_to_search_extensions),
+                                icon = Icons.Default.Search,
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(32.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = "Type at least 2 characters to search",
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
+                                    .height(220.dp),
+                            )
                         }
                     } else if (filteredAddons.isEmpty()) {
                         item {
-                            Box(
+                            NiraEmptyState(
+                                title = stringResource(R.string.no_extensions_found),
+                                icon = Icons.Default.Extension,
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(32.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = "No extensions found",
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
+                                    .height(220.dp),
+                            )
                         }
                     } else {
                         items(filteredAddons) { addon ->
@@ -239,7 +191,6 @@ fun SearchExtensionsContent(
                 }
             }
         }
-    }
 }
 
 @Composable
@@ -319,15 +270,14 @@ fun SearchExtensionItem(
             ) {
                 Text(
                     text = addon.translateName(context),
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Medium,
+                    style = MaterialTheme.typography.bodyMediumEmphasized,
                     maxLines = 1,
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 
                 if (addon.isInstalled()) {
                     Text(
-                        text = "Installed",
+                        text = stringResource(R.string.status_installed),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.primary
                     )

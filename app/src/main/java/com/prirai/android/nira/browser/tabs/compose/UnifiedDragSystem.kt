@@ -1,8 +1,8 @@
+@file:OptIn(ExperimentalMaterial3ExpressiveApi::class)
+
 package com.prirai.android.nira.browser.tabs.compose
 
 import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.spring
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.ui.Alignment
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -1070,58 +1071,40 @@ fun Modifier.dragVisualFeedback(
 
     val scale = remember { Animatable(1f) }
     val alpha = remember { Animatable(1f) }
+    val spatialSpec = MaterialTheme.motionScheme.defaultSpatialSpec<Float>()
+    val fastSpatialSpec = MaterialTheme.motionScheme.fastSpatialSpec<Float>()
+    val effectsSpec = MaterialTheme.motionScheme.defaultEffectsSpec<Float>()
 
     LaunchedEffect(isDragging, isDropTarget) {
         when {
             isDragging -> {
                 // When dragging, hide original (it will be shown in drag layer)
                 launch {
-                    scale.animateTo(
-                        draggedScale,
-                        animationSpec = spring(stiffness = Spring.StiffnessMedium)
-                    )
+                    scale.animateTo(draggedScale, animationSpec = fastSpatialSpec)
                 }
                 launch {
-                    alpha.animateTo(
-                        0.3f,
-                        animationSpec = spring(stiffness = Spring.StiffnessMedium)
-                    )
+                    alpha.animateTo(0.3f, animationSpec = fastSpatialSpec)
                 }
             }
 
             isDropTarget -> {
                 // When hovered as drop target, enlarge to signify grouping
                 launch {
-                    scale.animateTo(
-                        hoverScale,
-                        animationSpec = spring(
-                            stiffness = Spring.StiffnessHigh,
-                            dampingRatio = Spring.DampingRatioMediumBouncy
-                        )
-                    )
+                    scale.animateTo(hoverScale, animationSpec = spatialSpec)
                 }
                 // Keep full alpha when hovering
                 launch {
-                    alpha.animateTo(
-                        1f,
-                        animationSpec = spring(stiffness = Spring.StiffnessMedium)
-                    )
+                    alpha.animateTo(1f, animationSpec = effectsSpec)
                 }
             }
 
             else -> {
                 // Return to normal state
                 launch {
-                    scale.animateTo(
-                        1f,
-                        animationSpec = spring(stiffness = Spring.StiffnessMedium)
-                    )
+                    scale.animateTo(1f, animationSpec = spatialSpec)
                 }
                 launch {
-                    alpha.animateTo(
-                        1f,
-                        animationSpec = spring(stiffness = Spring.StiffnessMedium)
-                    )
+                    alpha.animateTo(1f, animationSpec = effectsSpec)
                 }
             }
         }

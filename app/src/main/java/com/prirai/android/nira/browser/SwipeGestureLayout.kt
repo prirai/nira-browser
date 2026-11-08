@@ -7,6 +7,7 @@ import android.view.GestureDetector
 import android.view.MotionEvent
 import android.widget.FrameLayout
 import androidx.core.view.GestureDetectorCompat
+import androidx.coordinatorlayout.widget.CoordinatorLayout
 
 interface SwipeGestureListener {
     fun onSwipeStarted(start: PointF, next: PointF): Boolean
@@ -14,13 +15,14 @@ interface SwipeGestureListener {
     fun onSwipeFinished(velocityX: Float, velocityY: Float)
 }
 
-class SwipeGestureLayout @JvmOverloads constructor(
-    context: Context,
-    attrs: AttributeSet? = null,
-    defStyleAttr: Int = 0
-) : FrameLayout(context, attrs, defStyleAttr) {
-
-    var isSwipeEnabled = true
+/**
+ * The touch-interception behavior every swipe host shares: a scroll that a
+ * registered listener claims (via [SwipeGestureListener.onSwipeStarted])
+ * is intercepted away from the children - which is what lets a swipe start
+ * on the toolbar's own clickable children (the URL display opens edit mode
+ * on tap) and still reach the tab-switch gesture.
+ */
+internal class SwipeGestureHost(context: Context) {
 
     private val gestureListener = object : GestureDetector.SimpleOnGestureListener() {
         override fun onDown(e: MotionEvent): Boolean {
@@ -72,11 +74,7 @@ class SwipeGestureLayout @JvmOverloads constructor(
         listeners.add(listener)
     }
 
-    override fun onInterceptTouchEvent(event: MotionEvent): Boolean {
-        if (!isSwipeEnabled) {
-            return false
-        }
-
+    fun onInterceptTouchEvent(event: MotionEvent): Boolean {
         return when (event.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
                 handledInitialScroll = false
@@ -93,7 +91,7 @@ class SwipeGestureLayout @JvmOverloads constructor(
         }
     }
 
-    override fun onTouchEvent(event: MotionEvent): Boolean {
+    fun onTouchEvent(event: MotionEvent): Boolean {
         return when (event.actionMasked) {
             MotionEvent.ACTION_CANCEL, MotionEvent.ACTION_UP -> {
                 gestureDetector.onTouchEvent(event)
@@ -107,9 +105,63 @@ class SwipeGestureLayout @JvmOverloads constructor(
             else -> gestureDetector.onTouchEvent(event)
         }
     }
+}
+
+class SwipeGestureLayout @JvmOverloads constructor(
+    context: Context,
+    attrs: AttributeSet? = null,
+    defStyleAttr: Int = 0
+) : FrameLayout(context, attrs, defStyleAttr) {
+
+    var isSwipeEnabled = true
+
+    private val host = SwipeGestureHost(context)
+
+    fun addGestureListener(listener: SwipeGestureListener) {
+        host.addGestureListener(listener)
+    }
+
+    override fun onInterceptTouchEvent(event: MotionEvent): Boolean {
+        if (!isSwipeEnabled) {
+            return false
+        }
+        return host.onInterceptTouchEvent(event)
+    }
+
+    override fun onTouchEvent(event: MotionEvent): Boolean {
+        return host.onTouchEvent(event)
+    }
 
     override fun performClick(): Boolean {
         super.performClick()
         return true
+    }
+}
+
+/**
+ * A [CoordinatorLayout] with [SwipeGestureLayout]'s interception behavior.
+ * The home fragment builds its view tree programmatically with a
+ * CoordinatorLayout root; hosting the interception at that root lets the
+ * tab-switch swipe start on the toolbar's address bar, whose tap opens
+ * edit mode and would otherwise consume the gesture.
+ */
+class SwipeGestureCoordinatorLayout @JvmOverloads constructor(
+    context: Context,
+    attrs: AttributeSet? = null,
+    defStyleAttr: Int = 0
+) : CoordinatorLayout(context, attrs, defStyleAttr) {
+
+    private val host = SwipeGestureHost(context)
+
+    fun addGestureListener(listener: SwipeGestureListener) {
+        host.addGestureListener(listener)
+    }
+
+    override fun onInterceptTouchEvent(event: MotionEvent): Boolean {
+        return host.onInterceptTouchEvent(event)
+    }
+
+    override fun onTouchEvent(event: MotionEvent): Boolean {
+        return host.onTouchEvent(event)
     }
 }

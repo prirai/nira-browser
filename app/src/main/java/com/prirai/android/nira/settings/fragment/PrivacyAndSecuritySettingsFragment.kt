@@ -1,26 +1,51 @@
+@file:OptIn(ExperimentalMaterial3ExpressiveApi::class)
+
 package com.prirai.android.nira.settings.fragment
 
-import android.content.Context.LAYOUT_INFLATER_SERVICE
-import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
-import android.text.InputType
-import android.view.LayoutInflater
-import android.view.View
-import android.widget.ArrayAdapter
-import android.widget.Button
-import android.widget.EditText
-import android.widget.Spinner
 import android.widget.Toast
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
 import androidx.preference.Preference
 import androidx.preference.PreferenceCategory
-import com.google.android.material.card.MaterialCardView
-import com.google.android.material.color.MaterialColors
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
-import com.google.android.material.R as MaterialR
 import com.prirai.android.nira.R
 import com.prirai.android.nira.ext.components
 import com.prirai.android.nira.preferences.UserPreferences
+import com.prirai.android.nira.ui.components.NiraAlertDialog
 import kotlinx.coroutines.launch
 import mozilla.components.concept.engine.Engine
 import java.util.concurrent.TimeUnit
@@ -67,19 +92,21 @@ class PrivacyAndSecuritySettingsFragment : BaseSettingsFragment() {
     }
 
     private fun showSleepingTabsPicker(prefs: UserPreferences) {
-        val items = resources.getStringArray(R.array.sleeping_tabs_mode_names)
-        MaterialAlertDialogBuilder(requireContext())
-            .setTitle(R.string.sleeping_tabs_title)
-            .setSingleChoiceItems(items, prefs.sleepingTabsMode) { dialog, which ->
-                prefs.sleepingTabsMode = which
-                requireContext().components.sleepingTabsManager
-                    .onPreferencesChanged(requireContext().components.store)
-                findPreference<Preference>(resources.getString(R.string.key_sleeping_tabs))
-                    ?.summary = sleepingTabsSummary(which)
-                dialog.dismiss()
-            }
-            .setNegativeButton(R.string.cancel, null)
-            .show()
+        showNiraDialog { onDismiss ->
+            ChoiceListDialog(
+                title = getString(R.string.sleeping_tabs_title),
+                items = resources.getStringArray(R.array.sleeping_tabs_mode_names),
+                initialSelection = prefs.sleepingTabsMode,
+                onChoice = { which ->
+                    prefs.sleepingTabsMode = which
+                    requireContext().components.sleepingTabsManager
+                        .onPreferencesChanged(requireContext().components.store)
+                    findPreference<Preference>(resources.getString(R.string.key_sleeping_tabs))
+                        ?.summary = sleepingTabsSummary(which)
+                },
+                onDismiss = onDismiss,
+            )
+        }
     }
 
     private fun sleepingTabsSummary(mode: Int): String = when (mode) {
@@ -120,35 +147,39 @@ class PrivacyAndSecuritySettingsFragment : BaseSettingsFragment() {
     }
 
     private fun showHttpsOnlyPicker(prefs: UserPreferences) {
-        val items = resources.getStringArray(R.array.https_only_mode_names)
-        MaterialAlertDialogBuilder(requireActivity())
-            .setTitle(R.string.https_only_title)
-            .setSingleChoiceItems(items, prefs.httpsOnlyMode) { dialog, which ->
-                prefs.httpsOnlyMode = which
-                requireContext().components.applyPrivacyEngineSettings()
-                findPreference<Preference>(resources.getString(R.string.key_https_only))
-                    ?.summary = httpsOnlySummary(which)
-                dialog.dismiss()
-            }
-            .setNegativeButton(R.string.cancel, null)
-            .show()
+        showNiraDialog { onDismiss ->
+            ChoiceListDialog(
+                title = getString(R.string.https_only_title),
+                items = resources.getStringArray(R.array.https_only_mode_names),
+                initialSelection = prefs.httpsOnlyMode,
+                onChoice = { which ->
+                    prefs.httpsOnlyMode = which
+                    requireContext().components.applyPrivacyEngineSettings()
+                    findPreference<Preference>(resources.getString(R.string.key_https_only))
+                        ?.summary = httpsOnlySummary(which)
+                },
+                onDismiss = onDismiss,
+            )
+        }
     }
 
     private fun showDohModePicker(prefs: UserPreferences) {
-        val items = resources.getStringArray(R.array.doh_mode_names)
-        MaterialAlertDialogBuilder(requireActivity())
-            .setTitle(R.string.doh_title)
-            .setSingleChoiceItems(items, prefs.dohMode) { dialog, which ->
-                prefs.dohMode = which
-                requireContext().components.applyPrivacyEngineSettings()
-                findPreference<Preference>(resources.getString(R.string.key_doh))
-                    ?.summary = dohModeSummary(which)
-                findPreference<Preference>(resources.getString(R.string.key_doh_provider))
-                    ?.isEnabled = prefs.isDohProviderSelectable()
-                dialog.dismiss()
-            }
-            .setNegativeButton(R.string.cancel, null)
-            .show()
+        showNiraDialog { onDismiss ->
+            ChoiceListDialog(
+                title = getString(R.string.doh_title),
+                items = resources.getStringArray(R.array.doh_mode_names),
+                initialSelection = prefs.dohMode,
+                onChoice = { which ->
+                    prefs.dohMode = which
+                    requireContext().components.applyPrivacyEngineSettings()
+                    findPreference<Preference>(resources.getString(R.string.key_doh))
+                        ?.summary = dohModeSummary(which)
+                    findPreference<Preference>(resources.getString(R.string.key_doh_provider))
+                        ?.isEnabled = prefs.isDohProviderSelectable()
+                },
+                onDismiss = onDismiss,
+            )
+        }
     }
 
     private fun showDohProviderPicker(prefs: UserPreferences) {
@@ -167,51 +198,45 @@ class PrivacyAndSecuritySettingsFragment : BaseSettingsFragment() {
             else -> 2
         }
 
-        MaterialAlertDialogBuilder(requireActivity())
-            .setTitle(R.string.doh_provider_title)
-            .setSingleChoiceItems(labels, checked) { dialog, which ->
-                if (which == 2) {
-                    dialog.dismiss()
-                    showCustomDohProviderDialog(prefs)
-                } else {
-                    prefs.dohProviderUrl = urls[which]
-                    requireContext().components.applyPrivacyEngineSettings()
-                    findPreference<Preference>(resources.getString(R.string.key_doh_provider))
-                        ?.summary = dohProviderSummary(prefs.dohProviderUrl)
-                    dialog.dismiss()
-                }
-            }
-            .setNegativeButton(R.string.cancel, null)
-            .show()
+        showNiraDialog { onDismiss ->
+            ChoiceListDialog(
+                title = getString(R.string.doh_provider_title),
+                items = labels,
+                initialSelection = checked,
+                onChoice = { which ->
+                    if (which == 2) {
+                        showCustomDohProviderDialog(prefs)
+                    } else {
+                        prefs.dohProviderUrl = urls[which]
+                        requireContext().components.applyPrivacyEngineSettings()
+                        findPreference<Preference>(resources.getString(R.string.key_doh_provider))
+                            ?.summary = dohProviderSummary(prefs.dohProviderUrl)
+                    }
+                },
+                onDismiss = onDismiss,
+            )
+        }
     }
 
     private fun showCustomDohProviderDialog(prefs: UserPreferences) {
-        val input = EditText(requireContext()).apply {
-            hint = getString(R.string.doh_provider_custom_hint)
-            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_URI
-            setText(
-                prefs.dohProviderUrl.takeUnless {
+        showNiraDialog { onDismiss ->
+            CustomDohProviderDialog(
+                initialUrl = prefs.dohProviderUrl.takeUnless {
                     it == UserPreferences.CLOUDFLARE_DOH_URI || it == UserPreferences.NEXTDNS_DOH_URI
-                }.orEmpty()
+                }.orEmpty(),
+                onConfirm = { url ->
+                    if (url.startsWith("https://")) {
+                        prefs.dohProviderUrl = url
+                        requireContext().components.applyPrivacyEngineSettings()
+                        findPreference<Preference>(resources.getString(R.string.key_doh_provider))
+                            ?.summary = dohProviderSummary(url)
+                    } else {
+                        Toast.makeText(context, R.string.doh_provider_custom_error, Toast.LENGTH_LONG).show()
+                    }
+                },
+                onDismiss = onDismiss,
             )
         }
-
-        MaterialAlertDialogBuilder(requireActivity())
-            .setTitle(R.string.doh_provider_custom)
-            .setView(input)
-            .setPositiveButton(R.string.mozac_feature_prompts_ok) { _, _ ->
-                val url = input.text.toString().trim()
-                if (url.startsWith("https://")) {
-                    prefs.dohProviderUrl = url
-                    requireContext().components.applyPrivacyEngineSettings()
-                    findPreference<Preference>(resources.getString(R.string.key_doh_provider))
-                        ?.summary = dohProviderSummary(url)
-                } else {
-                    Toast.makeText(context, R.string.doh_provider_custom_error, Toast.LENGTH_LONG).show()
-                }
-            }
-            .setNegativeButton(R.string.cancel, null)
-            .show()
     }
 
     private fun httpsOnlySummary(mode: Int): String = when (mode) {
@@ -272,137 +297,79 @@ class PrivacyAndSecuritySettingsFragment : BaseSettingsFragment() {
     }
 
     private fun showEtpLevelPicker(prefs: UserPreferences, customCategories: PreferenceCategory?) {
-        val ctx = requireActivity()
-        val currentLevel = prefs.etpLevel
+        showNiraDialog { onDismiss ->
+            EtpLevelDialog(
+                initialLevel = prefs.etpLevel,
+                onSelect = { level ->
+                    prefs.etpLevel = level
+                    customCategories?.isVisible = level == 3
 
-        // Resolve Material 3 theme colours
-        val primaryContainer = MaterialColors.getColor(ctx, MaterialR.attr.colorPrimaryContainer, 0)
-        val tertiaryContainer = MaterialColors.getColor(ctx, MaterialR.attr.colorTertiaryContainer, 0)
-        val surfaceVariant = MaterialColors.getColor(ctx, MaterialR.attr.colorSurfaceVariant, 0)
-
-        val view = LayoutInflater.from(ctx).inflate(R.layout.dialog_etp_level_picker, null)
-
-        data class CardInfo(
-            val card: MaterialCardView,
-            val checkView: View,
-            val circleBg: Int,
-        )
-
-        val cards = listOf(
-            CardInfo(
-                card = view.findViewById(R.id.noneCard),
-                checkView = view.findViewById(R.id.noneCheck),
-                circleBg = surfaceVariant,
-            ),
-            CardInfo(
-                card = view.findViewById(R.id.standardCard),
-                checkView = view.findViewById(R.id.standardCheck),
-                circleBg = primaryContainer,
-            ),
-            CardInfo(
-                card = view.findViewById(R.id.strictCard),
-                checkView = view.findViewById(R.id.strictCheck),
-                circleBg = tertiaryContainer,
-            ),
-            CardInfo(
-                card = view.findViewById(R.id.customCard),
-                checkView = view.findViewById(R.id.customCheck),
-                circleBg = surfaceVariant,
-            ),
-        )
-
-        // Style each card
-        cards.forEachIndexed { index, info ->
-            val isSelected = index == currentLevel
-
-            val circleFrame = when (index) {
-                0 -> view.findViewById<View>(R.id.noneIcon)
-                1 -> view.findViewById<View>(R.id.standardIcon)
-                2 -> view.findViewById<View>(R.id.strictIcon)
-                3 -> view.findViewById<View>(R.id.customIcon)
-                else -> view.findViewById<View>(R.id.noneIcon)
-            }
-            val circleBgDrawable = GradientDrawable().apply {
-                shape = GradientDrawable.OVAL
-                setSize(
-                    (48 * ctx.resources.displayMetrics.density).toInt(),
-                    (48 * ctx.resources.displayMetrics.density).toInt(),
-                )
-                setColor(info.circleBg)
-            }
-            circleFrame.background = circleBgDrawable
-
-            updateCardAppearance(info.card, info.checkView, isSelected)
-        }
-
-        val dialog = MaterialAlertDialogBuilder(ctx)
-            .setTitle(R.string.etp_level_title)
-            .setView(view)
-            .setNegativeButton(android.R.string.cancel, null)
-            .show()
-
-        cards.forEachIndexed { index, info ->
-            info.card.setOnClickListener {
-                val level = index
-                prefs.etpLevel = level
-                customCategories?.isVisible = level == 3
-
-                // Update all cards
-                cards.forEachIndexed { i, ci ->
-                    val sel = i == level
-                    updateCardAppearance(ci.card, ci.checkView, sel)
-                }
-
-                if (level == 2) {
-                    MaterialAlertDialogBuilder(ctx)
-                        .setTitle(R.string.etp_strict_title)
-                        .setMessage(R.string.etp_strict_warning)
-                        .setPositiveButton(android.R.string.ok) { _, _ -> }
-                        .show()
-                }
-
-                dialog.dismiss()
-            }
-        }
-    }
-
-    private fun updateCardAppearance(
-        card: MaterialCardView,
-        checkView: View,
-        isSelected: Boolean,
-    ) {
-        if (isSelected) {
-            card.setCardBackgroundColor(
-                MaterialColors.getColor(card.context, MaterialR.attr.colorPrimaryContainer, 0)
+                    if (level == 2) {
+                        showEtpStrictWarning()
+                    }
+                },
+                onDismiss = onDismiss,
             )
-            card.strokeWidth = 0
-            checkView.visibility = View.VISIBLE
-        } else {
-            card.setCardBackgroundColor(
-                MaterialColors.getColor(card.context, MaterialR.attr.colorSurface, 0)
-            )
-            card.strokeWidth = 0
-            checkView.visibility = View.GONE
         }
     }
 
-    private fun clearTabs(){
-        MaterialAlertDialogBuilder(requireActivity())
-            .setTitle(resources.getString(R.string.clear_tabs))
-            .setNegativeButton(resources.getString(R.string.cancel)) { _, _ -> }
-            .setPositiveButton(resources.getString(R.string.mozac_feature_prompts_ok)) { _, _ ->
-                lifecycleScope.launch {
-                    requireContext().components.tabsUseCases.removeAllTabs.invoke()
-                }
-                Toast.makeText(context, R.string.tabs_cleared, Toast.LENGTH_LONG).show()
-            }
-            .show()
+    private fun showEtpStrictWarning() {
+        showNiraDialog { onDismiss ->
+            NiraAlertDialog(
+                onDismissRequest = onDismiss,
+                title = {
+                    Text(
+                        text = stringResource(R.string.etp_strict_title),
+                        style = MaterialTheme.typography.headlineSmallEmphasized,
+                    )
+                },
+                text = { Text(stringResource(R.string.etp_strict_warning)) },
+                confirmButton = {
+                    TextButton(
+                        onClick = onDismiss,
+                        shapes = ButtonDefaults.shapes(),
+                    ) {
+                        Text(stringResource(android.R.string.ok))
+                    }
+                },
+            )
+        }
     }
 
-    private fun clearHistory(){
-        val inflater = requireContext().getSystemService(LAYOUT_INFLATER_SERVICE) as LayoutInflater
-        val layout: View = inflater.inflate(R.layout.dialog_clear_history, null)
+    private fun clearTabs() {
+        showNiraDialog { onDismiss ->
+            NiraAlertDialog(
+                onDismissRequest = onDismiss,
+                title = {
+                    Text(
+                        text = stringResource(R.string.clear_tabs),
+                        style = MaterialTheme.typography.headlineSmallEmphasized,
+                    )
+                },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            onDismiss()
+                            lifecycleScope.launch {
+                                requireContext().components.tabsUseCases.removeAllTabs.invoke()
+                            }
+                            Toast.makeText(context, R.string.tabs_cleared, Toast.LENGTH_LONG).show()
+                        },
+                        shapes = ButtonDefaults.shapes(),
+                    ) {
+                        Text(stringResource(R.string.mozac_feature_prompts_ok))
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = onDismiss) {
+                        Text(stringResource(R.string.cancel))
+                    }
+                },
+            )
+        }
+    }
 
+    private fun clearHistory() {
         val timeArray: Array<Long> = arrayOf(
             System.currentTimeMillis() - TimeUnit.HOURS.toMillis(1),
             System.currentTimeMillis() - TimeUnit.DAYS.toMillis(1),
@@ -413,33 +380,19 @@ class PrivacyAndSecuritySettingsFragment : BaseSettingsFragment() {
             0
         )
 
-        val spinner: Spinner = layout.findViewById(R.id.timeSpinner)
-        ArrayAdapter.createFromResource(
-            requireContext(),
-            R.array.history_delete_times,
-            android.R.layout.simple_spinner_item
-        ).also { adapter ->
-            adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-            spinner.adapter = adapter
+        showNiraDialog { onDismiss ->
+            ClearHistoryDialog(
+                labels = resources.getStringArray(R.array.history_delete_times),
+                times = timeArray,
+                onClear = { since ->
+                    lifecycleScope.launch {
+                        requireContext().components.historyStorage.deleteVisitsSince(since)
+                    }
+                    Toast.makeText(context, R.string.history_cleared, Toast.LENGTH_LONG).show()
+                },
+                onDismiss = onDismiss,
+            )
         }
-
-        val historyDialog = MaterialAlertDialogBuilder(requireActivity())
-            .setView(layout)
-            .create()
-
-        layout.findViewById<Button>(R.id.clearButton).setOnClickListener {
-            lifecycleScope.launch {
-                requireContext().components.historyStorage.deleteVisitsSince(timeArray[spinner.selectedItemPosition])
-            }
-            Toast.makeText(context, R.string.history_cleared, Toast.LENGTH_LONG).show()
-            historyDialog.dismiss()
-        }
-
-        layout.findViewById<Button>(R.id.cancelButton).setOnClickListener {
-            historyDialog.dismiss()
-        }
-
-        historyDialog.show()
     }
 
     private fun clearCookies(){
@@ -466,4 +419,284 @@ class PrivacyAndSecuritySettingsFragment : BaseSettingsFragment() {
         lifecycleScope.launch { components.permissionStorage.removeAll() }
         Toast.makeText(context, R.string.permissions_cleared, Toast.LENGTH_LONG).show()
     }
+}
+
+@Composable
+private fun ChoiceRow(label: String, selected: Boolean, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        RadioButton(selected = selected, onClick = onClick)
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyLargeEmphasized,
+            modifier = Modifier.padding(start = 4.dp),
+        )
+    }
+}
+
+/**
+ * The picker behind Sleeping tabs, HTTPS-Only and DoH mode: a radio list where
+ * tapping a row applies the choice and closes the dialog, with a Cancel
+ * button to leave without changing anything.
+ */
+@Composable
+private fun ChoiceListDialog(
+    title: String,
+    items: Array<String>,
+    initialSelection: Int,
+    onChoice: (Int) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var selected by remember { mutableIntStateOf(initialSelection) }
+    NiraAlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.headlineSmallEmphasized,
+            )
+        },
+        text = {
+            Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                items.forEachIndexed { index, label ->
+                    ChoiceRow(
+                        label = label,
+                        selected = index == selected,
+                        onClick = {
+                            selected = index
+                            onDismiss()
+                            onChoice(index)
+                        },
+                    )
+                }
+            }
+        },
+        confirmButton = {},
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.cancel))
+            }
+        },
+    )
+}
+
+@Composable
+private fun CustomDohProviderDialog(
+    initialUrl: String,
+    onConfirm: (String) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var url by remember { mutableStateOf(initialUrl) }
+    NiraAlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = stringResource(R.string.doh_provider_custom),
+                style = MaterialTheme.typography.headlineSmallEmphasized,
+            )
+        },
+        text = {
+            OutlinedTextField(
+                value = url,
+                onValueChange = { url = it },
+                label = { Text(stringResource(R.string.doh_provider_custom_hint)) },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+            )
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    onDismiss()
+                    onConfirm(url.trim())
+                },
+                shapes = ButtonDefaults.shapes(),
+            ) {
+                Text(stringResource(R.string.mozac_feature_prompts_ok))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.cancel))
+            }
+        },
+    )
+}
+
+private data class EtpLevelInfo(
+    val titleRes: Int,
+    val descriptionRes: Int,
+    val circleColor: Color,
+)
+
+@Composable
+private fun EtpLevelDialog(
+    initialLevel: Int,
+    onSelect: (Int) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var selected by remember { mutableIntStateOf(initialLevel) }
+    val levels = listOf(
+        EtpLevelInfo(R.string.etp_none_title, R.string.etp_none_desc, MaterialTheme.colorScheme.surfaceVariant),
+        EtpLevelInfo(R.string.etp_standard_title, R.string.etp_standard_desc, MaterialTheme.colorScheme.primaryContainer),
+        EtpLevelInfo(R.string.etp_strict_title, R.string.etp_strict_desc, MaterialTheme.colorScheme.tertiaryContainer),
+        EtpLevelInfo(R.string.etp_custom_title, R.string.etp_custom_desc, MaterialTheme.colorScheme.surfaceVariant),
+    )
+    NiraAlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = stringResource(R.string.etp_level_title),
+                style = MaterialTheme.typography.headlineSmallEmphasized,
+            )
+        },
+        text = {
+            Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                levels.forEachIndexed { index, info ->
+                    EtpLevelCard(
+                        info = info,
+                        isTopRow = index == 0,
+                        isBottomRow = index == levels.lastIndex,
+                        isSelected = index == selected,
+                        onClick = {
+                            selected = index
+                            onDismiss()
+                            onSelect(index)
+                        },
+                    )
+                }
+            }
+        },
+        confirmButton = {},
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(android.R.string.cancel))
+            }
+        },
+    )
+}
+
+@Composable
+private fun EtpLevelCard(
+    info: EtpLevelInfo,
+    isTopRow: Boolean,
+    isBottomRow: Boolean,
+    isSelected: Boolean,
+    onClick: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(
+                RoundedCornerShape(
+                    topStart = if (isTopRow) 16.dp else 0.dp,
+                    topEnd = if (isTopRow) 16.dp else 0.dp,
+                    bottomStart = if (isBottomRow) 16.dp else 0.dp,
+                    bottomEnd = if (isBottomRow) 16.dp else 0.dp,
+                ),
+            )
+            .background(
+                if (isSelected) {
+                    MaterialTheme.colorScheme.primaryContainer
+                } else {
+                    MaterialTheme.colorScheme.surface
+                },
+            )
+            .clickable(onClick = onClick)
+            .padding(16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            modifier = Modifier
+                .size(48.dp)
+                .clip(CircleShape)
+                .background(info.circleColor),
+        )
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .padding(start = 16.dp),
+        ) {
+            Text(
+                text = stringResource(info.titleRes),
+                style = MaterialTheme.typography.titleMediumEmphasized,
+            )
+            Text(
+                text = stringResource(info.descriptionRes),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        if (isSelected) {
+            Spacer(modifier = Modifier.width(12.dp))
+            Icon(
+                painter = painterResource(R.drawable.ic_check_circle),
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(24.dp),
+            )
+        }
+    }
+}
+
+@Composable
+private fun ClearHistoryDialog(
+    labels: Array<String>,
+    times: Array<Long>,
+    onClear: (Long) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var selected by remember { mutableIntStateOf(0) }
+    NiraAlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = stringResource(R.string.clear_history),
+                style = MaterialTheme.typography.headlineSmallEmphasized,
+            )
+        },
+        text = {
+            Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                Text(
+                    text = stringResource(R.string.select_time_range),
+                    style = MaterialTheme.typography.bodyMediumEmphasized,
+                    modifier = Modifier.padding(bottom = 8.dp),
+                )
+                labels.forEachIndexed { index, label ->
+                    ChoiceRow(
+                        label = label,
+                        selected = index == selected,
+                        onClick = { selected = index },
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    onDismiss()
+                    onClear(times[selected])
+                },
+                shapes = ButtonDefaults.shapes(),
+            ) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_baseline_history),
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp),
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(stringResource(R.string.clear))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.cancel))
+            }
+        },
+    )
 }

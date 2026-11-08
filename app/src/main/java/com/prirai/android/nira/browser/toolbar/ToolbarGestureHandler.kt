@@ -228,6 +228,12 @@ class ToolbarGestureHandler(
                 contentLayout.translationX = 0f
 
                 lruManager.markAsSwipeNavigation(tab.id)
+                // The LRU queue spans every profile, so the destination tab
+                // may belong to a different profile than the active one. The
+                // active profile must follow the destination BEFORE the
+                // selection dispatches: the tab bar re-filters on that same
+                // store emission, reading the profile from preferences.
+                syncProfileToTabPartition(tab)
                 selectTabUseCase(tab.id)
 
                 val shortAnimationDuration =
@@ -242,6 +248,34 @@ class ToolbarGestureHandler(
                     })
             }
         }.start()
+    }
+
+    /**
+     * Points the active profile at [tab]'s partition: `profile_<id>`
+     * contextIds map to that profile, `null`/`profile_default` to the
+     * default profile. Swipes never cross the private/normal boundary
+     * (see [getDestination]), so the private branch is defensive only.
+     */
+    private fun syncProfileToTabPartition(tab: TabSessionState) {
+        val profileManager =
+            com.prirai.android.nira.browser.profile.ProfileManager.getInstance(activity)
+        if (tab.content.private || tab.contextId == "private") {
+            profileManager.setPrivateMode(true)
+            return
+        }
+        when (tab.contextId) {
+            null, "profile_default" -> profileManager.setActiveProfile(
+                com.prirai.android.nira.browser.profile.BrowserProfile.getDefaultProfile()
+            )
+            else -> {
+                val profileId = tab.contextId!!.removePrefix("profile_")
+                val profile = profileManager.getAllProfiles().find { it.id == profileId }
+                profileManager.setActiveProfile(
+                    profile ?: com.prirai.android.nira.browser.profile.BrowserProfile.getDefaultProfile()
+                )
+            }
+        }
+        profileManager.setPrivateMode(false)
     }
 
     private fun animateCanceledGesture(velocityX: Float) {

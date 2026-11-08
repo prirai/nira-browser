@@ -1,9 +1,12 @@
+@file:OptIn(ExperimentalMaterial3ExpressiveApi::class)
+
 package com.prirai.android.nira.browser.profile
 
 import android.content.Context
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -18,9 +21,12 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
+import com.prirai.android.nira.ui.components.NiraAlertDialog
+import com.prirai.android.nira.ui.components.pressScale
+import com.prirai.android.nira.ui.components.mutedAdaptive
+import com.prirai.android.nira.browser.profile.ProfileIcons
 import com.prirai.android.nira.R
 
 @Composable
@@ -36,45 +42,25 @@ fun ProfileCreateDialog(
     val colors = BrowserProfile.PROFILE_COLORS
     val emojis = BrowserProfile.PROFILE_EMOJIS
     
-    Dialog(onDismissRequest = onDismiss) {
-        Surface(
-            modifier = Modifier
-                .fillMaxWidth()
-                .wrapContentHeight(),
-            shape = RoundedCornerShape(24.dp),
-            tonalElevation = 6.dp
-        ) {
-            Column(
-                modifier = Modifier
-                    .padding(24.dp)
-            ) {
-                Text(
-                    text = "Create Profile",
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold
-                )
-                
-                Spacer(modifier = Modifier.height(24.dp))
-                
+    NiraAlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.create_profile)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 OutlinedTextField(
                     value = profileName,
                     onValueChange = { profileName = it },
-                    label = { Text("Profile Name") },
-                    placeholder = { Text("Work, Personal, etc.") },
+                    label = { Text(stringResource(R.string.profile_name)) },
+                    placeholder = { Text(stringResource(R.string.profile_name_placeholder)) },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true
                 )
-                
-                Spacer(modifier = Modifier.height(24.dp))
-                
+
                 Text(
-                    text = "Choose Style",
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Medium
+                    text = stringResource(R.string.choose_style),
+                    style = MaterialTheme.typography.titleSmallEmphasized
                 )
-                
-                Spacer(modifier = Modifier.height(12.dp))
-                
+
                 LazyVerticalGrid(
                     columns = GridCells.Fixed(4),
                     modifier = Modifier
@@ -89,54 +75,46 @@ fun ProfileCreateDialog(
                             emoji = emojis[index],
                             color = Color(colors[index % colors.size]),
                             selected = selectedEmojiIndex == index,
-                            onClick = { 
+                            onClick = {
                                 selectedEmojiIndex = index
                                 selectedColorIndex = index % colors.size
                             }
                         )
                     }
                 }
-                
-                Spacer(modifier = Modifier.height(24.dp))
-                
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = if (onImport != null) Arrangement.SpaceBetween else Arrangement.End,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    if (onImport != null) {
-                        TextButton(onClick = onImport) {
-                            Text("Import ZIP")
-                        }
-                    }
-                    Row {
-                        TextButton(onClick = onDismiss) {
-                            Text("Cancel")
-                        }
-                        
-                        Spacer(modifier = Modifier.width(8.dp))
-                        
-                        Button(
-                            onClick = {
-                                if (profileName.isNotBlank()) {
-                                    onConfirm(
-                                        profileName.trim(),
-                                        colors[selectedColorIndex],
-                                        emojis[selectedEmojiIndex]
-                                    )
-                                }
-                            },
-                            enabled = profileName.isNotBlank()
-                        ) {
-                            Text("Create")
-                        }
+
+                if (onImport != null) {
+                    TextButton(onClick = onImport, modifier = Modifier.fillMaxWidth()) {
+                        Text(stringResource(R.string.import_zip))
                     }
                 }
             }
-        }
-    }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    if (profileName.isNotBlank()) {
+                        onConfirm(
+                            profileName.trim(),
+                            colors[selectedColorIndex],
+                            emojis[selectedEmojiIndex]
+                        )
+                    }
+                },
+                enabled = profileName.isNotBlank()
+            ) {
+                Text(stringResource(R.string.create_action))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.cancel))
+            }
+        },
+    )
 }
 
+@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun CombinedEmojiColorOption(
     emoji: String,
@@ -144,71 +122,37 @@ fun CombinedEmojiColorOption(
     selected: Boolean,
     onClick: () -> Unit
 ) {
+    val interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
     Box(
         modifier = Modifier
+            .pressScale(interactionSource)
             .size(64.dp)
             .clip(RoundedCornerShape(16.dp))
-            .background(color.copy(alpha = 0.2f))
-            .then(
-                if (selected) {
-                    Modifier.border(3.dp, color, RoundedCornerShape(16.dp))
-                } else {
-                    Modifier.border(1.dp, color.copy(alpha = 0.3f), RoundedCornerShape(16.dp))
-                }
-            )
-            .clickable(onClick = onClick),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = emoji,
-            style = MaterialTheme.typography.headlineMedium,
-            fontSize = androidx.compose.ui.unit.TextUnit(28f, androidx.compose.ui.unit.TextUnitType.Sp)
-        )
-    }
-}
-
-@Composable
-fun ColorOption(
-    color: Color,
-    selected: Boolean,
-    onClick: () -> Unit
-) {
-    Box(
-        modifier = Modifier
-            .size(48.dp)
-            .clip(CircleShape)
-            .background(color)
-            .then(
-                if (selected) {
-                    Modifier.border(3.dp, MaterialTheme.colorScheme.primary, CircleShape)
-                } else {
-                    Modifier.border(2.dp, Color.Gray.copy(alpha = 0.3f), CircleShape)
-                }
-            )
-            .clickable(onClick = onClick)
-    )
-}
-
-@Composable
-fun EmojiOption(
-    emoji: String,
-    selected: Boolean,
-    onClick: () -> Unit
-) {
-    Box(
-        modifier = Modifier
-            .size(48.dp)
-            .clip(CircleShape)
+            // One selection language, the same as focused tab pills: the
+            // selected option is the primaryContainer, resting options are
+            // fully transparent - no tinted fill, no accent stroke. The
+            // icon's muted color carries the palette identity.
             .background(
-                if (selected) MaterialTheme.colorScheme.primaryContainer
-                else MaterialTheme.colorScheme.surfaceVariant
+                if (selected) {
+                    MaterialTheme.colorScheme.primaryContainer
+                } else {
+                    Color.Transparent
+                }
             )
-            .clickable(onClick = onClick),
+            .combinedClickable(
+                onClick = onClick,
+                interactionSource = interactionSource,
+            ),
         contentAlignment = Alignment.Center
     ) {
-        Text(
-            text = emoji,
-            style = MaterialTheme.typography.headlineMedium
+        // Icon avatar, not emoji - the stored key maps through ProfileIcons.
+        // The tint is the muted, theme-adaptive variant of the palette
+        // color, never the raw saturated accent.
+        Icon(
+            imageVector = ProfileIcons.iconFor(emoji),
+            contentDescription = null,
+            tint = color.mutedAdaptive(),
+            modifier = Modifier.size(32.dp)
         )
     }
 }
@@ -232,44 +176,25 @@ fun ProfileEditDialog(
     val colors = BrowserProfile.PROFILE_COLORS
     val emojis = BrowserProfile.PROFILE_EMOJIS
     
-    Dialog(onDismissRequest = onDismiss) {
-        Surface(
-            modifier = Modifier
-                .fillMaxWidth()
-                .wrapContentHeight(),
-            shape = RoundedCornerShape(24.dp),
-            tonalElevation = 6.dp
-        ) {
-            Column(
-                modifier = Modifier.padding(24.dp)
-            ) {
-                Text(
-                    text = "Edit Profile",
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold
-                )
-                
-                Spacer(modifier = Modifier.height(24.dp))
-                
+    NiraAlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.edit_profile)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 OutlinedTextField(
                     value = profileName,
                     onValueChange = { profileName = it },
-                    label = { Text("Profile Name") },
+                    label = { Text(stringResource(R.string.profile_name)) },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                     enabled = !profile.isDefault
                 )
-                
-                Spacer(modifier = Modifier.height(24.dp))
-                
+
                 Text(
-                    text = "Choose Style",
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Medium
+                    text = stringResource(R.string.choose_style),
+                    style = MaterialTheme.typography.titleSmallEmphasized
                 )
-                
-                Spacer(modifier = Modifier.height(12.dp))
-                
+
                 LazyVerticalGrid(
                     columns = GridCells.Fixed(4),
                     modifier = Modifier
@@ -284,17 +209,14 @@ fun ProfileEditDialog(
                             emoji = emojis[index],
                             color = Color(colors[index % colors.size]),
                             selected = selectedEmojiIndex == index,
-                            onClick = { 
+                            onClick = {
                                 selectedEmojiIndex = index
                                 selectedColorIndex = index % colors.size
                             }
                         )
                     }
                 }
-                
-                Spacer(modifier = Modifier.height(24.dp))
-                
-                // Export button row (shown above the action buttons when onExport is provided)
+
                 if (onExport != null) {
                     OutlinedButton(
                         onClick = onExport,
@@ -306,53 +228,43 @@ fun ProfileEditDialog(
                             modifier = Modifier.size(18.dp)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("Export Profile as ZIP")
+                        Text(stringResource(R.string.export_profile_zip))
                     }
-                    Spacer(modifier = Modifier.height(16.dp))
                 }
 
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    if (!profile.isDefault) {
-                        TextButton(
-                            onClick = onDelete,
-                            colors = ButtonDefaults.textButtonColors(
-                                contentColor = MaterialTheme.colorScheme.error
-                            )
-                        ) {
-                            Text("Delete")
-                        }
-                    } else {
-                        Spacer(modifier = Modifier.width(1.dp))
-                    }
-                    
-                    Row {
-                        TextButton(onClick = onDismiss) {
-                            Text("Cancel")
-                        }
-                        
-                        Spacer(modifier = Modifier.width(8.dp))
-                        
-                        Button(
-                            onClick = {
-                                if (profileName.isNotBlank()) {
-                                    onConfirm(
-                                        profileName.trim(),
-                                        colors[selectedColorIndex],
-                                        emojis[selectedEmojiIndex]
-                                    )
-                                }
-                            },
-                            enabled = profileName.isNotBlank()
-                        ) {
-                            Text("Save")
-                        }
+                if (!profile.isDefault) {
+                    TextButton(
+                        onClick = onDelete,
+                        colors = ButtonDefaults.textButtonColors(
+                            contentColor = MaterialTheme.colorScheme.error
+                        ),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(stringResource(R.string.delete))
                     }
                 }
             }
-        }
-    }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    if (profileName.isNotBlank()) {
+                        onConfirm(
+                            profileName.trim(),
+                            colors[selectedColorIndex],
+                            emojis[selectedEmojiIndex]
+                        )
+                    }
+                },
+                enabled = profileName.isNotBlank()
+            ) {
+                Text(stringResource(R.string.save))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.cancel))
+            }
+        },
+    )
 }

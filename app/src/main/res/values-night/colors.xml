@@ -75,7 +75,19 @@
     <!-- Additional semantic colors -->
     <color name="security_indicator_secure">@color/secure_icon_color</color>
     <color name="menu_text_color">@color/m3_on_surface</color>
-    
+
+    <!-- Settings category icon tints: the night side of the muted
+         palette - same hues, lifted to muted light tones. -->
+    <color name="settings_icon_general">#A3BECE</color>
+    <color name="settings_icon_sync">#A2C6CE</color>
+    <color name="settings_icon_privacy">#A6CDB6</color>
+    <color name="settings_icon_customization">#CBBBDD</color>
+    <color name="settings_icon_webapps">#9CC6C4</color>
+    <color name="settings_icon_addons">#DDBB96</color>
+    <color name="settings_icon_import_export">#C4AE9C</color>
+    <color name="settings_icon_advanced">#D6A49F</color>
+    <color name="settings_icon_about">#B0B8C2</color>
+
     <!-- Mozilla Reader View color overrides -->
     <color name="mozac_feature_readerview_text_color">@color/m3_on_surface</color>
     <color name="mozac_feature_readerview_selected">@color/m3_primary</color>

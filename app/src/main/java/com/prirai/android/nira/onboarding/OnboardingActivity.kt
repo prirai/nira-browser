@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalMaterial3ExpressiveApi::class)
+
 package com.prirai.android.nira.onboarding
 
 import android.content.Intent
@@ -6,9 +8,7 @@ import androidx.activity.compose.setContent
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.spring
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -52,6 +52,7 @@ import androidx.compose.material.icons.rounded.SystemUpdate
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -77,7 +78,7 @@ import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.prirai.android.nira.BrowserActivity
@@ -87,6 +88,7 @@ import com.prirai.android.nira.components.toolbar.ToolbarPosition
 import com.prirai.android.nira.ext.enableEdgeToEdgeMode
 import com.prirai.android.nira.preferences.UserPreferences
 import com.prirai.android.nira.settings.ThemeChoice
+import com.prirai.android.nira.ui.components.NiraActionButton
 import com.prirai.android.nira.ui.theme.NiraTheme
 import kotlinx.coroutines.launch
 
@@ -255,6 +257,7 @@ fun OnboardingScreen(
             }
         }
 
+        val pageTurnSpec = MaterialTheme.motionScheme.defaultSpatialSpec<Float>()
         OnboardingBottomBar(
             currentPage = pagerState.currentPage,
             pageCount = pageCount,
@@ -264,7 +267,7 @@ fun OnboardingScreen(
                 scope.launch {
                     pagerState.animateScrollToPage(
                         pagerState.currentPage + 1,
-                        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy)
+                        animationSpec = pageTurnSpec
                     )
                 }
             },
@@ -304,7 +307,7 @@ private fun OnboardingBottomBar(
                     val isActive = index == currentPage
                     val width by animateDpAsState(
                         targetValue = if (isActive) 28.dp else 8.dp,
-                        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy),
+                        animationSpec = MaterialTheme.motionScheme.fastSpatialSpec(),
                         label = "dot_width"
                     )
                     Box(
@@ -321,33 +324,25 @@ private fun OnboardingBottomBar(
 
             Spacer(modifier = Modifier.height(16.dp))
 
+            val contentFadeIn = MaterialTheme.motionScheme.defaultEffectsSpec<Float>()
+            val contentExpand = MaterialTheme.motionScheme.fastSpatialSpec<androidx.compose.ui.unit.IntSize>()
+            val contentFadeOut = MaterialTheme.motionScheme.fastEffectsSpec<Float>()
+            val contentShrink = MaterialTheme.motionScheme.fastSpatialSpec<androidx.compose.ui.unit.IntSize>()
             AnimatedContent(
                 targetState = isLastPage,
                 transitionSpec = {
-                    (fadeIn() + expandVertically()).togetherWith(fadeOut() + shrinkVertically())
+                    (fadeIn(contentFadeIn) + expandVertically(contentExpand))
+                        .togetherWith(fadeOut(contentFadeOut) + shrinkVertically(contentShrink))
                 },
                 label = "bottom_buttons"
             ) { lastPage ->
                 if (lastPage) {
-                    Button(
+                    NiraActionButton(
+                        text = stringResource(R.string.start_browsing),
                         onClick = onStart,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(52.dp),
-                        shape = RoundedCornerShape(16.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Rounded.Star,
-                            contentDescription = null,
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = "Start Browsing",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                    }
+                        leading = Icons.Rounded.Star,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
                 } else {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -355,13 +350,13 @@ private fun OnboardingBottomBar(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         TextButton(onClick = onSkip) {
-                            Text("Skip")
+                            Text(stringResource(R.string.skip))
                         }
                         FilledTonalButton(
                             onClick = onNext,
                             shape = RoundedCornerShape(12.dp)
                         ) {
-                            Text("Next")
+                            Text(stringResource(R.string.next))
                             Spacer(modifier = Modifier.width(4.dp))
                             Icon(
                                 imageVector = Icons.Rounded.ArrowForward,
@@ -408,9 +403,8 @@ private fun WelcomePage() {
         Spacer(modifier = Modifier.height(24.dp))
 
         Text(
-            text = "Welcome to Nira",
-            style = MaterialTheme.typography.displaySmall,
-            fontWeight = FontWeight.Bold,
+            text = stringResource(R.string.welcome_to_nira),
+            style = MaterialTheme.typography.displaySmallEmphasized,
             textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.onBackground
         )
@@ -418,7 +412,7 @@ private fun WelcomePage() {
         Spacer(modifier = Modifier.height(8.dp))
 
         Text(
-            text = "A fast, private browser",
+            text = stringResource(R.string.fast_private_browser),
             style = MaterialTheme.typography.titleMedium,
             textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -427,12 +421,12 @@ private fun WelcomePage() {
         Spacer(modifier = Modifier.height(32.dp))
 
         listOf(
-            "• Built on Mozilla's powerful GeckoView engine",
-            "• Tab groups to stay organised",
-            "• Firefox Account sync across devices",
-            "• Powerful extension support",
-            "• Multiple profiles for different identities",
-            "• Download manager with progress tracking"
+            stringResource(R.string.onboarding_bullet_geckoview),
+            stringResource(R.string.onboarding_bullet_tab_groups),
+            stringResource(R.string.onboarding_bullet_sync),
+            stringResource(R.string.onboarding_bullet_extensions),
+            stringResource(R.string.onboarding_bullet_profiles),
+            stringResource(R.string.onboarding_bullet_downloads)
         ).forEach { bullet ->
             Text(
                 text = bullet,
@@ -458,14 +452,14 @@ private fun ThemePage(
     onWebThemeSelected: (Int) -> Unit
 ) {
     val appThemeOptions = listOf(
-        Triple(ThemeChoice.LIGHT.ordinal, "Light", Icons.Rounded.LightMode),
-        Triple(ThemeChoice.DARK.ordinal, "Dark", Icons.Rounded.DarkMode),
-        Triple(ThemeChoice.SYSTEM.ordinal, "System Default", Icons.Rounded.SettingsBrightness)
+        Triple(ThemeChoice.LIGHT.ordinal, stringResource(R.string.light_theme), Icons.Rounded.LightMode),
+        Triple(ThemeChoice.DARK.ordinal, stringResource(R.string.dark_theme), Icons.Rounded.DarkMode),
+        Triple(ThemeChoice.SYSTEM.ordinal, stringResource(R.string.theme_system_default), Icons.Rounded.SettingsBrightness)
     )
     val webThemeOptions = listOf(
-        Triple(ThemeChoice.LIGHT.ordinal, "Light pages", Icons.Rounded.LightMode),
-        Triple(ThemeChoice.DARK.ordinal, "Dark pages", Icons.Rounded.DarkMode),
-        Triple(ThemeChoice.SYSTEM.ordinal, "Follow system", Icons.Rounded.SettingsBrightness)
+        Triple(ThemeChoice.LIGHT.ordinal, stringResource(R.string.light_pages), Icons.Rounded.LightMode),
+        Triple(ThemeChoice.DARK.ordinal, stringResource(R.string.dark_pages), Icons.Rounded.DarkMode),
+        Triple(ThemeChoice.SYSTEM.ordinal, stringResource(R.string.follow_system), Icons.Rounded.SettingsBrightness)
     )
 
     Column(
@@ -479,14 +473,14 @@ private fun ThemePage(
 
         OnboardingPageHeader(
             icon = Icons.Rounded.LightMode,
-            title = "Choose Your Theme",
-            subtitle = "Personalise how Nira Browser looks"
+            title = stringResource(R.string.choose_your_theme),
+            subtitle = stringResource(R.string.personalise_looks)
         )
 
         Spacer(modifier = Modifier.height(28.dp))
 
         Text(
-            text = "App Theme",
+            text = stringResource(R.string.app_theme),
             style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.primary,
             modifier = Modifier
@@ -523,13 +517,15 @@ private fun ThemePage(
 
         AnimatedVisibility(
             visible = appThemeChoice == ThemeChoice.DARK.ordinal,
-            enter = fadeIn() + expandVertically(),
-            exit = fadeOut() + shrinkVertically()
+            enter = fadeIn(MaterialTheme.motionScheme.defaultEffectsSpec()) +
+                expandVertically(MaterialTheme.motionScheme.fastSpatialSpec()),
+            exit = fadeOut(MaterialTheme.motionScheme.fastEffectsSpec()) +
+                shrinkVertically(MaterialTheme.motionScheme.fastSpatialSpec())
         ) {
             Column {
                 Spacer(modifier = Modifier.height(20.dp))
                 Text(
-                    text = "Web Page Theme",
+                    text = stringResource(R.string.web_page_theme),
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier
@@ -590,8 +586,8 @@ private fun SearchEnginePage(
 
         OnboardingPageHeader(
             icon = Icons.Rounded.Search,
-            title = "Pick a Search Engine",
-            subtitle = "Choose your default search for browsing"
+            title = stringResource(R.string.pick_search_engine),
+            subtitle = stringResource(R.string.choose_default_search)
         )
 
         Spacer(modifier = Modifier.height(28.dp))
@@ -648,8 +644,8 @@ private fun PrivacyPage(
 
         OnboardingPageHeader(
             icon = Icons.Rounded.PrivacyTip,
-            title = "Privacy by Default",
-            subtitle = "Nira protects you as you browse"
+            title = stringResource(R.string.privacy_by_default),
+            subtitle = stringResource(R.string.nira_protects)
         )
 
         Spacer(modifier = Modifier.height(20.dp))
@@ -663,10 +659,10 @@ private fun PrivacyPage(
         ) {
             Column(modifier = Modifier.padding(20.dp)) {
                 listOf(
-                    Pair(Icons.Rounded.Block, "Tracker & ad blocking"),
-                    Pair(Icons.Rounded.Fingerprint, "Fingerprint protection"),
-                    Pair(Icons.Rounded.Shield, "Enhanced Tracking Protection"),
-                    Pair(Icons.Rounded.Security, "Strict HTTPS enforcement")
+                    Pair(Icons.Rounded.Block, stringResource(R.string.tracker_ad_blocking)),
+                    Pair(Icons.Rounded.Fingerprint, stringResource(R.string.fingerprint_protection)),
+                    Pair(Icons.Rounded.Shield, stringResource(R.string.enhanced_tracking_protection_short)),
+                    Pair(Icons.Rounded.Security, stringResource(R.string.strict_https))
                 ).forEach { (icon, text) ->
                     Row(
                         modifier = Modifier.padding(vertical = 6.dp),
@@ -692,7 +688,7 @@ private fun PrivacyPage(
         Spacer(modifier = Modifier.height(20.dp))
 
         Text(
-            text = "Customise Settings",
+            text = stringResource(R.string.customise_settings),
             style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.primary,
             modifier = Modifier
@@ -710,8 +706,8 @@ private fun PrivacyPage(
                         modifier = Modifier.size(24.dp)
                     )
                 },
-                title = "Tracking Protection",
-                subtitle = "Block trackers and third-party cookies",
+                title = stringResource(R.string.tracking_protection),
+                subtitle = stringResource(R.string.block_trackers_cookies),
                 selected = trackingProtection,
                 highlightIcon = false,
                 onClick = { onTrackingProtectionChanged(!trackingProtection) },
@@ -732,8 +728,8 @@ private fun PrivacyPage(
                         modifier = Modifier.size(24.dp)
                     )
                 },
-                title = "Safe Browsing",
-                subtitle = "Warn about dangerous sites",
+                title = stringResource(R.string.safe_browsing),
+                subtitle = stringResource(R.string.warn_dangerous_sites),
                 selected = safeBrowsing,
                 highlightIcon = false,
                 onClick = { onSafeBrowsingChanged(!safeBrowsing) },
@@ -754,8 +750,8 @@ private fun PrivacyPage(
                         modifier = Modifier.size(24.dp)
                     )
                 },
-                title = "Search Suggestions",
-                subtitle = "Show suggestions as you type",
+                title = stringResource(R.string.search_suggestions),
+                subtitle = stringResource(R.string.show_suggestions_as_you_type),
                 selected = searchSuggestions,
                 highlightIcon = false,
                 onClick = { onSearchSuggestionsChanged(!searchSuggestions) },
@@ -801,8 +797,8 @@ private fun UpdatesPage(
 
         OnboardingPageHeader(
             icon = Icons.Rounded.SystemUpdate,
-            title = "Stay up to date",
-            subtitle = "Nira can check GitHub for new releases",
+            title = stringResource(R.string.stay_up_to_date),
+            subtitle = stringResource(R.string.nira_check_github),
         )
 
         Spacer(modifier = Modifier.height(20.dp))
@@ -816,10 +812,10 @@ private fun UpdatesPage(
         ) {
             Column(modifier = Modifier.padding(20.dp)) {
                 listOf(
-                    "Checks once a day on Wi-Fi only.",
-                    "Only version metadata is fetched - no telemetry.",
-                    "You decide whether to install when a release is offered.",
-                    "You can turn this off any time in Settings -> About.",
+                    stringResource(R.string.update_bullet_wifi),
+                    stringResource(R.string.update_bullet_metadata),
+                    stringResource(R.string.update_bullet_decide),
+                    stringResource(R.string.update_bullet_off),
                 ).forEach { text ->
                     Row(
                         modifier = Modifier.padding(vertical = 6.dp),
@@ -854,11 +850,11 @@ private fun UpdatesPage(
                         modifier = Modifier.size(24.dp),
                     )
                 },
-                title = "Check for updates",
+                title = stringResource(R.string.check_for_updates),
                 subtitle = if (updateChecksEnabled) {
-                    "Nira will offer new releases when they land"
+                    stringResource(R.string.updates_on_subtitle)
                 } else {
-                    "Off - you can enable this later in Settings"
+                    stringResource(R.string.updates_off_subtitle)
                 },
                 selected = updateChecksEnabled,
                 highlightIcon = false,
@@ -890,9 +886,9 @@ private fun GetStartedPage(
     val engineName = engines.getOrNull(searchEngineIndex)?.name ?: "DuckDuckGo"
 
     val themeName = when (appThemeChoice) {
-        ThemeChoice.LIGHT.ordinal -> "Light"
-        ThemeChoice.DARK.ordinal -> "Dark"
-        else -> "System Default"
+        ThemeChoice.LIGHT.ordinal -> stringResource(R.string.light_theme)
+        ThemeChoice.DARK.ordinal -> stringResource(R.string.dark_theme)
+        else -> stringResource(R.string.theme_system_default)
     }
 
     Column(
@@ -908,14 +904,7 @@ private fun GetStartedPage(
             modifier = Modifier
                 .size(110.dp)
                 .clip(CircleShape)
-                .background(
-                    Brush.radialGradient(
-                        colors = listOf(
-                            MaterialTheme.colorScheme.primaryContainer,
-                            MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
-                        )
-                    )
-                ),
+                .background(MaterialTheme.colorScheme.primaryContainer),
             contentAlignment = Alignment.Center
         ) {
             Icon(
@@ -929,9 +918,8 @@ private fun GetStartedPage(
         Spacer(modifier = Modifier.height(20.dp))
 
         Text(
-            text = "You're all set!",
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold,
+            text = stringResource(R.string.you_re_all_set),
+            style = MaterialTheme.typography.headlineMediumEmphasized,
             textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.onBackground
         )
@@ -939,7 +927,7 @@ private fun GetStartedPage(
         Spacer(modifier = Modifier.height(8.dp))
 
         Text(
-            text = "Here's what you configured",
+            text = stringResource(R.string.here_s_what_configured),
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center
@@ -959,46 +947,39 @@ private fun GetStartedPage(
             Column(modifier = Modifier.padding(20.dp)) {
                 SummaryRow(
                     icon = Icons.Rounded.LightMode,
-                    label = "Theme",
+                    label = stringResource(R.string.theme_label),
                     value = themeName
                 )
                 Spacer(modifier = Modifier.height(12.dp))
                 SummaryRow(
                     icon = Icons.Rounded.Search,
-                    label = "Search Engine",
+                    label = stringResource(R.string.search_engine_label),
                     value = engineName
                 )
                 Spacer(modifier = Modifier.height(12.dp))
                 SummaryRow(
                     icon = Icons.Rounded.Shield,
-                    label = "Tracking Protection",
-                    value = if (trackingProtection) "Enabled" else "Disabled"
+                    label = stringResource(R.string.tracking_protection),
+                    value =
+                        if (trackingProtection) {
+                            stringResource(R.string.enabled)
+                        } else {
+                            stringResource(R.string.disabled)
+                        }
                 )
             }
         }
 
         Spacer(modifier = Modifier.height(32.dp))
 
-        Button(
+        NiraActionButton(
+            text = stringResource(R.string.start_browsing),
             onClick = onStart,
+            leading = Icons.Rounded.ArrowForward,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 24.dp)
-                .height(56.dp),
-            shape = RoundedCornerShape(16.dp)
-        ) {
-            Icon(
-                imageVector = Icons.Rounded.ArrowForward,
-                contentDescription = null,
-                modifier = Modifier.size(20.dp)
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(
-                text = "Start Browsing",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold
-            )
-        }
+                .padding(horizontal = 24.dp),
+        )
 
         Spacer(modifier = Modifier.height(24.dp))
     }
@@ -1026,8 +1007,7 @@ private fun SummaryRow(
         )
         Text(
             text = value,
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.SemiBold,
+            style = MaterialTheme.typography.bodyMediumEmphasized,
             color = MaterialTheme.colorScheme.onSurface
         )
     }
@@ -1051,16 +1031,16 @@ private fun ToolbarPositionPage(
 
         OnboardingPageHeader(
             icon = Icons.Rounded.SettingsBrightness,
-            title = "Toolbar Position",
-            subtitle = "Choose where the address bar appears"
+            title = stringResource(R.string.toolbar_position_title),
+            subtitle = stringResource(R.string.address_bar_where)
         )
 
         Spacer(modifier = Modifier.height(28.dp))
 
         OnboardingOptionGroup {
             listOf(
-                Triple(ToolbarPosition.TOP.ordinal, "Top", "Address bar at the top of the screen"),
-                Triple(ToolbarPosition.BOTTOM.ordinal, "Bottom", "Address bar at the bottom of the screen")
+                Triple(ToolbarPosition.TOP.ordinal, stringResource(R.string.toolbar_top), stringResource(R.string.address_bar_top_desc)),
+                Triple(ToolbarPosition.BOTTOM.ordinal, stringResource(R.string.toolbar_bottom), stringResource(R.string.address_bar_bottom_desc))
             ).forEachIndexed { index, (value, label, description) ->
                 OnboardingOptionItem(
                     icon = { ToolbarPositionPreview(isTop = value == ToolbarPosition.TOP.ordinal) },
@@ -1119,16 +1099,16 @@ private fun TabBarPage(
 
         OnboardingPageHeader(
             icon = Icons.Rounded.Star,
-            title = "Tab Bar",
-            subtitle = "Quick-access bar for switching tab groups"
+            title = stringResource(R.string.tab_bar_title),
+            subtitle = stringResource(R.string.tab_bar_subtitle)
         )
 
         Spacer(modifier = Modifier.height(28.dp))
 
         OnboardingOptionGroup {
             listOf(
-                Triple(true, "Show Tab Bar", "Switch between tab groups at a glance"),
-                Triple(false, "Hide Tab Bar", "More screen space while browsing")
+                Triple(true, stringResource(R.string.show_tab_bar), stringResource(R.string.show_tab_bar_desc)),
+                Triple(false, stringResource(R.string.hide_tab_bar), stringResource(R.string.hide_tab_bar_desc))
             ).forEachIndexed { index, (value, label, description) ->
                 OnboardingOptionItem(
                     icon = { TabBarPreview(visible = value) },
@@ -1197,16 +1177,16 @@ private fun ContextualToolbarPage(
 
         OnboardingPageHeader(
             icon = Icons.Rounded.Shield,
-            title = "Contextual Toolbar",
-            subtitle = "Toolbar shown while browsing pages"
+            title = stringResource(R.string.contextual_toolbar_title),
+            subtitle = stringResource(R.string.contextual_toolbar_subtitle)
         )
 
         Spacer(modifier = Modifier.height(28.dp))
 
         OnboardingOptionGroup {
             listOf(
-                Triple(true, "Show Contextual Toolbar", "Quick-access browser actions while browsing"),
-                Triple(false, "Hide Contextual Toolbar", "More vertical space for page content")
+                Triple(true, stringResource(R.string.show_contextual_toolbar), stringResource(R.string.show_contextual_toolbar_desc)),
+                Triple(false, stringResource(R.string.hide_contextual_toolbar), stringResource(R.string.hide_contextual_toolbar_desc))
             ).forEachIndexed { index, (value, label, description) ->
                 OnboardingOptionItem(
                     icon = { ContextualToolbarPreview(visible = value) },
@@ -1226,12 +1206,14 @@ private fun ContextualToolbarPage(
 
         AnimatedVisibility(
             visible = showContextualToolbar,
-            enter = fadeIn() + expandVertically(),
-            exit = fadeOut() + shrinkVertically()
+            enter = fadeIn(MaterialTheme.motionScheme.defaultEffectsSpec()) +
+                expandVertically(MaterialTheme.motionScheme.fastSpatialSpec()),
+            exit = fadeOut(MaterialTheme.motionScheme.fastEffectsSpec()) +
+                shrinkVertically(MaterialTheme.motionScheme.fastSpatialSpec())
         ) {
             Column(modifier = Modifier.padding(top = 20.dp)) {
                 Text(
-                    text = "Icon Size",
+                    text = stringResource(R.string.icon_size),
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier
@@ -1283,12 +1265,12 @@ private fun ContextualToolbarPage(
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
                             Text(
-                                text = "Small",
+                                text = stringResource(R.string.small),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Text(
-                                text = "Large",
+                                text = stringResource(R.string.large),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -1381,8 +1363,12 @@ private fun OnboardingOptionItem(
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = title,
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = if (selected) FontWeight.Medium else FontWeight.Normal,
+                style =
+                    if (selected) {
+                        MaterialTheme.typography.bodyLargeEmphasized
+                    } else {
+                        MaterialTheme.typography.bodyLarge
+                    },
                 color = MaterialTheme.colorScheme.onSurface
             )
             if (subtitle != null) {
@@ -1424,8 +1410,7 @@ private fun OnboardingPageHeader(
     Spacer(modifier = Modifier.height(20.dp))
     Text(
         text = title,
-        style = MaterialTheme.typography.headlineSmall,
-        fontWeight = FontWeight.Bold,
+        style = MaterialTheme.typography.headlineSmallEmphasized,
         textAlign = TextAlign.Center,
         color = MaterialTheme.colorScheme.onBackground
     )

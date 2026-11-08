@@ -66,6 +66,19 @@
 <!-- Legacy Mozilla colors for compatibility -->
     <color name="photonGrey40">@color/m3_outline_variant</color>
 <color name="photonBlue40">@color/m3_primary</color>
+
+    <!-- Settings category icon tints: muted, deepened tones that hold
+         ~3:1 contrast on light surfaces. Night variants lift them. -->
+    <color name="settings_icon_general">#4A6579</color>
+    <color name="settings_icon_sync">#45707A</color>
+    <color name="settings_icon_privacy">#4A7A5C</color>
+    <color name="settings_icon_customization">#6E5A86</color>
+    <color name="settings_icon_webapps">#3F7270</color>
+    <color name="settings_icon_addons">#9C6B3F</color>
+    <color name="settings_icon_import_export">#7A5F4E</color>
+    <color name="settings_icon_advanced">#964F4A</color>
+    <color name="settings_icon_about">#5C6470</color>
+
     
     <!-- Mozilla Reader View color overrides -->
 </resources>

@@ -290,15 +290,29 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
                         // Get the profile for this tab
                         val tabContextId = tab.contextId
                         val profileManager = com.prirai.android.nira.browser.profile.ProfileManager.getInstance(fragmentContext)
-                        
-                        // Extract profile ID from contextId (format: "profile_X")
-                        val profileId = tabContextId?.removePrefix("profile_")
-                        
-                        if (profileId != null) {
+                        val currentProfile = profileManager.getActiveProfile()
+
+                        if (tab.content.private || tabContextId == "private") {
+                            // Private selections don't move the active profile;
+                            // the private toolbar theme is applied above.
+                        } else if (tabContextId == null || tabContextId == "profile_default") {
+                            // Default-profile partition: a cross-profile
+                            // navigation (address-bar swipe, LRU selection
+                            // after a close) landing here must move the active
+                            // profile back to default - the tab bar filters by
+                            // the active profile, so it would otherwise keep
+                            // showing the previous profile's tabs.
+                            if (currentProfile.id != "default") {
+                                val defaultProfile = com.prirai.android.nira.browser.profile.BrowserProfile.getDefaultProfile()
+                                profileManager.setActiveProfile(defaultProfile)
+                                unifiedToolbar?.getTabGroupBar()?.updateProfileIcon(defaultProfile)
+                            }
+                        } else {
+                            // Extract profile ID from contextId (format: "profile_X")
+                            val profileId = tabContextId!!.removePrefix("profile_")
                             val allProfiles = profileManager.getAllProfiles()
                             val profile = allProfiles.find { it.id == profileId }
-                            val currentProfile = profileManager.getActiveProfile()
-                            
+
                             if (profile != null && currentProfile.id != profileId) {
                                 // Switch to this profile context in the toolbar
                                 profileManager.setActiveProfile(profile)
@@ -895,23 +909,48 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
             )
         )
 
-        if (UserPreferences(requireContext()).translationsEnabled &&
+        // IconRow: Translate, Extensions, New Private Tab - the second
+        // quick-action group, mirroring the Find-in-Page row above. Translate
+        // joins only while translations are enabled on an http(s) page.
+        val translateItem = if (UserPreferences(requireContext()).translationsEnabled &&
             selectedTab?.content?.url?.startsWith("http") == true
         ) {
             val translated = selectedTab.translationsState.isTranslated
-            menuItems.add(
-                com.prirai.android.nira.components.menu.Material3BrowserMenu.MenuItem.Action(
-                    id = "translate",
-                    title = getString(
-                        if (translated) R.string.show_original_page else R.string.translate_page
+            com.prirai.android.nira.components.menu.Material3BrowserMenu.IconRowItem(
+                title = getString(
+                    if (translated) R.string.show_original_page else R.string.translate_page
+                ),
+                iconRes = mozilla.components.ui.icons.R.drawable.mozac_ic_translate_24,
+                onClick = {
+                    browserInteractor.onBrowserToolbarMenuItemTapped(ToolbarMenu.Item.Translate)
+                }
+            )
+        } else {
+            null
+        }
+
+        menuItems.add(
+            com.prirai.android.nira.components.menu.Material3BrowserMenu.MenuItem.IconRow(
+                items = listOfNotNull(
+                    translateItem,
+                    com.prirai.android.nira.components.menu.Material3BrowserMenu.IconRowItem(
+                        title = getString(R.string.extensions),
+                        iconRes = R.drawable.mozac_ic_extension_24,
+                        onClick = {
+                            val extensionsBottomSheet = com.prirai.android.nira.addons.ExtensionsBottomSheetFragment.newInstance()
+                            extensionsBottomSheet.show(parentFragmentManager, com.prirai.android.nira.addons.ExtensionsBottomSheetFragment.TAG)
+                        }
                     ),
-                    iconRes = mozilla.components.ui.icons.R.drawable.mozac_ic_translate_24,
-                    onClick = {
-                        browserInteractor.onBrowserToolbarMenuItemTapped(ToolbarMenu.Item.Translate)
-                    }
+                    com.prirai.android.nira.components.menu.Material3BrowserMenu.IconRowItem(
+                        title = getString(R.string.mozac_browser_menu_new_private_tab),
+                        iconRes = mozilla.components.ui.icons.R.drawable.mozac_ic_private_mode_24,
+                        onClick = {
+                            browserInteractor.onBrowserToolbarMenuItemTapped(ToolbarMenu.Item.NewPrivateTab)
+                        }
+                    ),
                 )
             )
-        }
+        )
 
         menuItems.add(com.prirai.android.nira.components.menu.Material3BrowserMenu.MenuItem.Divider)
 
@@ -958,19 +997,6 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
             }
         }
 
-        // Extensions
-        menuItems.add(
-            com.prirai.android.nira.components.menu.Material3BrowserMenu.MenuItem.Action(
-                id = "extensions",
-                title = getString(R.string.extensions),
-                iconRes = R.drawable.mozac_ic_extension_24,
-                onClick = {
-                    val extensionsBottomSheet = com.prirai.android.nira.addons.ExtensionsBottomSheetFragment.newInstance()
-                    extensionsBottomSheet.show(parentFragmentManager, com.prirai.android.nira.addons.ExtensionsBottomSheetFragment.TAG)
-                }
-            )
-        )
-
         // Downloads
         menuItems.add(
             com.prirai.android.nira.components.menu.Material3BrowserMenu.MenuItem.Action(
@@ -1006,17 +1032,6 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
                 iconRes = R.drawable.mozac_ic_tab_new_24,
                 onClick = {
                     browserInteractor.onBrowserToolbarMenuItemTapped(ToolbarMenu.Item.NewTab)
-                }
-            )
-        )
-
-        menuItems.add(
-            com.prirai.android.nira.components.menu.Material3BrowserMenu.MenuItem.Action(
-                id = "new_private_tab",
-                title = getString(R.string.mozac_browser_menu_new_private_tab),
-                iconRes = mozilla.components.ui.icons.R.drawable.mozac_ic_private_mode_24,
-                onClick = {
-                    browserInteractor.onBrowserToolbarMenuItemTapped(ToolbarMenu.Item.NewPrivateTab)
                 }
             )
         )

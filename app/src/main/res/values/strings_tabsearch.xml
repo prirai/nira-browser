@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Unified search sheet (tab sheet's Search button) -->
+    <string name="tabsearch_title">Search</string>
+    <string name="tabsearch_unknown_profile">Unknown</string>
+    <string name="tabsearch_time_last_hour">Last hour</string>
+    <string name="tabsearch_time_today">Today</string>
+    <string name="tabsearch_time_yesterday">Yesterday</string>
+    <string name="tabsearch_time_this_week">This week</string>
+    <string name="tabsearch_time_this_month">This month</string>
+    <string name="tabsearch_time_older">Older</string>
+</resources>

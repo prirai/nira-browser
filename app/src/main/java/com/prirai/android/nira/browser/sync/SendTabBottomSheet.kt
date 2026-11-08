@@ -16,7 +16,6 @@ import androidx.compose.material.icons.automirrored.rounded.Send
 import androidx.compose.material.icons.rounded.Computer
 import androidx.compose.material.icons.rounded.PhoneAndroid
 import androidx.compose.material.icons.rounded.Tablet
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
@@ -24,7 +23,6 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -36,8 +34,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
+import com.prirai.android.nira.ui.components.NiraListProgress
+import com.prirai.android.nira.ui.components.NiraSheetHeader
+import com.prirai.android.nira.ui.components.rememberNiraSheetState
 import com.prirai.android.nira.R
 import com.prirai.android.nira.ext.components
 import com.prirai.android.nira.preferences.UserPreferences
@@ -107,9 +109,10 @@ fun SendTabBottomSheet(
     accountManager: FxaAccountManager,
     onDismiss: () -> Unit
 ) {
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false)
+    val sheetState = rememberNiraSheetState(skipPartiallyExpanded = false)
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
+    val tabSentMessage = stringResource(R.string.tab_sent)
 
     var devices by remember { mutableStateOf<List<Device>?>(null) }
     var isLoading by remember { mutableStateOf(true) }
@@ -131,28 +134,24 @@ fun SendTabBottomSheet(
             modifier = Modifier.padding(horizontal = 16.dp)
         )
 
-        ListItem(
-            headlineContent = {
-                Text(text = "Send tab to\u2026")
-            }
+        NiraSheetHeader(
+            title = stringResource(R.string.send_tab_to),
+            onClose = onDismiss,
+            showDragHandle = false,
+            dividerAlpha = null,
         )
 
         when {
             isLoading -> {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(32.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    CircularProgressIndicator(modifier = Modifier.size(36.dp))
-                }
+                NiraListProgress(
+                    modifier = Modifier.fillMaxWidth(),
+                )
             }
 
             devices.isNullOrEmpty() -> {
                 ListItem(
                     headlineContent = {
-                        Text(text = "No other devices signed in to this Firefox Account")
+                        Text(text = stringResource(R.string.no_other_devices))
                     }
                 )
             }
@@ -175,7 +174,7 @@ fun SendTabBottomSheet(
                             trailingContent = {
                                 Icon(
                                     imageVector = Icons.AutoMirrored.Rounded.Send,
-                                    contentDescription = "Send"
+                                    contentDescription = stringResource(R.string.send_action)
                                 )
                             },
                             modifier = Modifier.clickable {
@@ -186,7 +185,7 @@ fun SendTabBottomSheet(
                                             device.id,
                                             DeviceCommandOutgoing.SendTab(title, url, TabPrivacy.Normal)
                                         )
-                                    snackbarHostState.showSnackbar("Tab sent!")
+                                    snackbarHostState.showSnackbar(tabSentMessage)
                                     onDismiss()
                                 }
                             }

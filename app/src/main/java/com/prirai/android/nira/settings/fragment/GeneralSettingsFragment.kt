@@ -1,19 +1,42 @@
+@file:OptIn(ExperimentalMaterial3ExpressiveApi::class)
+
 package com.prirai.android.nira.settings.fragment
 
-import android.app.AlertDialog
 import android.os.Bundle
-import android.text.InputType
-import android.widget.EditText
 import android.widget.Toast
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
 import com.prirai.android.nira.R
 import com.prirai.android.nira.browser.SearchEngineList
 import com.prirai.android.nira.browser.SearchEnginePreferences
 import com.prirai.android.nira.ext.components
 import com.prirai.android.nira.preferences.UserPreferences
-import com.prirai.android.nira.settings.HomepageChoice
+import com.prirai.android.nira.ui.components.NiraAlertDialog
 import com.prirai.android.nira.utils.Utils
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlinx.coroutines.launch
 import mozilla.components.browser.state.action.DefaultDesktopModeAction
 
@@ -59,11 +82,11 @@ class GeneralSettingsFragment : BaseSettingsFragment() {
         )
 
         switchPreference(
-            preference = resources.getString(R.string.key_translations_enabled),
-            isChecked = UserPreferences(requireContext()).translationsEnabled,
-            onCheckChange = {
-                UserPreferences(requireContext()).translationsEnabled = it
-            }
+                preference = resources.getString(R.string.key_translations_enabled),
+                isChecked = UserPreferences(requireContext()).translationsEnabled,
+                onCheckChange = {
+                    UserPreferences(requireContext()).translationsEnabled = it
+                }
         )
 
         // "Background audio on YouTube" global toggle used to live here;
@@ -75,12 +98,12 @@ class GeneralSettingsFragment : BaseSettingsFragment() {
         // pref was previously enabled.
 
         switchPreference(
-            preference = requireContext().resources.getString(R.string.key_search_suggestions_enabled),
-            isChecked = UserPreferences(requireContext()).searchSuggestionsEnabled,
-            onCheckChange = {
-                UserPreferences(requireContext()).searchSuggestionsEnabled = it
-                Toast.makeText(context, requireContext().resources.getText(R.string.app_restart), Toast.LENGTH_LONG).show()
-            }
+                preference = requireContext().resources.getString(R.string.key_search_suggestions_enabled),
+                isChecked = UserPreferences(requireContext()).searchSuggestionsEnabled,
+                onCheckChange = {
+                    UserPreferences(requireContext()).searchSuggestionsEnabled = it
+                    Toast.makeText(context, requireContext().resources.getText(R.string.app_restart), Toast.LENGTH_LONG).show()
+                }
         )
 
         seekbarPreference(
@@ -92,21 +115,21 @@ class GeneralSettingsFragment : BaseSettingsFragment() {
         }
 
         switchPreference(
-            preference = requireContext().resources.getString(R.string.key_safe_browsing),
-            isChecked = UserPreferences(requireContext()).safeBrowsing,
-            onCheckChange = {
-                UserPreferences(requireContext()).safeBrowsing = it
-                Toast.makeText(context, requireContext().resources.getText(R.string.app_restart), Toast.LENGTH_LONG).show()
-            }
+                preference = requireContext().resources.getString(R.string.key_safe_browsing),
+                isChecked = UserPreferences(requireContext()).safeBrowsing,
+                onCheckChange = {
+                    UserPreferences(requireContext()).safeBrowsing = it
+                    Toast.makeText(context, requireContext().resources.getText(R.string.app_restart), Toast.LENGTH_LONG).show()
+                }
         )
 
         switchPreference(
-            preference = requireContext().resources.getString(R.string.key_tracking_protection),
-            isChecked = UserPreferences(requireContext()).trackingProtection,
-            onCheckChange = {
-                UserPreferences(requireContext()).trackingProtection = it
-                Toast.makeText(context, requireContext().resources.getText(R.string.app_restart), Toast.LENGTH_LONG).show()
-            }
+                preference = requireContext().resources.getString(R.string.key_tracking_protection),
+                isChecked = UserPreferences(requireContext()).trackingProtection,
+                onCheckChange = {
+                    UserPreferences(requireContext()).trackingProtection = it
+                    Toast.makeText(context, requireContext().resources.getText(R.string.app_restart), Toast.LENGTH_LONG).show()
+                }
         )
 
         clickablePreference(
@@ -116,106 +139,267 @@ class GeneralSettingsFragment : BaseSettingsFragment() {
 
     }
 
-    private fun pickHomepage(){
-        val startingChoice = UserPreferences(requireContext()).homepageType
-        val singleItems = resources.getStringArray(R.array.homepage_types).toMutableList()
-        val checkedItem = UserPreferences(requireContext()).homepageType
+    private fun pickHomepage() {
+        val prefs = UserPreferences(requireContext())
+        val startingChoice = prefs.homepageType
+        val choices = resources.getStringArray(R.array.homepage_types)
 
-        MaterialAlertDialogBuilder(requireActivity())
-                .setTitle(resources.getString(R.string.homepage_type))
-                .setNeutralButton(resources.getString(R.string.cancel)) { _, _ ->
-                    UserPreferences(requireContext()).homepageType = startingChoice
-                }
-                .setPositiveButton(resources.getString(R.string.mozac_feature_prompts_ok)) { _, _ ->
+        showNiraDialog { onDismiss ->
+            HomepageTypeDialog(
+                choices = choices,
+                initialChoice = startingChoice,
+                onChoice = { prefs.homepageType = it },
+                onConfirm = {
                     Toast.makeText(context, requireContext().resources.getText(R.string.app_restart), Toast.LENGTH_LONG).show()
-                }
-                .setSingleChoiceItems(singleItems.toTypedArray(), checkedItem) { dialog, which ->
-                    UserPreferences(requireContext()).homepageType = which
-                }
-                .show()
+                },
+                onCancel = { prefs.homepageType = startingChoice },
+                onDismiss = onDismiss,
+            )
+        }
     }
 
-    private fun pickSearchEngine(private: Boolean){
+    private fun pickSearchEngine(private: Boolean) {
         val prefs = UserPreferences(requireContext())
         val engines = SearchEngineList(requireContext()).getEngines()
-        val singleItems = engines.map { it.name }.toMutableList()
+        val labels = engines.map { it.name }.toMutableList()
         if (private) {
-            singleItems.add(0, getString(R.string.use_default_search_engine))
+            labels.add(0, getString(R.string.use_default_search_engine))
         } else {
-            singleItems.add(getString(R.string.custom))
+            labels.add(getString(R.string.custom))
         }
 
-        val checkedItem = if (private) {
+        val initialSelection = if (private) {
             if (prefs.privateSearchEngineChoice >= 0) prefs.privateSearchEngineChoice + 1 else 0
         } else if (prefs.customSearchEngine) {
-            singleItems.lastIndex
+            labels.lastIndex
         } else {
             prefs.searchEngineChoice
         }
 
-        MaterialAlertDialogBuilder(requireActivity())
-            .setTitle(if (private) getString(R.string.private_search_engine) else getString(R.string.search_engine))
-            .setNeutralButton(resources.getString(R.string.cancel), null)
-            .setPositiveButton(resources.getString(R.string.mozac_feature_prompts_ok)) { _, _ ->
-                viewLifecycleOwner.lifecycleScope.launch {
-                    SearchEnginePreferences.apply(requireContext(), private = private)
-                    if (!private && prefs.privateSearchEngineChoice < 0) {
-                        requireContext().components.searchUseCases.clearPrivateSearchEngine()
+        showNiraDialog { onDismiss ->
+            SearchEngineDialog(
+                title = if (private) getString(R.string.private_search_engine) else getString(R.string.search_engine),
+                labels = labels.toTypedArray(),
+                initialSelection = initialSelection,
+                onChoice = { which ->
+                    if (private) {
+                        prefs.privateSearchEngineChoice = if (which == 0) -1 else which - 1
+                    } else if (which == labels.lastIndex) {
+                        onDismiss()
+                        customSearchEngineDialog()
+                    } else {
+                        prefs.customSearchEngine = false
+                        prefs.searchEngineChoice = which
                     }
-                }
-            }
-            .setSingleChoiceItems(singleItems.toTypedArray(), checkedItem) { dialog, which ->
-                if (private) {
-                    prefs.privateSearchEngineChoice = if (which == 0) -1 else which - 1
-                } else if (which == singleItems.lastIndex) {
-                    customSearchEngineDialog()
-                    dialog.cancel()
-                } else {
-                    prefs.customSearchEngine = false
-                    prefs.searchEngineChoice = which
-                }
-            }
-            .show()
-    }
-
-    fun customSearchEngineDialog(){
-        val builder = MaterialAlertDialogBuilder(requireActivity())
-        builder.setTitle(R.string.custom_search_engine)
-        builder.setMessage(R.string.custom_search_engine_details)
-
-        val input = EditText(context)
-        input.inputType = InputType.TYPE_CLASS_TEXT
-        builder.setView(input)
-
-        input.setText(
-            SearchEngineList.toUserFacingSearchUrl(
-                UserPreferences(requireContext()).customSearchEngineURL
+                },
+                onConfirm = {
+                    viewLifecycleOwner.lifecycleScope.launch {
+                        SearchEnginePreferences.apply(requireContext(), private = private)
+                        if (!private && prefs.privateSearchEngineChoice < 0) {
+                            requireContext().components.searchUseCases.clearPrivateSearchEngine()
+                        }
+                    }
+                },
+                onDismiss = onDismiss,
             )
-        )
+        }
+    }
 
-        builder.setPositiveButton(
-            "OK"
-        ) { dialog, which ->
-            val entered = input.text.toString()
-            if (SearchEngineList.isValidCustomSearchUrl(entered)) {
-                UserPreferences(requireContext()).customSearchEngine = true
-                UserPreferences(requireContext()).customSearchEngineURL =
-                    SearchEngineList.normalizeCustomSearchUrl(entered)
-                viewLifecycleOwner.lifecycleScope.launch {
-                    SearchEnginePreferences.apply(requireContext(), private = false)
+    fun customSearchEngineDialog() {
+        val prefs = UserPreferences(requireContext())
+        showNiraDialog { onDismiss ->
+            CustomSearchEngineDialog(
+                initialUrl = SearchEngineList.toUserFacingSearchUrl(prefs.customSearchEngineURL),
+                onDismiss = onDismiss,
+                onSave = { entered ->
+                    if (SearchEngineList.isValidCustomSearchUrl(entered)) {
+                        prefs.customSearchEngine = true
+                        prefs.customSearchEngineURL = SearchEngineList.normalizeCustomSearchUrl(entered)
+                        viewLifecycleOwner.lifecycleScope.launch {
+                            SearchEnginePreferences.apply(requireContext(), private = false)
+                        }
+                        true
+                    } else {
+                        Toast.makeText(context, R.string.custom_search_engine_error, Toast.LENGTH_LONG).show()
+                        false
+                    }
+                },
+                onCancel = { prefs.customSearchEngine = false },
+            )
+        }
+    }
+}
+
+@Composable
+private fun ChoiceRow(label: String, selected: Boolean, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        RadioButton(selected = selected, onClick = onClick)
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyLargeEmphasized,
+            modifier = Modifier.padding(start = 4.dp),
+        )
+    }
+}
+
+@Composable
+private fun HomepageTypeDialog(
+    choices: Array<String>,
+    initialChoice: Int,
+    onChoice: (Int) -> Unit,
+    onConfirm: () -> Unit,
+    onCancel: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var selected by remember { mutableIntStateOf(initialChoice) }
+    NiraAlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = stringResource(R.string.homepage_type),
+                style = MaterialTheme.typography.headlineSmallEmphasized,
+            )
+        },
+        text = {
+            Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                choices.forEachIndexed { index, label ->
+                    ChoiceRow(
+                        label = label,
+                        selected = index == selected,
+                        onClick = {
+                            selected = index
+                            onChoice(index)
+                        },
+                    )
                 }
             }
-            else{
-                Toast.makeText(context, R.string.custom_search_engine_error, Toast.LENGTH_LONG).show()
-                customSearchEngineDialog()
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    onDismiss()
+                    onConfirm()
+                },
+                shapes = ButtonDefaults.shapes(),
+            ) {
+                Text(stringResource(R.string.mozac_feature_prompts_ok))
             }
-        }
-        builder.setNegativeButton(
-            "Cancel"
-        ) { dialog, which ->
-            UserPreferences(requireContext()).customSearchEngine = false
-        }
+        },
+        dismissButton = {
+            TextButton(
+                onClick = {
+                    onCancel()
+                    onDismiss()
+                },
+            ) {
+                Text(stringResource(R.string.cancel))
+            }
+        },
+    )
+}
 
-        builder.show()
-    }
+@Composable
+private fun SearchEngineDialog(
+    title: String,
+    labels: Array<String>,
+    initialSelection: Int,
+    onChoice: (Int) -> Unit,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var selected by remember { mutableIntStateOf(initialSelection) }
+    NiraAlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.headlineSmallEmphasized,
+            )
+        },
+        text = {
+            Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                labels.forEachIndexed { index, label ->
+                    ChoiceRow(
+                        label = label,
+                        selected = index == selected,
+                        onClick = {
+                            selected = index
+                            onChoice(index)
+                        },
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    onDismiss()
+                    onConfirm()
+                },
+                shapes = ButtonDefaults.shapes(),
+            ) {
+                Text(stringResource(R.string.mozac_feature_prompts_ok))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.cancel))
+            }
+        },
+    )
+}
+
+@Composable
+private fun CustomSearchEngineDialog(
+    initialUrl: String,
+    onSave: (String) -> Boolean,
+    onCancel: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var url by remember { mutableStateOf(initialUrl) }
+    NiraAlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = stringResource(R.string.custom_search_engine),
+                style = MaterialTheme.typography.headlineSmallEmphasized,
+            )
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                Text(stringResource(R.string.custom_search_engine_details))
+                OutlinedTextField(
+                    value = url,
+                    onValueChange = { url = it },
+                    label = { Text(stringResource(R.string.url)) },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = { if (onSave(url)) onDismiss() },
+                shapes = ButtonDefaults.shapes(),
+            ) {
+                Text(stringResource(R.string.mozac_feature_prompts_ok))
+            }
+        },
+        dismissButton = {
+            TextButton(
+                onClick = {
+                    onCancel()
+                    onDismiss()
+                },
+            ) {
+                Text(stringResource(R.string.cancel))
+            }
+        },
+    )
 }

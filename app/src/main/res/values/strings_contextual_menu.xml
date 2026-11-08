@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Contextual bottom toolbar: the back slot shows the bookmark glyph on the homepage. -->
+    <string name="contextual_toolbar_bookmarks">Bookmarks</string>
+
+    <!--
+      Previously declared by contextual_bottom_toolbar.xml (deleted when the
+      toolbar moved to Compose rendering). BrowserFragment.showBrowserMenu()
+      looks the contextual toolbar's menu button up by this id to anchor the
+      browser menu popup, so the id must stay defined.
+    -->
+    <item type="id" name="menu_button" />
+</resources>

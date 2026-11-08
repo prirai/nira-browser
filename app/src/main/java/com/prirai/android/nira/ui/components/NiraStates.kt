@@ -1,0 +1,95 @@
+package com.prirai.android.nira.ui.components
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialShapes
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.material3.toShape
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+
+private val StateIconContainerSize = 96.dp
+private val StateIconSize = 44.dp
+
+/**
+ * Empty state for any surface. [icon] and [subtitle] are optional so a bare
+ * "nothing here yet" line stays a one-liner at the call site.
+ */
+@Composable
+fun NiraEmptyState(
+    title: String,
+    modifier: Modifier = Modifier,
+    subtitle: String? = null,
+    icon: ImageVector? = null,
+    action: (@Composable () -> Unit)? = null,
+) {
+    Box(
+        modifier = modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(
+            modifier = Modifier.padding(32.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            if (icon != null) {
+                NiraStateIcon(icon = icon, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodyLarge,
+                textAlign = TextAlign.Center,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            if (subtitle != null) {
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodyMedium,
+                    textAlign = TextAlign.Center,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            action?.invoke()
+        }
+    }
+}
+
+/**
+ * The icon of an empty, error or message state, on the state container shape
+ * (a MaterialShapes cookie, distinct from the theme's rounded rectangles so it
+ * reads as a container, not a card).
+ */
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+private fun NiraStateIcon(
+    icon: ImageVector,
+    tint: Color,
+) {
+    Surface(
+        shape = MaterialShapes.Cookie9Sided.toShape(),
+        color = MaterialTheme.colorScheme.surfaceContainerHighest,
+        modifier = Modifier.size(StateIconContainerSize),
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                modifier = Modifier.size(StateIconSize),
+                tint = tint,
+            )
+        }
+    }
+}

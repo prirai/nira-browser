@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalMaterial3ExpressiveApi::class)
+
 package com.prirai.android.nira.browser.tabs
 
 import android.graphics.Color
@@ -20,6 +22,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.fragment.app.DialogFragment
 import androidx.lifecycle.lifecycleScope
@@ -34,6 +38,7 @@ import com.prirai.android.nira.R
 import com.prirai.android.nira.browser.BrowsingMode
 import com.prirai.android.nira.browser.BrowsingModeManager
 import com.prirai.android.nira.browser.tabgroups.UnifiedTabGroupManager
+import com.prirai.android.nira.browser.tabs.compose.ProfileSwitcherRow
 import com.prirai.android.nira.browser.tabs.compose.TabViewModel
 import com.prirai.android.nira.browser.tabs.compose.TabSheetListView
 import com.prirai.android.nira.browser.tabs.compose.TabSheetGridView
@@ -99,7 +104,7 @@ class TabsBottomSheetFragment : DialogFragment() {
                 val exportManager = com.prirai.android.nira.browser.profile.ProfileExportManager
                     .getInstance(requireContext())
                 val imported = exportManager.importProfile(uri)
-                setupMergedProfileButtons()
+                profileStateTrigger.value++
                 android.widget.Toast.makeText(
                     requireContext(),
                     "Profile \"${imported.name}\" imported",
@@ -182,7 +187,7 @@ class TabsBottomSheetFragment : DialogFragment() {
                 unifiedGroupManager
             )
             setupComposeTabViews()
-        setupMergedProfileButtons()
+        profileStateTrigger.value++
 
         isInitializing = false
     }
@@ -213,14 +218,8 @@ class TabsBottomSheetFragment : DialogFragment() {
             androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(window.decorView) { v, insets ->
                 val systemBars = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars())
 
-                // Apply padding to profile button container to avoid navigation bar overlap
-                binding.profileButtonContainer.setPadding(
-                    binding.profileButtonContainer.paddingLeft,
-                    binding.profileButtonContainer.paddingTop,
-                    binding.profileButtonContainer.paddingRight,
-                    systemBars.bottom + 16 // Add extra padding for navigation bar
-                )
-
+                // The Compose profile pill row applies navigationBarsPadding
+                // itself; nothing to inset here anymore.
                 insets
             }
         }
@@ -245,24 +244,8 @@ class TabsBottomSheetFragment : DialogFragment() {
             showTabSearch()
         }
 
-        // Hide XML view mode switcher — replaced by Compose SingleChoiceSegmentedButtonRow in header
-        binding.viewModeSwitcher.visibility = View.GONE
-
-        // Setup view mode switcher
-        setupViewModeSwitcher()
-    }
-
-    private fun setupViewModeSwitcher() {
         // Restore saved view preference; Compose header handles the toggle UI
         isGridViewState.value = viewPrefs.getBoolean("is_grid_view", false)
-    }
-
-    private fun handleSwitchToListView() {
-            setupComposeTabViews()
-    }
-
-    private fun handleSwitchToGridView() {
-            setupComposeTabViews()
     }
 
     private fun showTabSearch() {
@@ -270,125 +253,16 @@ class TabsBottomSheetFragment : DialogFragment() {
         searchFragment.show(parentFragmentManager, TabSearchFragment.TAG)
     }
 
-    private fun setupMergedProfileButtons() {
-        val profileManager = com.prirai.android.nira.browser.profile.ProfileManager.getInstance(requireContext())
-        val profiles = profileManager.getAllProfiles()
-        val isPrivateMode = browsingModeManager.mode.isPrivate
-        val currentProfile = browsingModeManager.currentProfile
-
-        binding.profileButtonGroup.removeAllViews()
-
-        val buttons = mutableListOf<MergedProfileButton>()
-
-        // Add profile buttons
-        profiles.forEachIndexed { index, profile ->
-            val button = MergedProfileButton(requireContext()).apply {
-                id = View.generateViewId()
-                tag = profile.id
-                setText(profile.emoji, profile.name)
-                setActive(!isPrivateMode && profile.id == currentProfile.id, animated = false)
-
-                val position = when {
-                    profiles.size == 1 -> MergedProfileButton.Position.ONLY
-                    index == 0 -> MergedProfileButton.Position.FIRST
-                    index == profiles.size - 1 -> MergedProfileButton.Position.MIDDLE
-                    else -> MergedProfileButton.Position.MIDDLE
-                }
-                setPosition(position)
-
-                val heightPx = (48 * resources.displayMetrics.density).toInt()
-                layoutParams = LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.WRAP_CONTENT,
-                    heightPx
-                ).apply {
-                    marginEnd = 1 // 1dp for merged appearance
-                }
-
-                setOnClickListener {
-                    switchToProfile(profile.id, false)
-                }
-
-                setOnLongClickListener {
-                    showProfileEditDialog(profile)
-                    true
-                }
-            }
-            buttons.add(button)
-            binding.profileButtonGroup.addView(button)
-        }
-
-        // Add private button
-        val privateButton = MergedProfileButton(requireContext()).apply {
-            id = View.generateViewId()
-            tag = "private"
-            setText("🕵️", "Private")
-            setActive(isPrivateMode, animated = false)
-            setPosition(MergedProfileButton.Position.MIDDLE)
-
-            val heightPx = (48 * resources.displayMetrics.density).toInt()
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.WRAP_CONTENT,
-                heightPx
-            ).apply {
-                marginEnd = 1
-            }
-
-            setOnClickListener {
-                switchToProfile("private", true)
-            }
-        }
-        binding.profileButtonGroup.addView(privateButton)
-
-        // Add plus button
-        val plusButton = MergedProfileButton(requireContext()).apply {
-            id = View.generateViewId()
-            setText("+", "")
-            setActive(false, animated = false)
-            setPosition(MergedProfileButton.Position.LAST)
-
-            val heightPx = (48 * resources.displayMetrics.density).toInt()
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.WRAP_CONTENT,
-                heightPx
-            )
-
-            setOnClickListener {
-                showProfileCreateDialog()
-            }
-        }
-        binding.profileButtonGroup.addView(plusButton)
-    }
-
     private fun switchToProfile(profileId: String, isPrivate: Boolean) {
         if (isInitializing) return
 
-        // Animate all buttons
-        val transition = ChangeBounds().apply {
-            duration = 300
-            interpolator = PathInterpolator(0.4f, 0.0f, 0.2f, 1.0f)
-        }
-        TransitionManager.beginDelayedTransition(binding.profileButtonGroup, transition)
-
-        for (i in 0 until binding.profileButtonGroup.childCount) {
-            val child = binding.profileButtonGroup.getChildAt(i) as? MergedProfileButton
-            child?.let {
-                val buttonTag = it.tag as? String
-                val shouldBeActive = if (isPrivate) {
-                    buttonTag == "private"
-                } else {
-                    buttonTag == profileId
-                }
-                it.setActive(shouldBeActive, animated = true)
-            }
-        }
-
-        // Update browsing mode and tabs
+        // Update browsing mode and tabs; the Compose profile pill row
+        // recomposes via profileStateTrigger and shows the active pill.
         val profileManager = com.prirai.android.nira.browser.profile.ProfileManager.getInstance(requireContext())
         if (isPrivate) {
             if (!browsingModeManager.mode.isPrivate) {
                 browsingModeManager.mode = BrowsingMode.Private
                 profileManager.setPrivateMode(true)
-                // Trigger Compose recomposition (it will automatically refresh via LaunchedEffect)
                 profileStateTrigger.value++
             }
         } else {
@@ -399,7 +273,6 @@ class TabsBottomSheetFragment : DialogFragment() {
                 browsingModeManager.mode = BrowsingMode.Normal
                 profileManager.setActiveProfile(profile)
                 profileManager.setPrivateMode(false)
-                // Trigger Compose recomposition (it will automatically refresh via LaunchedEffect)
                 profileStateTrigger.value++
             }
         }
@@ -415,8 +288,8 @@ class TabsBottomSheetFragment : DialogFragment() {
         val profileManager = com.prirai.android.nira.browser.profile.ProfileManager.getInstance(requireContext())
         val profiles = profileManager.getAllProfiles()
 
-        val items = profiles.map { "${it.emoji} ${it.name}" }.toMutableList()
-        items.add("🕵️ Private")
+        val items = profiles.map { it.name }.toMutableList()
+        items.add(getString(com.prirai.android.nira.R.string.private_mode_short))
 
         val tabWord = if (isGroup) "group" else if (tabIds.size > 1) "tabs" else "tab"
 
@@ -498,7 +371,7 @@ class TabsBottomSheetFragment : DialogFragment() {
                             com.prirai.android.nira.browser.profile.ProfileManager.getInstance(requireContext())
                         val newProfile = profileManager.createProfile(name, color, emoji)
 
-                        setupMergedProfileButtons()
+                        profileStateTrigger.value++
 
                         browsingModeManager.currentProfile = newProfile
                         browsingModeManager.mode = BrowsingMode.Normal
@@ -551,7 +424,7 @@ class TabsBottomSheetFragment : DialogFragment() {
                             browsingModeManager.currentProfile = updatedProfile
                         }
 
-                        setupMergedProfileButtons()
+                        profileStateTrigger.value++
 
                         (composeView.parent as? ViewGroup)?.removeView(composeView)
                     },
@@ -566,7 +439,7 @@ class TabsBottomSheetFragment : DialogFragment() {
 
                         profileManager.deleteProfile(profile.id)
 
-                        setupMergedProfileButtons()
+                        profileStateTrigger.value++
                         (composeView.parent as? ViewGroup)?.removeView(composeView)
                     },
                     onExport = {
@@ -613,8 +486,10 @@ class TabsBottomSheetFragment : DialogFragment() {
 
     private fun setupComposeTabViews() {
         // Hide RecyclerView
+        // Hide the RecyclerView anchors - the Compose tab sheet renders
+        // everything; tabsRecyclerView stays as the ComposeView's layout
+        // anchor (parent + LayoutParams).
         binding.tabsRecyclerView.visibility = View.GONE
-        binding.tabsGridRecyclerView.visibility = View.GONE
 
         // Find parent container
         val container = binding.tabsRecyclerView.parent as? ViewGroup ?: return
@@ -650,11 +525,6 @@ class TabsBottomSheetFragment : DialogFragment() {
         val showMenu by showMenuState
         val menuTab by menuTabState
         val menuIsInGroup by menuIsInGroupState
-
-        // Update profile button visibility based on menu state - use SideEffect for immediate execution
-        androidx.compose.runtime.SideEffect {
-            binding.profileButtonContainer.visibility = if (showMenu) View.GONE else View.VISIBLE
-        }
 
         // Create ViewModel once and store it. TabViewModel.closeTab() now
         // performs removal + undo via TabsUseCases + UndoMiddleware directly,
@@ -747,10 +617,9 @@ class TabsBottomSheetFragment : DialogFragment() {
                     verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    val tabWord = if (tabs.size == 1) "Tab" else "Tabs"
                     Text(
-                        text = "${tabs.size} $tabWord",
-                        style = MaterialTheme.typography.titleMedium
+                        text = pluralStringResource(R.plurals.tab_count, tabs.size, tabs.size),
+                        style = MaterialTheme.typography.titleMediumEmphasized
                     )
                     SingleChoiceSegmentedButtonRow {
                         SegmentedButton(
@@ -761,7 +630,7 @@ class TabsBottomSheetFragment : DialogFragment() {
                             },
                             shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2)
                         ) {
-                            Icon(Icons.Rounded.ViewList, contentDescription = "List view")
+                            Icon(Icons.Rounded.ViewList, contentDescription = stringResource(R.string.list_view))
                         }
                         SegmentedButton(
                             selected = isGridView,
@@ -771,7 +640,7 @@ class TabsBottomSheetFragment : DialogFragment() {
                             },
                             shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2)
                         ) {
-                            Icon(Icons.Rounded.GridView, contentDescription = "Grid view")
+                            Icon(Icons.Rounded.GridView, contentDescription = stringResource(R.string.grid_view))
                         }
                     }
                 }
@@ -850,6 +719,28 @@ class TabsBottomSheetFragment : DialogFragment() {
                                 .fillMaxWidth()
                         )
                     }
+                }
+
+                // Profile switcher - the Compose pill row replaces the old
+                // MergedProfileButton LinearLayout; hidden while the
+                // long-press menu overlay is up.
+                if (!showMenu) {
+                    val trigger by profileStateTrigger
+                    val profiles = remember(trigger) {
+                        com.prirai.android.nira.browser.profile.ProfileManager
+                            .getInstance(requireContext())
+                            .getAllProfiles()
+                    }
+                    val isPrivateMode = browsingModeManager.mode == BrowsingMode.Private
+                    ProfileSwitcherRow(
+                        profiles = profiles,
+                        currentProfileId = browsingModeManager.currentProfile.id,
+                        isPrivateMode = isPrivateMode,
+                        onProfileClick = { profile -> switchToProfile(profile.id, false) },
+                        onProfileLongClick = { profile -> showProfileEditDialog(profile) },
+                        onPrivateClick = { switchToProfile("private", true) },
+                        onAddClick = { showProfileCreateDialog() },
+                    )
                 }
             }
         }
@@ -932,8 +823,12 @@ class TabsBottomSheetFragment : DialogFragment() {
     ) {
         androidx.compose.animation.AnimatedVisibility(
             visible = true,
-            enter = androidx.compose.animation.slideInVertically { it } + androidx.compose.animation.fadeIn(),
-            exit = androidx.compose.animation.slideOutVertically { it } + androidx.compose.animation.fadeOut(),
+            enter = androidx.compose.animation.slideInVertically(
+                animationSpec = MaterialTheme.motionScheme.fastSpatialSpec()
+            ) { it } + androidx.compose.animation.fadeIn(MaterialTheme.motionScheme.defaultEffectsSpec()),
+            exit = androidx.compose.animation.slideOutVertically(
+                animationSpec = MaterialTheme.motionScheme.fastSpatialSpec()
+            ) { it } + androidx.compose.animation.fadeOut(MaterialTheme.motionScheme.fastEffectsSpec()),
             modifier = modifier
         ) {
             Surface(
@@ -957,8 +852,8 @@ class TabsBottomSheetFragment : DialogFragment() {
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Text(
-                            text = tab.content.title.ifEmpty { "Tab" },
-                            style = MaterialTheme.typography.titleMedium,
+                            text = tab.content.title.ifEmpty { stringResource(R.string.tab) },
+                            style = MaterialTheme.typography.titleMediumEmphasized,
                             maxLines = 1,
                             overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
                             modifier = Modifier.weight(1f)
@@ -967,7 +862,7 @@ class TabsBottomSheetFragment : DialogFragment() {
                         IconButton(onClick = onDismiss) {
                             Icon(
                                 imageVector = androidx.compose.material.icons.Icons.Default.Close,
-                                contentDescription = "Close menu"
+                                contentDescription = stringResource(R.string.close_menu)
                             )
                         }
                     }
@@ -980,20 +875,20 @@ class TabsBottomSheetFragment : DialogFragment() {
                     if (isInGroup) {
                         MenuOption(
                             icon = androidx.compose.material.icons.Icons.Default.Clear,
-                            text = "Remove from Group",
+                            text = stringResource(R.string.remove_from_island),
                             onClick = onRemoveFromGroup
                         )
                     }
 
                     MenuOption(
                         icon = androidx.compose.material.icons.Icons.Default.AccountCircle,
-                        text = "Move to Profile",
+                        text = stringResource(R.string.move_to_profile),
                         onClick = onMoveToProfile
                     )
 
                     MenuOption(
                         icon = androidx.compose.material.icons.Icons.Default.Close,
-                        text = "Close Tab",
+                        text = stringResource(R.string.menu_close_tab),
                         onClick = {
                             handleTabCloseCompose(tab.id)
                             onDismiss()

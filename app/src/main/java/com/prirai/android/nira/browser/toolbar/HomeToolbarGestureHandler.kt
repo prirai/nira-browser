@@ -137,9 +137,18 @@ class HomeToolbarGestureHandler(
         activity.resources.configuration.layoutDirection == View.LAYOUT_DIRECTION_LTR
         val currentTab = store.state.selectedTab
         val isPrivateMode = currentTab?.content?.private ?: false
-        
-        val nextTabId = lruManager.getMostRecentTab()
-        
+
+        // From home the swipe goes to the previously used tab: the LRU
+        // entry AFTER the current one. The current tab itself sits at the
+        // front of the LRU queue (every selection moves it there), so the
+        // plain "most recent" would target the tab we are already on and
+        // the gesture would be a no-op.
+        val nextTabId = if (currentTab != null) {
+            lruManager.getTabAtLRUOffset(currentTab.id, 1)
+        } else {
+            lruManager.getMostRecentTab()
+        }
+
         if (nextTabId == null) return Destination.None
         
         val tabs = store.state.getNormalOrPrivateTabs(isPrivateMode)
@@ -214,6 +223,11 @@ class HomeToolbarGestureHandler(
                 }
 
                 lruManager.markAsSwipeNavigation(tab.id)
+                // The LRU spans every profile, so the destination tab may
+                // belong to another profile - sync the active profile to
+                // the destination BEFORE the selection dispatches so the
+                // tab bar re-filters correctly on the same store emission.
+                syncProfileToTabPartition(tab)
                 selectTabUseCase(tab.id)
 
                 val shortAnimationDuration =
@@ -226,6 +240,34 @@ class HomeToolbarGestureHandler(
                     }
             }
         }.start()
+    }
+
+    /**
+     * Points the active profile at [tab]'s partition: `profile_<id>`
+     * contextIds map to that profile, `null`/`profile_default` to the
+     * default profile. Swipes never cross the private/normal boundary
+     * (see [getDestination]), so the private branch is defensive only.
+     */
+    private fun syncProfileToTabPartition(tab: TabSessionState) {
+        val profileManager =
+            com.prirai.android.nira.browser.profile.ProfileManager.getInstance(activity)
+        if (tab.content.private || tab.contextId == "private") {
+            profileManager.setPrivateMode(true)
+            return
+        }
+        when (tab.contextId) {
+            null, "profile_default" -> profileManager.setActiveProfile(
+                com.prirai.android.nira.browser.profile.BrowserProfile.getDefaultProfile()
+            )
+            else -> {
+                val profileId = tab.contextId!!.removePrefix("profile_")
+                val profile = profileManager.getAllProfiles().find { it.id == profileId }
+                profileManager.setActiveProfile(
+                    profile ?: com.prirai.android.nira.browser.profile.BrowserProfile.getDefaultProfile()
+                )
+            }
+        }
+        profileManager.setPrivateMode(false)
     }
 
     private fun animateCanceledGesture(velocityX: Float) {

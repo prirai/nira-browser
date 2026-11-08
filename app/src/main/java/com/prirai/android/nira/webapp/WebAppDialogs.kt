@@ -1,318 +1,341 @@
+@file:OptIn(ExperimentalMaterial3ExpressiveApi::class)
+
 package com.prirai.android.nira.webapp
 
-import android.content.Context
 import android.graphics.Bitmap
-import android.view.LayoutInflater
-import android.widget.ArrayAdapter
-import androidx.appcompat.app.AlertDialog
-import androidx.lifecycle.LifecycleOwner
-import androidx.lifecycle.lifecycleScope
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Language
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.ExposedDropdownMenu
+import androidx.compose.material3.ExposedDropdownMenuAnchorType
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import com.prirai.android.nira.R
 import com.prirai.android.nira.browser.profile.BrowserProfile
 import com.prirai.android.nira.browser.profile.ProfileManager
-import com.prirai.android.nira.databinding.DialogWebappInstallBinding
-import com.prirai.android.nira.databinding.DialogWebappCloneBinding
-import com.prirai.android.nira.databinding.DialogWebappProfileBinding
 import com.prirai.android.nira.ext.components
-import com.prirai.android.nira.theme.ThemeManager
-import com.prirai.android.nira.preferences.UserPreferences
-import kotlinx.coroutines.launch
+import com.prirai.android.nira.ui.components.NiraAlertDialog
+import com.prirai.android.nira.utils.FaviconCache
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 /**
- * Material 3 dialog for cloning a web app with profile selection
+ * Dialog for cloning a web app into another profile: the app's icon, a
+ * name field pre-filled with "(Clone)" and the profile picker, on
+ * [NiraAlertDialog].
  */
-class WebAppCloneDialog(
-    private val context: Context,
-    private val lifecycleOwner: LifecycleOwner,
-    private val webApp: WebAppEntity,
-    private val onClone: (name: String, profileId: String) -> Unit
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun WebAppCloneDialog(
+    webApp: WebAppEntity,
+    onDismiss: () -> Unit,
+    onClone: (name: String, profileId: String) -> Unit,
 ) {
+    val context = LocalContext.current
+    val profiles = remember { ProfileManager.getInstance(context).getAllProfiles() }
+    var selectedProfile by remember {
+        mutableStateOf(ProfileManager.getInstance(context).getActiveProfile())
+    }
+    var cloneName by rememberSaveable(webApp.id) {
+        mutableStateOf(context.getString(R.string.webapp_clone_name_suffix, webApp.name))
+    }
+    var nameEmpty by remember { mutableStateOf(false) }
 
-    private var dialog: AlertDialog? = null
-    private var selectedProfile: BrowserProfile? = null
-
-    fun show() {
-        val binding = DialogWebappCloneBinding.inflate(LayoutInflater.from(context))
-
-        // Setup app info
-        binding.appTitle.text = context.getString(R.string.clone_webapp_dialog_title)
-        binding.appDescription.text = context.getString(R.string.clone_webapp_dialog_message, webApp.name)
-
-        // Pre-fill with clone name
-        binding.appNameInput.setText("${webApp.name} (Clone)")
-
-        // Load and set icon asynchronously
-        lifecycleOwner.lifecycleScope.launch {
-            val icon = loadWebAppIcon(webApp)
-            if (icon != null) {
-                binding.appIcon.setImageBitmap(icon)
-                binding.appIcon.imageTintList = null
-            } else {
-                binding.appIcon.setImageResource(R.drawable.ic_language)
+    NiraAlertDialog(
+        onDismissRequest = onDismiss,
+        icon = { WebAppIcon(webApp = webApp, size = 48.dp) },
+        title = {
+            Text(
+                text = stringResource(R.string.clone_webapp_dialog_title),
+                style = MaterialTheme.typography.headlineSmallEmphasized,
+            )
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                Text(
+                    text = stringResource(R.string.clone_webapp_dialog_message, webApp.name),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                OutlinedTextField(
+                    value = cloneName,
+                    onValueChange = {
+                        cloneName = it
+                        nameEmpty = false
+                    },
+                    label = { Text(stringResource(R.string.web_app_name)) },
+                    singleLine = true,
+                    isError = nameEmpty,
+                    supportingText = if (nameEmpty) {
+                        { Text(stringResource(R.string.name_required)) }
+                    } else {
+                        null
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                ProfileDropdown(
+                    profiles = profiles,
+                    selectedProfile = selectedProfile,
+                    onSelected = { selectedProfile = it },
+                )
             }
-        }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    val trimmed = cloneName.trim()
+                    if (trimmed.isEmpty()) {
+                        nameEmpty = true
+                    } else {
+                        onClone(trimmed, selectedProfile.id)
+                    }
+                },
+                shapes = ButtonDefaults.shapes(),
+            ) {
+                Text(stringResource(R.string.clone))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.cancel))
+            }
+        },
+    )
+}
 
-        // Setup profile dropdown
-        val profileManager = ProfileManager.getInstance(context)
-        val profiles = profileManager.getAllProfiles()
-        val profileNames = profiles.map { it.name }
-
-        // Find default profile
-        val defaultProfile = profileManager.getActiveProfile()
-        selectedProfile = defaultProfile
-
-        // Setup dropdown adapter
-        val adapter = ArrayAdapter(
-            context,
-            R.layout.dropdown_menu_popup_item,
-            profileNames
+/**
+ * Dialog for binding a web app to a profile: the app's icon, the
+ * binding explanation and the profile picker, pre-selected to the
+ * app's current profile.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun WebAppProfileDialog(
+    webApp: WebAppEntity,
+    onDismiss: () -> Unit,
+    onAssociate: (profileId: String) -> Unit,
+) {
+    val context = LocalContext.current
+    val profileManager = remember { ProfileManager.getInstance(context) }
+    val profiles = remember { profileManager.getAllProfiles() }
+    var selectedProfile by remember {
+        mutableStateOf(
+            profiles.find { it.id == webApp.profileId }
+                ?: profileManager.getActiveProfile(),
         )
+    }
 
-        val dropdown = binding.profileDropdown
-        dropdown.setAdapter(adapter)
-        dropdown.setText(defaultProfile.name, false)
-
-        // Handle profile selection
-        dropdown.setOnItemClickListener { _, _, position, _ ->
-            selectedProfile = profiles[position]
-        }
-
-        // Setup buttons
-        binding.cancelButton.setOnClickListener {
-            dialog?.dismiss()
-        }
-
-        binding.cloneButton.setOnClickListener {
-            val newName = binding.appNameInput.text.toString().trim()
-            if (newName.isNotEmpty()) {
-                selectedProfile?.let { profile ->
-                    onClone(newName, profile.id)
-                    dialog?.dismiss()
-                }
-            } else {
-                binding.appNameInput.error = context.getString(R.string.name_required)
+    NiraAlertDialog(
+        onDismissRequest = onDismiss,
+        icon = { WebAppIcon(webApp = webApp, size = 48.dp) },
+        title = {
+            Text(
+                text = stringResource(R.string.associate_profile),
+                style = MaterialTheme.typography.headlineSmallEmphasized,
+            )
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                Text(
+                    text = stringResource(R.string.associate_profile_message, webApp.name),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                ProfileDropdown(
+                    profiles = profiles,
+                    selectedProfile = selectedProfile,
+                    onSelected = { selectedProfile = it },
+                )
             }
-        }
-
-        // Create and show dialog
-        dialog = MaterialAlertDialogBuilder(context)
-            .setView(binding.root)
-            .create()
-
-        // Apply theme to dialog
-        applyThemeToDialog(dialog)
-
-        dialog?.show()
-    }
-
-    fun dismiss() {
-        dialog?.dismiss()
-    }
-
-    private suspend fun loadWebAppIcon(webApp: WebAppEntity): Bitmap? {
-        return kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-            try {
-                // Try webapp's stored icon
-                context.components.webAppManager
-                    .loadIconFromFile(webApp.iconUrl) ?: run {
-                    // Fallback to cache
-                    com.prirai.android.nira.utils.FaviconCache.getInstance(context)
-                        .loadFavicon(webApp.url)
-                }
-            } catch (e: Exception) {
-                null
+        },
+        confirmButton = {
+            Button(
+                onClick = { onAssociate(selectedProfile.id) },
+                shapes = ButtonDefaults.shapes(),
+            ) {
+                Text(stringResource(R.string.associate))
             }
-        }
-    }
-
-    private fun applyThemeToDialog(dialog: AlertDialog?) {
-        dialog?.window?.let { window ->
-            val userPreferences = UserPreferences(context)
-            val isDarkTheme = ThemeManager.isDarkMode(context)
-
-            // Apply AMOLED or themed background
-            val bgColor = if (userPreferences.amoledMode && isDarkTheme) {
-                android.graphics.Color.BLACK
-            } else {
-                context.getColorFromAttr(android.R.attr.colorBackground)
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.cancel))
             }
-
-            window.decorView.setBackgroundColor(bgColor)
-            window.setBackgroundDrawableResource(android.R.color.transparent)
-        }
-    }
+        },
+    )
 }
 
 /**
- * Material 3 dialog for associating a web app with a profile
+ * Confirmation dialog for uninstalling a web app.
  */
-class WebAppProfileDialog(
-    private val context: Context,
-    private val lifecycleOwner: LifecycleOwner,
-    private val webApp: WebAppEntity,
-    private val onAssociate: (profileId: String) -> Unit
+@Composable
+fun WebAppUninstallDialog(
+    webApp: WebAppEntity,
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit,
 ) {
+    NiraAlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = stringResource(R.string.uninstall_web_app),
+                style = MaterialTheme.typography.headlineSmallEmphasized,
+            )
+        },
+        text = { Text(stringResource(R.string.uninstall_web_app_message, webApp.name)) },
+        confirmButton = {
+            Button(
+                onClick = onConfirm,
+                shapes = ButtonDefaults.shapes(),
+            ) {
+                Text(stringResource(R.string.uninstall))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.cancel))
+            }
+        },
+    )
+}
 
-    private var dialog: AlertDialog? = null
-    private var selectedProfile: BrowserProfile? = null
+/**
+ * Confirmation dialog for clearing a web app's data.
+ */
+@Composable
+fun WebAppClearDataDialog(
+    webApp: WebAppEntity,
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit,
+) {
+    NiraAlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = stringResource(R.string.clear_data),
+                style = MaterialTheme.typography.headlineSmallEmphasized,
+            )
+        },
+        text = { Text(stringResource(R.string.clear_data_message, webApp.name)) },
+        confirmButton = {
+            Button(
+                onClick = onConfirm,
+                shapes = ButtonDefaults.shapes(),
+            ) {
+                Text(stringResource(R.string.clear_data))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.cancel))
+            }
+        },
+    )
+}
 
-    fun show() {
-        val binding = DialogWebappProfileBinding.inflate(LayoutInflater.from(context))
+/**
+ * The read-only profile picker shared by the web app dialogs.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ProfileDropdown(
+    profiles: List<BrowserProfile>,
+    selectedProfile: BrowserProfile,
+    onSelected: (BrowserProfile) -> Unit,
+) {
+    var expanded by remember { mutableStateOf(false) }
 
-        // Setup app info
-        binding.appTitle.text = context.getString(R.string.associate_profile)
-        binding.appDescription.text = context.getString(
-            R.string.associate_profile_message,
-            webApp.name
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { expanded = it },
+    ) {
+        OutlinedTextField(
+            value = selectedProfile.name,
+            onValueChange = {},
+            readOnly = true,
+            label = { Text(stringResource(R.string.select_profile)) },
+            singleLine = true,
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+            modifier = Modifier
+                .fillMaxWidth()
+                .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable),
         )
-
-        // Load and set icon asynchronously
-        lifecycleOwner.lifecycleScope.launch {
-            val icon = loadWebAppIcon(webApp)
-            if (icon != null) {
-                binding.appIcon.setImageBitmap(icon)
-                binding.appIcon.imageTintList = null
-            } else {
-                binding.appIcon.setImageResource(R.drawable.ic_language)
+        ExposedDropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+        ) {
+            profiles.forEach { profile ->
+                DropdownMenuItem(
+                    text = { Text(profile.name) },
+                    onClick = {
+                        onSelected(profile)
+                        expanded = false
+                    },
+                )
             }
         }
+    }
+}
 
-        // Setup profile dropdown
-        val profileManager = ProfileManager.getInstance(context)
-        val profiles = profileManager.getAllProfiles()
-        val profileNames = profiles.map { it.name }
+/**
+ * A web app's icon on the stored-icon loader - the icon file saved at
+ * install time, then the favicon cache - with the globe glyph as its
+ * placeholder while the load is in flight.
+ */
+@Composable
+private fun WebAppIcon(webApp: WebAppEntity, size: Dp) {
+    val context = LocalContext.current
+    val icon by produceState<Bitmap?>(initialValue = null, webApp.id) {
+        value = withContext(Dispatchers.IO) {
+            runCatching {
+                context.components.webAppManager.loadIconFromFile(webApp.iconUrl)
+                    ?: FaviconCache.getInstance(context).loadFavicon(webApp.url)
+            }.getOrNull()
+        }
+    }
 
-        // Find current profile
-        val currentProfile = profiles.find { it.id == webApp.profileId }
-            ?: profileManager.getActiveProfile()
-        selectedProfile = currentProfile
-
-        // Setup dropdown adapter
-        val adapter = ArrayAdapter(
-            context,
-            R.layout.dropdown_menu_popup_item,
-            profileNames
+    if (icon != null) {
+        Image(
+            bitmap = icon!!.asImageBitmap(),
+            contentDescription = null,
+            modifier = Modifier
+                .size(size)
+                .clip(RoundedCornerShape(12.dp)),
         )
-
-        val dropdown = binding.profileDropdown
-        dropdown.setAdapter(adapter)
-        dropdown.setText(currentProfile.name, false)
-
-        // Handle profile selection
-        dropdown.setOnItemClickListener { _, _, position, _ ->
-            selectedProfile = profiles[position]
-        }
-
-        // Setup buttons
-        binding.cancelButton.setOnClickListener {
-            dialog?.dismiss()
-        }
-
-        binding.associateButton.setOnClickListener {
-            selectedProfile?.let { profile ->
-                onAssociate(profile.id)
-                dialog?.dismiss()
-            }
-        }
-
-        // Create and show dialog
-        dialog = MaterialAlertDialogBuilder(context)
-            .setView(binding.root)
-            .create()
-
-        // Apply theme to dialog
-        applyThemeToDialog(dialog)
-
-        dialog?.show()
+    } else {
+        Icon(
+            imageVector = Icons.Filled.Language,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(size),
+        )
     }
-
-    fun dismiss() {
-        dialog?.dismiss()
-    }
-
-    private suspend fun loadWebAppIcon(webApp: WebAppEntity): Bitmap? {
-        return kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-            try {
-                // Try webapp's stored icon
-                context.components.webAppManager
-                    .loadIconFromFile(webApp.iconUrl) ?: run {
-                    // Fallback to cache
-                    com.prirai.android.nira.utils.FaviconCache.getInstance(context)
-                        .loadFavicon(webApp.url)
-                }
-            } catch (e: Exception) {
-                null
-            }
-        }
-    }
-
-    private fun applyThemeToDialog(dialog: AlertDialog?) {
-        dialog?.window?.let { window ->
-            val userPreferences = UserPreferences(context)
-            val isDarkTheme = ThemeManager.isDarkMode(context)
-
-            // Apply AMOLED or themed background
-            val bgColor = if (userPreferences.amoledMode && isDarkTheme) {
-                android.graphics.Color.BLACK
-            } else {
-                context.getColorFromAttr(android.R.attr.colorBackground)
-            }
-
-            window.decorView.setBackgroundColor(bgColor)
-            window.setBackgroundDrawableResource(android.R.color.transparent)
-        }
-    }
-}
-
-/**
- * Material 3 confirmation dialog for uninstalling a web app
- */
-class WebAppUninstallDialog(
-    private val context: Context,
-    private val webApp: WebAppEntity,
-    private val onConfirm: () -> Unit
-) {
-
-    fun show() {
-        MaterialAlertDialogBuilder(context)
-            .setTitle(R.string.uninstall_web_app)
-            .setMessage(context.getString(R.string.uninstall_web_app_message, webApp.name))
-            .setPositiveButton(R.string.uninstall) { dialog, which ->
-                onConfirm()
-            }
-            .setNegativeButton(android.R.string.cancel, null)
-            .show()
-    }
-}
-
-/**
- * Material 3 confirmation dialog for clearing web app data
- */
-class WebAppClearDataDialog(
-    private val context: Context,
-    private val webApp: WebAppEntity,
-    private val onConfirm: () -> Unit
-) {
-
-    fun show() {
-        MaterialAlertDialogBuilder(context)
-            .setTitle(R.string.clear_data)
-            .setMessage(context.getString(R.string.clear_data_message, webApp.name))
-            .setPositiveButton(R.string.clear_data) { dialog, which ->
-                onConfirm()
-            }
-            .setNegativeButton(android.R.string.cancel, null)
-            .show()
-    }
-}
-
-/**
- * Helper extension to get color from theme attribute
- */
-private fun Context.getColorFromAttr(attr: Int): Int {
-    val typedArray = obtainStyledAttributes(intArrayOf(attr))
-    val color = typedArray.getColor(0, 0)
-    typedArray.recycle()
-    return color
 }

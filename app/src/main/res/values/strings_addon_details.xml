@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="addon_installing">Installing…</string>
+    <string name="addon_no_permissions">No permissions requested</string>
+</resources>
