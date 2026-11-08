@@ -10,8 +10,11 @@ import androidx.preference.SwitchPreferenceCompat
  * A SwitchPreference that properly binds to Material 3 MaterialSwitch widget.
  * This fixes the issue where MaterialSwitch doesn't update its visual state
  * when the preference value changes.
+ *
+ * Open so the info-icon variants ([com.prirai.android.nira.settings.InfoSwitchPreference])
+ * can extend it.
  */
-class MaterialSwitchPreference @JvmOverloads constructor(
+open class MaterialSwitchPreference @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,
     defStyleAttr: Int = androidx.preference.R.attr.switchPreferenceCompatStyle,

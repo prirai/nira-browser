@@ -80,6 +80,40 @@ class PrivacyAndSecuritySettingsFragment : BaseSettingsFragment() {
         setupETP()
         setupConnectionPrivacy()
         setupSleepingTabs()
+        setupProtectionToggles()
+    }
+
+    /**
+     * The protection master switches that used to live on the General and
+     * Advanced pages - tracking protection, safe browsing and fingerprint
+     * resistance all belong here. Each needs an app restart to take
+     * effect, same as their previous homes.
+     */
+    private fun setupProtectionToggles() {
+        val prefs = UserPreferences(requireContext())
+
+        switchPreference(
+            preference = requireContext().resources.getString(R.string.key_tracking_protection),
+            isChecked = prefs.trackingProtection,
+        ) {
+            prefs.trackingProtection = it
+            Toast.makeText(context, requireContext().resources.getText(R.string.app_restart), Toast.LENGTH_LONG).show()
+        }
+
+        switchPreference(
+            preference = requireContext().resources.getString(R.string.key_safe_browsing),
+            isChecked = prefs.safeBrowsing,
+        ) {
+            prefs.safeBrowsing = it
+            Toast.makeText(context, requireContext().resources.getText(R.string.app_restart), Toast.LENGTH_LONG).show()
+        }
+
+        switchPreference(
+            preference = requireContext().resources.getString(R.string.key_resist_fingerprinting),
+            isChecked = prefs.resistFingerprinting,
+        ) {
+            prefs.resistFingerprinting = it
+        }
     }
 
     private fun setupSleepingTabs() {

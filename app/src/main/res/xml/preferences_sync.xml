@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Firefox Sync Settings -->
+<PreferenceScreen
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <PreferenceCategory android:title="@string/sync_account_category">
+
+        <!-- Account status: the fragment composes the signed-in email, last
+             sync time, connected device count and any sync error into the
+             summary. -->
+        <Preference
+            app:key="@string/key_sync_account_status"
+            app:title="@string/firefox_account"
+            app:summary="@string/sync_not_signed_in"
+            app:singleLineTitle="false"
+            app:selectable="false" />
+
+        <!-- Label and action switch between sign in and sign out with the
+             account state. -->
+        <Preference
+            app:key="@string/key_sync_sign_in_out"
+            app:title="@string/sign_in_to_firefox"
+            app:singleLineTitle="false" />
+
+        <Preference
+            app:key="@string/key_sync_now"
+            app:title="@string/sync_now"
+            app:singleLineTitle="false" />
+
+    </PreferenceCategory>
+
+    <PreferenceCategory android:title="@string/what_syncs">
+
+        <com.prirai.android.nira.settings.MaterialSwitchPreference
+            app:key="@string/key_sync_history"
+            app:title="@string/action_history"
+            app:icon="@drawable/mozac_ic_history_24"
+            app:singleLineTitle="false"
+            app:defaultValue="true"/>
+
+        <com.prirai.android.nira.settings.MaterialSwitchPreference
+            app:key="@string/key_sync_bookmarks"
+            app:title="@string/action_bookmarks"
+            app:icon="@drawable/mozac_ic_bookmark_24"
+            app:singleLineTitle="false"
+            app:defaultValue="true"/>
+
+        <com.prirai.android.nira.settings.MaterialSwitchPreference
+            app:key="@string/key_sync_tabs"
+            app:title="@string/open_tabs"
+            app:icon="@drawable/mozac_ic_tab_24"
+            app:singleLineTitle="false"
+            app:defaultValue="true"/>
+
+    </PreferenceCategory>
+
+</PreferenceScreen>

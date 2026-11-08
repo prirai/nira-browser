@@ -1028,4 +1028,19 @@
          minimal (tap to restore the tab bar + contextual bar). -->
     <string name="minimal_state_collapse">Collapse toolbar</string>
     <string name="minimal_state_expand">Expand toolbar</string>
+    <string name="info_icon_description">Show information</string>
+
+    <!-- Firefox Sync settings page -->
+    <string name="sync_account_category">Account</string>
+    <string name="sync_not_signed_in">Not signed in</string>
+    <string name="signed_in_as">Signed in as %1$s</string>
+    <string name="signed_in_to_firefox">Signed in to Firefox</string>
+    <string name="sync_engine_change_failed">Sync setting change failed: %1$s</string>
+    <string name="sync_unknown_error">unknown error</string>
+    <string name="key_sync_account_status" translatable="false">sync_account_status</string>
+    <string name="key_sync_sign_in_out" translatable="false">sync_sign_in_out</string>
+    <string name="key_sync_now" translatable="false">sync_now</string>
+    <string name="key_sync_history" translatable="false">sync_history_enabled</string>
+    <string name="key_sync_bookmarks" translatable="false">sync_bookmarks_enabled</string>
+    <string name="key_sync_tabs" translatable="false">sync_tabs_enabled</string>
 </resources>
