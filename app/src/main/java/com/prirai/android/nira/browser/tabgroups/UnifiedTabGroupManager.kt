@@ -88,6 +88,19 @@ class UnifiedTabGroupManager private constructor(private val context: Context) {
             0xFFFFF176.toInt()  // Yellow
         )
 
+        /**
+         * The color a new group wears: the first palette entry no active
+         * group uses yet, falling back to a positional pick when the
+         * palette is exhausted. Deterministic - two groups created in a
+         * row always get different colors, instead of the old
+         * [AVAILABLE_COLORS.random] which could hand both the same one.
+         */
+        private fun nextAvailableColor(existingGroups: List<TabGroupData>): Int {
+            val used = existingGroups.map { it.color }.toSet()
+            AVAILABLE_COLORS.firstOrNull { it !in used }?.let { return it }
+            return AVAILABLE_COLORS[existingGroups.size % AVAILABLE_COLORS.size]
+        }
+
         @Volatile
         private var instance: UnifiedTabGroupManager? = null
 
@@ -199,7 +212,7 @@ class UnifiedTabGroupManager private constructor(private val context: Context) {
 
         val groupId = UUID.randomUUID().toString()
         val groupName = name ?: ""
-        val groupColor = color ?: AVAILABLE_COLORS.random()
+        val groupColor = color ?: nextAvailableColor(groupsCache.values.toList())
         val now = System.currentTimeMillis()
 
         // Create database entity

@@ -1,20 +1,35 @@
+@file:OptIn(ExperimentalMaterial3ExpressiveApi::class)
+
 package com.prirai.android.nira.settings.fragment
 
-import android.app.AlertDialog
 import android.app.ProgressDialog
 import android.net.Uri
 import android.os.Bundle
-import android.text.InputType
 import android.view.View
-import android.widget.EditText
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.preference.Preference
 import com.prirai.android.nira.R
 import com.prirai.android.nira.addons.WebExtensionPromptFeature
 import com.prirai.android.nira.ext.components
 import com.prirai.android.nira.preferences.UserPreferences
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.prirai.android.nira.ui.components.NiraAlertDialog
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -120,19 +135,7 @@ class AdvancedSettingsFragment : BaseSettingsFragment() {
             isChecked = UserPreferences(requireContext()).customAddonCollection
         ) {
             if (it && !UserPreferences(requireContext()).shownCollectionDisclaimer) {
-                AlertDialog.Builder(context)
-                    .setTitle(resources.getString(R.string.custom_collection))
-                    .setMessage(resources.getString(R.string.use_custom_collection_disclaimer))
-                    .setPositiveButton(android.R.string.yes) { _, _ ->
-                        UserPreferences(requireContext()).customAddonCollection = it
-                        preferenceScreen.findPreference<Preference>(resources.getString(R.string.key_collection_user))!!.isEnabled =
-                            it
-                        preferenceScreen.findPreference<Preference>(resources.getString(R.string.key_collection_name))!!.isEnabled =
-                            it
-                    }
-                    .setNegativeButton(android.R.string.no, null)
-                    .setIcon(android.R.drawable.ic_dialog_alert)
-                    .show()
+                showCollectionDisclaimer(it)
                 UserPreferences(requireContext()).shownCollectionDisclaimer = true
             } else {
                 UserPreferences(requireContext()).customAddonCollection = it
@@ -160,63 +163,120 @@ class AdvancedSettingsFragment : BaseSettingsFragment() {
 
     }
 
-    private fun sideloadXpiLink() {
-        val builder = MaterialAlertDialogBuilder(requireActivity())
-        builder.setTitle(resources.getString(R.string.load_xpi_link))
-
-        val input = EditText(requireContext())
-        input.hint = getString(R.string.url)
-        input.inputType = InputType.TYPE_CLASS_TEXT
-        builder.setView(input)
-
-        builder.setPositiveButton(resources.getString(R.string.mozac_feature_prompts_ok)) { _, _ ->
-            val loadingDialog = ProgressDialog.show(
-                activity, "",
-                requireContext().resources.getString(R.string.loading), true
-            )
-
-            components.engine.installWebExtension(
-                input.text.toString(), InstallationMethod.FROM_FILE, onSuccess = {
-                    CoroutineScope(Dispatchers.IO).launch {
-                        val addons = requireContext().components.addonCollectionProvider.getFeaturedAddons()
-                        for (i in addons) {
-                            if (i.id == it.id) {
-                                runOnUiThread {
-                                    MaterialAlertDialogBuilder(requireActivity())
-                                        .setTitle(resources.getString(R.string.error))
-                                        .setMessage(resources.getString(R.string.already_available))
-                                        .setNeutralButton(resources.getString(R.string.mozac_feature_prompts_ok)) { dialog, _ ->
-                                            dialog.dismiss()
-                                        }
-                                        .show()
-                                    components.engine.uninstallWebExtension(it)
-                                }
-                                loadingDialog.dismiss()
-                                return@launch
-                            }
-                        }
-                        runOnUiThread {
-                            loadingDialog.dismiss()
-                            Toast.makeText(
-                                requireContext(),
-                                requireContext().resources.getString(R.string.installed),
-                                Toast.LENGTH_LONG
-                            ).show()
-                        }
+    private fun showCollectionDisclaimer(enabled: Boolean) {
+        showNiraDialog { onDismiss ->
+            NiraAlertDialog(
+                onDismissRequest = onDismiss,
+                icon = {
+                    Icon(
+                        painter = painterResource(android.R.drawable.ic_dialog_alert),
+                        contentDescription = null,
+                    )
+                },
+                title = {
+                    Text(
+                        text = stringResource(R.string.custom_collection),
+                        style = MaterialTheme.typography.headlineSmallEmphasized,
+                    )
+                },
+                text = { Text(stringResource(R.string.use_custom_collection_disclaimer)) },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            onDismiss()
+                            UserPreferences(requireContext()).customAddonCollection = enabled
+                            preferenceScreen.findPreference<Preference>(resources.getString(R.string.key_collection_user))!!.isEnabled =
+                                enabled
+                            preferenceScreen.findPreference<Preference>(resources.getString(R.string.key_collection_name))!!.isEnabled =
+                                enabled
+                        },
+                        shapes = ButtonDefaults.shapes(),
+                    ) {
+                        Text(stringResource(android.R.string.yes))
                     }
                 },
-                onError = { _ ->
-                    Toast.makeText(
-                        requireContext(),
-                        requireContext().resources.getString(R.string.error),
-                        Toast.LENGTH_LONG
-                    ).show()
-                    loadingDialog.dismiss()
-                })
+                dismissButton = {
+                    TextButton(onClick = onDismiss) {
+                        Text(stringResource(android.R.string.no))
+                    }
+                },
+            )
         }
-        builder.setNegativeButton(resources.getString(R.string.cancel)) { dialog, _ -> dialog.cancel() }
+    }
 
-        builder.show()
+    private fun sideloadXpiLink() {
+        showNiraDialog { onDismiss ->
+            XpiLinkDialog(
+                onConfirm = { link ->
+                    onDismiss()
+                    installXpiFromLink(link)
+                },
+                onDismiss = onDismiss,
+            )
+        }
+    }
+
+    private fun installXpiFromLink(link: String) {
+        val loadingDialog = ProgressDialog.show(
+            activity, "",
+            requireContext().resources.getString(R.string.loading), true
+        )
+
+        components.engine.installWebExtension(
+            link, InstallationMethod.FROM_FILE, onSuccess = {
+                CoroutineScope(Dispatchers.IO).launch {
+                    val addons = requireContext().components.addonCollectionProvider.getFeaturedAddons()
+                    for (i in addons) {
+                        if (i.id == it.id) {
+                            runOnUiThread {
+                                showAlreadyAvailableDialog()
+                                components.engine.uninstallWebExtension(it)
+                            }
+                            loadingDialog.dismiss()
+                            return@launch
+                        }
+                    }
+                    runOnUiThread {
+                        loadingDialog.dismiss()
+                        Toast.makeText(
+                            requireContext(),
+                            requireContext().resources.getString(R.string.installed),
+                            Toast.LENGTH_LONG
+                        ).show()
+                    }
+                }
+            },
+            onError = { _ ->
+                Toast.makeText(
+                    requireContext(),
+                    requireContext().resources.getString(R.string.error),
+                    Toast.LENGTH_LONG
+                ).show()
+                loadingDialog.dismiss()
+            })
+    }
+
+    private fun showAlreadyAvailableDialog() {
+        showNiraDialog { onDismiss ->
+            NiraAlertDialog(
+                onDismissRequest = onDismiss,
+                title = {
+                    Text(
+                        text = stringResource(R.string.error),
+                        style = MaterialTheme.typography.headlineSmallEmphasized,
+                    )
+                },
+                text = { Text(stringResource(R.string.already_available)) },
+                confirmButton = {
+                    TextButton(
+                        onClick = onDismiss,
+                        shapes = ButtonDefaults.shapes(),
+                    ) {
+                        Text(stringResource(R.string.mozac_feature_prompts_ok))
+                    }
+                },
+            )
+        }
     }
 
     private fun sideloadXpiFile() {
@@ -233,13 +293,13 @@ class AdvancedSettingsFragment : BaseSettingsFragment() {
             // Copy file to permanent extensions directory instead of cache
             val contentResolver = requireContext().contentResolver
             val inputStream = contentResolver.openInputStream(uri)
-            
+
             // Create permanent extensions directory in app's internal storage
             val extensionsDir = File(requireContext().filesDir, "sideloaded_extensions")
             if (!extensionsDir.exists()) {
                 extensionsDir.mkdirs()
             }
-            
+
             // Generate unique filename based on timestamp
             val timestamp = System.currentTimeMillis()
             val permanentFile = File(extensionsDir, "extension_${timestamp}.xpi")
@@ -260,13 +320,7 @@ class AdvancedSettingsFragment : BaseSettingsFragment() {
                         for (addon in addons) {
                             if (addon.id == extension.id) {
                                 runOnUiThread {
-                                    MaterialAlertDialogBuilder(requireActivity())
-                                        .setTitle(resources.getString(R.string.error))
-                                        .setMessage(resources.getString(R.string.already_available))
-                                        .setNeutralButton(resources.getString(R.string.mozac_feature_prompts_ok)) { dialog, _ ->
-                                            dialog.dismiss()
-                                        }
-                                        .show()
+                                    showAlreadyAvailableDialog()
                                     components.engine.uninstallWebExtension(extension)
                                 }
                                 loadingDialog.dismiss()
@@ -311,51 +365,48 @@ class AdvancedSettingsFragment : BaseSettingsFragment() {
     }
 
     private fun pickCollectionUser() {
-        val builder = MaterialAlertDialogBuilder(requireActivity())
-        builder.setTitle(resources.getString(R.string.collection_user))
-
-        val input = EditText(requireContext())
-        input.inputType = InputType.TYPE_CLASS_TEXT
-        builder.setView(input)
-
-        input.setText(UserPreferences(requireContext()).customAddonCollectionUser)
-
-        builder.setPositiveButton(resources.getString(R.string.mozac_feature_prompts_ok)) { _, _ ->
-            val text = input.text.toString()
-            UserPreferences(requireContext()).customAddonCollectionUser = text
-            Toast.makeText(
-                context,
-                requireContext().resources.getText(R.string.app_restart),
-                Toast.LENGTH_LONG
-            ).show()
-        }
-        builder.setNegativeButton(resources.getString(R.string.cancel)) { dialog, _ -> dialog.cancel() }
-
-        builder.show()
+        showCollectionFieldDialog(
+            title = getString(R.string.collection_user),
+            initialValue = UserPreferences(requireContext()).customAddonCollectionUser,
+            onConfirm = { text ->
+                UserPreferences(requireContext()).customAddonCollectionUser = text
+                Toast.makeText(
+                    context,
+                    requireContext().resources.getText(R.string.app_restart),
+                    Toast.LENGTH_LONG
+                ).show()
+            },
+        )
     }
 
     private fun pickCollectionName() {
-        val builder = MaterialAlertDialogBuilder(requireActivity())
-        builder.setTitle(resources.getString(R.string.collection_name))
+        showCollectionFieldDialog(
+            title = getString(R.string.collection_name),
+            initialValue = UserPreferences(requireContext()).customAddonCollectionName,
+            onConfirm = { text ->
+                UserPreferences(requireContext()).customAddonCollectionName = text
+                Toast.makeText(
+                    context,
+                    requireContext().resources.getText(R.string.app_restart),
+                    Toast.LENGTH_LONG
+                ).show()
+            },
+        )
+    }
 
-        val input = EditText(requireContext())
-        input.inputType = InputType.TYPE_CLASS_TEXT
-        builder.setView(input)
-
-        input.setText(UserPreferences(requireContext()).customAddonCollectionName)
-
-        builder.setPositiveButton(resources.getString(R.string.mozac_feature_prompts_ok)) { _, _ ->
-            val text = input.text.toString()
-            UserPreferences(requireContext()).customAddonCollectionName = text
-            Toast.makeText(
-                context,
-                requireContext().resources.getText(R.string.app_restart),
-                Toast.LENGTH_LONG
-            ).show()
+    private fun showCollectionFieldDialog(
+        title: String,
+        initialValue: String,
+        onConfirm: (String) -> Unit,
+    ) {
+        showNiraDialog { onDismiss ->
+            TextFieldDialog(
+                title = title,
+                initialValue = initialValue,
+                onConfirm = onConfirm,
+                onDismiss = onDismiss,
+            )
         }
-        builder.setNegativeButton(resources.getString(R.string.cancel)) { dialog, _ -> dialog.cancel() }
-
-        builder.show()
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -376,4 +427,86 @@ class AdvancedSettingsFragment : BaseSettingsFragment() {
             view = view,
         )
     }
+}
+
+@Composable
+private fun XpiLinkDialog(
+    onConfirm: (String) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var link by remember { mutableStateOf("") }
+    NiraAlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = stringResource(R.string.load_xpi_link),
+                style = MaterialTheme.typography.headlineSmallEmphasized,
+            )
+        },
+        text = {
+            OutlinedTextField(
+                value = link,
+                onValueChange = { link = it },
+                label = { Text(stringResource(R.string.url)) },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+            )
+        },
+        confirmButton = {
+            TextButton(
+                onClick = { onConfirm(link) },
+                shapes = ButtonDefaults.shapes(),
+            ) {
+                Text(stringResource(R.string.mozac_feature_prompts_ok))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.cancel))
+            }
+        },
+    )
+}
+
+@Composable
+private fun TextFieldDialog(
+    title: String,
+    initialValue: String,
+    onConfirm: (String) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var text by remember { mutableStateOf(initialValue) }
+    NiraAlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.headlineSmallEmphasized,
+            )
+        },
+        text = {
+            OutlinedTextField(
+                value = text,
+                onValueChange = { text = it },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+            )
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    onDismiss()
+                    onConfirm(text)
+                },
+                shapes = ButtonDefaults.shapes(),
+            ) {
+                Text(stringResource(R.string.mozac_feature_prompts_ok))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.cancel))
+            }
+        },
+    )
 }

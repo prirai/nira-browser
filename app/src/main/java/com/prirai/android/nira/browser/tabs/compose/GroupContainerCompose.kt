@@ -79,14 +79,16 @@ private fun GroupContainerShell(
     containerModifier: Modifier,
     content: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit,
 ) {
-    // Single container with group styling
+    // Neutral M3 container (anti-slop: containers are theme tokens, never
+    // tinted with the group's accent); the 4dp accent strip, name and badge
+    // carry the group color - its identity.
     Surface(
         modifier = containerModifier
             .fillMaxWidth()
             .padding(horizontal = 8.dp, vertical = 4.dp),
         shape = RoundedCornerShape(12.dp),
-        color = Color(color).copy(alpha = 0.1f),
-        tonalElevation = 2.dp
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        tonalElevation = 1.dp
     ) {
         // IntrinsicSize.Min lets the left accent strip fill the container's full height
         Row(
@@ -391,7 +393,9 @@ private fun GroupedTabRow(
         modifier = modifier
             .fillMaxWidth()
             .background(
-                if (isSelected) MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.5f)
+                // One selection language: the focused row is always the
+                // primaryContainer, grouped or not.
+                if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f)
                 else Color.Transparent
             )
             .clickable { onTabClick() }

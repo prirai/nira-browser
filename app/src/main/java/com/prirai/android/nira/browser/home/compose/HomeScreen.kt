@@ -312,7 +312,7 @@ fun LogoSection(
                 color = MaterialTheme.colorScheme.onBackground
             )
 
-            // Profile emoji selector (clickable)
+            // Profile avatar selector (clickable) - Material icon, not emoji
             Surface(
                 shape = CircleShape,
                 color = if (currentProfile.color != 0) {
@@ -325,10 +325,11 @@ fun LogoSection(
                     .clickable(onClick = onProfileClick)
             ) {
                 Box(contentAlignment = Alignment.Center) {
-                    Text(
-                        text = currentProfile.emoji,
-                        style = MaterialTheme.typography.titleLarge,
-                        fontSize = 24.sp
+                    Icon(
+                        imageVector = com.prirai.android.nira.browser.profile.ProfileIcons.iconFor(currentProfile.emoji),
+                        contentDescription = currentProfile.name,
+                        tint = MaterialTheme.colorScheme.onPrimary,
+                        modifier = Modifier.size(22.dp)
                     )
                 }
             }

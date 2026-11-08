@@ -703,7 +703,11 @@ private fun GroupPill(
                 if (isDragging) Modifier else Modifier
             ),
         shape = RoundedCornerShape(12.dp),
-        color = Color(group.color).copy(alpha = 0.2f)
+        // Neutral M3 container (anti-slop: containers are theme tokens,
+        // never tinted with the group's accent); the group color remains
+        // on the name, badge, expand icon and dividers - its identity.
+        color = MaterialTheme.colorScheme.surfaceContainerHighest,
+        tonalElevation = 1.dp
     ) {
         Row(
             modifier = Modifier
