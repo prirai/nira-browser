@@ -8,7 +8,9 @@ import android.graphics.drawable.ColorDrawable
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
+import android.widget.FrameLayout
 import android.widget.PopupWindow
+import androidx.activity.OnBackPressedCallback
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -63,12 +65,20 @@ import kotlin.math.roundToInt
 
 /**
  * Custom Material 3 Expressive browser menu. The content is rendered with the
- * app's unified Compose stack ([NiraTheme]) inside a [PopupWindow]; it does not
- * use the Mozilla Components menu system.
+ * app's unified Compose stack ([NiraTheme]); it does not use the Mozilla
+ * Components menu system.
  *
- * The popup keeps the anchoring, outside-dismiss and back-press behaviour of
- * the previous View-based implementation: a focusable popup shown at absolute
- * screen coordinates computed from the anchor, never scrollable, 280dp wide.
+ * Hosted as an overlay attached to the activity's content view (the same
+ * pattern as the settings/profile Compose dialogs), NOT a [PopupWindow]: a
+ * popup's decor view has no ViewTree lifecycle owners, so a ComposeView
+ * inside one crashes with "ViewTreeLifecycleOwner not found" when it tries
+ * to create its window recomposer. Attached to the activity content, the
+ * ComposeView inherits the full view-tree owners for free.
+ *
+ * The overlay keeps the anchoring, outside-dismiss (full-screen scrim) and
+ * back-press behaviour (intercepted while shown) of the previous
+ * View-based implementation: absolute screen coordinates computed from
+ * the anchor, never scrollable, 280dp wide.
  */
 class Material3BrowserMenu(
     private val context: Context,
@@ -137,6 +147,8 @@ class Material3BrowserMenu(
     )
 
     private var popupWindow: PopupWindow? = null
+    private var overlayViews: MutableList<View> = mutableListOf()
+    private var backCallback: OnBackPressedCallback? = null
 
     fun show(anchor: View, preferBottom: Boolean = true) {
         val visibleItems = items.filter { item ->
@@ -163,13 +175,7 @@ class Material3BrowserMenu(
         val darkTheme = ThemeManager.isDarkMode(context)
 
         val composeView = ComposeView(context).apply {
-            setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnDetachedFromWindow)
-            // The popup's decor view is not part of the anchor's view tree, so
-            // the composition owners must be carried over manually — the same
-            // wiring Compose's own popup host performs.
-            anchor.findViewTreeLifecycleOwner()?.let { setViewTreeLifecycleOwner(it) }
-            anchor.findViewTreeViewModelStoreOwner()?.let { setViewTreeViewModelStoreOwner(it) }
-            anchor.findViewTreeSavedStateRegistryOwner()?.let { setViewTreeSavedStateRegistryOwner(it) }
+            setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnDetachedFromWindowOrReleasedFromPool)
             setContent {
                 NiraTheme(
                     darkTheme = darkTheme,
@@ -178,7 +184,7 @@ class Material3BrowserMenu(
                 ) {
                     BrowserMenuContent(
                         items = visibleItems,
-                        onDismiss = { popupWindow?.dismiss() },
+                        onDismiss = ::dismiss,
                     )
                 }
             }
@@ -188,58 +194,109 @@ class Material3BrowserMenu(
         val gap = (8 * density).toInt()
         val screenPadding = (16 * density).toInt()
 
-        popupWindow = PopupWindow(
-            composeView,
-            menuWidthPx,
-            ViewGroup.LayoutParams.WRAP_CONTENT,
-            true,
-        ).apply {
-            elevation = 0f
-            // Transparent so the rounded Compose card defines the menu silhouette.
-            setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+        // Get anchor screen position
+        val location = IntArray(2)
+        anchor.getLocationOnScreen(location)
+        val anchorY = location[1]
 
-            // Get anchor screen position
-            val location = IntArray(2)
-            anchor.getLocationOnScreen(location)
-            val anchorY = location[1]
+        // Determine if anchor is in the bottom half of the screen (contextual toolbar case)
+        val anchorInBottomHalf = anchorY > screenHeight / 2
 
-            // Determine if anchor is in the bottom half of the screen (contextual toolbar case)
-            val anchorInBottomHalf = anchorY > screenHeight / 2
-
-            // Decide whether to show above or below
-            val showAbove = if (preferBottom) {
-                // Prefer bottom positioning: if anchor is in bottom half, show above it to keep menu at bottom
-                // if anchor is in top half, show below it to position menu at bottom
-                anchorInBottomHalf
-            } else {
-                // Prefer top positioning: if anchor is in top half, show below it to keep menu at top
-                // if anchor is in bottom half, show above it to position menu at top
-                !anchorInBottomHalf
-            }
-
-            // Calculate Y position
-            val yPos = if (showAbove) {
-                // Show above - align bottom of menu with top of anchor
-                anchorY - menuHeightPx - gap
-            } else {
-                // Show below - position below anchor
-                anchorY + anchor.height + gap
-            }
-
-            // Calculate X position - align right edge of menu with right edge of screen minus padding
-            val xPos = displayMetrics.widthPixels - menuWidthPx - screenPadding
-
-            // Ensure menu stays on screen
-            val finalX = xPos.coerceIn(screenPadding, displayMetrics.widthPixels - menuWidthPx - screenPadding)
-            val finalY = yPos.coerceIn(screenPadding, screenHeight - menuHeightPx - screenPadding)
-
-            showAtLocation(anchor, Gravity.NO_GRAVITY, finalX, finalY)
+        // Decide whether to show above or below
+        val showAbove = if (preferBottom) {
+            // Prefer bottom positioning: if anchor is in bottom half, show above it to keep menu at bottom
+            // if anchor is in top half, show below it to position menu at bottom
+            anchorInBottomHalf
+        } else {
+            // Prefer top positioning: if anchor is in top half, show below it to keep menu at top
+            // if anchor is in bottom half, show above it to position menu at top
+            !anchorInBottomHalf
         }
+
+        // Calculate Y position
+        val yPos = if (showAbove) {
+            // Show above - align bottom of menu with top of anchor
+            anchorY - menuHeightPx - gap
+        } else {
+            // Show below - position below anchor
+            anchorY + anchor.height + gap
+        }
+
+        // Calculate X position - align right edge of menu with right edge of screen minus padding
+        val xPos = displayMetrics.widthPixels - menuWidthPx - screenPadding
+
+        // Ensure menu stays on screen
+        val finalX = xPos.coerceIn(screenPadding, displayMetrics.widthPixels - menuWidthPx - screenPadding)
+        val finalY = yPos.coerceIn(screenPadding, screenHeight - menuHeightPx - screenPadding)
+
+        // Host in the activity's content view: the ComposeView inherits the
+        // view-tree lifecycle owners (a PopupWindow's decor view has none,
+        // which crashed composition). A full-screen scrim dismisses on
+        // outside taps; an OnBackPressedCallback intercepts back while shown.
+        val activity = anchor.context.let { ctx ->
+            var current: android.content.Context? = ctx
+            while (current is android.content.ContextWrapper) {
+                if (current is androidx.fragment.app.FragmentActivity) return@let current
+                current = current.baseContext
+            }
+            null
+        } ?: run {
+            // No activity host (unit-test context): fall back to a plain
+            // popup so the API still behaves.
+            popupWindow = PopupWindow(
+                composeView,
+                menuWidthPx,
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                true,
+            ).apply {
+                setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+                showAtLocation(anchor, Gravity.NO_GRAVITY, finalX, finalY)
+            }
+            return
+        }
+
+        val content = activity.window.decorView
+            .findViewById(android.R.id.content) as? ViewGroup ?: return
+
+        // Screen coordinates -> content-view-local coordinates.
+        val contentOrigin = IntArray(2)
+        content.getLocationOnScreen(contentOrigin)
+        val localX = finalX - contentOrigin[0]
+        val localY = finalY - contentOrigin[1]
+
+        val scrim = View(context).apply {
+            setOnClickListener { dismiss() }
+        }
+        val scrimParams = FrameLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            ViewGroup.LayoutParams.MATCH_PARENT,
+        )
+        content.addView(scrim, scrimParams)
+
+        val menuParams = FrameLayout.LayoutParams(menuWidthPx, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+            leftMargin = localX
+            topMargin = localY
+        }
+        content.addView(composeView, menuParams)
+
+        overlayViews.addAll(listOf(scrim, composeView))
+
+        backCallback = object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                dismiss()
+            }
+        }.also { activity.onBackPressedDispatcher.addCallback(it) }
     }
 
     fun dismiss() {
         popupWindow?.dismiss()
         popupWindow = null
+        backCallback?.remove()
+        backCallback = null
+        overlayViews.forEach { view ->
+            (view.parent as? ViewGroup)?.removeView(view)
+        }
+        overlayViews.clear()
     }
 }
 

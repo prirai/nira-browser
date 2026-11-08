@@ -41,6 +41,7 @@ import com.prirai.android.nira.ui.components.NiraCardRow
 import com.prirai.android.nira.ui.theme.NiraTheme
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
 import mozilla.components.browser.state.selector.findCustomTab
 import mozilla.components.browser.state.selector.selectedTab
 import mozilla.components.browser.state.store.BrowserStore
@@ -145,13 +146,16 @@ object ToolbarPopupWindow {
             }
         }
 
-        // Compose measures with the exact menu width so the popup height is
-        // deterministic (same pattern as Material3BrowserMenu.show).
-        composeView.measure(
-            View.MeasureSpec.makeMeasureSpec(menuWidthPx, View.MeasureSpec.EXACTLY),
-            View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
-        )
-        popupWindow.height = composeView.measuredHeight
+        // Compose only composes once the view attaches to the popup window,
+        // so measuring the ComposeView here would read 0 and open a
+        // zero-height popup (the bug this replaces). Every row renders at a
+        // fixed 48dp minimum with 1dp dividers and 8dp of vertical padding,
+        // so the natural content height is a deterministic dp sum - the same
+        // pattern as Material3BrowserMenu.show.
+        val rowCount = (if (copyVisible) 1 else 0) + (if (showPasteRows) 2 else 0)
+        val menuHeightPx =
+            ((16 + rowCount * 48 + (rowCount - 1).coerceAtLeast(0)) * density).roundToInt()
+        popupWindow.height = menuHeightPx
 
         popupWindow.elevation =
             context.resources.getDimension(R.dimen.mozac_browser_menu_elevation)
