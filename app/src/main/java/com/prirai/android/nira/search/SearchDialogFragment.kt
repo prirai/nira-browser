@@ -500,9 +500,12 @@ class SearchDialogFragment : AppCompatDialogFragment(), UserInteractionHandler {
     ) {
         // Lazy evaluation order matters: the binder read is skipped unless
         // the query is empty and clipboard suggestions can show at all.
+        // The card shows when the clipboard HOLDS a URL - containsURL() is
+        // readable even on S+ (it reads the clip description's text
+        // classification, not the content).
         val shouldShowView = searchState.showClipboardSuggestions &&
                 searchState.query.isEmpty() &&
-                !containsUrl()
+                containsUrl()
 
         binding.fillLinkFromClipboard.isVisible = shouldShowView
         pillDividerVisible.value =
