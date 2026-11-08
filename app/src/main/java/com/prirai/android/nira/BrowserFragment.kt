@@ -895,23 +895,48 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
             )
         )
 
-        if (UserPreferences(requireContext()).translationsEnabled &&
+        // IconRow: Translate, Extensions, New Private Tab - the second
+        // quick-action group, mirroring the Find-in-Page row above. Translate
+        // joins only while translations are enabled on an http(s) page.
+        val translateItem = if (UserPreferences(requireContext()).translationsEnabled &&
             selectedTab?.content?.url?.startsWith("http") == true
         ) {
             val translated = selectedTab.translationsState.isTranslated
-            menuItems.add(
-                com.prirai.android.nira.components.menu.Material3BrowserMenu.MenuItem.Action(
-                    id = "translate",
-                    title = getString(
-                        if (translated) R.string.show_original_page else R.string.translate_page
+            com.prirai.android.nira.components.menu.Material3BrowserMenu.IconRowItem(
+                title = getString(
+                    if (translated) R.string.show_original_page else R.string.translate_page
+                ),
+                iconRes = mozilla.components.ui.icons.R.drawable.mozac_ic_translate_24,
+                onClick = {
+                    browserInteractor.onBrowserToolbarMenuItemTapped(ToolbarMenu.Item.Translate)
+                }
+            )
+        } else {
+            null
+        }
+
+        menuItems.add(
+            com.prirai.android.nira.components.menu.Material3BrowserMenu.MenuItem.IconRow(
+                items = listOfNotNull(
+                    translateItem,
+                    com.prirai.android.nira.components.menu.Material3BrowserMenu.IconRowItem(
+                        title = getString(R.string.extensions),
+                        iconRes = R.drawable.mozac_ic_extension_24,
+                        onClick = {
+                            val extensionsBottomSheet = com.prirai.android.nira.addons.ExtensionsBottomSheetFragment.newInstance()
+                            extensionsBottomSheet.show(parentFragmentManager, com.prirai.android.nira.addons.ExtensionsBottomSheetFragment.TAG)
+                        }
                     ),
-                    iconRes = mozilla.components.ui.icons.R.drawable.mozac_ic_translate_24,
-                    onClick = {
-                        browserInteractor.onBrowserToolbarMenuItemTapped(ToolbarMenu.Item.Translate)
-                    }
+                    com.prirai.android.nira.components.menu.Material3BrowserMenu.IconRowItem(
+                        title = getString(R.string.mozac_browser_menu_new_private_tab),
+                        iconRes = mozilla.components.ui.icons.R.drawable.mozac_ic_private_mode_24,
+                        onClick = {
+                            browserInteractor.onBrowserToolbarMenuItemTapped(ToolbarMenu.Item.NewPrivateTab)
+                        }
+                    ),
                 )
             )
-        }
+        )
 
         menuItems.add(com.prirai.android.nira.components.menu.Material3BrowserMenu.MenuItem.Divider)
 
@@ -958,19 +983,6 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
             }
         }
 
-        // Extensions
-        menuItems.add(
-            com.prirai.android.nira.components.menu.Material3BrowserMenu.MenuItem.Action(
-                id = "extensions",
-                title = getString(R.string.extensions),
-                iconRes = R.drawable.mozac_ic_extension_24,
-                onClick = {
-                    val extensionsBottomSheet = com.prirai.android.nira.addons.ExtensionsBottomSheetFragment.newInstance()
-                    extensionsBottomSheet.show(parentFragmentManager, com.prirai.android.nira.addons.ExtensionsBottomSheetFragment.TAG)
-                }
-            )
-        )
-
         // Downloads
         menuItems.add(
             com.prirai.android.nira.components.menu.Material3BrowserMenu.MenuItem.Action(
@@ -1006,17 +1018,6 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
                 iconRes = R.drawable.mozac_ic_tab_new_24,
                 onClick = {
                     browserInteractor.onBrowserToolbarMenuItemTapped(ToolbarMenu.Item.NewTab)
-                }
-            )
-        )
-
-        menuItems.add(
-            com.prirai.android.nira.components.menu.Material3BrowserMenu.MenuItem.Action(
-                id = "new_private_tab",
-                title = getString(R.string.mozac_browser_menu_new_private_tab),
-                iconRes = mozilla.components.ui.icons.R.drawable.mozac_ic_private_mode_24,
-                onClick = {
-                    browserInteractor.onBrowserToolbarMenuItemTapped(ToolbarMenu.Item.NewPrivateTab)
                 }
             )
         )

@@ -25,6 +25,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.prirai.android.nira.ui.components.NiraAlertDialog
 import com.prirai.android.nira.ui.components.pressScale
+import com.prirai.android.nira.ui.components.mutedAdaptive
 import com.prirai.android.nira.browser.profile.ProfileIcons
 import com.prirai.android.nira.R
 
@@ -127,14 +128,15 @@ fun CombinedEmojiColorOption(
             .pressScale(interactionSource)
             .size(64.dp)
             .clip(RoundedCornerShape(16.dp))
+            // One selection language, the same as focused tab pills: the
+            // selected option is the primaryContainer, resting options are
+            // fully transparent - no tinted fill, no accent stroke. The
+            // icon's muted color carries the palette identity.
             .background(
-                if (selected) color.copy(alpha = 0.3f) else Color.Transparent
-            )
-            .then(
                 if (selected) {
-                    Modifier.border(2.dp, color, RoundedCornerShape(16.dp))
+                    MaterialTheme.colorScheme.primaryContainer
                 } else {
-                    Modifier
+                    Color.Transparent
                 }
             )
             .combinedClickable(
@@ -143,11 +145,13 @@ fun CombinedEmojiColorOption(
             ),
         contentAlignment = Alignment.Center
     ) {
-        // Icon avatar, not emoji - the stored key maps through ProfileIcons
+        // Icon avatar, not emoji - the stored key maps through ProfileIcons.
+        // The tint is the muted, theme-adaptive variant of the palette
+        // color, never the raw saturated accent.
         Icon(
             imageVector = ProfileIcons.iconFor(emoji),
             contentDescription = null,
-            tint = color,
+            tint = color.mutedAdaptive(),
             modifier = Modifier.size(32.dp)
         )
     }
