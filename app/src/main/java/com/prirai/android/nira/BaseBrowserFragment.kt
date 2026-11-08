@@ -1112,14 +1112,21 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
     private fun setupEdgeToEdgeForFragment() {
         // Initialize web content position manager for comprehensive handling
         // Uses callback functions to get toolbar heights dynamically
-        webContentPositionManager = com.prirai.android.nira.browser.WebContentPositionManager(
-            engineView = binding.engineView,
-            swipeRefreshView = binding.swipeRefresh,
-            rootView = binding.root,
-            getTopToolbarHeight = { getTopToolbarHeight() },
-            getBottomToolbarHeight = { getBottomToolbarHeight() }
-        )
-        webContentPositionManager?.initialize()
+        // The custom-tab fragment positions its own content (its header
+        // replaces the toolbar, so the main browser's toolbar-relative
+        // padding would double the status bar). ExternalAppBrowserFragment
+        // pads browserLayout for both the header and the opposite system
+        // bar in setupCustomTabContentPadding.
+        if (customTabSessionId == null) {
+            webContentPositionManager = com.prirai.android.nira.browser.WebContentPositionManager(
+                engineView = binding.engineView,
+                swipeRefreshView = binding.swipeRefresh,
+                rootView = binding.root,
+                getTopToolbarHeight = { getTopToolbarHeight() },
+                getBottomToolbarHeight = { getBottomToolbarHeight() }
+            )
+            webContentPositionManager?.initialize()
+        }
         
         // Make browserLayout pass insets through to children
         ViewCompat.setOnApplyWindowInsetsListener(binding.browserLayout) { _, insets ->

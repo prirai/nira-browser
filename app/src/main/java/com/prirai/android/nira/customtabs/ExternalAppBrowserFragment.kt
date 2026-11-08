@@ -141,10 +141,11 @@ class ExternalAppBrowserFragment : Fragment(), UserInteractionHandler, ActivityR
     }
     
     private fun setupEdgeToEdge() {
-        // Let header handle its own insets
-        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(binding.browserLayout) { _, insets ->
-            insets
-        }
+        // No-op pass-through kept for call-site stability: the real inset
+        // handling lives in setupCustomTabContentPadding (system bars) and
+        // setupKeyboardAdjustment (IME). Registering another listener here
+        // would only be replaced by the keyboard listener further down
+        // onViewCreated anyway.
     }
     
     private fun initializeFeatures(sessionId: String) {
@@ -335,51 +336,64 @@ class ExternalAppBrowserFragment : Fragment(), UserInteractionHandler, ActivityR
     
     /**
      * Pad the browser content so it does not render under the custom-
-     * tab header. The side on which padding is applied follows the
-     * header's mount position (top vs. bottom), which in turn follows
-     * [UserPreferences.shouldUseBottomToolbar].
+     * tab header NOR under the system bar on the opposite side. The side
+     * on which the header is mounted follows
+     * [UserPreferences.shouldUseBottomToolbar]; the header pads its own
+     * side for its system bar (addCustomHeader), and this function pads
+     * the content for BOTH the header height and the opposite system bar
+     * (status bar above the content when the header is at the bottom,
+     * navigation bar below it when the header is at the top) - previously
+     * the opposite side was never padded and the web content rendered
+     * beneath the status bar.
      *
-     * Previously this was a single `browserWindow.post {}` snapshot
-     * of `headerWrapper.height` taken after the first layout pass.
-     * That meant the engine view measured once at full-height, then
-     * re-measured with padding on the next frame - a visible
-     * reflow + white flash on first paint on cheap devices. Rewired
-     * to a `OnLayoutChangeListener` that keeps padding in sync any
-     * time the header's measured height changes (status-bar inset
-     * late-arriving, nav-bar inset late-arriving, rotation). The
-     * first callback fires before the first content frame so the
-     * engine view measures with the correct available area from the
-     * start.
+     * The header-side padding is kept in sync via a
+     * `OnLayoutChangeListener` on the header wrapper (fires before the
+     * first content frame, and again on late-arriving insets or
+     * rotation), and the opposite-side system-bar padding via a window
+     * insets listener on the fragment root. Both funnel through
+     * [applyBrowserLayoutPadding], so neither clobbers the other.
      */
+    private var headerSidePaddingPx = 0
+    private var oppositeSystemBarPaddingPx = 0
+    private var headerAtBottom = false
+
+    private fun applyBrowserLayoutPadding() {
+        if (headerAtBottom) {
+            binding.browserLayout.setPadding(0, oppositeSystemBarPaddingPx, 0, headerSidePaddingPx)
+        } else {
+            binding.browserLayout.setPadding(0, headerSidePaddingPx, 0, oppositeSystemBarPaddingPx)
+        }
+    }
+
     private fun setupCustomTabContentPadding(view: View) {
         val browserWindow = view.findViewById<ViewGroup>(R.id.browserWindow) ?: return
-        val browserLayout = binding.browserLayout
-        val bottom = UserPreferences(requireContext()).shouldUseBottomToolbar
+        headerAtBottom = UserPreferences(requireContext()).shouldUseBottomToolbar
 
-        // Apply a safe initial padding synchronously from the known
-        // design height (56 dp content + ~24 dp status bar guess, or
-        // nav-bar bottom guess) so the engine view measures correctly
-        // on the first pass without waiting for a post().
+        // Apply a safe initial header-side padding synchronously from the
+        // known design height (56 dp content + ~24 dp status bar guess) so
+        // the engine view measures correctly on the first pass without
+        // waiting for a post(). The opposite side starts at zero and is
+        // filled by the insets listener before the first content frame.
         val density = resources.displayMetrics.density
-        val initialPadPx = ((56f + 24f) * density).toInt()
-        if (bottom) {
-            browserLayout.setPadding(0, 0, 0, initialPadPx)
-        } else {
-            browserLayout.setPadding(0, initialPadPx, 0, 0)
+        headerSidePaddingPx = ((56f + 24f) * density).toInt()
+        applyBrowserLayoutPadding()
+
+        // System bar on the side opposite the header. Registered on the
+        // fragment root (not browserLayout) so the keyboard listener
+        // registered later in setupKeyboardAdjustment cannot replace it.
+        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(binding.root) { _, insets ->
+            val systemBars = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars())
+            oppositeSystemBarPaddingPx = if (headerAtBottom) systemBars.top else systemBars.bottom
+            applyBrowserLayoutPadding()
+            insets
         }
 
         val headerWrapper = browserWindow.findViewWithTag<View>("customTabHeaderWrapper")
             ?: return
         headerWrapper.addOnLayoutChangeListener { v, _, _, _, _, _, _, _, _ ->
-            val h = v.height
-            if (bottom) {
-                if (browserLayout.paddingBottom != h) {
-                    browserLayout.setPadding(0, 0, 0, h)
-                }
-            } else {
-                if (browserLayout.paddingTop != h) {
-                    browserLayout.setPadding(0, h, 0, 0)
-                }
+            if (headerSidePaddingPx != v.height) {
+                headerSidePaddingPx = v.height
+                applyBrowserLayoutPadding()
             }
         }
     }
