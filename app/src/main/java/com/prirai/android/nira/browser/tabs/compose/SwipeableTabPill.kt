@@ -1,7 +1,7 @@
 package com.prirai.android.nira.browser.tabs.compose
 
+import androidx.compose.animation.core.Animatable
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
@@ -11,19 +11,24 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material3.*
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChange
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import com.prirai.android.nira.R
+import kotlinx.coroutines.launch
 import mozilla.components.browser.state.state.TabSessionState
 import kotlin.math.abs
 import kotlin.math.roundToInt
@@ -38,7 +43,7 @@ import kotlin.math.roundToInt
  * Features:
  * - Visual feedback during swipe (background color + icon)
  * - Configurable swipe threshold
- * - Smooth animations
+ * - Smooth release animation on the theme's fast spatial spring
  * - Group color theming support
  * - Selection state support
  *
@@ -67,6 +72,7 @@ import kotlin.math.roundToInt
  * @param modifier Optional modifier
  * @param swipeThreshold Vertical distance in pixels required to trigger action (default: 40f)
  */
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun SwipeableTabPill(
     tab: TabSessionState,
@@ -78,11 +84,14 @@ fun SwipeableTabPill(
     modifier: Modifier = Modifier,
     swipeThreshold: Float = 40f
 ) {
-    // Reset offset when the tab id changes so the state does not leak between
+    val maxOffset = 80f
+    val scope = rememberCoroutineScope()
+    val releaseSpec = MaterialTheme.motionScheme.fastSpatialSpec<Float>()
+
+    // Reset when the tab id changes so the state does not leak between
     // adjacent slots when Compose reuses this call site for a different tab
     // (e.g. after a neighbouring pill is closed).
-    var offsetY by remember(tab.id) { mutableStateOf(0f) }
-    val maxOffset = 80f
+    val offsetY = remember(tab.id) { Animatable(0f) }
 
     Box(
         modifier = modifier
@@ -90,24 +99,24 @@ fun SwipeableTabPill(
             .width(100.dp)
     ) {
         // Background indicator based on swipe direction
-        if (abs(offsetY) > 5f) {
+        if (abs(offsetY.value) > 5f) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .clip(RoundedCornerShape(16.dp))
                     .background(
                         when {
-                            offsetY < -5f -> MaterialTheme.colorScheme.errorContainer // Swipe up - delete
-                            offsetY > 5f -> MaterialTheme.colorScheme.primaryContainer // Swipe down - menu
+                            offsetY.value < -5f -> MaterialTheme.colorScheme.errorContainer // Swipe up - delete
+                            offsetY.value > 5f -> MaterialTheme.colorScheme.primaryContainer // Swipe down - menu
                             else -> Color.Transparent
                         }
                     ),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    imageVector = if (offsetY < 0) Icons.Default.Delete else Icons.Default.MoreVert,
-                    contentDescription = if (offsetY < 0) "Delete" else "Menu",
-                    tint = if (offsetY < 0)
+                    imageVector = if (offsetY.value < 0) Icons.Default.Delete else Icons.Default.MoreVert,
+                    contentDescription = stringResource(if (offsetY.value < 0) R.string.delete else R.string.more_options),
+                    tint = if (offsetY.value < 0)
                         MaterialTheme.colorScheme.onErrorContainer
                     else
                         MaterialTheme.colorScheme.onPrimaryContainer,
@@ -120,7 +129,7 @@ fun SwipeableTabPill(
         Surface(
             modifier = Modifier
                 .fillMaxSize()
-                .offset { IntOffset(0, offsetY.roundToInt()) }
+                .offset { IntOffset(0, offsetY.value.roundToInt()) }
                 .pointerInput(tab.id) {
                     var totalHorizontalDrag = 0f
                     var totalVerticalDrag = 0f
@@ -145,7 +154,9 @@ fun SwipeableTabPill(
                                 if (totalVerticalDrag > totalHorizontalDrag && totalVerticalDrag > 10f) {
                                     // This is a vertical gesture - consume it
                                     drag.consume()
-                                    offsetY = (offsetY + deltaY).coerceIn(-maxOffset, maxOffset)
+                                    scope.launch {
+                                        offsetY.snapTo((offsetY.value + deltaY).coerceIn(-maxOffset, maxOffset))
+                                    }
                                 }
                             }
                         } while (event.changes.any { it.pressed })
@@ -153,7 +164,7 @@ fun SwipeableTabPill(
                         // On release, trigger action if vertical was dominant
                         if (totalVerticalDrag > totalHorizontalDrag && totalVerticalDrag > 10f) {
                             when {
-                                offsetY < -swipeThreshold -> {
+                                offsetY.value < -swipeThreshold -> {
                                     // Swipe up - close tab. Do NOT hide the pill locally;
                                     // the tab list flowing down from the store will remove
                                     // it on the next recomposition. Hiding it locally used
@@ -162,28 +173,31 @@ fun SwipeableTabPill(
                                     onTabClose()
                                 }
 
-                                offsetY > swipeThreshold -> {
+                                offsetY.value > swipeThreshold -> {
                                     // Swipe down - show menu
                                     onShowMenu()
                                 }
                             }
                         }
 
-                        // Reset position
-                        offsetY = 0f
+                        // Reset position on the theme's spring so the pill settles instead of snapping
+                        scope.launch { offsetY.animateTo(0f, animationSpec = releaseSpec) }
                     }
                 },
             shape = RoundedCornerShape(12.dp),
-            color = when {
-                isSelected && groupColor != null -> Color(groupColor).copy(alpha = 0.3f)
-                isSelected -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.55f)
-                else -> Color.Transparent
+            // One selection language: the focused pill is always the
+            // primaryContainer, grouped or not - the group color speaks
+            // through the container, name and badge, never the focus state.
+            color = if (isSelected) {
+                MaterialTheme.colorScheme.primaryContainer
+            } else {
+                Color.Transparent
             },
-            border = if (isSelected) {
-                BorderStroke(
-                    1.dp,
-                    groupColor?.let { Color(it) } ?: MaterialTheme.colorScheme.primary
-                )
+            // Only the selected pill carries a stroke; an unselected pill is
+            // fully transparent - no border, no tint (a resting pill with a
+            // light outline reads as a second, wrong focus state).
+            border = if (isSelected && groupColor != null) {
+                BorderStroke(2.dp, Color(groupColor).copy(alpha = 0.9f))
             } else {
                 null
             }
@@ -204,11 +218,15 @@ fun SwipeableTabPill(
 
                 // Title
                 Text(
-                    text = getTabDisplayTitle(tab),
-                    style = MaterialTheme.typography.labelSmall,
+                    text = getTabDisplayTitle(tab, stringResource(R.string.tab_history_new_tab)),
+                    style =
+                        if (isSelected) {
+                            MaterialTheme.typography.labelSmallEmphasized
+                        } else {
+                            MaterialTheme.typography.labelSmall
+                        },
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
                     color = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.weight(1f)
                 )
@@ -218,41 +236,19 @@ fun SwipeableTabPill(
 }
 
 /**
- * Example usage in GroupPill:
+ * Get display title for a tab, avoiding the new tab title for homepage.
  *
- * ```kotlin
- * group.tabs.forEachIndexed { index, tab ->
- *     if (index > 0) {
- *         // Divider
- *     }
- *
- *     SwipeableTabPill(
- *         tab = tab,
- *         isSelected = selectedTabId == tab.id,
- *         groupColor = group.color,
- *         onTabClick = { onTabClick(tab.id) },
- *         onTabClose = { onTabClose(tab.id) },
- *         onShowMenu = {
- *             menuTab = tab
- *             showTabMenu = true
- *         }
- *     )
- * }
- * ```
+ * @param newTabTitle localized fallback for the synthetic new tab page
  */
-
-/**
- * Get display title for a tab, avoiding "New Tab" for homepage
- */
-fun getTabDisplayTitle(tab: TabSessionState): String {
+fun getTabDisplayTitle(tab: TabSessionState, newTabTitle: String): String {
     return when {
-        // For homepage with no title, show "New Tab"
-        tab.content.url == "about:homepage" && tab.content.title.isEmpty() -> "New Tab"
+        // For homepage with no title, show the new tab title
+        tab.content.url == "about:homepage" && tab.content.title.isEmpty() -> newTabTitle
         // For other pages, show title if available
         tab.content.title.isNotEmpty() -> tab.content.title
         // If no title but has URL (not homepage), show URL
         tab.content.url.isNotEmpty() && tab.content.url != "about:homepage" -> tab.content.url
         // Last resort fallback
-        else -> "New Tab"
+        else -> newTabTitle
     }
 }

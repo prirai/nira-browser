@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Connection info (lock icon) bottom sheet. -->
+    <string name="connection_is_not_secure">Connection is not secure</string>
+    <string name="connection_internal_page">Internal page</string>
+    <string name="certificate_issuer_unknown">Unknown</string>
+    <string name="tracking_protection_enabled_toast">Tracking protection enabled</string>
+    <string name="tracking_protection_disabled_toast">Tracking protection disabled</string>
+</resources>

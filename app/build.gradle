@@ -63,10 +63,6 @@ android {
         }
     }
 
-    composeOptions {
-        kotlinCompilerExtensionVersion = '1.5.15'
-    }
-
     androidResources {
         noCompress += 'ja'
     }
@@ -230,7 +226,7 @@ dependencies {
 
     implementation libs.androidx.ui
     implementation libs.androidx.foundation
-    implementation libs.androidx.material
+    implementation platform(libs.androidx.compose.bom)
     implementation libs.androidx.material.icons.extended
     implementation libs.androidx.material3
     implementation libs.androidx.runtime

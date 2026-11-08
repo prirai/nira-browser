@@ -42,7 +42,11 @@ class FaviconCache private constructor(private val context: Context) {
             }
         }
         
-        private const val CACHE_SIZE = 40 * 1024 * 1024 // 40MB (doubled for more icons)
+        // Favicons are 16-64px bitmaps (a few KB each); 4MB holds hundreds
+        // of them, which is more than any profile browses between evictions.
+        // The previous 40MB was effectively a never-evicting 40MB floor of
+        // resident bitmap memory for icons nobody re-reads that often.
+        private const val CACHE_SIZE = 4 * 1024 * 1024
         private const val FAVICON_CACHE_DIR = "favicon_cache"
     }
     
@@ -215,6 +219,33 @@ class FaviconCache private constructor(private val context: Context) {
             memoryMaxSize = memoryCache.maxSize(),
             diskFiles = cacheDir.listFiles()?.size ?: 0
         )
+    }
+
+    /**
+     * Trim the memory cache under system memory pressure. Called from
+     * BrowserApp.onTrimMemory. The disk cache keeps everything, so a
+     * trimmed icon is one disk read away - exactly the hierarchy the
+     * class documents.
+     */
+    fun onTrimMemory(level: Int) {
+        when {
+            level >= android.content.ComponentCallbacks2.TRIM_MEMORY_COMPLETE ||
+                level == android.content.ComponentCallbacks2.TRIM_MEMORY_RUNNING_CRITICAL -> memoryCache.evictAll()
+
+            level >= android.content.ComponentCallbacks2.TRIM_MEMORY_BACKGROUND ||
+                level == android.content.ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW -> {
+                // Drop half the cache: LruCache has no halve(), so evict by
+                // removing the oldest quarter twice (approximation: snapshot,
+                // evict the first half of the LRU order).
+                val snapshot = memoryCache.snapshot()
+                var evicted = 0
+                val target = snapshot.size / 2
+                for (key in snapshot.keys) {
+                    if (evicted >= target) break
+                    if (memoryCache.remove(key) != null) evicted++
+                }
+            }
+        }
     }
     
     data class CacheStats(

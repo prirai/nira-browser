@@ -11,6 +11,8 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
@@ -52,6 +54,20 @@ class UnifiedTabGroupManager private constructor(private val context: Context) {
     // pattern as groupsCache, so same reasoning applies.
     private val tabToGroupMap = ConcurrentHashMap<String, String>()
 
+    /**
+     * Serializes every membership mutation. Groups enforce single membership
+     * (a tab belongs to at most one group), but the check-then-act sequences in
+     * createGroup/addTabToGroup raced when two coroutines (auto-grouping
+     * middleware, drag-and-drop, tab-bar "+" button) mutated the same tab
+     * concurrently — both passed the "already grouped?" check and the tab
+     * ended up in two groups, rendering as two pills that highlighted and
+     * closed together. Every mutating public function takes this mutex and
+     * delegates to its `*Locked` body; the `*Locked` variants assume the mutex
+     * is held and may call each other (Mutex is NOT reentrant, so only the
+     * public wrappers acquire it).
+     */
+    private val membershipMutex = Mutex()
+
     // State flows for reactive UI updates
     private val _groupsState = MutableStateFlow<List<TabGroupData>>(emptyList())
     val groupsState: StateFlow<List<TabGroupData>> = _groupsState.asStateFlow()
@@ -71,6 +87,19 @@ class UnifiedTabGroupManager private constructor(private val context: Context) {
             0xFF4DD0E1.toInt(), // Cyan
             0xFFFFF176.toInt()  // Yellow
         )
+
+        /**
+         * The color a new group wears: the first palette entry no active
+         * group uses yet, falling back to a positional pick when the
+         * palette is exhausted. Deterministic - two groups created in a
+         * row always get different colors, instead of the old
+         * [AVAILABLE_COLORS.random] which could hand both the same one.
+         */
+        private fun nextAvailableColor(existingGroups: List<TabGroupData>): Int {
+            val used = existingGroups.map { it.color }.toSet()
+            AVAILABLE_COLORS.firstOrNull { it !in used }?.let { return it }
+            return AVAILABLE_COLORS[existingGroups.size % AVAILABLE_COLORS.size]
+        }
 
         @Volatile
         private var instance: UnifiedTabGroupManager? = null
@@ -97,42 +126,67 @@ class UnifiedTabGroupManager private constructor(private val context: Context) {
         }
     }
 
-    private suspend fun loadGroupsFromDatabase() = withContext(Dispatchers.IO) {
-        try {
-            val groups = dao.getAllActiveGroups().first()
-            val groupDataList = mutableListOf<TabGroupData>()
-            
-            for (dbGroup in groups) {
-                val tabIds = dao.getTabIdsInGroup(dbGroup.id)
-                val groupData = TabGroupData(
-                    id = dbGroup.id,
-                    name = dbGroup.name,
-                    color = parseColor(dbGroup.color),
-                    tabIds = tabIds,
-                    createdAt = dbGroup.createdAt,
-                    isCollapsed = dbGroup.isCollapsed,
-                    contextId = dbGroup.contextId
-                )
-                groupDataList.add(groupData)
-            }
+    private suspend fun loadGroupsFromDatabase() = membershipMutex.withLock {
+        withContext(Dispatchers.IO) {
+            try {
+                val groups = dao.getAllActiveGroups().first()
+                val groupDataList = mutableListOf<TabGroupData>()
 
-            groupsCache.clear()
-            tabToGroupMap.clear()
-
-            groupDataList.forEach { groupData ->
-                groupsCache[groupData.id] = groupData
-                groupData.tabIds.forEach { tabId ->
-                    tabToGroupMap[tabId] = groupData.id
+                for (dbGroup in groups) {
+                    val tabIds = dao.getTabIdsInGroup(dbGroup.id)
+                    val groupData = TabGroupData(
+                        id = dbGroup.id,
+                        name = dbGroup.name,
+                        color = parseColor(dbGroup.color),
+                        tabIds = tabIds,
+                        createdAt = dbGroup.createdAt,
+                        isCollapsed = dbGroup.isCollapsed,
+                        contextId = dbGroup.contextId
+                    )
+                    groupDataList.add(groupData)
                 }
-            }
 
-            _groupsState.value = groupDataList
-        } catch (e: Exception) {
-            // Loading groups from Room failed - schema mismatch or DB
-            // corruption. Log so the empty tab-group state has an
-            // explanation instead of appearing to work fine but with
-            // no groups.
-            android.util.Log.e("UnifiedTabGroupManager", "Failed to load groups from database", e)
+                // Self-heal duplicated memberships from pre-mutex data: the
+                // same tab in two groups rendered as two pills that selected
+                // and closed together. Keep the oldest group's membership
+                // (stable, matches creation order) and strip the rest from
+                // both the loaded model and the database.
+                val seenTabs = mutableSetOf<String>()
+                val healed = groupDataList
+                    .sortedBy { it.createdAt }
+                    .map { group ->
+                        var changed = false
+                        val kept = group.tabIds.filter { tabId ->
+                            if (tabId in seenTabs) {
+                                runCatching { dao.removeTabFromGroup(tabId, group.id) }
+                                changed = true
+                                false
+                            } else {
+                                seenTabs.add(tabId)
+                                true
+                            }
+                        }
+                        if (changed) group.copy(tabIds = kept) else group
+                    }
+
+                groupsCache.clear()
+                tabToGroupMap.clear()
+
+                healed.forEach { groupData ->
+                    groupsCache[groupData.id] = groupData
+                    groupData.tabIds.forEach { tabId ->
+                        tabToGroupMap[tabId] = groupData.id
+                    }
+                }
+
+                _groupsState.value = healed
+            } catch (e: Exception) {
+                // Loading groups from Room failed - schema mismatch or DB
+                // corruption. Log so the empty tab-group state has an
+                // explanation instead of appearing to work fine but with
+                // no groups.
+                android.util.Log.e("UnifiedTabGroupManager", "Failed to load groups from database", e)
+            }
         }
     }
 
@@ -145,19 +199,20 @@ class UnifiedTabGroupManager private constructor(private val context: Context) {
         color: Int? = null,
         profileId: String? = null,
         contextId: String? = null
-    ): TabGroupData = withContext(Dispatchers.IO) {
-        if (tabIds.isEmpty()) {
-            throw IllegalArgumentException("Cannot create group with no tabs")
-        }
+    ): TabGroupData = membershipMutex.withLock {
+        withContext(Dispatchers.IO) {
+            if (tabIds.isEmpty()) {
+                throw IllegalArgumentException("Cannot create group with no tabs")
+            }
 
-        // Remove tabs from existing groups first
-        tabIds.forEach { tabId ->
-            removeTabFromGroup(tabId, notifyChange = false)
-        }
+            // Remove tabs from existing groups first
+            tabIds.forEach { tabId ->
+                removeTabFromGroupLocked(tabId, notifyChange = false)
+            }
 
         val groupId = UUID.randomUUID().toString()
         val groupName = name ?: ""
-        val groupColor = color ?: AVAILABLE_COLORS.random()
+        val groupColor = color ?: nextAvailableColor(groupsCache.values.toList())
         val now = System.currentTimeMillis()
 
         // Create database entity
@@ -201,12 +256,27 @@ class UnifiedTabGroupManager private constructor(private val context: Context) {
         _groupEvents.emit(GroupEvent.GroupCreated(groupData))
 
         groupData
+        }
     }
 
     /**
      * Adds a tab to an existing group
      */
     suspend fun addTabToGroup(
+        tabId: String,
+        groupId: String,
+        position: Int? = null,
+        notifyChange: Boolean = true
+    ): Boolean = membershipMutex.withLock {
+        withContext(Dispatchers.IO) {
+            addTabToGroupLocked(tabId, groupId, position, notifyChange)
+        }
+    }
+
+    /**
+     * Membership mutation; caller must hold [membershipMutex].
+     */
+    private suspend fun addTabToGroupLocked(
         tabId: String,
         groupId: String,
         position: Int? = null,
@@ -220,7 +290,7 @@ class UnifiedTabGroupManager private constructor(private val context: Context) {
         }
 
         // Remove from other groups first
-        removeTabFromGroup(tabId, notifyChange = false)
+        removeTabFromGroupLocked(tabId, notifyChange = false)
 
         val insertPosition = position ?: group.tabIds.size
         val newTabIds = group.tabIds.toMutableList().apply {
@@ -254,6 +324,18 @@ class UnifiedTabGroupManager private constructor(private val context: Context) {
     suspend fun removeTabFromGroup(
         tabId: String,
         notifyChange: Boolean = true
+    ): Boolean = membershipMutex.withLock {
+        withContext(Dispatchers.IO) {
+            removeTabFromGroupLocked(tabId, notifyChange)
+        }
+    }
+
+    /**
+     * Membership mutation; caller must hold [membershipMutex].
+     */
+    private suspend fun removeTabFromGroupLocked(
+        tabId: String,
+        notifyChange: Boolean = true
     ): Boolean = withContext(Dispatchers.IO) {
         val groupId = tabToGroupMap[tabId] ?: return@withContext false
         val group = groupsCache[groupId] ?: return@withContext false
@@ -267,7 +349,7 @@ class UnifiedTabGroupManager private constructor(private val context: Context) {
 
         if (newTabIds.isEmpty()) {
             // Delete empty group
-            deleteGroup(groupId, notifyChange = false)
+            deleteGroupLocked(groupId, notifyChange = false)
         } else {
             val updatedGroup = group.copy(tabIds = newTabIds)
             groupsCache[groupId] = updatedGroup
@@ -348,6 +430,19 @@ class UnifiedTabGroupManager private constructor(private val context: Context) {
         color: Int? = null,
         tabIds: List<String>? = null,
         contextId: String? = null
+    ): Boolean = membershipMutex.withLock {
+        withContext(Dispatchers.IO) { updateGroupLocked(groupId, name, color, tabIds, contextId) }
+    }
+
+    /**
+     * Membership mutation; caller must hold [membershipMutex].
+     */
+    private suspend fun updateGroupLocked(
+        groupId: String,
+        name: String? = null,
+        color: Int? = null,
+        tabIds: List<String>? = null,
+        contextId: String? = null
     ): Boolean = withContext(Dispatchers.IO) {
         val group = groupsCache[groupId] ?: return@withContext false
         val dbGroup = dao.getGroupById(groupId) ?: return@withContext false
@@ -402,7 +497,15 @@ class UnifiedTabGroupManager private constructor(private val context: Context) {
     /**
      * Deletes a group (ungroups all tabs)
      */
-    suspend fun deleteGroup(groupId: String, notifyChange: Boolean = true): Boolean = withContext(Dispatchers.IO) {
+    suspend fun deleteGroup(groupId: String, notifyChange: Boolean = true): Boolean =
+        membershipMutex.withLock {
+            withContext(Dispatchers.IO) { deleteGroupLocked(groupId, notifyChange) }
+        }
+
+    /**
+     * Membership mutation; caller must hold [membershipMutex].
+     */
+    private suspend fun deleteGroupLocked(groupId: String, notifyChange: Boolean = true): Boolean = withContext(Dispatchers.IO) {
         val group = groupsCache[groupId] ?: return@withContext false
 
         // Remove all tab associations
@@ -456,12 +559,13 @@ class UnifiedTabGroupManager private constructor(private val context: Context) {
     /**
      * Merges two groups together
      */
-    suspend fun mergeGroups(sourceGroupId: String, targetGroupId: String): Boolean {
-        if (sourceGroupId == targetGroupId) return false
+    suspend fun mergeGroups(sourceGroupId: String, targetGroupId: String): Boolean =
+        membershipMutex.withLock {
+            if (sourceGroupId == targetGroupId) return@withLock false
 
-        val sourceGroup = groupsCache[sourceGroupId] ?: return false
-        
-        withContext(Dispatchers.IO) {
+            val sourceGroup = groupsCache[sourceGroupId] ?: return@withLock false
+
+            withContext(Dispatchers.IO) {
             // Add all tabs from source to target without individual notifications
             sourceGroup.tabIds.forEach { tabId ->
                 val member = TabGroupMember(
@@ -488,9 +592,9 @@ class UnifiedTabGroupManager private constructor(private val context: Context) {
             emitStateUpdate()
             _groupEvents.emit(GroupEvent.GroupsMerged(sourceGroupId, targetGroupId))
 
+            }
+            true
         }
-        return true
-    }
 
     /**
      * Handles tab closure - removes from group
@@ -502,13 +606,15 @@ class UnifiedTabGroupManager private constructor(private val context: Context) {
     /**
      * Clears all groups
      */
-    suspend fun clearAllGroups() = withContext(Dispatchers.IO) {
-        val groupIds = groupsCache.keys.toList()
-        groupIds.forEach { groupId ->
-            deleteGroup(groupId, notifyChange = false)
+    suspend fun clearAllGroups() = membershipMutex.withLock {
+        withContext(Dispatchers.IO) {
+            val groupIds = groupsCache.keys.toList()
+            groupIds.forEach { groupId ->
+                deleteGroupLocked(groupId, notifyChange = false)
+            }
+            emitStateUpdate()
+            _groupEvents.emit(GroupEvent.AllGroupsCleared)
         }
-        emitStateUpdate()
-        _groupEvents.emit(GroupEvent.AllGroupsCleared)
     }
 
     /**

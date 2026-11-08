@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalMaterial3ExpressiveApi::class)
+
 package com.prirai.android.nira.downloads
 
 import android.content.ClipData
@@ -18,7 +20,6 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -43,6 +44,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -62,10 +64,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.prirai.android.nira.R
 import com.prirai.android.nira.ext.components
+import com.prirai.android.nira.ui.components.NiraAlertDialog
+import com.prirai.android.nira.ui.components.NiraEmptyState
+import com.prirai.android.nira.ui.components.NiraSearchField
+import com.prirai.android.nira.ui.components.NiraSheetHeader
 import mozilla.components.browser.state.action.DownloadAction
 import mozilla.components.browser.state.state.content.DownloadState
 import mozilla.components.lib.state.ext.observeAsComposableState
@@ -106,93 +113,45 @@ fun DownloadsScreen(onDismiss: () -> Unit) {
         }
         .sortedByDescending { it.createdTime }
 
-    Surface(
+    // The dialog theme's rounded_bottom_sheet provides the sheet chrome
+    // (28dp top corners, colorSurface); the content draws no second surface.
+    Column(
         modifier = Modifier
             .fillMaxWidth()
-            .wrapContentHeight(),
-        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
-        color = MaterialTheme.colorScheme.surface
+            .heightIn(min = 200.dp, max = 640.dp)
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .heightIn(min = 200.dp, max = 640.dp)
-        ) {
-            // Handle
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 12.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Surface(
-                    modifier = Modifier
-                        .width(32.dp)
-                        .height(4.dp),
-                    shape = RoundedCornerShape(2.dp),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
-                ) {}
-            }
+            NiraSheetHeader(
+                title = stringResource(R.string.downloads_title),
+                onClose = onDismiss,
+                dividerAlpha = null,
+            )
 
-            // Header row
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 12.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "Downloads",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier.weight(1f)
-                )
-            }
-
-            OutlinedTextField(
-                value = query,
-                onValueChange = { query = it },
+            NiraSearchField(
+                query = query,
+                onQueryChange = { query = it },
+                placeholder = stringResource(R.string.search_downloads),
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Default.Search,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                },
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 4.dp),
-                singleLine = true,
-                placeholder = { Text("Search downloads") },
-                leadingIcon = {
-                    Icon(imageVector = Icons.Default.Search, contentDescription = null)
-                },
-                trailingIcon = {
-                    if (query.isNotEmpty()) {
-                        IconButton(onClick = { query = "" }) {
-                            Icon(imageVector = Icons.Default.Close, contentDescription = "Clear search")
-                        }
-                    }
-                }
             )
 
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
 
             if (downloads.isEmpty()) {
-                Box(
+                NiraEmptyState(
+                    title = stringResource(R.string.no_downloads_yet),
+                    icon = Icons.Default.InsertDriveFile,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(200.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(
-                            imageVector = Icons.Default.InsertDriveFile,
-                            contentDescription = null,
-                            modifier = Modifier.size(48.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
-                        )
-                        Spacer(Modifier.height(12.dp))
-                        Text(
-                            text = "No downloads yet",
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
+                        .height(220.dp),
+                )
             } else {
                 LazyColumn(
                     modifier = Modifier.fillMaxWidth(),
@@ -201,7 +160,7 @@ fun DownloadsScreen(onDismiss: () -> Unit) {
                     if (activeDownloads.isNotEmpty()) {
                         item {
                             DownloadSection(
-                                title = "Active Downloads (${activeDownloads.size})",
+                                title = stringResource(R.string.active_downloads, activeDownloads.size),
                                 downloads = activeDownloads,
                                 onItemClick = { /* active items don't open */ },
                                 onCancelClick = { dl ->
@@ -219,14 +178,14 @@ fun DownloadsScreen(onDismiss: () -> Unit) {
                     if (completedDownloads.isNotEmpty()) {
                         item {
                             DownloadSection(
-                                title = "Completed (${completedDownloads.size})",
+                                title = stringResource(R.string.completed_section, completedDownloads.size),
                                 downloads = completedDownloads,
                                 onItemClick = { dl ->
                                     when (dl.status) {
                                         DownloadState.Status.COMPLETED -> openDownloadedFile(context, dl)
                                         DownloadState.Status.FAILED -> {
                                             DownloadController.start(context, dl)
-                                            Toast.makeText(context, "Retrying download…", Toast.LENGTH_SHORT).show()
+                                            Toast.makeText(context, context.getString(R.string.retrying_download), Toast.LENGTH_SHORT).show()
                                         }
                                         DownloadState.Status.CANCELLED -> {
                                             context.components.store.dispatch(DownloadAction.RemoveDownloadAction(dl.id))
@@ -241,7 +200,7 @@ fun DownloadsScreen(onDismiss: () -> Unit) {
                                                 status = DownloadState.Status.INITIATED
                                             )
                                             context.components.store.dispatch(DownloadAction.AddDownloadAction(freshDownload))
-                                            Toast.makeText(context, "Download requeued", Toast.LENGTH_SHORT).show()
+                                            Toast.makeText(context, context.getString(R.string.download_requeued), Toast.LENGTH_SHORT).show()
                                         }
                                         else -> {}
                                     }
@@ -258,7 +217,6 @@ fun DownloadsScreen(onDismiss: () -> Unit) {
                 }
             }
         }
-    }
 }
 
 @Composable
@@ -284,14 +242,13 @@ fun DownloadSection(
         ) {
             Text(
                 text = title,
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold,
+                style = MaterialTheme.typography.titleSmallEmphasized,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.weight(1f)
             )
             if (showClearButton) {
                 TextButton(onClick = onClearClick) {
-                    Text("Clear all")
+                    Text(stringResource(R.string.clear_all))
                 }
             }
         }
@@ -367,15 +324,14 @@ fun DownloadListItem(
                 DownloadState.Status.INITIATED -> {
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = "Download this file?",
+                            text = stringResource(R.string.download_this_file),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Spacer(Modifier.height(2.dp))
                         Text(
                             text = download.fileName ?: urlToFileName(download.url),
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.Medium,
+                            style = MaterialTheme.typography.bodyMediumEmphasized,
                             maxLines = 2,
                             overflow = TextOverflow.Ellipsis,
                             color = MaterialTheme.colorScheme.onSurface
@@ -384,9 +340,10 @@ fun DownloadListItem(
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             Button(
                                 onClick = { DownloadController.start(context, download) },
+                                shapes = ButtonDefaults.shapes(),
                                 modifier = Modifier.weight(1f),
                             ) {
-                                Text("Download")
+                                Text(stringResource(R.string.download_action))
                             }
                             TextButton(
                                 onClick = {
@@ -398,7 +355,7 @@ fun DownloadListItem(
                                     contentColor = MaterialTheme.colorScheme.error,
                                 ),
                             ) {
-                                Text("Cancel")
+                                Text(stringResource(R.string.cancel))
                             }
                         }
                     }
@@ -412,8 +369,7 @@ fun DownloadListItem(
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = download.fileName ?: urlToFileName(download.url),
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.Medium,
+                            style = MaterialTheme.typography.bodyMediumEmphasized,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                             color = MaterialTheme.colorScheme.onSurface
@@ -449,7 +405,7 @@ fun DownloadListItem(
                     IconButton(onClick = { DownloadController.pause(context, download.id) }) {
                         Icon(
                             imageVector = Icons.Default.Pause,
-                            contentDescription = "Pause",
+                            contentDescription = stringResource(R.string.pause),
                             tint = MaterialTheme.colorScheme.primary,
                         )
                     }
@@ -460,7 +416,7 @@ fun DownloadListItem(
                                 contentColor = MaterialTheme.colorScheme.error
                             )
                         ) {
-                            Text("Cancel", style = MaterialTheme.typography.labelMedium)
+                            Text(stringResource(R.string.cancel), style = MaterialTheme.typography.labelMedium)
                         }
                     }
                 }
@@ -469,8 +425,7 @@ fun DownloadListItem(
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = download.fileName ?: urlToFileName(download.url),
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.Medium,
+                            style = MaterialTheme.typography.bodyMediumEmphasized,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                             color = MaterialTheme.colorScheme.onSurface
@@ -487,8 +442,8 @@ fun DownloadListItem(
                     Spacer(Modifier.width(8.dp))
                     Icon(
                         imageVector = Icons.Default.CheckCircle,
-                        contentDescription = "Completed",
-                        tint = Color(0xFF4CAF50),
+                        contentDescription = stringResource(R.string.completed),
+                        tint = MaterialTheme.colorScheme.tertiary,
                         modifier = Modifier.size(20.dp)
                     )
                 }
@@ -498,8 +453,7 @@ fun DownloadListItem(
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = download.fileName ?: urlToFileName(download.url),
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.Medium,
+                            style = MaterialTheme.typography.bodyMediumEmphasized,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                             color = MaterialTheme.colorScheme.onSurface
@@ -521,7 +475,7 @@ fun DownloadListItem(
                     when (download.status) {
                         DownloadState.Status.FAILED -> Icon(
                             imageVector = Icons.Default.Refresh,
-                            contentDescription = "Retry",
+                            contentDescription = stringResource(R.string.retry),
                             tint = MaterialTheme.colorScheme.error,
                             modifier = Modifier.size(20.dp)
                         )
@@ -529,7 +483,7 @@ fun DownloadListItem(
                             IconButton(onClick = { DownloadController.resume(context, download) }) {
                                 Icon(
                                     imageVector = Icons.Default.PlayArrow,
-                                    contentDescription = "Resume",
+                                    contentDescription = stringResource(R.string.resume),
                                     tint = MaterialTheme.colorScheme.primary,
                                 )
                             }
@@ -540,13 +494,13 @@ fun DownloadListItem(
                                         contentColor = MaterialTheme.colorScheme.error
                                     )
                                 ) {
-                                    Text("Cancel", style = MaterialTheme.typography.labelMedium)
+                                    Text(stringResource(R.string.cancel), style = MaterialTheme.typography.labelMedium)
                                 }
                             }
                         }
                         DownloadState.Status.CANCELLED -> Icon(
                             imageVector = Icons.Default.Refresh,
-                            contentDescription = "Retry",
+                            contentDescription = stringResource(R.string.retry),
                             tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(20.dp)
                         )
@@ -562,7 +516,7 @@ fun DownloadListItem(
                     IconButton(onClick = { showMenu = true }) {
                         Icon(
                             imageVector = Icons.Default.MoreVert,
-                            contentDescription = "More options"
+                            contentDescription = stringResource(R.string.more_options)
                         )
                     }
                     DropdownMenu(
@@ -570,7 +524,7 @@ fun DownloadListItem(
                         onDismissRequest = { showMenu = false }
                     ) {
                         DropdownMenuItem(
-                            text = { Text("Share") },
+                            text = { Text(stringResource(R.string.share)) },
                             onClick = {
                                 showMenu = false
                                 val shareIntent = Intent(Intent.ACTION_SEND).apply {
@@ -578,28 +532,28 @@ fun DownloadListItem(
                                     putExtra(Intent.EXTRA_STREAM, Uri.parse(download.filePath ?: download.url))
                                     addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                                 }
-                                context.startActivity(Intent.createChooser(shareIntent, "Share file"))
+                                context.startActivity(Intent.createChooser(shareIntent, context.getString(R.string.share)))
                             }
                         )
                         DropdownMenuItem(
-                            text = { Text("Rename") },
+                            text = { Text(stringResource(R.string.rename_action)) },
                             onClick = {
                                 showMenu = false
                                 showRenameDialog = true
                             }
                         )
                         DropdownMenuItem(
-                            text = { Text("Copy link") },
+                            text = { Text(stringResource(R.string.copy_link)) },
                             onClick = {
                                 showMenu = false
                                 val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                                 val clip = ClipData.newPlainText("Download URL", download.url)
                                 clipboard.setPrimaryClip(clip)
-                                Toast.makeText(context, "Link copied", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, context.getString(R.string.link_copied), Toast.LENGTH_SHORT).show()
                             }
                         )
                         DropdownMenuItem(
-                            text = { Text("Delete") },
+                            text = { Text(stringResource(R.string.delete)) },
                             onClick = {
                                 showMenu = false
                                 onDelete(download.id)
@@ -615,9 +569,9 @@ fun DownloadListItem(
     }
 
     if (showRenameDialog) {
-        AlertDialog(
+        NiraAlertDialog(
             onDismissRequest = { showRenameDialog = false },
-            title = { Text("Rename file") },
+            title = { Text(stringResource(R.string.rename_file)) },
             text = {
                 OutlinedTextField(
                     value = renameText,
@@ -635,10 +589,10 @@ fun DownloadListItem(
                             file.renameTo(newFile)
                         } catch (e: Exception) { /* ignore */ }
                     }
-                }) { Text("Rename") }
+                }) { Text(stringResource(R.string.rename_action)) }
             },
             dismissButton = {
-                TextButton(onClick = { showRenameDialog = false }) { Text("Cancel") }
+                TextButton(onClick = { showRenameDialog = false }) { Text(stringResource(R.string.cancel)) }
             }
         )
     }
@@ -646,35 +600,35 @@ fun DownloadListItem(
 
 @Composable
 fun StatusChip(status: DownloadState.Status) {
-    val (label, containerColor, contentColor) = when (status) {
+    val (labelRes, containerColor, contentColor) = when (status) {
         DownloadState.Status.DOWNLOADING -> Triple(
-            "Downloading",
-            Color(0xFF1565C0).copy(alpha = 0.15f),
-            Color(0xFF1565C0)
+            R.string.status_downloading,
+            MaterialTheme.colorScheme.primaryContainer,
+            MaterialTheme.colorScheme.onPrimaryContainer
         )
         DownloadState.Status.INITIATED -> Triple(
-            "Starting",
-            Color(0xFF1565C0).copy(alpha = 0.15f),
-            Color(0xFF1565C0)
+            R.string.status_starting,
+            MaterialTheme.colorScheme.primaryContainer,
+            MaterialTheme.colorScheme.onPrimaryContainer
         )
         DownloadState.Status.FAILED -> Triple(
-            "Failed",
+            R.string.status_failed,
             MaterialTheme.colorScheme.errorContainer,
             MaterialTheme.colorScheme.error
         )
         DownloadState.Status.PAUSED -> Triple(
-            "Paused",
-            Color(0xFFE65100).copy(alpha = 0.15f),
-            Color(0xFFE65100)
+            R.string.status_paused,
+            MaterialTheme.colorScheme.tertiaryContainer,
+            MaterialTheme.colorScheme.onTertiaryContainer
         )
         DownloadState.Status.CANCELLED -> Triple(
-            "Cancelled",
-            MaterialTheme.colorScheme.surfaceVariant,
+            R.string.status_cancelled,
+            MaterialTheme.colorScheme.surfaceContainerHighest,
             MaterialTheme.colorScheme.onSurfaceVariant
         )
         else -> Triple(
-            status.name,
-            MaterialTheme.colorScheme.surfaceVariant,
+            null,
+            MaterialTheme.colorScheme.surfaceContainerHighest,
             MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
@@ -683,7 +637,7 @@ fun StatusChip(status: DownloadState.Status) {
         onClick = {},
         label = {
             Text(
-                text = label,
+                text = labelRes?.let { stringResource(it) } ?: status.name,
                 style = MaterialTheme.typography.labelSmall
             )
         },

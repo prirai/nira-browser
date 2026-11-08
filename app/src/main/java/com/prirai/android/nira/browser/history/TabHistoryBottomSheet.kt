@@ -1,21 +1,46 @@
+@file:OptIn(ExperimentalMaterial3ExpressiveApi::class)
+
 package com.prirai.android.nira.browser.history
 
-import android.content.Context
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.TextView
-import androidx.fragment.app.FragmentManager
-import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
-import com.google.android.material.bottomsheet.BottomSheetBehavior
-import com.google.android.material.bottomsheet.BottomSheetDialog
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.withFrameNanos
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.ViewCompositionStrategy
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import com.prirai.android.nira.R
 import com.prirai.android.nira.browser.tabs.NewTabCreator
 import com.prirai.android.nira.browser.tabs.NewTabCreator.NEW_TAB_INDEX
+import com.prirai.android.nira.browser.tabs.compose.FaviconImageFromUrl
 import com.prirai.android.nira.ext.components
+import com.prirai.android.nira.preferences.UserPreferences
+import com.prirai.android.nira.theme.ThemeManager
+import com.prirai.android.nira.ui.components.NiraCardRow
+import com.prirai.android.nira.ui.components.NiraSheetHeader
+import com.prirai.android.nira.ui.theme.NiraTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.mapNotNull
@@ -25,6 +50,7 @@ import mozilla.components.browser.state.selector.findCustomTabOrSelectedTab
 import mozilla.components.browser.state.state.content.HistoryState
 import mozilla.components.browser.state.store.BrowserStore
 import mozilla.components.lib.state.ext.flowScoped
+import mozilla.components.support.ktx.kotlin.tryGetHostFromUrl
 
 /**
  * Which toolbar button opened the popup. The popup itself always shows the
@@ -53,6 +79,20 @@ sealed class TabHistoryMode {
 }
 
 /**
+ * One row of the tab-history popup: an [index] into the session's
+ * [HistoryState] plus its display data.
+ *
+ * The row for the current page has [isCurrent] set; it renders with a filled
+ * dot and does not respond to clicks (Chrome/Fenix behaviour).
+ */
+data class TabHistoryRow(
+    val index: Int,
+    val title: String,
+    val uri: String,
+    val isCurrent: Boolean,
+)
+
+/**
  * Long-press back/forward popup (Firefox style).
  *
  * Shows the current tab's full session chart - the sites before, the
@@ -76,45 +116,35 @@ class TabHistoryBottomSheet : BottomSheetDialogFragment() {
 
     private val sessionId get() = arguments?.getString(KEY_SESSION_ID)
 
-    /** Adapter position of the current row, used to center the list. */
-    private var currentAdapterPosition: Int? = null
+    /** The latest chart rows, collected from the store and rendered by Compose. */
+    private val rowsState = mutableStateOf<List<TabHistoryRow>>(emptyList())
 
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
         savedInstanceState: Bundle?
-    ): View = inflater.inflate(R.layout.fragment_tab_history_bottom_sheet, container, false)
+    ): View = ComposeView(requireContext()).apply {
+        setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
+        setContent {
+            val context = LocalContext.current
+            val prefs = UserPreferences(context)
+            NiraTheme(
+                darkTheme = ThemeManager.isDarkMode(context),
+                amoledMode = prefs.amoledMode,
+                dynamicColor = prefs.dynamicColors
+            ) {
+                TabHistorySheetContent(
+                    rows = rowsState.value,
+                    onRowClick = ::onRowClicked,
+                    onDismiss = ::dismiss,
+                )
+            }
+        }
+    }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-
         val components = requireContext().components
-
-        view.findViewById<TextView>(R.id.tabHistorySheetTitle).setText(R.string.action_history)
-
-        val recyclerView = view.findViewById<RecyclerView>(R.id.tabHistoryRecyclerView)
-        recyclerView.layoutManager = CenteringLayoutManager(requireContext(), recyclerView)
-        val adapter = TabHistoryAdapter { row ->
-            components.store.state.findCustomTabOrSelectedTab(sessionId)?.let { tab ->
-                if (row.index >= 0) {
-                    components.sessionUseCases.goToHistoryIndex(row.index, tab.id)
-                    // When the tapped entry is the engine's current one the
-                    // dispatch above is a no-op and the engine emits no
-                    // location change - sync the state so the tab always
-                    // leaves the synthetic new tab page. For real jumps the
-                    // engine re-reports the same values, making this
-                    // idempotent.
-                    components.store.dispatch(ContentAction.UpdateUrlAction(tab.id, row.uri))
-                    components.store.dispatch(ContentAction.UpdateTitleAction(tab.id, row.title))
-                } else {
-                    // "New Tab" row: land the tab on its new tab page (the
-                    // engine has no history entry for it).
-                    NewTabCreator.setTabToNewTabPage(components.store, tab.id)
-                }
-            }
-            dismiss()
-        }
-        recyclerView.adapter = adapter
 
         // Force the engine to re-sync its session history into the store;
         // the flushed state is picked up by the flow below. Skipped on the
@@ -145,10 +175,31 @@ class TabHistoryBottomSheet : BottomSheetDialogFragment() {
                         return@collect
                     }
                     hasShownRows = true
-                    currentAdapterPosition = rows.indexOfFirst { it.isCurrent }.takeIf { it >= 0 }
-                    adapter.submitRows(rows)
+                    rowsState.value = rows
                 }
         }
+    }
+
+    private fun onRowClicked(row: TabHistoryRow) {
+        val components = requireContext().components
+        components.store.state.findCustomTabOrSelectedTab(sessionId)?.let { tab ->
+            if (row.index >= 0) {
+                components.sessionUseCases.goToHistoryIndex(row.index, tab.id)
+                // When the tapped entry is the engine's current one the
+                // dispatch above is a no-op and the engine emits no
+                // location change - sync the state so the tab always
+                // leaves the synthetic new tab page. For real jumps the
+                // engine re-reports the same values, making this
+                // idempotent.
+                components.store.dispatch(ContentAction.UpdateUrlAction(tab.id, row.uri))
+                components.store.dispatch(ContentAction.UpdateTitleAction(tab.id, row.title))
+            } else {
+                // "New Tab" row: land the tab on its new tab page (the
+                // engine has no history entry for it).
+                NewTabCreator.setTabToNewTabPage(components.store, tab.id)
+            }
+        }
+        dismiss()
     }
 
     /**
@@ -224,40 +275,6 @@ class TabHistoryBottomSheet : BottomSheetDialogFragment() {
         return rows
     }
 
-    /**
-     * Firefox layout: the chart renders bottom-up (oldest at the bottom,
-     * newest at the top) and the current page is centered once, after the
-     * first layout completes. If the current row is not laid out within
-     * the sheet's natural height the sheet expands first so the centering
-     * can reach it (upstream Fenix does the same).
-     */
-    private inner class CenteringLayoutManager(
-        context: Context,
-        private val recyclerView: RecyclerView,
-    ) : LinearLayoutManager(context) {
-        private var shouldCenterOnCurrent = true
-
-        init {
-            reverseLayout = true
-        }
-
-        override fun onLayoutCompleted(state: RecyclerView.State?) {
-            super.onLayoutCompleted(state)
-            if (!shouldCenterOnCurrent) return
-            val position = currentAdapterPosition ?: return
-            val itemView = recyclerView.findViewHolderForAdapterPosition(position)?.itemView
-                ?: run {
-                    // Out of reach at the sheet's natural height: expand,
-                    // the relayout centers on the next pass.
-                    (dialog as? BottomSheetDialog)?.behavior?.state =
-                        BottomSheetBehavior.STATE_EXPANDED
-                    return
-                }
-            shouldCenterOnCurrent = false
-            scrollToPositionWithOffset(position, (height - itemView.height) / 2)
-        }
-    }
-
     companion object {
         const val TAG = "TabHistoryBottomSheet"
         private const val KEY_MODE = "mode"
@@ -279,16 +296,16 @@ class TabHistoryBottomSheet : BottomSheetDialogFragment() {
          * tab resolved from [sessionId] - an empty direction shows nothing,
          * matching Firefox (the caller's long-press haptic still fires).
          *
-         * [TabSessionState.content.canGoBack]/[canGoForward] are used as
-         * the emptiness signal: they are maintained by the engine on every
-         * navigation (and synced by the synthetic new tab page state) and
-         * are more reliable than the [HistoryState] indexes, which can be
-         * stale until the sheet flushes the engine state.
+         * [mozilla.components.browser.state.state.TabSessionState.content.canGoBack]/
+         * `canGoForward` are used as the emptiness signal: they are maintained by
+         * the engine on every navigation (and synced by the synthetic new tab
+         * page state) and are more reliable than the [HistoryState] indexes,
+         * which can be stale until the sheet flushes the engine state.
          *
          * @return whether the sheet was shown.
          */
         fun showIfAvailable(
-            fragmentManager: FragmentManager,
+            fragmentManager: androidx.fragment.app.FragmentManager,
             store: BrowserStore,
             mode: TabHistoryMode,
             sessionId: String?
@@ -304,4 +321,116 @@ class TabHistoryBottomSheet : BottomSheetDialogFragment() {
             return true
         }
     }
+}
+
+/**
+ * The Compose body of the tab-history sheet: Firefox's bottom-up chart
+ * rendered with the shared grouped-card row, so the history chart reads as
+ * the same design as the awesome bar's suggestion list.
+ */
+@Composable
+private fun TabHistorySheetContent(
+    rows: List<TabHistoryRow>,
+    onRowClick: (TabHistoryRow) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val listState = rememberLazyListState()
+    val currentIndex = rows.indexOfFirst { it.isCurrent }.takeIf { it >= 0 }
+
+    // Center the current page once, after the first layout completes
+    // (Firefox behaviour; replaces the View implementation's
+    // CenteringLayoutManager).
+    LaunchedEffect(currentIndex, rows.size) {
+        if (currentIndex != null && rows.isNotEmpty()) {
+            withFrameNanos { }
+            val info = listState.layoutInfo
+            val itemHeight = info.visibleItemsInfo.firstOrNull { it.index == currentIndex }?.size
+                ?: info.visibleItemsInfo.firstOrNull()?.size
+                ?: 120
+            listState.scrollToItem(
+                currentIndex,
+                scrollOffset = -(info.viewportSize.height - itemHeight) / 2,
+            )
+        }
+    }
+
+    Column(modifier = Modifier.fillMaxWidth()) {
+        NiraSheetHeader(
+            title = stringResource(R.string.action_history),
+            onClose = onDismiss,
+            showDragHandle = false,
+            dividerAlpha = null,
+        )
+
+        LazyColumn(
+            state = listState,
+            modifier = Modifier.fillMaxWidth(),
+            reverseLayout = true,
+            verticalArrangement = Arrangement.spacedBy(0.dp),
+            contentPadding = PaddingValues(top = 8.dp, bottom = 24.dp),
+        ) {
+            itemsIndexed(rows, key = { _, row -> "${row.index}-${row.uri}" }) { index, row ->
+                // Reversed rendering (oldest at the bottom): adapter position 0
+                // is the visually BOTTOM row and the last position the visual
+                // top - the corner and divider assignment follows the mirror.
+                TabHistoryCardRow(
+                    row = row,
+                    isTopRow = index == rows.lastIndex,
+                    isBottomRow = index == 0,
+                    showDivider = index > 0,
+                    onClick = onRowClick,
+                )
+            }
+        }
+    }
+}
+
+/**
+ * One history row on the shared grouped-card idiom. The current page
+ * renders with the filled dot, grayed title and no click; every other
+ * row carries the favicon and jumps on tap.
+ */
+@Composable
+private fun TabHistoryCardRow(
+    row: TabHistoryRow,
+    isTopRow: Boolean,
+    isBottomRow: Boolean,
+    showDivider: Boolean,
+    onClick: (TabHistoryRow) -> Unit,
+) {
+    NiraCardRow(
+        title = row.title.ifBlank { row.uri.tryGetHostFromUrl() },
+        isTopRow = isTopRow,
+        isBottomRow = isBottomRow,
+        showDivider = showDivider,
+        onClick = if (row.isCurrent) {
+            null
+        } else {
+            { onClick(row) }
+        },
+        titleColor = if (row.isCurrent) {
+MaterialTheme.colorScheme.onSurfaceVariant
+        } else {
+            MaterialTheme.colorScheme.onSurface
+        },
+        leading = {
+            if (row.isCurrent) {
+                // Current page: filled dot
+                Surface(
+                    shape = CircleShape,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(10.dp),
+                ) {}
+            } else {
+                FaviconImageFromUrl(
+                    url = row.uri,
+                    title = row.title,
+                    size = 24.dp,
+                    modifier = Modifier
+                        .size(24.dp)
+                        .clip(RoundedCornerShape(4.dp)),
+                )
+            }
+        },
+    )
 }

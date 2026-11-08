@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalMaterial3ExpressiveApi::class)
+
 package com.prirai.android.nira.customtabs
 
 import android.content.Intent
@@ -6,10 +8,32 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.view.ViewStub
-import android.widget.ImageButton
-import android.widget.LinearLayout
-import android.widget.TextView
+import android.widget.FrameLayout
 import androidx.browser.customtabs.CustomTabsIntent
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.ViewCompositionStrategy
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
 import androidx.core.graphics.toColorInt
 import androidx.fragment.app.Fragment
 import com.prirai.android.nira.BrowserActivity
@@ -20,6 +44,8 @@ import com.prirai.android.nira.ext.components
 import com.prirai.android.nira.integration.ContextMenuIntegration
 import com.prirai.android.nira.integration.FindInPageIntegration
 import com.prirai.android.nira.preferences.UserPreferences
+import com.prirai.android.nira.theme.ThemeManager
+import com.prirai.android.nira.ui.theme.NiraTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.mapNotNull
 import mozilla.components.browser.state.selector.findCustomTab
@@ -65,12 +91,15 @@ class ExternalAppBrowserFragment : Fragment(), UserInteractionHandler, ActivityR
     // id, invoked from the Minimize button in the header.
     private var pipFeature: PictureInPictureFeature? = null
 
-    private var customTabHeader: LinearLayout? = null
-    private var customTabTitle: TextView? = null
-    private var customTabUrl: TextView? = null
-    private var customTabMenuButton: ImageButton? = null
-    private var customTabCloseButton: ImageButton? = null
-    private var customTabMinimizeButton: ImageButton? = null
+    // The ComposeView rendering the 56dp header row. Doubles as the
+    // overflow-menu anchor (same on-screen Y range as the old menu
+    // ImageButton) and as the find-in-page toolbar height source.
+    private var headerRow: ComposeView? = null
+
+    // Header display state, pushed from updateHeaderDisplay() and read
+    // by CustomTabHeaderRow below.
+    private val headerTitle = mutableStateOf("")
+    private val headerUrl = mutableStateOf("")
 
     // Upstream-style title/url observer state: once we have shown a
     // real title we stay in "showing a title" mode and fall back to
@@ -141,10 +170,11 @@ class ExternalAppBrowserFragment : Fragment(), UserInteractionHandler, ActivityR
     }
     
     private fun setupEdgeToEdge() {
-        // Let header handle its own insets
-        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(binding.browserLayout) { _, insets ->
-            insets
-        }
+        // No-op pass-through kept for call-site stability: the real inset
+        // handling lives in setupCustomTabContentPadding (system bars) and
+        // setupKeyboardAdjustment (IME). Registering another listener here
+        // would only be replaced by the keyboard listener further down
+        // onViewCreated anyway.
     }
     
     private fun initializeFeatures(sessionId: String) {
@@ -335,51 +365,64 @@ class ExternalAppBrowserFragment : Fragment(), UserInteractionHandler, ActivityR
     
     /**
      * Pad the browser content so it does not render under the custom-
-     * tab header. The side on which padding is applied follows the
-     * header's mount position (top vs. bottom), which in turn follows
-     * [UserPreferences.shouldUseBottomToolbar].
+     * tab header NOR under the system bar on the opposite side. The side
+     * on which the header is mounted follows
+     * [UserPreferences.shouldUseBottomToolbar]; the header pads its own
+     * side for its system bar (addCustomHeader), and this function pads
+     * the content for BOTH the header height and the opposite system bar
+     * (status bar above the content when the header is at the bottom,
+     * navigation bar below it when the header is at the top) - previously
+     * the opposite side was never padded and the web content rendered
+     * beneath the status bar.
      *
-     * Previously this was a single `browserWindow.post {}` snapshot
-     * of `headerWrapper.height` taken after the first layout pass.
-     * That meant the engine view measured once at full-height, then
-     * re-measured with padding on the next frame - a visible
-     * reflow + white flash on first paint on cheap devices. Rewired
-     * to a `OnLayoutChangeListener` that keeps padding in sync any
-     * time the header's measured height changes (status-bar inset
-     * late-arriving, nav-bar inset late-arriving, rotation). The
-     * first callback fires before the first content frame so the
-     * engine view measures with the correct available area from the
-     * start.
+     * The header-side padding is kept in sync via a
+     * `OnLayoutChangeListener` on the header wrapper (fires before the
+     * first content frame, and again on late-arriving insets or
+     * rotation), and the opposite-side system-bar padding via a window
+     * insets listener on the fragment root. Both funnel through
+     * [applyBrowserLayoutPadding], so neither clobbers the other.
      */
+    private var headerSidePaddingPx = 0
+    private var oppositeSystemBarPaddingPx = 0
+    private var headerAtBottom = false
+
+    private fun applyBrowserLayoutPadding() {
+        if (headerAtBottom) {
+            binding.browserLayout.setPadding(0, oppositeSystemBarPaddingPx, 0, headerSidePaddingPx)
+        } else {
+            binding.browserLayout.setPadding(0, headerSidePaddingPx, 0, oppositeSystemBarPaddingPx)
+        }
+    }
+
     private fun setupCustomTabContentPadding(view: View) {
         val browserWindow = view.findViewById<ViewGroup>(R.id.browserWindow) ?: return
-        val browserLayout = binding.browserLayout
-        val bottom = UserPreferences(requireContext()).shouldUseBottomToolbar
+        headerAtBottom = UserPreferences(requireContext()).shouldUseBottomToolbar
 
-        // Apply a safe initial padding synchronously from the known
-        // design height (56 dp content + ~24 dp status bar guess, or
-        // nav-bar bottom guess) so the engine view measures correctly
-        // on the first pass without waiting for a post().
+        // Apply a safe initial header-side padding synchronously from the
+        // known design height (56 dp content + ~24 dp status bar guess) so
+        // the engine view measures correctly on the first pass without
+        // waiting for a post(). The opposite side starts at zero and is
+        // filled by the insets listener before the first content frame.
         val density = resources.displayMetrics.density
-        val initialPadPx = ((56f + 24f) * density).toInt()
-        if (bottom) {
-            browserLayout.setPadding(0, 0, 0, initialPadPx)
-        } else {
-            browserLayout.setPadding(0, initialPadPx, 0, 0)
+        headerSidePaddingPx = ((56f + 24f) * density).toInt()
+        applyBrowserLayoutPadding()
+
+        // System bar on the side opposite the header. Registered on the
+        // fragment root (not browserLayout) so the keyboard listener
+        // registered later in setupKeyboardAdjustment cannot replace it.
+        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(binding.root) { _, insets ->
+            val systemBars = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars())
+            oppositeSystemBarPaddingPx = if (headerAtBottom) systemBars.top else systemBars.bottom
+            applyBrowserLayoutPadding()
+            insets
         }
 
         val headerWrapper = browserWindow.findViewWithTag<View>("customTabHeaderWrapper")
             ?: return
         headerWrapper.addOnLayoutChangeListener { v, _, _, _, _, _, _, _, _ ->
-            val h = v.height
-            if (bottom) {
-                if (browserLayout.paddingBottom != h) {
-                    browserLayout.setPadding(0, 0, 0, h)
-                }
-            } else {
-                if (browserLayout.paddingTop != h) {
-                    browserLayout.setPadding(0, h, 0, 0)
-                }
+            if (headerSidePaddingPx != v.height) {
+                headerSidePaddingPx = v.height
+                applyBrowserLayoutPadding()
             }
         }
     }
@@ -393,30 +436,70 @@ class ExternalAppBrowserFragment : Fragment(), UserInteractionHandler, ActivityR
      * under a system bar.
      */
     private fun addCustomHeader(view: View, tab: SessionState) {
-        val headerView = layoutInflater.inflate(R.layout.custom_tab_header, null)
-
         // Find the main constraint layout (browserWindow), not browserLayout
         val browserWindow = view.findViewById<ViewGroup>(R.id.browserWindow) ?: return
 
         val bottom = UserPreferences(requireContext()).shouldUseBottomToolbar
 
-        val layoutParams = androidx.constraintlayout.widget.ConstraintLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT,
-            ViewGroup.LayoutParams.WRAP_CONTENT,
-        ).apply {
-            if (bottom) {
-                bottomToBottom = androidx.constraintlayout.widget.ConstraintLayout.LayoutParams.PARENT_ID
-            } else {
-                topToTop = androidx.constraintlayout.widget.ConstraintLayout.LayoutParams.PARENT_ID
+        // Wrapper that carries the system-bar padding for whichever side
+        // the header mounts on (see the insets listener below). Same
+        // wrapper contract the inflated custom_tab_header.xml root used
+        // to provide: tag + elevation + generated id, with the ComposeView
+        // rendering the actual 56dp row inside.
+        val headerView = FrameLayout(requireContext()).apply {
+            layoutParams = androidx.constraintlayout.widget.ConstraintLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+            ).apply {
+                if (bottom) {
+                    bottomToBottom = androidx.constraintlayout.widget.ConstraintLayout.LayoutParams.PARENT_ID
+                } else {
+                    topToTop = androidx.constraintlayout.widget.ConstraintLayout.LayoutParams.PARENT_ID
+                }
+                startToStart = androidx.constraintlayout.widget.ConstraintLayout.LayoutParams.PARENT_ID
+                endToEnd = androidx.constraintlayout.widget.ConstraintLayout.LayoutParams.PARENT_ID
             }
-            startToStart = androidx.constraintlayout.widget.ConstraintLayout.LayoutParams.PARENT_ID
-            endToEnd = androidx.constraintlayout.widget.ConstraintLayout.LayoutParams.PARENT_ID
+            // The old XML root filled the inset-padded area behind the
+            // header with the theme's colorBackground; keep that.
+            val typedValue = android.util.TypedValue()
+            context.theme.resolveAttribute(android.R.attr.colorBackground, typedValue, true)
+            setBackgroundColor(typedValue.data)
+            elevation = 8f
+            tag = "customTabHeaderWrapper"
+            id = View.generateViewId()
         }
-        headerView.layoutParams = layoutParams
-        headerView.elevation = 8f
-        headerView.tag = "customTabHeaderWrapper"
-        headerView.id = View.generateViewId()
 
+        val composeRow = ComposeView(requireContext()).apply {
+            setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
+            layoutParams = FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+            )
+        }
+
+        composeRow.setContent {
+            val context = LocalContext.current
+            val prefs = UserPreferences(context)
+            NiraTheme(
+                darkTheme = ThemeManager.isDarkMode(context),
+                amoledMode = prefs.amoledMode,
+                dynamicColor = prefs.dynamicColors
+            ) {
+                CustomTabHeaderRow(
+                    title = headerTitle.value,
+                    url = headerUrl.value,
+                    headerColor = toolbarColor.takeIf { it != -1 }?.let { Color(it) },
+                    contentColor = textColor.takeIf { toolbarColor != -1 }?.let { Color(it) },
+                    onClose = ::closeCustomTab,
+                    onMinimize = { pipFeature?.enterPipModeCompat() },
+                    // The row view spans the same on-screen Y range the old
+                    // menu ImageButton did, so the popup lands identically.
+                    onMenu = { showCustomTabMenu(composeRow) },
+                )
+            }
+        }
+
+        headerView.addView(composeRow)
         browserWindow.addView(headerView)
 
         // Pad the system-bar side opposite the content. When the header
@@ -436,24 +519,7 @@ class ExternalAppBrowserFragment : Fragment(), UserInteractionHandler, ActivityR
             androidx.core.view.ViewCompat.requestApplyInsets(headerView)
         }
 
-        customTabHeader = headerView.findViewById(R.id.customTabHeader)
-        customTabTitle = headerView.findViewById(R.id.customTabTitle)
-        customTabUrl = headerView.findViewById(R.id.customTabUrl)
-        customTabMenuButton = headerView.findViewById(R.id.customTabMenuButton)
-        customTabCloseButton = headerView.findViewById(R.id.customTabCloseButton)
-        customTabMinimizeButton = headerView.findViewById(R.id.customTabMinimizeButton)
-
-        applyCustomTabTheming()
-
-        customTabCloseButton?.setOnClickListener {
-            closeCustomTab()
-        }
-        customTabMenuButton?.setOnClickListener { anchor ->
-            showCustomTabMenu(anchor)
-        }
-        customTabMinimizeButton?.setOnClickListener {
-            pipFeature?.enterPipModeCompat()
-        }
+        headerRow = composeRow
 
         updateHeaderDisplay(tab)
     }
@@ -498,13 +564,13 @@ class ExternalAppBrowserFragment : Fragment(), UserInteractionHandler, ActivityR
 
         if (newTitle != observedTitle) {
             if (newTitle.isNotEmpty()) {
-                customTabTitle?.text = newTitle
+                headerTitle.value = newTitle
                 showedTitleOnce = true
             } else {
                 // No real title yet (or lost mid-load). Fall back to the
                 // display URL on the title line so the user is never
                 // staring at a blank header.
-                customTabTitle?.text = displayUrl
+                headerTitle.value = displayUrl
             }
             observedTitle = newTitle
         }
@@ -514,9 +580,9 @@ class ExternalAppBrowserFragment : Fragment(), UserInteractionHandler, ActivityR
             // fallback as above - URL changed under us without the
             // title updating).
             if (!showedTitleOnce || newTitle.isEmpty()) {
-                customTabTitle?.text = displayUrl
+                headerTitle.value = displayUrl
             }
-            customTabUrl?.text = displayUrl
+            headerUrl.value = displayUrl
             observedUrl = newUrl
         }
     }
@@ -580,22 +646,6 @@ class ExternalAppBrowserFragment : Fragment(), UserInteractionHandler, ActivityR
         ).show(anchor, preferBottom = !headerAtBottom)
     }
     
-    private fun applyCustomTabTheming() {
-        if (toolbarColor == -1) return
-
-        // Apply background color to header
-        customTabHeader?.setBackgroundColor(toolbarColor)
-
-        // Apply text colors
-        customTabTitle?.setTextColor(textColor)
-        customTabUrl?.setTextColor(textColor)
-
-        // Apply icon tints
-        customTabCloseButton?.setColorFilter(textColor)
-        customTabMenuButton?.setColorFilter(textColor)
-        customTabMinimizeButton?.setColorFilter(textColor)
-    }
-    
     private fun isColorLight(color: Int): Boolean {
         val red = android.graphics.Color.red(color) / 255.0
         val green = android.graphics.Color.green(color) / 255.0
@@ -613,21 +663,22 @@ class ExternalAppBrowserFragment : Fragment(), UserInteractionHandler, ActivityR
      * Wire the find-in-page affordance to a dynamically-inflated
      * stub inside the fragment layout. The previous implementation
      * attempted to cast `customTabHeader.parent` to a
-     * `BrowserToolbar` and bailed out when the cast failed (our
-     * header is a `LinearLayout`), leaving `findInPageIntegration`
+     * `BrowserToolbar` and bailed out when the cast failed (the
+     * header was a plain `LinearLayout`), leaving `findInPageIntegration`
      * never set and the overflow menu entry silently no-op.
      *
      * [FindInPageIntegration.ToolbarInfo.toolbar] has been widened to
-     * accept a plain `View`, so we pass the header's root
-     * `LinearLayout` directly - the only thing the integration reads
-     * off `toolbar` is `height`, which every View exposes.
+     * accept a plain `View`, so we pass the header row's `ComposeView`
+     * directly - the only thing the integration reads off `toolbar` is
+     * `height`, which every View exposes (the row composes at the same
+     * 56dp the old LinearLayout had).
      *
      * `isToolbarPlacedAtTop` reflects our mount position so the
      * find bar's gravity / translation choices match the toolbar's.
      */
     private fun setupCustomFindInPage(sessionId: String) {
         val stub = view?.findViewById<ViewStub>(R.id.stubFindInPage) ?: return
-        val header = customTabHeader ?: return
+        val header = headerRow ?: return
         val toolbarAtTop = !UserPreferences(requireContext()).shouldUseBottomToolbar
 
         findInPageIntegration.set(
@@ -771,5 +822,93 @@ class ExternalAppBrowserFragment : Fragment(), UserInteractionHandler, ActivityR
         private const val REQUEST_CODE_DOWNLOAD_PERMISSIONS = 1
         private const val REQUEST_CODE_PROMPT_PERMISSIONS = 2
         private const val REQUEST_CODE_APP_PERMISSIONS = 3
+    }
+}
+
+/**
+ * The custom-tab header row: close button, page title + display URL,
+ * minimize (picture-in-picture) and overflow menu buttons.
+ *
+ * When the launching app supplied a [headerColor] (the custom-tab
+ * toolbar color), the row renders in it with [contentColor] for text and
+ * icons - the branding the old View header applied via
+ * `applyCustomTabTheming`. Otherwise both are null and the theme's own
+ * surface/onSurface tokens drive the row.
+ */
+@Composable
+private fun CustomTabHeaderRow(
+    title: String,
+    url: String,
+    headerColor: Color?,
+    contentColor: Color?,
+    onClose: () -> Unit,
+    onMinimize: () -> Unit,
+    onMenu: () -> Unit,
+) {
+    val backgroundColor = headerColor ?: MaterialTheme.colorScheme.surface
+    val titleColor = contentColor ?: MaterialTheme.colorScheme.onSurface
+    val urlColor = contentColor ?: MaterialTheme.colorScheme.onSurfaceVariant
+    val iconTint = contentColor ?: MaterialTheme.colorScheme.onSurface
+
+    Surface(
+        color = backgroundColor,
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(56.dp),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(start = 8.dp, end = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            IconButton(onClick = onClose) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_round_close),
+                    contentDescription = stringResource(R.string.close),
+                    tint = iconTint,
+                )
+            }
+
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(start = 8.dp, end = 8.dp),
+            ) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMediumEmphasized,
+                    color = titleColor,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(
+                    text = url,
+                    style = MaterialTheme.typography.bodySmallEmphasized,
+                    color = urlColor,
+                    maxLines = 1,
+                    // The View header used ellipsize="middle"; Compose's
+                    // TextOverflow has no middle variant, so the URL
+                    // ellipsizes at the end instead.
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+
+            IconButton(onClick = onMinimize) {
+                Icon(
+                    painter = painterResource(R.drawable.mozac_ic_chevron_down_24),
+                    contentDescription = stringResource(R.string.custom_tab_menu_minimize),
+                    tint = iconTint,
+                )
+            }
+
+            IconButton(onClick = onMenu) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_more_vert),
+                    contentDescription = stringResource(R.string.menu),
+                    tint = iconTint,
+                )
+            }
+        }
     }
 }

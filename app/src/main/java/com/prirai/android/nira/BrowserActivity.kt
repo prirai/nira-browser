@@ -84,6 +84,16 @@ open class BrowserActivity : LocaleAwareAppCompatActivity(), ComponentCallbacks2
 
     private var lastToolbarPosition: Int = 0
 
+    /**
+     * True while this activity is finishing only to hand the first launch over
+     * to [com.prirai.android.nira.onboarding.OnboardingActivity]. The
+     * task-removal teardown in [onDestroy] must not run in that case: the
+     * onboarding lives in this same process, and `killProcess` here took the
+     * just-displayed onboarding down with it (visible as the app dying
+     * ~100ms after the onboarding appeared on a fresh install).
+     */
+    private var handingOffToOnboarding = false
+
     protected open fun getIntentSessionId(intent: SafeIntent): String? = null
 
     @VisibleForTesting
@@ -118,6 +128,7 @@ open class BrowserActivity : LocaleAwareAppCompatActivity(), ComponentCallbacks2
         if (prefs.firstLaunch) {
             val intent = Intent(this, com.prirai.android.nira.onboarding.OnboardingActivity::class.java)
             intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            handingOffToOnboarding = true
             startActivity(intent)
             finish()
             return
@@ -316,7 +327,8 @@ open class BrowserActivity : LocaleAwareAppCompatActivity(), ComponentCallbacks2
      *      through those children.
      */
     override fun onDestroy() {
-        val taskGone = isFinishing && isTaskRoot && !isChangingConfigurations
+        val taskGone =
+            isFinishing && isTaskRoot && !isChangingConfigurations && !handingOffToOnboarding
         super.onDestroy()
         if (!taskGone) return
 

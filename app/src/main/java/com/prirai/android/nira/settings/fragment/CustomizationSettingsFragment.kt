@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalMaterial3ExpressiveApi::class)
+
 package com.prirai.android.nira.settings.fragment
 
 import android.app.Activity
@@ -6,13 +8,45 @@ import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
+import androidx.compose.material3.Slider
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.preference.Preference
 import androidx.preference.SeekBarPreference
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.prirai.android.nira.R
 import com.prirai.android.nira.preferences.UserPreferences
 import com.prirai.android.nira.settings.HomepageBackgroundChoice
 import com.prirai.android.nira.theme.applyAppTheme
+import com.prirai.android.nira.ui.components.NiraAlertDialog
+import kotlin.math.roundToInt
 
 
 class CustomizationSettingsFragment : BaseSettingsFragment() {
@@ -239,48 +273,50 @@ class CustomizationSettingsFragment : BaseSettingsFragment() {
     }
 
     private fun pickHomepageBackground() {
-        // Simple dialog with three direct action options (matching enum order)
         val items = arrayOf(
             getString(R.string.none),
             getString(R.string.homepage_background_gallery),
             getString(R.string.homepage_background_url)
         )
-        
-        MaterialAlertDialogBuilder(requireActivity())
-            .setTitle(resources.getString(R.string.homepage_background_image))
-            .setItems(items) { _, which ->
-                when (which) {
-                    0 -> {
-                        // None - immediate action
-                        UserPreferences(requireContext()).homepageBackgroundChoice = HomepageBackgroundChoice.NONE.ordinal
-                        updateHomepageBackgroundSummary()
-                        Toast.makeText(
-                            context,
-                            requireContext().resources.getText(R.string.successful),
-                            Toast.LENGTH_SHORT
-                        ).show()
-                    }
-                    1 -> {
-                        // Choose from gallery - launch picker immediately
-                        val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
-                            addCategory(Intent.CATEGORY_OPENABLE)
-                            type = "image/*"
-                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                            addFlags(Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION)
+
+        showNiraDialog { onDismiss ->
+            HomepageBackgroundDialog(
+                title = getString(R.string.homepage_background_image),
+                items = items,
+                onItem = { which ->
+                    when (which) {
+                        0 -> {
+                            // None - immediate action
+                            UserPreferences(requireContext()).homepageBackgroundChoice = HomepageBackgroundChoice.NONE.ordinal
+                            updateHomepageBackgroundSummary()
+                            Toast.makeText(
+                                context,
+                                requireContext().resources.getText(R.string.successful),
+                                Toast.LENGTH_SHORT
+                            ).show()
                         }
-                        UserPreferences(requireContext()).homepageBackgroundChoice = HomepageBackgroundChoice.GALLERY.ordinal
-                        getBackgroundImageUri.launch(intent)
+                        1 -> {
+                            // Choose from gallery - launch picker immediately
+                            val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+                                addCategory(Intent.CATEGORY_OPENABLE)
+                                type = "image/*"
+                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                addFlags(Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION)
+                            }
+                            UserPreferences(requireContext()).homepageBackgroundChoice = HomepageBackgroundChoice.GALLERY.ordinal
+                            getBackgroundImageUri.launch(intent)
+                        }
+                        2 -> {
+                            // Enter URL - show input dialog immediately
+                            showUrlInputDialog()
+                        }
                     }
-                    2 -> {
-                        // Enter URL - show input dialog immediately
-                        showUrlInputDialog()
-                    }
-                }
-            }
-            .setNegativeButton(resources.getString(R.string.cancel), null)
-            .show()
+                },
+                onDismiss = onDismiss,
+            )
+        }
     }
-    
+
     private fun updateHomepageBackgroundSummary() {
         val singleItems = resources.getStringArray(R.array.homepage_background_image_types)
         val currentChoice = UserPreferences(requireContext()).homepageBackgroundChoice
@@ -288,157 +324,358 @@ class CustomizationSettingsFragment : BaseSettingsFragment() {
             requireContext().resources.getString(R.string.key_homepage_background_image)
         )?.summary = singleItems[currentChoice]
     }
-    
+
     private fun showUrlInputDialog() {
-        val dialogView = layoutInflater.inflate(R.layout.dialog_edittext, null)
-        val inputLayout = dialogView.findViewById<com.google.android.material.textfield.TextInputLayout>(R.id.text_input_layout)
-        val editText = dialogView.findViewById<com.google.android.material.textfield.TextInputEditText>(R.id.edit_text)
-        
-        inputLayout.hint = resources.getString(R.string.url)
-        editText.setText(UserPreferences(requireContext()).homepageBackgroundUrl)
-        
-        MaterialAlertDialogBuilder(requireActivity())
-            .setTitle(resources.getString(R.string.homepage_background_image))
-            .setView(dialogView)
-            .setPositiveButton(resources.getString(R.string.mozac_feature_prompts_ok)) { _, _ ->
-                if (editText.text.toString().isNotEmpty()) {
-                    UserPreferences(requireContext()).homepageBackgroundChoice = HomepageBackgroundChoice.URL.ordinal
-                    UserPreferences(requireContext()).homepageBackgroundUrl = editText.text.toString()
-                    updateHomepageBackgroundSummary()
-                    Toast.makeText(
-                        context,
-                        requireContext().resources.getText(R.string.successful),
-                        Toast.LENGTH_SHORT
-                    ).show()
-                } else {
-                    UserPreferences(requireContext()).homepageBackgroundChoice = HomepageBackgroundChoice.NONE.ordinal
-                    updateHomepageBackgroundSummary()
-                    Toast.makeText(
-                        context,
-                        requireContext().resources.getText(R.string.failed),
-                        Toast.LENGTH_SHORT
-                    ).show()
-                }
-            }
-            .setNegativeButton(resources.getString(R.string.cancel), null)
-            .show()
+        showNiraDialog { onDismiss ->
+            UrlInputDialog(
+                initialUrl = UserPreferences(requireContext()).homepageBackgroundUrl,
+                onConfirm = { url ->
+                    if (url.isNotEmpty()) {
+                        UserPreferences(requireContext()).homepageBackgroundChoice = HomepageBackgroundChoice.URL.ordinal
+                        UserPreferences(requireContext()).homepageBackgroundUrl = url
+                        updateHomepageBackgroundSummary()
+                        Toast.makeText(
+                            context,
+                            requireContext().resources.getText(R.string.successful),
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    } else {
+                        UserPreferences(requireContext()).homepageBackgroundChoice = HomepageBackgroundChoice.NONE.ordinal
+                        updateHomepageBackgroundSummary()
+                        Toast.makeText(
+                            context,
+                            requireContext().resources.getText(R.string.failed),
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                },
+                onDismiss = onDismiss,
+            )
+        }
     }
 
     private fun pickAppTheme() {
         val items = resources.getStringArray(R.array.theme_types)
-        var selectedChoice = UserPreferences(requireContext()).appThemeChoice
+        val initialChoice = UserPreferences(requireContext()).appThemeChoice
 
-        MaterialAlertDialogBuilder(requireActivity())
-            .setTitle(resources.getString(R.string.theme))
-            .setSingleChoiceItems(items, selectedChoice) { _, which ->
-                selectedChoice = which
-            }
-            .setNegativeButton(resources.getString(R.string.cancel), null)
-            .setPositiveButton(resources.getString(R.string.mozac_feature_prompts_ok)) { _, _ ->
-                UserPreferences(requireContext()).appThemeChoice = selectedChoice
-                applyAppTheme(selectedChoice)
-                requireActivity().recreate()
-            }
-            .show()
+        showNiraDialog { onDismiss ->
+            ThemeChoiceDialog(
+                title = getString(R.string.theme),
+                items = items,
+                initialChoice = initialChoice,
+                onConfirm = { choice ->
+                    UserPreferences(requireContext()).appThemeChoice = choice
+                    applyAppTheme(choice)
+                    requireActivity().recreate()
+                },
+                onDismiss = onDismiss,
+            )
+        }
     }
 
     private fun showIconSizeDialog() {
         val userPreferences = UserPreferences(requireContext())
-        val dialogView = layoutInflater.inflate(R.layout.dialog_size_picker, null)
-        val slider = dialogView.findViewById<com.google.android.material.slider.Slider>(R.id.sizeSlider)
-        val previewIcon = dialogView.findViewById<android.widget.ImageView>(R.id.previewIcon)
-        val previewText = dialogView.findViewById<android.widget.TextView>(R.id.previewText)
-        
-        slider.value = userPreferences.toolbarIconSize
-        slider.valueFrom = 0.8f
-        slider.valueTo = 1.5f
-        slider.stepSize = 0.1f
-        
-        previewText.text = getString(R.string.toolbar_icon_size)
-        updateIconPreview(previewIcon, userPreferences.toolbarIconSize)
-        
-        slider.addOnChangeListener { _, value, _ ->
-            updateIconPreview(previewIcon, value)
+        showNiraDialog { onDismiss ->
+            SizePickerDialog(
+                title = getString(R.string.toolbar_icon_size),
+                previewLabel = getString(R.string.toolbar_icon_size),
+                initialValue = userPreferences.toolbarIconSize,
+                valueRange = 0.8f..1.5f,
+                steps = 6,
+                showIconPreview = true,
+                onConfirm = { value ->
+                    userPreferences.toolbarIconSize = value
+                    Toast.makeText(
+                        context,
+                        requireContext().resources.getText(R.string.app_restart),
+                        Toast.LENGTH_LONG
+                    ).show()
+                },
+                onDismiss = onDismiss,
+            )
         }
-        
-        MaterialAlertDialogBuilder(requireActivity())
-            .setTitle(R.string.toolbar_icon_size)
-            .setView(dialogView)
-            .setPositiveButton(R.string.mozac_feature_prompts_ok) { _, _ ->
-                userPreferences.toolbarIconSize = slider.value
-                Toast.makeText(
-                    context,
-                    requireContext().resources.getText(R.string.app_restart),
-                    Toast.LENGTH_LONG
-                ).show()
-            }
-            .setNegativeButton(R.string.cancel, null)
-            .show()
     }
-    
+
     private fun showFontScaleDialog() {
         val userPreferences = UserPreferences(requireContext())
-        val dialogView = layoutInflater.inflate(R.layout.dialog_size_picker, null)
-        val slider = dialogView.findViewById<com.google.android.material.slider.Slider>(R.id.sizeSlider)
-        val previewIcon = dialogView.findViewById<android.widget.ImageView>(R.id.previewIcon)
-        val previewText = dialogView.findViewById<android.widget.TextView>(R.id.previewText)
-        
-        slider.value = userPreferences.interfaceFontScale
-        slider.valueFrom = 0.8f
-        slider.valueTo = 1.3f
-        slider.stepSize = 0.1f
-        
-        previewIcon.visibility = android.view.View.GONE
-        previewText.text = getString(R.string.interface_font_scale_preview)
-        updateFontPreview(previewText, userPreferences.interfaceFontScale)
-        
-        slider.addOnChangeListener { _, value, _ ->
-            updateFontPreview(previewText, value)
+        showNiraDialog { onDismiss ->
+            SizePickerDialog(
+                title = getString(R.string.interface_font_scale),
+                previewLabel = getString(R.string.interface_font_scale_preview),
+                initialValue = userPreferences.interfaceFontScale,
+                valueRange = 0.8f..1.3f,
+                steps = 4,
+                showIconPreview = false,
+                onConfirm = { value ->
+                    userPreferences.interfaceFontScale = value
+                    Toast.makeText(
+                        context,
+                        requireContext().resources.getText(R.string.app_restart),
+                        Toast.LENGTH_LONG
+                    ).show()
+                },
+                onDismiss = onDismiss,
+            )
         }
-        
-        MaterialAlertDialogBuilder(requireActivity())
-            .setTitle(R.string.interface_font_scale)
-            .setView(dialogView)
-            .setPositiveButton(R.string.mozac_feature_prompts_ok) { _, _ ->
-                userPreferences.interfaceFontScale = slider.value
-                Toast.makeText(
-                    context,
-                    requireContext().resources.getText(R.string.app_restart),
-                    Toast.LENGTH_LONG
-                ).show()
-            }
-            .setNegativeButton(R.string.cancel, null)
-            .show()
-    }
-    
-    private fun updateIconPreview(icon: android.widget.ImageView, scale: Float) {
-        val baseSize = (48 * resources.displayMetrics.density).toInt()
-        val scaledSize = (baseSize * scale).toInt()
-        val layoutParams = icon.layoutParams
-        layoutParams.width = scaledSize
-        layoutParams.height = scaledSize
-        icon.layoutParams = layoutParams
-    }
-    
-    private fun updateFontPreview(textView: android.widget.TextView, scale: Float) {
-        val baseSize = 16f
-        textView.textSize = baseSize * scale
     }
 
     private fun pickWebTheme() {
         val items = resources.getStringArray(R.array.theme_types)
-        var selectedChoice = UserPreferences(requireContext()).webThemeChoice
+        val initialChoice = UserPreferences(requireContext()).webThemeChoice
 
-        MaterialAlertDialogBuilder(requireActivity())
-            .setTitle(resources.getString(R.string.web_theme))
-            .setSingleChoiceItems(items, selectedChoice) { _, which ->
-                selectedChoice = which
-            }
-            .setNegativeButton(resources.getString(R.string.cancel), null)
-            .setPositiveButton(resources.getString(R.string.mozac_feature_prompts_ok)) { _, _ ->
-                UserPreferences(requireContext()).webThemeChoice = selectedChoice
-            }
-            .show()
+        showNiraDialog { onDismiss ->
+            ThemeChoiceDialog(
+                title = getString(R.string.web_theme),
+                items = items,
+                initialChoice = initialChoice,
+                onConfirm = { choice ->
+                    UserPreferences(requireContext()).webThemeChoice = choice
+                },
+                onDismiss = onDismiss,
+            )
+        }
     }
 
+}
+
+@Composable
+private fun ChoiceRow(label: String, selected: Boolean, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        RadioButton(selected = selected, onClick = onClick)
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyLargeEmphasized,
+            modifier = Modifier.padding(start = 4.dp),
+        )
+    }
+}
+
+@Composable
+private fun HomepageBackgroundDialog(
+    title: String,
+    items: Array<String>,
+    onItem: (Int) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    NiraAlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.headlineSmallEmphasized,
+            )
+        },
+        text = {
+            Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                items.forEachIndexed { index, label ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                onDismiss()
+                                onItem(index)
+                            }
+                            .padding(vertical = 14.dp),
+                    ) {
+                        Text(
+                            text = label,
+                            style = MaterialTheme.typography.bodyLargeEmphasized,
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {},
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.cancel))
+            }
+        },
+    )
+}
+
+@Composable
+private fun UrlInputDialog(
+    initialUrl: String,
+    onConfirm: (String) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var url by remember { mutableStateOf(initialUrl) }
+    NiraAlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = stringResource(R.string.homepage_background_image),
+                style = MaterialTheme.typography.headlineSmallEmphasized,
+            )
+        },
+        text = {
+            OutlinedTextField(
+                value = url,
+                onValueChange = { url = it },
+                label = { Text(stringResource(R.string.url)) },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+            )
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    onDismiss()
+                    onConfirm(url)
+                },
+                shapes = ButtonDefaults.shapes(),
+            ) {
+                Text(stringResource(R.string.mozac_feature_prompts_ok))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.cancel))
+            }
+        },
+    )
+}
+
+@Composable
+private fun ThemeChoiceDialog(
+    title: String,
+    items: Array<String>,
+    initialChoice: Int,
+    onConfirm: (Int) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var selected by remember { mutableIntStateOf(initialChoice) }
+    NiraAlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.headlineSmallEmphasized,
+            )
+        },
+        text = {
+            Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                items.forEachIndexed { index, label ->
+                    ChoiceRow(
+                        label = label,
+                        selected = index == selected,
+                        onClick = { selected = index },
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    onDismiss()
+                    onConfirm(selected)
+                },
+                shapes = ButtonDefaults.shapes(),
+            ) {
+                Text(stringResource(R.string.mozac_feature_prompts_ok))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.cancel))
+            }
+        },
+    )
+}
+
+/**
+ * The slider picker behind both "Toolbar Icon Size" and "Interface Font Size":
+ * a live preview (a primary-tinted icon or a text sample) above a stepped
+ * [Slider] bracketed by the "Small"/"Large" labels.
+ */
+@Composable
+private fun SizePickerDialog(
+    title: String,
+    previewLabel: String,
+    initialValue: Float,
+    valueRange: ClosedFloatingPointRange<Float>,
+    steps: Int,
+    showIconPreview: Boolean,
+    onConfirm: (Float) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var value by remember { mutableStateOf(initialValue) }
+    NiraAlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.headlineSmallEmphasized,
+            )
+        },
+        text = {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+            ) {
+                if (showIconPreview) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_palette),
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(48.dp * value),
+                    )
+                    Text(
+                        text = previewLabel,
+                        style = MaterialTheme.typography.bodyMediumEmphasized,
+                    )
+                } else {
+                    Text(
+                        text = previewLabel,
+                        fontSize = (16 * value).sp,
+                        style = MaterialTheme.typography.bodyLargeEmphasized,
+                    )
+                }
+                Slider(
+                    value = value,
+                    onValueChange = { value = it },
+                    valueRange = valueRange,
+                    steps = steps,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Row(modifier = Modifier.fillMaxWidth()) {
+                    Text(
+                        text = stringResource(R.string.small),
+                        style = MaterialTheme.typography.labelSmallEmphasized,
+                        modifier = Modifier.weight(1f),
+                    )
+                    Text(
+                        text = stringResource(R.string.large),
+                        style = MaterialTheme.typography.labelSmallEmphasized,
+                        textAlign = TextAlign.End,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    onDismiss()
+                    onConfirm((value * 10).roundToInt() / 10f)
+                },
+                shapes = ButtonDefaults.shapes(),
+            ) {
+                Text(stringResource(R.string.mozac_feature_prompts_ok))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.cancel))
+            }
+        },
+    )
 }

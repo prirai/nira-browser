@@ -690,7 +690,7 @@ open class Components(private val applicationContext: Context) {
             .contentBlocking(trackingPolicy.toContentBlockingSetting())
             .build()
 
-        UserJsPreferences.applyTypedSettings(runtimeSettings)
+        UserJsPreferences.applyTypedSettings(applicationContext, runtimeSettings)
 
         runtimeSettings.contentBlocking.setSafeBrowsing(safeBrowsingPolicy)
 

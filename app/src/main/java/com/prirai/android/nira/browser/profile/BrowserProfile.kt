@@ -33,31 +33,17 @@ data class BrowserProfile(
         val PROFILE_COLORS = com.prirai.android.nira.theme.ColorConstants.Profiles.COLORS
         
         /**
-         * Predefined emoji for profiles
-         * Using standard emoji characters for better display
+         * Predefined profile avatars: stable icon KEYS (see [ProfileIcons]),
+         * stored in the same String field the old emoji list used - no
+         * schema change. Legacy emoji values map to icons at render time.
          */
-        val PROFILE_EMOJIS = listOf(
-            "👤", // Person - default
-            "🎓", // Scholar/Student  
-            "💼", // Work/Briefcase
-            "⚽", // Sports
-            "🛒", // Shopping
-            "🏦", // Bank
-            "🎨", // Creative/Art
-            "🎮", // Gaming
-            "🔵", // Blue blob
-            "🟢", // Green blob
-            "🟡", // Yellow blob
-            "🟣", // Purple blob
-            "🟠", // Orange blob
-            "🔴", // Red blob
-        )
-        
+        val PROFILE_EMOJIS = ProfileIcons.KEYS
+
         /**
-         * Get emoji for profile index
+         * Get the icon key for a profile picker index
          */
         fun getEmojiForIndex(index: Int): String {
-            return PROFILE_EMOJIS.getOrElse(index) { "👤" }
+            return PROFILE_EMOJIS.getOrElse(index) { ProfileIcons.KEYS.first() }
         }
 
         /**

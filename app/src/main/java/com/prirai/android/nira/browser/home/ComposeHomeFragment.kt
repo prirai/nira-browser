@@ -85,8 +85,12 @@ class ComposeHomeFragment : Fragment() {
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
-        // Create a CoordinatorLayout as root container for the homepage
-        val coordinatorLayout = CoordinatorLayout(requireContext()).apply {
+        // Create the swipe-intercepting CoordinatorLayout as root container
+        // for the homepage. It hosts the tab-switch swipe gesture the same
+        // way BrowserFragment's SwipeGestureLayout does: interception at the
+        // ancestor lets the swipe start on the toolbar's address bar even
+        // though tapping it opens edit mode (a clickable child).
+        val coordinatorLayout = com.prirai.android.nira.browser.SwipeGestureCoordinatorLayout(requireContext()).apply {
             id = View.generateViewId()
             layoutParams = ViewGroup.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
@@ -657,7 +661,7 @@ class ComposeHomeFragment : Fragment() {
 
     private fun setupToolbarGestureHandler(coordinatorLayout: CoordinatorLayout) {
         val toolbar = unifiedToolbar?.getBrowserToolbar() ?: return
-        
+
         // Create a fake tab for preview (will not be visible on homepage)
         val fakeTab = com.prirai.android.nira.browser.FakeTab(requireContext())
         fakeTab.visibility = View.GONE
@@ -673,60 +677,13 @@ class ComposeHomeFragment : Fragment() {
             selectTabUseCase = components.tabsUseCases.selectTab
         )
         
-        // Create gesture detector for toolbar
-        val gestureDetector = androidx.core.view.GestureDetectorCompat(
-            requireContext(),
-            object : android.view.GestureDetector.SimpleOnGestureListener() {
-                private var activeListener: com.prirai.android.nira.browser.SwipeGestureListener? = null
-                private var handledInitialScroll = false
-                
-                override fun onDown(e: android.view.MotionEvent): Boolean = true
-                
-                override fun onScroll(
-                    e1: android.view.MotionEvent?,
-                    e2: android.view.MotionEvent,
-                    distanceX: Float,
-                    distanceY: Float
-                ): Boolean {
-                    val start = e1?.let { android.graphics.PointF(it.rawX, it.rawY) } 
-                        ?: return false
-                    val next = android.graphics.PointF(e2.rawX, e2.rawY)
-                    
-                    if (activeListener == null && !handledInitialScroll) {
-                        if (gestureHandler.onSwipeStarted(start, next)) {
-                            activeListener = gestureHandler
-                        }
-                        handledInitialScroll = true
-                    }
-                    activeListener?.onSwipeUpdate(distanceX, distanceY)
-                    return activeListener != null
-                }
-                
-                override fun onFling(
-                    e1: android.view.MotionEvent?,
-                    e2: android.view.MotionEvent,
-                    velocityX: Float,
-                    velocityY: Float
-                ): Boolean {
-                    activeListener?.onSwipeFinished(velocityX, velocityY)
-                    val handled = activeListener != null
-                    activeListener = null
-                    handledInitialScroll = false
-                    return handled
-                }
-            }
-        )
-        
-        // Set touch listener on toolbar
-        toolbar.setOnTouchListener { _, event ->
-            when (event.actionMasked) {
-                android.view.MotionEvent.ACTION_CANCEL,
-                android.view.MotionEvent.ACTION_UP -> {
-                    gestureDetector.onTouchEvent(event)
-                }
-                else -> gestureDetector.onTouchEvent(event)
-            }
-        }
+        // The root SwipeGestureCoordinatorLayout intercepts the swipe before
+        // the toolbar's clickable children (URL display, buttons) can
+        // consume it - the same hosting model as BrowserFragment's
+        // SwipeGestureLayout. The old toolbar OnTouchListener never saw
+        // swipes that started on the address bar for exactly that reason.
+        (coordinatorLayout as? com.prirai.android.nira.browser.SwipeGestureCoordinatorLayout)
+            ?.addGestureListener(gestureHandler)
     }
 
     private fun showNativeMenu() {
