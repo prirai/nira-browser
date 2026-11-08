@@ -257,6 +257,7 @@ suspend fun getData() = withContext(Dispatchers.IO) {
 - Default profile accepts both `null` and `"profile_default"` contextId
 - Profile deletion must clean up associated tabs, groups, PWAs
 - Cookie jar switching requires browser restart in some cases
+- **Profile avatars are Material icons, not emoji**: `browser/profile/ProfileIcons.kt` maps stable icon keys (`person`, `school`, `work`, ...) to vectors. The keys are stored in `BrowserProfile.emoji` — the same String field the old emoji list used, so **no schema change**; legacy emoji values map through `ProfileIcons.legacyEmojiMap` at render time (`ProfileIcons.iconFor(stored)`, never null). Render avatars via `iconFor` everywhere — never display the raw stored value.
 
 ### PWAs
 - Installation checks for existing PWAs with same URL
@@ -272,9 +273,14 @@ suspend fun getData() = withContext(Dispatchers.IO) {
 - Lazy list keys must be unique across types: prefix `"tab-"` / `"group-"` / section id. Duplicate `item.id` values crash the same animator.
 - `NiraTheme` must **not** cast `view.context as Activity`. Search dialogs wrap context in `ContextThemeWrapper`. Unwrap with a `ContextWrapper` loop (`findActivity()`).
 - `AwesomeBarWrapper` used to pass empty `{ }` click lambdas — Compose AwesomeBar does not call `Suggestion.onSuggestionClicked` unless the wrapper does.
+- **A `ComposeView` must never be hosted inside a `PopupWindow`** — the popup's decor view carries no ViewTree lifecycle owners, so composition crashes with `ViewTreeLifecycleOwner not found from PopupDecorView` (killed the browser menu on open). Two valid hostings:
+  - **Attach the ComposeView to the activity's content view** (`android.R.id.content`) — the in-repo dialog pattern (`NiraDialogHost`, `Material3BrowserMenu`): full-screen scrim view for outside-dismiss, `OnBackPressedCallback` for back-dismiss, and screen→content-local coordinate translation for positioning (`getLocationOnScreen` on the content view).
+  - If a real popup window is required (anchored dismissal), bridge the owners explicitly **from the activity, not the anchor** (`setViewTreeLifecycleOwner(activity)` etc. — the anchor's chain can be null) **and** `setParentCompositionContext(...)` with the anchor window's composition context (`ToolbarPopupWindow` is the working example).
+- **A `ComposeView` measures 0 before it attaches** — Compose composes on attach, so `composeView.measure(...)` before `showAsDropDown` reads a zero height and opens a zero-height popup. Compute popup heights as deterministic dp sums of the fixed-height rows (the `Material3BrowserMenu`/`ToolbarPopupWindow` pattern), never from a pre-attach measure.
+- Browser overflow menu: `components/menu/Material3BrowserMenu.kt` — Compose rendering behind the same presentation API, hosted per the content-view pattern above (scrim + back callback).
 
 ### GeckoView / Engine Gotchas
-- ⚠️ `privacy.resistFingerprinting` (a hardening default in `components/UserJsPreferences.kt`) **forces content `prefers-color-scheme: light`** by design (bug 1535189). The "Web theme" setting drives the engine's `preferredColorScheme` correctly, but pages cannot react while RFP is enabled — an accepted trade-off, documented inline in `UserJsPreferences.privacyPrefs`. Investigated end-to-end in v0.5.16; do not re-investigate without changing the RFP default.
+- ⚠️ `privacy.resistFingerprinting` is now a **user setting, default OFF** (`resistFingerprinting` pref, Advanced > Security; `components/UserJsPreferences.kt` gates both the config-file pref and typed setters on it; takes effect on restart). While enabled it **forces content `prefers-color-scheme: light`** by design (bug 1535189) and can break image uploads — the "Web theme" setting drives the engine's `preferredColorScheme` correctly, but pages cannot react while RFP is on. If a user reports forced light theme or broken uploads, check this toggle first.
 - AC `BrowserStore.dispatch` reduces state **synchronously** on the calling thread — reading `store.state` right after dispatch is safe (e.g. selectedTabId after `addTab(selectTab = true)`); engine side-effects are serialized in dispatch order.
 - The engine reports `canGoBack`/`canGoForward` reliably on every navigation; `HistoryState` indexes do **not** stay as current (see the flush note under Tab History). Use flags as truthiness signals, not history indexes.
 - `GeckoRuntimeSettings.writeToParcel` does **not** serialize `mPreferredColorScheme` to child processes — live `setPreferredColorScheme` changes reach content only via the LookAndFeel refresh push (`onDeviceChanged` → `NotifyChangedAllWindows`), not via the settings parcel.
@@ -410,6 +416,6 @@ Common Mozilla components used:
 
 ---
 
-**Last Updated**: October 2026 (feat/m3e: Material 3 Expressive — BOM alpha stack, MaterialExpressiveTheme + MotionScheme, emphasized typography, shared `ui/components` library; v0.5.16: tab history chart, back-UX rework, toolbar rework, address-bar perf, automated release process)
+**Last Updated**: November 2026 (feat/m3e: Material 3 Expressive — BOM alpha stack, MaterialExpressiveTheme + MotionScheme, emphasized typography, shared `ui/components` library, full Compose conversion of menu/toolbar/add-ons/settings dialogs/search chrome, ComposeView-in-PopupWindow hosting rules, ProfileIcons avatar system, RFP now default-off user setting; v0.5.16: tab history chart, back-UX rework, toolbar rework, address-bar perf, automated release process)
 
 For questions or updates to this guide, please open an issue or discussion on GitHub.
