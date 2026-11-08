@@ -12,10 +12,10 @@
             app:icon="@drawable/mozac_ic_search_24"
             app:singleLineTitle="false"/>
 
-        <Preference
+        <com.prirai.android.nira.settings.InfoPreference
             app:key="@string/key_private_search_engine"
             app:title="@string/private_search_engine"
-            app:summary="@string/private_search_engine_summary"
+            app:infoText="@string/private_search_engine_summary"
             app:icon="@drawable/mozac_ic_private_mode_24"
             app:singleLineTitle="false"/>
 
@@ -37,24 +37,6 @@
 
     </PreferenceCategory>
 
-    <PreferenceCategory android:title="Privacy &amp; Security">
-        
-        <com.prirai.android.nira.settings.MaterialSwitchPreference
-            app:key="@string/key_tracking_protection"
-            app:title="@string/tracking_protection"
-            app:icon="@drawable/mozac_ic_shield_24"
-            app:singleLineTitle="false"
-            app:defaultValue="true"/>
-
-        <com.prirai.android.nira.settings.MaterialSwitchPreference
-            app:key="@string/key_safe_browsing"
-            app:title="@string/safe_browsing"
-            app:icon="@drawable/mozac_ic_lock_24"
-            app:singleLineTitle="false"
-            app:defaultValue="true"/>
-
-    </PreferenceCategory>
-
     <PreferenceCategory android:title="Browser">
         
         <Preference
@@ -63,18 +45,18 @@
             app:icon="@drawable/mozac_ic_home_24"
             app:singleLineTitle="false"/>
 
-        <com.prirai.android.nira.settings.MaterialSwitchPreference
+        <com.prirai.android.nira.settings.InfoSwitchPreference
             app:key="@string/key_desktop_mode_default"
             app:title="@string/desktop_mode_default"
-            app:summary="@string/desktop_mode_default_summary"
+            app:infoText="@string/desktop_mode_default_summary"
             app:icon="@drawable/mozac_ic_device_desktop_24"
             app:singleLineTitle="false"
             app:defaultValue="false"/>
 
-        <com.prirai.android.nira.settings.MaterialSwitchPreference
+        <com.prirai.android.nira.settings.InfoSwitchPreference
             app:key="@string/key_translations_enabled"
             app:title="@string/translations_enabled"
-            app:summary="@string/translations_enabled_summary"
+            app:infoText="@string/translations_enabled_summary"
             app:icon="@drawable/mozac_ic_translate_24"
             app:singleLineTitle="false"
             app:defaultValue="true"/>

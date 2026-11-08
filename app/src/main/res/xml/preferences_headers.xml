@@ -12,70 +12,61 @@
         android:fragment="com.prirai.android.nira.settings.fragment.GeneralSettingsFragment"
         android:icon="@drawable/mozac_ic_settings_24"
         android:title="@string/settings_general"
-        android:singleLineTitle="false"
-        android:summary="@string/settings_general_explain"/>
+        android:singleLineTitle="false"/>
 
     <!-- Firefox Sync -->
     <androidx.preference.Preference
         android:fragment="com.prirai.android.nira.settings.fragment.SyncSettingsFragment"
         android:icon="@drawable/mozac_ic_sync_24"
         android:title="@string/settings_sync"
-        android:singleLineTitle="false"
-        android:summary="@string/settings_sync_explain"/>
+        android:singleLineTitle="false"/>
     
     <androidx.preference.Preference
         android:fragment="com.prirai.android.nira.settings.fragment.PrivacyAndSecuritySettingsFragment"
         android:icon="@drawable/mozac_ic_shield_24"
         android:title="@string/settings_privacy_and_security"
-        android:singleLineTitle="false"
-        android:summary="@string/settings_privacy_and_security_explain"/>
+        android:singleLineTitle="false"/>
     
     <!-- Appearance & Customization -->
     <androidx.preference.Preference
         android:fragment="com.prirai.android.nira.settings.fragment.CustomizationSettingsFragment"
         android:icon="@drawable/mozac_ic_themes_24"
         android:title="@string/settings_customization"
-        android:singleLineTitle="false"
-        android:summary="@string/settings_customization_explain"/>
+        android:singleLineTitle="false"/>
 
     <androidx.preference.Preference
         android:fragment="com.prirai.android.nira.settings.fragment.UnifiedWebAppFragment"
         android:icon="@drawable/mozac_ic_globe_24"
         android:title="@string/web_apps_title"
-        android:singleLineTitle="false"
-        android:summary="Manage and discover progressive web apps"/>
+        android:singleLineTitle="false"/>
     
     <!-- Extensions -->
     <androidx.preference.Preference
         android:key="addons_settings"
         android:icon="@drawable/mozac_ic_extension_24"
         android:title="@string/settings_addons"
-        android:singleLineTitle="false"
-        android:summary="@string/settings_addons_explain"/>
+        android:singleLineTitle="false"/>
     
     <!-- Data Management -->
     <androidx.preference.Preference
         android:fragment="com.prirai.android.nira.settings.fragment.ImportExportSettingsFragment"
         android:icon="@drawable/mozac_ic_import_data_24"
         android:title="@string/settings_import_and_export"
-        android:singleLineTitle="false"
-        android:summary="@string/settings_import_and_export_explain"/>
+        android:singleLineTitle="false"/>
     
     <!-- Advanced -->
     <androidx.preference.Preference
         android:fragment="com.prirai.android.nira.settings.fragment.AdvancedSettingsFragment"
         android:icon="@drawable/mozac_ic_tool_24"
         android:title="@string/settings_advanced"
-        android:singleLineTitle="false"
-        android:summary="@string/settings_advanced_explain"/>
+        android:singleLineTitle="false"/>
     
     <!-- About -->
     <androidx.preference.Preference
         android:fragment="com.prirai.android.nira.settings.fragment.AboutSettingsFragment"
         android:icon="@drawable/mozac_ic_information_24"
         android:title="@string/settings_about"
-        android:singleLineTitle="false"
-        android:summary="@string/settings_about_explain"/>
+        android:singleLineTitle="false"/>
     
     </androidx.preference.PreferenceCategory>
         

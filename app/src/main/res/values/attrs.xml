@@ -36,4 +36,12 @@
 
     <!-- Custom state for internal pages -->
     <attr name="state_internal_page" format="boolean" />
+
+    <!-- Explanation text shown by a preference's info icon dialog -->
+    <attr name="infoText" format="reference" />
+
+    <!-- Preferences whose explanation lives behind the info icon -->
+    <declare-styleable name="InfoPreference">
+        <attr name="infoText" />
+    </declare-styleable>
 </resources>

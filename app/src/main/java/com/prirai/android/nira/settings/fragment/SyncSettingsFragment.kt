@@ -1,80 +1,15 @@
-@file:OptIn(ExperimentalMaterial3ExpressiveApi::class)
-
 package com.prirai.android.nira.settings.fragment
 
-import android.content.Intent
 import android.os.Bundle
-import android.view.LayoutInflater
+import android.util.Log
 import android.view.View
-import android.view.ViewGroup
 import android.widget.Toast
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.AccountCircle
-import androidx.compose.material.icons.rounded.Bookmark
-import androidx.compose.material.icons.rounded.Check
-import androidx.compose.material.icons.rounded.History
-import androidx.compose.material.icons.rounded.OpenInNew
-import androidx.compose.material.icons.rounded.Sync
-import androidx.compose.material.icons.rounded.Tab
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.Icon
-import androidx.compose.material3.ListItem
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SuggestionChip
-import androidx.compose.material3.SuggestionChipDefaults
-import androidx.compose.material3.Switch
-import androidx.compose.material3.Text
-import androidx.compose.material3.VerticalDivider
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.platform.ComposeView
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.ViewCompositionStrategy
-import androidx.compose.ui.res.pluralStringResource
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
-import androidx.fragment.app.Fragment
-import androidx.lifecycle.compose.LocalLifecycleOwner
-import com.prirai.android.nira.BrowserActivity
+import androidx.lifecycle.lifecycleScope
+import androidx.preference.Preference
 import com.prirai.android.nira.R
 import com.prirai.android.nira.ext.components
 import com.prirai.android.nira.preferences.UserPreferences
-import com.prirai.android.nira.theme.ThemeManager
-import com.prirai.android.nira.ui.theme.NiraTheme
+import com.prirai.android.nira.settings.MaterialSwitchPreference
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -84,705 +19,323 @@ import mozilla.components.service.fxa.sync.SyncStatusObserver
 import java.text.DateFormat
 import java.util.Date
 
-class SyncSettingsFragment : Fragment() {
+/**
+ * Firefox Sync settings, using the same preference-based design language as
+ * the other settings pages: a PreferenceScreen (preferences_sync.xml) whose
+ * summaries, titles and enabled states are updated live from the
+ * [com.prirai.android.nira.browser.sync.FxaSyncManager] StateFlows.
+ */
+class SyncSettingsFragment : BaseSettingsFragment() {
 
-    override fun onCreateView(
-        inflater: LayoutInflater,
-        container: ViewGroup?,
-        savedInstanceState: Bundle?
-    ): View {
-        return ComposeView(requireContext()).apply {
-            setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
-            setContent {
-                val context = LocalContext.current
-                val prefs = UserPreferences(context)
-                NiraTheme(
-                    darkTheme = ThemeManager.isDarkMode(context),
-                    amoledMode = prefs.amoledMode,
-                    dynamicColor = prefs.dynamicColors
-                ) {
-                    val syncManager = requireContext().components.fxaSyncManager
-                    val coroutineScope = rememberCoroutineScope()
-
-                    val settingsEntryPoint = object : FxAEntryPoint {
-                        override val entryName = "app-settings"
-                    }
-
-                    val isSignedIn by syncManager.isSignedIn.collectAsState()
-                    val accountEmail by syncManager.accountEmail.collectAsState()
-                    val lastSyncTime by syncManager.lastSyncTime.collectAsState()
-                    val isSyncing by syncManager.isSyncing.collectAsState()
-                    val syncError by syncManager.syncError.collectAsState()
-
-                    // Sync engine toggle state backed by UserPreferences
-                    var syncHistoryEnabled by remember { mutableStateOf(prefs.syncHistoryEnabled) }
-                    var syncTabsEnabled by remember { mutableStateOf(prefs.syncTabsEnabled) }
-                    var syncBookmarksEnabled by remember { mutableStateOf(prefs.syncBookmarksEnabled) }
-
-                    // Live state updated by SyncStatusObserver
-                    var liveIsSyncing by remember { mutableStateOf(false) }
-                    var liveLastSyncTime by remember { mutableStateOf<Long?>(null) }
-
-                    // Connected device count
-                    var deviceCount by remember { mutableStateOf<Int?>(null) }
-
-                    val lifecycleOwner = LocalLifecycleOwner.current
-
-                    // Show toast on successful sign-in
-                    LaunchedEffect(Unit) {
-                        syncManager.authSuccessEvent.collect { email ->
-                            val msg = if (email != null) "Signed in as $email" else "Signed in to Firefox"
-                            Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
-                        }
-                    }
-
-                    // Load connected device count when signed in
-                    LaunchedEffect(isSignedIn) {
-                        if (isSignedIn) {
-                            try {
-                                val constellation = withContext(Dispatchers.IO) {
-                                    syncManager.accountManager.authenticatedAccount()?.deviceConstellation()
-                                }
-                                withContext(Dispatchers.IO) { constellation?.refreshDevices() }
-                                deviceCount = constellation?.state()?.otherDevices?.size
-                            } catch (e: Exception) {
-                                // Non-fatal: the connected-devices count is a
-                                // decorative badge on the sync screen. If FxA
-                                // is offline we just leave the count blank.
-                                android.util.Log.w("FxaAuth", "Failed to refresh device constellation", e)
-                            }
-                        } else {
-                            deviceCount = null
-                        }
-                    }
-
-                    // Register SyncStatusObserver for live sync state updates
-                    DisposableEffect(isSignedIn) {
-                        if (isSignedIn) {
-                            val syncObserver = object : SyncStatusObserver {
-                                override fun onStarted() {
-                                    coroutineScope.launch { liveIsSyncing = true }
-                                }
-
-                                override fun onIdle() {
-                                    coroutineScope.launch {
-                                        liveIsSyncing = false
-                                        liveLastSyncTime = System.currentTimeMillis()
-                                    }
-                                }
-
-                                override fun onError(error: Exception?) {
-                                    coroutineScope.launch { liveIsSyncing = false }
-                                }
-                            }
-                            try {
-                                syncManager.accountManager.registerForSyncEvents(
-                                    observer = syncObserver,
-                                    owner = lifecycleOwner,
-                                    autoPause = true
-                                )
-                            } catch (e: Exception) {
-                                // Observer already registered / lifecycle race - log
-                                // instead of ignoring so the missing spinner has an
-                                // explanation.
-                                android.util.Log.w("FxaAuth", "Failed to register sync observer", e)
-                            }
-                            onDispose {
-                                try {
-                                    syncManager.accountManager.unregisterForSyncEvents(syncObserver)
-                                } catch (e: Exception) {
-                                    android.util.Log.w("FxaAuth", "Failed to unregister sync observer", e)
-                                }
-                            }
-                        } else {
-                            onDispose { }
-                        }
-                    }
-
-                    var isSigningIn by remember { mutableStateOf(false) }
-                    LaunchedEffect(isSignedIn) {
-                        if (isSignedIn) isSigningIn = false
-                    }
-
-                    // Merge StateFlow values with live observer values
-                    val effectiveIsSyncing = isSyncing || liveIsSyncing
-                    val effectiveLastSyncTime = liveLastSyncTime ?: lastSyncTime
-
-                    SyncSettingsScreen(
-                        isSignedIn = isSignedIn,
-                        accountEmail = accountEmail,
-                        lastSyncTime = effectiveLastSyncTime,
-                        isSyncing = effectiveIsSyncing,
-                        syncError = syncError,
-                        isSigningIn = isSigningIn,
-                        deviceCount = deviceCount,
-                        syncHistoryEnabled = syncHistoryEnabled,
-                        syncTabsEnabled = syncTabsEnabled,
-                        syncBookmarksEnabled = syncBookmarksEnabled,
-                        onSignIn = {
-                            isSigningIn = true
-                            android.util.Log.d("FxaAuth", "Sign in button pressed, calling beginAuthentication")
-                            requireContext().components.fxaAuthFeature
-                                .beginAuthentication(requireContext(), settingsEntryPoint)
-                        },
-                        onSignOut = { coroutineScope.launch { syncManager.signOut() } },
-                        onSyncNow = { coroutineScope.launch { syncManager.triggerSync() } },
-                        onManageAccount = {
-                            coroutineScope.launch {
-                                try {
-                                    val account = syncManager.accountManager.authenticatedAccount()
-                                        ?: return@launch
-                                    val url = account.getManageAccountURL(settingsEntryPoint)
-                                    if (url != null) {
-                                        context.components.tabsUseCases.addTab(url, selectTab = true)
-                                        context.startActivity(
-                                            Intent(context, BrowserActivity::class.java).apply {
-                                                flags = Intent.FLAG_ACTIVITY_NEW_TASK or
-                                                        Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
-                                            }
-                                        )
-                                    }
-                                } catch (e: Exception) {
-                                    // The user just tapped "Manage account" and the
-                                    // browser failed to open the account settings
-                                    // page - surface the error instead of doing
-                                    // nothing visible.
-                                    Toast.makeText(
-                                        context,
-                                        "Couldn't open account page: ${e.message ?: "unknown error"}",
-                                        Toast.LENGTH_LONG,
-                                    ).show()
-                                }
-                            }
-                        },
-                        onExportLogs = {
-                            val syncInfo = StringBuilder()
-                            syncInfo.appendLine("=== Nira Sync Diagnostics ===")
-                            syncInfo.appendLine("App: Nira 0.5.5 (debug)")
-                            syncInfo.appendLine("Time: ${java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.US).format(java.util.Date())}")
-                            syncInfo.appendLine()
-                            syncInfo.appendLine("--- Sync State ---")
-                            syncInfo.appendLine("isSignedIn: $isSignedIn")
-                            syncInfo.appendLine("accountEmail: ${accountEmail ?: "null"}")
-                            syncInfo.appendLine("isSyncing: $effectiveIsSyncing")
-                            val lastSyncStr = effectiveLastSyncTime?.let {
-                                java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.US).format(java.util.Date(it))
-                            } ?: "never"
-                            syncInfo.appendLine("lastSyncTime: $lastSyncStr")
-                            syncInfo.appendLine("syncError: ${syncError ?: "none"}")
-                            syncInfo.appendLine()
-                            syncInfo.appendLine("--- Account Manager ---")
-                            val am = syncManager.accountManager
-                            syncInfo.appendLine("accountManager.authenticatedAccount: ${am.authenticatedAccount() != null}")
-                            val profile = am.accountProfile()
-                            syncInfo.appendLine("profile email: ${profile?.email ?: "null"}")
-                            syncInfo.appendLine("profile avatar: ${profile?.avatar ?: "null"}")
-                            syncInfo.appendLine()
-                            syncInfo.appendLine("--- Last Auth Attempt ---")
-                            val lastDebug = com.prirai.android.nira.browser.sync.FxaSyncManager.lastAuthDebugInfo
-                            val lastTs = com.prirai.android.nira.browser.sync.FxaSyncManager.lastAuthTimestamp
-                            syncInfo.appendLine("lastAuthDebugInfo: ${lastDebug ?: "none (no attempt recorded)"}")
-                            if (lastTs > 0) {
-                                val lastTsStr = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.US).format(java.util.Date(lastTs))
-                                syncInfo.appendLine("lastAuthTimestamp: $lastTsStr")
-                            }
-                            syncInfo.appendLine()
-                            syncInfo.appendLine("--- WebChannel Extension ---")
-                            val ext = com.prirai.android.nira.browser.sync.FxaSyncManager.webChannelExtension
-                            syncInfo.appendLine("webChannelExtension: ${if (ext != null) "installed (${ext.id})" else "NOT INSTALLED"}")
-                            syncInfo.appendLine()
-                            syncInfo.appendLine("--- Device ---")
-                            syncInfo.appendLine("model: ${android.os.Build.MODEL}")
-                            syncInfo.appendLine("brand: ${android.os.Build.BRAND}")
-                            syncInfo.appendLine("sdk: ${android.os.Build.VERSION.SDK_INT}")
-                            val text = syncInfo.toString()
-                            android.util.Log.d("FxaAuth", "Exporting diagnostics:\n$text")
-                            val sendIntent = android.content.Intent().apply {
-                                action = android.content.Intent.ACTION_SEND
-                                putExtra(android.content.Intent.EXTRA_TEXT, text)
-                                type = "text/plain"
-                            }
-                            val shareIntent = android.content.Intent.createChooser(sendIntent, "Share Sync Diagnostics")
-                            context.startActivity(shareIntent)
-                        },
-                        onEngineToggle = { engine, enabled ->
-                            when (engine) {
-                                SyncEngine.History -> {
-                                    prefs.syncHistoryEnabled = enabled
-                                    syncHistoryEnabled = enabled
-                                }
-                                SyncEngine.Tabs -> {
-                                    prefs.syncTabsEnabled = enabled
-                                    syncTabsEnabled = enabled
-                                }
-                                SyncEngine.Bookmarks -> {
-                                    prefs.syncBookmarksEnabled = enabled
-                                    syncBookmarksEnabled = enabled
-                                }
-                                else -> {}
-                            }
-                            coroutineScope.launch {
-                                try {
-                                    syncManager.accountManager.setEngineEnabled(engine, enabled)
-                                    syncManager.triggerSync()
-                                } catch (e: Exception) {
-                                    // The user just toggled a sync engine and expects
-                                    // action - if the account rejects the update we
-                                    // surface it as a Toast rather than silently
-                                    // leaving the switch in a state that doesn't
-                                    // match the server.
-                                    Toast.makeText(
-                                        context,
-                                        "Sync setting change failed: ${e.message ?: "unknown error"}",
-                                        Toast.LENGTH_LONG,
-                                    ).show()
-                                }
-                            }
-                        }
-                    )
-                }
-            }
-        }
+    private val settingsEntryPoint = object : FxAEntryPoint {
+        override val entryName = "app-settings"
     }
-}
 
-@Composable
-private fun SyncSettingsScreen(
-    isSignedIn: Boolean,
-    accountEmail: String?,
-    lastSyncTime: Long?,
-    isSyncing: Boolean,
-    syncError: String?,
-    isSigningIn: Boolean,
-    deviceCount: Int?,
-    syncHistoryEnabled: Boolean,
-    syncTabsEnabled: Boolean,
-    syncBookmarksEnabled: Boolean,
-    onSignIn: () -> Unit,
-    onSignOut: () -> Unit,
-    onSyncNow: () -> Unit,
-    onManageAccount: () -> Unit,
-    onExportLogs: () -> Unit,
-    onEngineToggle: (SyncEngine, Boolean) -> Unit
-) {
-    Scaffold { innerPadding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Text(
-                text = stringResource(R.string.firefox_sync),
-                style = MaterialTheme.typography.headlineSmallEmphasized,
-                modifier = Modifier.padding(vertical = 8.dp)
-            )
+    private val syncManager by lazy { requireContext().components.fxaSyncManager }
 
-            if (isSignedIn) {
-                SignedInContent(
-                    accountEmail = accountEmail,
-                    lastSyncTime = lastSyncTime,
-                    isSyncing = isSyncing,
-                    syncError = syncError,
-                    deviceCount = deviceCount,
-                    onSyncNow = onSyncNow,
-                    onSignOut = onSignOut,
-                    onManageAccount = onManageAccount
-                )
+    // Live state mirrored from the FxaSyncManager StateFlows.
+    private var signedIn = false
+    private var accountEmail: String? = null
+    private var lastSyncTime: Long? = null
+    private var isSyncing = false
+    private var syncError: String? = null
+
+    // Live state pushed by the SyncStatusObserver - more immediate than the
+    // store flows for the in-progress indication on the "Sync now" row.
+    private var liveIsSyncing = false
+    private var liveLastSyncTime: Long? = null
+
+    // Decorative connected-device count, loaded from the device constellation.
+    private var deviceCount: Int? = null
+
+    private var isSigningIn = false
+    private var syncObserver: SyncStatusObserver? = null
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        observeSyncState()
+    }
+
+    override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
+        addPreferencesFromResource(R.xml.preferences_sync)
+
+        val prefs = UserPreferences(requireContext())
+
+        // Sign in / Sign out - one row whose label and action follow the
+        // current account state.
+        clickablePreference(preference = getString(R.string.key_sync_sign_in_out)) {
+            if (signedIn) {
+                lifecycleScope.launch { syncManager.signOut() }
             } else {
-                SignedOutContent(
-                    syncError = syncError,
-                    isSigningIn = isSigningIn,
-                    onSignIn = onSignIn
-                )
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            SyncEnginesCard(
-                isSignedIn = isSignedIn,
-                syncHistoryEnabled = syncHistoryEnabled,
-                syncTabsEnabled = syncTabsEnabled,
-                syncBookmarksEnabled = syncBookmarksEnabled,
-                onEngineToggle = onEngineToggle
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Diagnostics / export logs button
-            OutlinedButton(
-                onClick = onExportLogs,
-                modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.outlinedButtonColors(
-                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            ) {
-                Text(stringResource(R.string.export_diagnostics))
+                isSigningIn = true
+                refreshUi()
+                Log.d("FxaAuth", "Sign in pressed, calling beginAuthentication")
+                requireContext().components.fxaAuthFeature
+                    .beginAuthentication(requireContext(), settingsEntryPoint)
             }
         }
-    }
-}
 
-@Composable
-private fun SignedInContent(
-    accountEmail: String?,
-    lastSyncTime: Long?,
-    isSyncing: Boolean,
-    syncError: String?,
-    deviceCount: Int?,
-    onSyncNow: () -> Unit,
-    onSignOut: () -> Unit,
-    onManageAccount: () -> Unit
-) {
-    // Account info card
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.primaryContainer
-        )
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                // Circle avatar with first letter of email
-                val initial = accountEmail?.firstOrNull()?.uppercaseChar()?.toString() ?: "F"
-                Box(
-                    modifier = Modifier
-                        .size(44.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.primary),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = initial,
-                        style = MaterialTheme.typography.titleMediumEmphasized,
-                        color = MaterialTheme.colorScheme.onPrimary
-                    )
+        // Sync now
+        clickablePreference(preference = getString(R.string.key_sync_now)) {
+            lifecycleScope.launch { syncManager.triggerSync() }
+        }
+
+        // Sync engine toggles, backed by the same UserPreferences properties.
+        switchPreference(
+            preference = getString(R.string.key_sync_history),
+            isChecked = prefs.syncHistoryEnabled,
+        ) { enabled ->
+            prefs.syncHistoryEnabled = enabled
+            applyEngineChange(SyncEngine.History, enabled)
+        }
+        switchPreference(
+            preference = getString(R.string.key_sync_bookmarks),
+            isChecked = prefs.syncBookmarksEnabled,
+        ) { enabled ->
+            prefs.syncBookmarksEnabled = enabled
+            applyEngineChange(SyncEngine.Bookmarks, enabled)
+        }
+        switchPreference(
+            preference = getString(R.string.key_sync_tabs),
+            isChecked = prefs.syncTabsEnabled,
+        ) { enabled ->
+            prefs.syncTabsEnabled = enabled
+            applyEngineChange(SyncEngine.Tabs, enabled)
+        }
+    }
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+
+        // Seed the mirrored state so the rows render correctly before the
+        // collectors deliver their first value.
+        signedIn = syncManager.isSignedIn.value
+        accountEmail = syncManager.accountEmail.value
+        lastSyncTime = syncManager.lastSyncTime.value
+        isSyncing = syncManager.isSyncing.value
+        syncError = syncManager.syncError.value
+
+        if (signedIn) {
+            registerSyncObserver()
+            loadDeviceCount()
+        }
+        refreshUi()
+    }
+
+    override fun onDestroyView() {
+        unregisterSyncObserver()
+        super.onDestroyView()
+    }
+
+    /**
+     * Collects the FxaSyncManager StateFlows on the main dispatcher and
+     * pushes every change straight into the preference rows. The flows are
+     * plain Kotlin, not Compose-dependent, so they port cleanly to the
+     * preference-based page.
+     */
+    private fun observeSyncState() {
+        lifecycleScope.launch {
+            syncManager.isSignedIn.collect { value ->
+                signedIn = value
+                if (value) {
+                    isSigningIn = false
+                    registerSyncObserver()
+                    loadDeviceCount()
+                } else {
+                    unregisterSyncObserver()
+                    deviceCount = null
                 }
-                Spacer(modifier = Modifier.width(12.dp))
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = stringResource(R.string.firefox_account),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
-                    )
-                    Text(
-                        text = accountEmail ?: "—",
-                        style = MaterialTheme.typography.bodyMediumEmphasized,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
-                    )
-                    val formatted = remember(lastSyncTime) {
-                        if (lastSyncTime != null) {
-                            DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT)
-                                .format(Date(lastSyncTime))
-                        } else null
-                    }
-                    Text(
-                        text =
-                            if (formatted != null) {
-                                stringResource(R.string.last_synced, formatted)
-                            } else {
-                                stringResource(R.string.never_synced)
-                            },
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
-                    )
+                refreshUi()
+            }
+        }
+        lifecycleScope.launch {
+            syncManager.accountEmail.collect { value ->
+                accountEmail = value
+                refreshUi()
+            }
+        }
+        lifecycleScope.launch {
+            syncManager.lastSyncTime.collect { value ->
+                lastSyncTime = value
+                refreshUi()
+            }
+        }
+        lifecycleScope.launch {
+            syncManager.isSyncing.collect { value ->
+                isSyncing = value
+                refreshUi()
+            }
+        }
+        lifecycleScope.launch {
+            syncManager.syncError.collect { value ->
+                syncError = value
+                refreshUi()
+            }
+        }
+        lifecycleScope.launch {
+            syncManager.authSuccessEvent.collect { email ->
+                val context = context ?: return@collect
+                val message = if (email != null) {
+                    getString(R.string.signed_in_as, email)
+                } else {
+                    getString(R.string.signed_in_to_firefox)
                 }
-                Spacer(modifier = Modifier.width(8.dp))
-                VerticalDivider(
-                    modifier = Modifier.height(52.dp),
-                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.2f)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                SuggestionChip(
-                    onClick = {},
-                    label = { Text(stringResource(R.string.sync_status_active), style = MaterialTheme.typography.labelSmall) },
-                    colors = SuggestionChipDefaults.suggestionChipColors(
-                        containerColor = MaterialTheme.colorScheme.tertiaryContainer,
-                        labelColor = MaterialTheme.colorScheme.onTertiaryContainer
-                    ),
-                    border = null
-                )
-            }
-
-            if (deviceCount != null && deviceCount > 0) {
-                Text(
-                    text = pluralStringResource(R.plurals.connected_devices, deviceCount, deviceCount),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
-                )
+                Toast.makeText(context, message, Toast.LENGTH_LONG).show()
             }
         }
     }
 
-    // Sync error banner
-    if (syncError != null) {
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(12.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.errorContainer
-            )
-        ) {
-            Text(
-                text = syncError,
-                modifier = Modifier.padding(12.dp),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onErrorContainer
-            )
+    /**
+     * Pushes an engine toggle to the account as well, so the server-side
+     * choice matches the local UserPreferences value.
+     */
+    private fun applyEngineChange(engine: SyncEngine, enabled: Boolean) {
+        lifecycleScope.launch {
+            try {
+                syncManager.accountManager.setEngineEnabled(engine, enabled)
+                syncManager.triggerSync()
+            } catch (e: Exception) {
+                // The user just toggled a sync engine and expects action -
+                // if the account rejects the update we surface it as a Toast
+                // rather than silently leaving the switch in a state that
+                // doesn't match the server.
+                val context = context ?: return@launch
+                val reason = e.message ?: getString(R.string.sync_unknown_error)
+                Toast.makeText(
+                    context,
+                    getString(R.string.sync_engine_change_failed, reason),
+                    Toast.LENGTH_LONG,
+                ).show()
+            }
         }
     }
 
-    // Sync Now + Sign Out
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        FilledTonalButton(
-            onClick = onSyncNow,
-            enabled = !isSyncing,
-            modifier = Modifier.weight(1f)
-        ) {
-            if (isSyncing) {
-                CircularProgressIndicator(
-                    modifier = Modifier.size(16.dp),
-                    strokeWidth = 2.dp
-                )
+    /**
+     * Connected-device count for the account summary. Non-fatal: the count
+     * is decorative, so if FxA is offline we simply leave it out.
+     */
+    private fun loadDeviceCount() {
+        lifecycleScope.launch {
+            try {
+                val constellation = withContext(Dispatchers.IO) {
+                    syncManager.accountManager.authenticatedAccount()?.deviceConstellation()
+                }
+                withContext(Dispatchers.IO) { constellation?.refreshDevices() }
+                deviceCount = constellation?.state()?.otherDevices?.size
+            } catch (e: Exception) {
+                Log.w("FxaAuth", "Failed to refresh device constellation", e)
+            }
+            refreshUi()
+        }
+    }
+
+    private fun registerSyncObserver() {
+        if (syncObserver != null) return
+        if (view == null) return
+        val observer = object : SyncStatusObserver {
+            override fun onStarted() {
+                liveIsSyncing = true
+                refreshUi()
+            }
+
+            override fun onIdle() {
+                liveIsSyncing = false
+                liveLastSyncTime = System.currentTimeMillis()
+                refreshUi()
+            }
+
+            override fun onError(error: Exception?) {
+                liveIsSyncing = false
+                refreshUi()
+            }
+        }
+        try {
+            syncManager.accountManager.registerForSyncEvents(
+                observer = observer,
+                owner = viewLifecycleOwner,
+                autoPause = true,
+            )
+            syncObserver = observer
+        } catch (e: Exception) {
+            // Observer already registered / lifecycle race - log instead of
+            // ignoring so the missing sync indicator has an explanation.
+            Log.w("FxaAuth", "Failed to register sync observer", e)
+        }
+    }
+
+    private fun unregisterSyncObserver() {
+        val observer = syncObserver ?: return
+        try {
+            syncManager.accountManager.unregisterForSyncEvents(observer)
+        } catch (e: Exception) {
+            Log.w("FxaAuth", "Failed to unregister sync observer", e)
+        }
+        syncObserver = null
+    }
+
+    private fun refreshUi() {
+        val context = context ?: return
+        val effectiveIsSyncing = isSyncing || liveIsSyncing
+        val effectiveLastSyncTime = liveLastSyncTime ?: lastSyncTime
+
+        // Account status: email, last sync time, connected devices and any
+        // sync error, composed into one summary.
+        findPreference<Preference>(getString(R.string.key_sync_account_status))?.summary =
+            accountStatusSummary(effectiveLastSyncTime)
+
+        // Sign in / Sign out
+        findPreference<Preference>(getString(R.string.key_sync_sign_in_out))?.apply {
+            if (signedIn) {
+                title = context.getString(R.string.sign_out)
+                isEnabled = true
             } else {
-                Icon(
-                    imageVector = Icons.Rounded.Sync,
-                    contentDescription = null,
-                    modifier = Modifier.size(16.dp)
+                title = if (isSigningIn) {
+                    context.getString(R.string.opening_sign_in)
+                } else {
+                    context.getString(R.string.sign_in_to_firefox)
+                }
+                isEnabled = !isSigningIn
+            }
+        }
+
+        // Sync now - only while signed in, disabled while a sync runs
+        findPreference<Preference>(getString(R.string.key_sync_now))?.apply {
+            isEnabled = signedIn && !effectiveIsSyncing
+            summary = if (effectiveIsSyncing) context.getString(R.string.syncing) else null
+        }
+
+        // Engine toggles only act on a signed-in account
+        val enginesEnabled = signedIn
+        findPreference<MaterialSwitchPreference>(getString(R.string.key_sync_history))?.isEnabled = enginesEnabled
+        findPreference<MaterialSwitchPreference>(getString(R.string.key_sync_bookmarks))?.isEnabled = enginesEnabled
+        findPreference<MaterialSwitchPreference>(getString(R.string.key_sync_tabs))?.isEnabled = enginesEnabled
+    }
+
+    private fun accountStatusSummary(lastSync: Long?): String {
+        val context = context ?: return ""
+        val lines = mutableListOf<String>()
+        if (signedIn) {
+            accountEmail?.let { lines.add(it) }
+            val formatted = lastSync?.let {
+                DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT)
+                    .format(Date(it))
+            }
+            lines.add(
+                if (formatted != null) {
+                    context.getString(R.string.last_synced, formatted)
+                } else {
+                    context.getString(R.string.never_synced)
+                }
+            )
+            deviceCount?.takeIf { it > 0 }?.let { count ->
+                lines.add(
+                    context.resources.getQuantityString(R.plurals.connected_devices, count, count)
                 )
             }
-            Spacer(modifier = Modifier.width(6.dp))
-            Text(if (isSyncing) stringResource(R.string.syncing) else stringResource(R.string.sync_now))
-        }
-
-        OutlinedButton(
-            onClick = onSignOut,
-            modifier = Modifier.weight(1f),
-            colors = ButtonDefaults.outlinedButtonColors(
-                contentColor = MaterialTheme.colorScheme.error
-            )
-        ) {
-            Text(stringResource(R.string.sign_out))
-        }
-    }
-
-    // Manage Account
-    OutlinedButton(
-        onClick = onManageAccount,
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Icon(
-            imageVector = Icons.Rounded.OpenInNew,
-            contentDescription = null,
-            modifier = Modifier.size(16.dp)
-        )
-        Spacer(modifier = Modifier.width(8.dp))
-        Text(stringResource(R.string.manage_account))
-    }
-}
-
-@Composable
-private fun SignedOutContent(
-    syncError: String?,
-    isSigningIn: Boolean,
-    onSignIn: () -> Unit
-) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
-        )
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Icon(
-                imageVector = Icons.Rounded.Sync,
-                contentDescription = null,
-                modifier = Modifier.size(40.dp),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Text(
-                text = stringResource(R.string.sync_pitch),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-    }
-
-    if (syncError != null) {
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(12.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.errorContainer
-            )
-        ) {
-            Text(
-                text = syncError,
-                modifier = Modifier.padding(12.dp),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onErrorContainer
-            )
-        }
-    }
-
-    Button(
-        onClick = onSignIn,
-        enabled = !isSigningIn,
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        if (isSigningIn) {
-            CircularProgressIndicator(
-                modifier = Modifier.size(16.dp),
-                strokeWidth = 2.dp,
-                color = MaterialTheme.colorScheme.onPrimary
-            )
         } else {
-            Icon(
-                imageVector = Icons.Rounded.AccountCircle,
-                contentDescription = null,
-                modifier = Modifier.size(18.dp)
-            )
+            lines.add(context.getString(R.string.sync_not_signed_in))
         }
-        Spacer(modifier = Modifier.width(8.dp))
-        Text(if (isSigningIn) stringResource(R.string.opening_sign_in) else stringResource(R.string.sign_in_to_firefox))
-    }
-}
-
-@Composable
-private fun SyncEnginesCard(
-    isSignedIn: Boolean,
-    syncHistoryEnabled: Boolean,
-    syncTabsEnabled: Boolean,
-    syncBookmarksEnabled: Boolean,
-    onEngineToggle: (SyncEngine, Boolean) -> Unit
-) {
-    Text(
-        text = stringResource(R.string.what_syncs),
-        style = MaterialTheme.typography.titleSmallEmphasized,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp)
-    )
-
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp)
-    ) {
-        Column(modifier = Modifier.padding(4.dp)) {
-            SyncEngineRow(
-                icon = { Icon(Icons.Rounded.History, contentDescription = null, modifier = Modifier.size(20.dp)) },
-                label = stringResource(R.string.action_history),
-                enabled = syncHistoryEnabled,
-                showToggle = isSignedIn,
-                onToggleChange = if (isSignedIn) ({ onEngineToggle(SyncEngine.History, it) }) else null
-            )
-            SyncEngineRow(
-                icon = { Icon(Icons.Rounded.Tab, contentDescription = null, modifier = Modifier.size(20.dp)) },
-                label = stringResource(R.string.open_tabs),
-                enabled = syncTabsEnabled,
-                showToggle = isSignedIn,
-                onToggleChange = if (isSignedIn) ({ onEngineToggle(SyncEngine.Tabs, it) }) else null
-            )
-            SyncEngineRow(
-                icon = { Icon(Icons.Rounded.Bookmark, contentDescription = null, modifier = Modifier.size(20.dp)) },
-                label = stringResource(R.string.action_bookmarks),
-                enabled = syncBookmarksEnabled,
-                showToggle = isSignedIn,
-                onToggleChange = if (isSignedIn) ({ onEngineToggle(SyncEngine.Bookmarks, it) }) else null
-            )
-        }
-    }
-}
-
-@Composable
-private fun SyncEngineRow(
-    icon: @Composable () -> Unit,
-    label: String,
-    enabled: Boolean,
-    note: String? = null,
-    showToggle: Boolean = false,
-    onToggleChange: ((Boolean) -> Unit)? = null
-) {
-    if (showToggle && onToggleChange != null) {
-        ListItem(
-            headlineContent = {
-                Text(
-                    text = label,
-                    style = MaterialTheme.typography.bodyMedium
-                )
-            },
-            supportingContent = note?.let { { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline) } },
-            leadingContent = {
-                Box(
-                    modifier = Modifier
-                        .size(36.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(MaterialTheme.colorScheme.secondaryContainer),
-                    contentAlignment = Alignment.Center
-                ) {
-                    icon()
-                }
-            },
-            trailingContent = {
-                Switch(
-                    checked = enabled,
-                    onCheckedChange = onToggleChange
-                )
-            }
-        )
-    } else {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Box(
-                modifier = Modifier.size(20.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                icon()
-            }
-            Spacer(modifier = Modifier.width(12.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = label,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = if (enabled) MaterialTheme.colorScheme.onSurface
-                    else MaterialTheme.colorScheme.outline
-                )
-                if (note != null) {
-                    Text(
-                        text = note,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.outline
-                    )
-                }
-            }
-            if (enabled) {
-                Icon(
-                    imageVector = Icons.Rounded.Check,
-                    contentDescription = stringResource(R.string.enabled),
-                    modifier = Modifier.size(18.dp),
-                    tint = MaterialTheme.colorScheme.primary
-                )
-            }
-        }
+        syncError?.let { lines.add(it) }
+        return lines.joinToString("\n")
     }
 }

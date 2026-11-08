@@ -105,19 +105,6 @@ class AdvancedSettingsFragment : BaseSettingsFragment() {
             // Disabled for security reasons
         }
 
-        // Classic fingerprint resistance (letterboxing, canvas spoofing,
-        // uniform UA). Off by default: while enabled Gecko forces a light
-        // page theme (bug 1535189) and spoofs canvas readbacks, which broke
-        // picture uploads/downloads on some sites. Both the config-file
-        // pref and the typed setters are applied at engine construction,
-        // so the toggle takes effect on the next app start.
-        switchPreference(
-            preference = requireContext().resources.getString(R.string.key_resist_fingerprinting),
-            isChecked = UserPreferences(requireContext()).resistFingerprinting,
-        ) {
-            UserPreferences(requireContext()).resistFingerprinting = it
-        }
-
         switchPreference(
             preference = requireContext().resources.getString(R.string.key_prompt_external_downloader),
             isChecked = UserPreferences(requireContext()).promptExternalDownloader

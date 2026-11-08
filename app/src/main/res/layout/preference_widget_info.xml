@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Standalone info icon widget for non-switch preferences: the row keeps
+     its own click behavior, the icon opens the explanation dialog. -->
+<ImageView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/pref_info_icon"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:padding="4dp"
+    android:src="@drawable/mozac_ic_information_24"
+    android:contentDescription="@string/info_icon_description"
+    android:background="?attr/selectableItemBackgroundBorderless" />

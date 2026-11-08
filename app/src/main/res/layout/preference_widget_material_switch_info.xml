@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Material 3 switch + trailing info icon. The switch keeps the
+     @android:id/switch_widget id TwoStatePreference binds to; the info
+     icon is clickable on its own so row taps and info taps don't mix. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:gravity="center_vertical">
+
+    <com.google.android.material.materialswitch.MaterialSwitch
+        android:id="@android:id/switch_widget"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:clickable="false"
+        android:focusable="false"
+        android:background="@null" />
+
+    <ImageView
+        android:id="@+id/pref_info_icon"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="12dp"
+        android:padding="4dp"
+        android:src="@drawable/mozac_ic_information_24"
+        android:contentDescription="@string/info_icon_description"
+        android:background="?attr/selectableItemBackgroundBorderless" />
+</LinearLayout>

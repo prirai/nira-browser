@@ -10,6 +10,7 @@ import android.view.MenuInflater
 import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -22,10 +23,14 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Extension
+import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -39,7 +44,9 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -59,6 +66,7 @@ import com.prirai.android.nira.R
 import com.prirai.android.nira.ext.components
 import com.prirai.android.nira.preferences.UserPreferences
 import com.prirai.android.nira.theme.ThemeManager
+import com.prirai.android.nira.ui.components.NiraAlertDialog
 import com.prirai.android.nira.ui.components.NiraEmptyState
 import com.prirai.android.nira.ui.components.NiraLoadingIndicator
 import com.prirai.android.nira.ui.theme.NiraTheme
@@ -443,7 +451,8 @@ fun AddonListItem(
 
             Spacer(modifier = Modifier.width(16.dp))
 
-            // Extension info
+            // Extension info: title only - the description lives behind
+            // the info icon, not in the list.
             Column(
                 modifier = Modifier.weight(1f)
             ) {
@@ -454,18 +463,49 @@ fun AddonListItem(
                     overflow = TextOverflow.Ellipsis,
                     color = MaterialTheme.colorScheme.onSurface
                 )
-                
-                addon.translatableSummary.values.firstOrNull()?.let { summary ->
-                    if (summary.isNotEmpty()) {
-                        Text(
-                            text = summary,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
+            }
+
+            val summary = addon.translatableSummary.values.firstOrNull().orEmpty()
+
+            if (summary.isNotEmpty()) {
+                var showInfo by remember { mutableStateOf(false) }
+                if (showInfo) {
+                    NiraAlertDialog(
+                        onDismissRequest = { showInfo = false },
+                        title = {
+                            Text(
+                                text = addon.translateName(context),
+                                style = MaterialTheme.typography.headlineSmallEmphasized,
+                            )
+                        },
+                        text = {
+                            Text(
+                                text = summary,
+                                style = MaterialTheme.typography.bodyMedium,
+                                modifier = Modifier.verticalScroll(rememberScrollState()),
+                            )
+                        },
+                        confirmButton = {
+                            TextButton(
+                                onClick = { showInfo = false },
+                                shapes = ButtonDefaults.shapes(),
+                            ) {
+                                Text(stringResource(com.prirai.android.nira.R.string.mozac_feature_prompts_ok))
+                            }
+                        },
+                    )
                 }
+                Icon(
+                    imageVector = Icons.Outlined.Info,
+                    contentDescription = stringResource(
+                        com.prirai.android.nira.R.string.info_icon_description
+                    ),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier
+                        .clickable { showInfo = true }
+                        .padding(8.dp)
+                        .size(20.dp),
+                )
             }
 
             Spacer(modifier = Modifier.width(8.dp))

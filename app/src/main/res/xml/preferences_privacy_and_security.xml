@@ -6,6 +6,33 @@
 
     <PreferenceCategory android:title="Enhanced Tracking Protection">
 
+        <com.prirai.android.nira.settings.MaterialSwitchPreference
+            app:key="@string/key_tracking_protection"
+            app:title="@string/tracking_protection"
+            app:icon="@drawable/mozac_ic_shield_24"
+            app:singleLineTitle="false"
+            app:defaultValue="true"/>
+
+        <com.prirai.android.nira.settings.MaterialSwitchPreference
+            app:key="@string/key_safe_browsing"
+            app:title="@string/safe_browsing"
+            app:icon="@drawable/mozac_ic_lock_24"
+            app:singleLineTitle="false"
+            app:defaultValue="true"/>
+
+        <!-- Classic fingerprint resistance (letterboxing, canvas spoofing,
+             uniform UA). Off by default: while enabled Gecko forces a light
+             page theme (bug 1535189) and spoofs canvas readbacks, which broke
+             picture uploads/downloads on some sites. Both the config-file
+             pref and the typed setters are applied at engine construction,
+             so the toggle takes effect on the next app start. -->
+        <com.prirai.android.nira.settings.InfoSwitchPreference
+            app:key="@string/key_resist_fingerprinting"
+            app:title="@string/resist_fingerprinting"
+            app:infoText="@string/resist_fingerprinting_summary"
+            app:singleLineTitle="false"
+            app:defaultValue="false" />
+
         <Preference
             app:key="etp_level"
             app:title="Tracking Protection"
@@ -73,10 +100,10 @@
             app:key="@string/key_doh_provider"
             app:title="@string/doh_provider_title" />
 
-        <com.prirai.android.nira.settings.MaterialSwitchPreference
+        <com.prirai.android.nira.settings.InfoSwitchPreference
             app:key="@string/key_global_privacy_control"
             app:title="@string/gpc_title"
-            app:summary="@string/gpc_summary"
+            app:infoText="@string/gpc_summary"
             app:defaultValue="true" />
 
     </PreferenceCategory>

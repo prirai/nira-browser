@@ -114,24 +114,6 @@ class GeneralSettingsFragment : BaseSettingsFragment() {
             value = UserPreferences(requireContext()).searchSuggestionCount.coerceIn(1, 10)
         }
 
-        switchPreference(
-                preference = requireContext().resources.getString(R.string.key_safe_browsing),
-                isChecked = UserPreferences(requireContext()).safeBrowsing,
-                onCheckChange = {
-                    UserPreferences(requireContext()).safeBrowsing = it
-                    Toast.makeText(context, requireContext().resources.getText(R.string.app_restart), Toast.LENGTH_LONG).show()
-                }
-        )
-
-        switchPreference(
-                preference = requireContext().resources.getString(R.string.key_tracking_protection),
-                isChecked = UserPreferences(requireContext()).trackingProtection,
-                onCheckChange = {
-                    UserPreferences(requireContext()).trackingProtection = it
-                    Toast.makeText(context, requireContext().resources.getText(R.string.app_restart), Toast.LENGTH_LONG).show()
-                }
-        )
-
         clickablePreference(
                 preference = resources.getString(R.string.key_homepage_type),
                 onClick = { pickHomepage() }
