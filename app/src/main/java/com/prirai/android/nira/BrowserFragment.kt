@@ -290,15 +290,29 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
                         // Get the profile for this tab
                         val tabContextId = tab.contextId
                         val profileManager = com.prirai.android.nira.browser.profile.ProfileManager.getInstance(fragmentContext)
-                        
-                        // Extract profile ID from contextId (format: "profile_X")
-                        val profileId = tabContextId?.removePrefix("profile_")
-                        
-                        if (profileId != null) {
+                        val currentProfile = profileManager.getActiveProfile()
+
+                        if (tab.content.private || tabContextId == "private") {
+                            // Private selections don't move the active profile;
+                            // the private toolbar theme is applied above.
+                        } else if (tabContextId == null || tabContextId == "profile_default") {
+                            // Default-profile partition: a cross-profile
+                            // navigation (address-bar swipe, LRU selection
+                            // after a close) landing here must move the active
+                            // profile back to default - the tab bar filters by
+                            // the active profile, so it would otherwise keep
+                            // showing the previous profile's tabs.
+                            if (currentProfile.id != "default") {
+                                val defaultProfile = com.prirai.android.nira.browser.profile.BrowserProfile.getDefaultProfile()
+                                profileManager.setActiveProfile(defaultProfile)
+                                unifiedToolbar?.getTabGroupBar()?.updateProfileIcon(defaultProfile)
+                            }
+                        } else {
+                            // Extract profile ID from contextId (format: "profile_X")
+                            val profileId = tabContextId!!.removePrefix("profile_")
                             val allProfiles = profileManager.getAllProfiles()
                             val profile = allProfiles.find { it.id == profileId }
-                            val currentProfile = profileManager.getActiveProfile()
-                            
+
                             if (profile != null && currentProfile.id != profileId) {
                                 // Switch to this profile context in the toolbar
                                 profileManager.setActiveProfile(profile)

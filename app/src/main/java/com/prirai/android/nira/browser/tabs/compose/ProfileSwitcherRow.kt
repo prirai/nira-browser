@@ -40,6 +40,7 @@ import androidx.compose.ui.unit.dp
 import com.prirai.android.nira.R
 import com.prirai.android.nira.browser.profile.BrowserProfile
 import com.prirai.android.nira.browser.profile.ProfileIcons
+import com.prirai.android.nira.ui.components.mutedAdaptive
 import com.prirai.android.nira.ui.components.pressScale
 
 /**
@@ -81,6 +82,10 @@ fun ProfileSwitcherRow(
             profiles.forEach { profile ->
                 ProfilePill(
                     icon = ProfileIcons.iconFor(profile.emoji),
+                    // The muted, theme-adaptive variant of the profile's
+                    // identity color - the same tint the create/edit
+                    // dialog's icon grid renders.
+                    iconTint = Color(profile.color).mutedAdaptive(),
                     label = profile.name,
                     active = !isPrivateMode && profile.id == currentProfileId,
                     onClick = { onProfileClick(profile) },
@@ -90,6 +95,11 @@ fun ProfileSwitcherRow(
 
             ProfilePill(
                 icon = Icons.Filled.Shield,
+                // Private mode's muted purple identity, the same adaptive
+                // treatment as the profile colors.
+                iconTint = Color(
+                    com.prirai.android.nira.theme.ColorConstants.PrivateMode.PURPLE
+                ).mutedAdaptive(),
                 label = stringResource(R.string.private_mode_short),
                 active = isPrivateMode,
                 onClick = onPrivateClick,
@@ -102,14 +112,16 @@ fun ProfileSwitcherRow(
 }
 
 /**
- * One profile pill: icon avatar in a tonal circle + name. The active state
- * is the `primaryContainer` container, filled avatar circle and emphasized
- * label - no accent stroke anywhere.
+ * One profile pill: icon avatar (muted identity tint) in a tonal circle +
+ * name. The active state is the `primaryContainer` container and the
+ * emphasized label - no accent stroke anywhere, and the avatar circle
+ * stays tonal in both states.
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun ProfilePill(
     icon: ImageVector,
+    iconTint: Color,
     label: String,
     active: Boolean,
     onClick: () -> Unit,
@@ -142,16 +154,16 @@ private fun ProfilePill(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            // Icon avatar in a tonal circle - filled when active
+            // Icon avatar in a tonal circle. The icon wears the muted,
+            // theme-adaptive variant of the identity color - the same
+            // treatment the create/edit dialog's icon grid uses - in both
+            // states; the pill's container and emphasized label speak for
+            // the active state.
             Box(
                 modifier = Modifier
                     .size(32.dp)
                     .background(
-                        color = if (active) {
-                            MaterialTheme.colorScheme.primary
-                        } else {
-                            MaterialTheme.colorScheme.surfaceContainerHigh
-                        },
+                        color = MaterialTheme.colorScheme.surfaceContainerHigh,
                         shape = CircleShape,
                     ),
                 contentAlignment = Alignment.Center,
@@ -159,11 +171,7 @@ private fun ProfilePill(
                 Icon(
                     imageVector = icon,
                     contentDescription = null,
-                    tint = if (active) {
-                        MaterialTheme.colorScheme.onPrimary
-                    } else {
-                        MaterialTheme.colorScheme.onSurfaceVariant
-                    },
+                    tint = iconTint,
                     modifier = Modifier.size(18.dp),
                 )
             }
