@@ -202,7 +202,7 @@ class TabSearchFragment : BottomSheetDialogFragment() {
                 val group = allGroups.find { it.tabIds.contains(tab.id) }
                 SearchResultItem.TabResult(
                     tab = tab,
-                    profileName = profile?.let { "${it.emoji} ${it.name}" }
+                    profileName = profile?.let { it.name }
                         ?: getString(R.string.tabsearch_unknown_profile),
                     groupName = group?.name,
                 )

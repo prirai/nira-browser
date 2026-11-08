@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalMaterial3ExpressiveApi::class)
+
 package com.prirai.android.nira.settings.fragment
 
 import android.app.Activity
@@ -6,14 +8,20 @@ import android.net.Uri
 import android.os.Bundle
 import android.util.Log
 import android.widget.Toast
-import androidx.appcompat.app.AlertDialog
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.res.stringResource
 import androidx.core.content.edit
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.prirai.android.nira.R
 import com.prirai.android.nira.browser.bookmark.items.BookmarkFolderItem
 import com.prirai.android.nira.browser.bookmark.items.BookmarkItem
 import com.prirai.android.nira.browser.bookmark.items.BookmarkSiteItem
 import com.prirai.android.nira.browser.bookmark.repository.BookmarkManager
+import com.prirai.android.nira.ui.components.NiraAlertDialog
 import com.prirai.android.nira.utils.BookmarkUtils
 import org.json.JSONArray
 import org.json.JSONObject
@@ -62,26 +70,41 @@ class ImportExportSettingsFragment : BaseSettingsFragment() {
 
     private fun clearBookmarks() {
         // TODO: notify bookmark manager to clear bookmarks
-        val builder = MaterialAlertDialogBuilder(activity as Activity)
-        builder.setTitle(getString(R.string.clear_bookmarks))
-        builder.setMessage(getString(R.string.clear_bookmarks_confirm))
+        showNiraDialog { onDismiss ->
+            NiraAlertDialog(
+                onDismissRequest = onDismiss,
+                title = {
+                    Text(
+                        text = stringResource(R.string.clear_bookmarks),
+                        style = MaterialTheme.typography.headlineSmallEmphasized,
+                    )
+                },
+                text = { Text(stringResource(R.string.clear_bookmarks_confirm)) },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            onDismiss()
+                            Toast.makeText(
+                                activity,
+                                R.string.successful, Toast.LENGTH_LONG
+                            ).show()
 
-        builder.setPositiveButton(resources.getString(R.string.mozac_feature_prompts_ok)) { dialogInterface, which ->
-            Toast.makeText(
-                activity,
-                R.string.successful, Toast.LENGTH_LONG
-            ).show()
-
-            val manager = BookmarkManager.getInstance(requireActivity())
-            manager.file.delete()
-            manager.initialize()
+                            val manager = BookmarkManager.getInstance(requireActivity())
+                            manager.file.delete()
+                            manager.initialize()
+                        },
+                        shapes = ButtonDefaults.shapes(),
+                    ) {
+                        Text(stringResource(R.string.mozac_feature_prompts_ok))
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = onDismiss) {
+                        Text(stringResource(R.string.cancel))
+                    }
+                },
+            )
         }
-        builder.setNegativeButton(resources.getString(R.string.cancel)) { dialogInterface, which ->
-
-        }
-        val alertDialog: AlertDialog = builder.create()
-        alertDialog.setCancelable(true)
-        alertDialog.show()
     }
 
     private fun requestBookmarkImport() {
@@ -313,28 +336,43 @@ class ImportExportSettingsFragment : BaseSettingsFragment() {
     }
 
     private fun clearSettings() {
-        val builder = MaterialAlertDialogBuilder(activity as Activity)
-        builder.setTitle(getString(R.string.clear_settings))
+        showNiraDialog { onDismiss ->
+            NiraAlertDialog(
+                onDismissRequest = onDismiss,
+                title = {
+                    Text(
+                        text = stringResource(R.string.clear_settings),
+                        style = MaterialTheme.typography.headlineSmallEmphasized,
+                    )
+                },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            onDismiss()
+                            Toast.makeText(
+                                activity,
+                                R.string.successful, Toast.LENGTH_LONG
+                            ).show()
 
-        builder.setPositiveButton(resources.getString(R.string.mozac_feature_prompts_ok)) { dialogInterface, which ->
-            Toast.makeText(
-                activity,
-                R.string.successful, Toast.LENGTH_LONG
-            ).show()
-
-            requireContext().getSharedPreferences(SCW_PREFERENCES, 0).edit { clear() }
-            Toast.makeText(
-                context,
-                requireContext().resources.getText(R.string.app_restart),
-                Toast.LENGTH_LONG
-            ).show()
+                            requireContext().getSharedPreferences(SCW_PREFERENCES, 0).edit { clear() }
+                            Toast.makeText(
+                                context,
+                                requireContext().resources.getText(R.string.app_restart),
+                                Toast.LENGTH_LONG
+                            ).show()
+                        },
+                        shapes = ButtonDefaults.shapes(),
+                    ) {
+                        Text(stringResource(R.string.mozac_feature_prompts_ok))
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = onDismiss) {
+                        Text(stringResource(R.string.cancel))
+                    }
+                },
+            )
         }
-        builder.setNegativeButton(resources.getString(R.string.cancel)) { dialogInterface, which ->
-
-        }
-        val alertDialog: AlertDialog = builder.create()
-        alertDialog.setCancelable(true)
-        alertDialog.show()
     }
 
     private fun exportSettings(uri: Uri) {

@@ -154,9 +154,10 @@ fun GroupHeaderRow(
             .fillMaxWidth()
             .padding(horizontal = 8.dp, vertical = 4.dp),
         shape = RoundedCornerShape(12.dp),
-        color = Color(color).copy(alpha = 0.1f),
-        tonalElevation = 2.dp,
-        border = BorderStroke(1.dp, Color(color).copy(alpha = 0.3f))
+        // Neutral M3 container; the group color lives on the name, badge
+        // and expand icon - not on the container fill or a border.
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        tonalElevation = 1.dp
     ) {
         Row(
             modifier = Modifier

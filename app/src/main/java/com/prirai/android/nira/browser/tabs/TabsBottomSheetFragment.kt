@@ -288,8 +288,8 @@ class TabsBottomSheetFragment : DialogFragment() {
         val profileManager = com.prirai.android.nira.browser.profile.ProfileManager.getInstance(requireContext())
         val profiles = profileManager.getAllProfiles()
 
-        val items = profiles.map { "${it.emoji} ${it.name}" }.toMutableList()
-        items.add("🕵️ Private")
+        val items = profiles.map { it.name }.toMutableList()
+        items.add(getString(com.prirai.android.nira.R.string.private_mode_short))
 
         val tabWord = if (isGroup) "group" else if (tabIds.size > 1) "tabs" else "tab"
 

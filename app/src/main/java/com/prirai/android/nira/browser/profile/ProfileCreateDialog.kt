@@ -3,9 +3,10 @@
 package com.prirai.android.nira.browser.profile
 
 import android.content.Context
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -23,6 +24,8 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.prirai.android.nira.ui.components.NiraAlertDialog
+import com.prirai.android.nira.ui.components.pressScale
+import com.prirai.android.nira.browser.profile.ProfileIcons
 import com.prirai.android.nira.R
 
 @Composable
@@ -110,6 +113,7 @@ fun ProfileCreateDialog(
     )
 }
 
+@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun CombinedEmojiColorOption(
     emoji: String,
@@ -117,25 +121,34 @@ fun CombinedEmojiColorOption(
     selected: Boolean,
     onClick: () -> Unit
 ) {
+    val interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
     Box(
         modifier = Modifier
+            .pressScale(interactionSource)
             .size(64.dp)
             .clip(RoundedCornerShape(16.dp))
-            .background(color.copy(alpha = 0.2f))
+            .background(
+                if (selected) color.copy(alpha = 0.3f) else Color.Transparent
+            )
             .then(
                 if (selected) {
-                    Modifier.border(3.dp, color, RoundedCornerShape(16.dp))
+                    Modifier.border(2.dp, color, RoundedCornerShape(16.dp))
                 } else {
-                    Modifier.border(1.dp, color.copy(alpha = 0.3f), RoundedCornerShape(16.dp))
+                    Modifier
                 }
             )
-            .clickable(onClick = onClick),
+            .combinedClickable(
+                onClick = onClick,
+                interactionSource = interactionSource,
+            ),
         contentAlignment = Alignment.Center
     ) {
-        Text(
-            text = emoji,
-            style = MaterialTheme.typography.headlineMedium,
-            fontSize = androidx.compose.ui.unit.TextUnit(28f, androidx.compose.ui.unit.TextUnitType.Sp)
+        // Icon avatar, not emoji - the stored key maps through ProfileIcons
+        Icon(
+            imageVector = ProfileIcons.iconFor(emoji),
+            contentDescription = null,
+            tint = color,
+            modifier = Modifier.size(32.dp)
         )
     }
 }
