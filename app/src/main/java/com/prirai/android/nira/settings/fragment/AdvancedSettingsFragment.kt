@@ -55,13 +55,12 @@ class AdvancedSettingsFragment : BaseSettingsFragment() {
             onClick = { sideloadXpiFile() }
         )
 
-        // GeckoView remote debugging — off by default. When on, a desktop
+        // GeckoView remote debugging - off by default. When on, a desktop
         // Firefox can inspect this app's pages via about:debugging over USB.
         switchPreference(
             preference = requireContext().resources.getString(R.string.key_remote_debugging),
             isChecked = UserPreferences(requireContext()).remoteDebugging,
-        ) {
-            val prefs = UserPreferences(requireContext())
+        ) {            val prefs = UserPreferences(requireContext())
             prefs.remoteDebugging = it
             // Apply live so the user doesn't have to restart the app to
             // start a debugging session.
@@ -89,6 +88,19 @@ class AdvancedSettingsFragment : BaseSettingsFragment() {
             isEnabled = false
         ) {
             // Disabled for security reasons
+        }
+
+        // Classic fingerprint resistance (letterboxing, canvas spoofing,
+        // uniform UA). Off by default: while enabled Gecko forces a light
+        // page theme (bug 1535189) and spoofs canvas readbacks, which broke
+        // picture uploads/downloads on some sites. Both the config-file
+        // pref and the typed setters are applied at engine construction,
+        // so the toggle takes effect on the next app start.
+        switchPreference(
+            preference = requireContext().resources.getString(R.string.key_resist_fingerprinting),
+            isChecked = UserPreferences(requireContext()).resistFingerprinting,
+        ) {
+            UserPreferences(requireContext()).resistFingerprinting = it
         }
 
         switchPreference(

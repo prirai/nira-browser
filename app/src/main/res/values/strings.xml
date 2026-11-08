@@ -76,6 +76,12 @@
         translatable="false"
     >remote_debugging</string>
   <string
+        name="key_resist_fingerprinting"
+        translatable="false"
+    >resist_fingerprinting</string>
+  <string name="resist_fingerprinting">Resist fingerprinting</string>
+  <string name="resist_fingerprinting_summary">Hardens against browser fingerprinting, but forces light page theme and can break image uploads on some sites (canvas spoofing). Takes effect after restart.</string>
+  <string
         name="key_export_bookmarks"
         translatable="false"
     >export_bookmarks</string>
