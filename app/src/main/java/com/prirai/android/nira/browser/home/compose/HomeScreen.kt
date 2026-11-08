@@ -54,6 +54,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
+import com.prirai.android.nira.ui.components.mutedAdaptive
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -312,14 +314,18 @@ fun LogoSection(
                 color = MaterialTheme.colorScheme.onBackground
             )
 
-            // Profile avatar selector (clickable) - Material icon, not emoji
+            // Profile avatar selector (clickable) - Material icon, not emoji.
+            // The container is the muted, theme-adaptive variant of the
+            // profile color; the icon tint follows the container's
+            // luminance so it stays legible for every palette entry.
+            val avatarColor = if (currentProfile.color != 0) {
+                Color(currentProfile.color).mutedAdaptive()
+            } else {
+                MaterialTheme.colorScheme.primaryContainer
+            }
             Surface(
                 shape = CircleShape,
-                color = if (currentProfile.color != 0) {
-                    Color(currentProfile.color)
-                } else {
-                    MaterialTheme.colorScheme.primaryContainer
-                },
+                color = avatarColor,
                 modifier = Modifier
                     .size(40.dp)
                     .clickable(onClick = onProfileClick)
@@ -328,7 +334,11 @@ fun LogoSection(
                     Icon(
                         imageVector = com.prirai.android.nira.browser.profile.ProfileIcons.iconFor(currentProfile.emoji),
                         contentDescription = currentProfile.name,
-                        tint = MaterialTheme.colorScheme.onPrimary,
+                        tint = if (avatarColor.luminance() > 0.5f) {
+                            MaterialTheme.colorScheme.onSurface
+                        } else {
+                            Color.White
+                        },
                         modifier = Modifier.size(22.dp)
                     )
                 }
