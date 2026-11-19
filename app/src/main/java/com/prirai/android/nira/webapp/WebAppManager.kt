@@ -1,5 +1,7 @@
 package com.prirai.android.nira.webapp
 
+import com.prirai.android.nira.ext.components
+import mozilla.components.concept.engine.Engine
 import android.content.Context
 import android.graphics.Bitmap
 import androidx.room.Dao
@@ -102,6 +104,24 @@ class WebAppManager(private val context: Context) {
      */
     suspend fun updateWebApp(webApp: WebAppEntity) {
         webAppDatabase.webAppDao().update(webApp)
+    }
+
+    /**
+     * Clears cookies, DOM storage, auth sessions and caches for the app's site. Gecko can only
+     * clear by host (not by container), so the same site in other profiles is cleared as well.
+     */
+    fun clearSiteData(webApp: WebAppEntity) {
+        val host = runCatching { java.net.URL(webApp.url).host }.getOrNull()
+        if (host.isNullOrEmpty()) return
+        context.components.engine.clearData(
+            data = Engine.BrowsingData.select(
+                Engine.BrowsingData.COOKIES,
+                Engine.BrowsingData.DOM_STORAGES,
+                Engine.BrowsingData.AUTH_SESSIONS,
+                Engine.BrowsingData.ALL_CACHES,
+            ),
+            host = host,
+        )
     }
 
     /**

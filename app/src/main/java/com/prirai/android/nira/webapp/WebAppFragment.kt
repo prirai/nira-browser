@@ -7,6 +7,7 @@ import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import com.prirai.android.nira.R
+import com.prirai.android.nira.browser.profile.BrowserProfile
 import com.prirai.android.nira.ext.components
 import com.prirai.android.nira.integration.ContextMenuIntegration
 import kotlinx.coroutines.launch
@@ -76,7 +77,7 @@ class WebAppFragment : Fragment(), EngineSession.Observer {
         lifecycleScope.launch {
             try {
                 val engine = requireContext().components.engine
-                val contextId = "profile_$profileId"
+                val contextId = BrowserProfile.contextIdFor(profileId)
                 
                 engineSession = engine.createSession(private = false, contextId = contextId)
                 
