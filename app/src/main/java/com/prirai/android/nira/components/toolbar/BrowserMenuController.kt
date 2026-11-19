@@ -1,5 +1,6 @@
 package com.prirai.android.nira.components.toolbar
 
+import mozilla.components.support.ktx.android.content.share
 import android.content.Intent
 import androidx.core.content.ContextCompat
 import androidx.navigation.NavController
@@ -219,20 +220,7 @@ class DefaultBrowserToolbarMenuController(
             is ToolbarMenu.Item.Share -> {
                 MainScope().launch {
                     activity.components.store.state.selectedTab?.content?.let {
-                        val shareIntent = Intent(Intent.ACTION_SEND)
-                        shareIntent.type = "text/plain"
-                        if (it.title != "") {
-                            shareIntent.putExtra(Intent.EXTRA_SUBJECT, it.title)
-                        }
-                        shareIntent.putExtra(Intent.EXTRA_TEXT, it.url)
-                        ContextCompat.startActivity(
-                            activity,
-                            Intent.createChooser(
-                                shareIntent,
-                                activity.resources.getString(R.string.mozac_selection_context_menu_share)
-                            ).setFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
-                            null
-                        )
+                        activity.share(it.url, it.title)
                     }
                 }
             }

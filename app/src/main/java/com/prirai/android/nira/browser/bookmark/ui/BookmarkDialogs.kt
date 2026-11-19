@@ -2,6 +2,7 @@
 
 package com.prirai.android.nira.browser.bookmark.ui
 
+import mozilla.components.support.ktx.android.content.share
 import android.content.Context
 import android.content.Intent
 import android.widget.Toast
@@ -614,10 +615,5 @@ internal fun folderDisplayName(context: Context, manager: BookmarkManager, folde
  * share action did.
  */
 internal fun shareBookmarkUrl(context: Context, url: String) {
-    val shareIntent = Intent().apply {
-        action = Intent.ACTION_SEND
-        putExtra(Intent.EXTRA_TEXT, url)
-        type = "text/plain"
-    }
-    context.startActivity(Intent.createChooser(shareIntent, context.getString(R.string.share)))
+    context.share(url)
 }

@@ -234,6 +234,17 @@
         />
 
     <service
+            android:name=".privacy.PrivateNotificationService"
+            android:foregroundServiceType="specialUse"
+            android:exported="false"
+        >
+      <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="private_browsing_indicator"
+            />
+    </service>
+
+    <service
             android:name=".downloads.DownloadService"
             android:foregroundServiceType="dataSync"
             android:exported="false"

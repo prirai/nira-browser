@@ -114,6 +114,15 @@ class PrivacyAndSecuritySettingsFragment : BaseSettingsFragment() {
         ) {
             prefs.resistFingerprinting = it
         }
+
+        switchPreference(
+            preference = requireContext().resources.getString(R.string.key_allow_screenshots_in_private),
+            isChecked = prefs.allowScreenshotsInPrivate,
+        ) {
+            prefs.allowScreenshotsInPrivate = it
+            // SecureWindowFeature reads the flag on tab selection; the user sees it on next activity start.
+            Toast.makeText(context, requireContext().resources.getText(R.string.app_restart), Toast.LENGTH_LONG).show()
+        }
     }
 
     private fun setupSleepingTabs() {

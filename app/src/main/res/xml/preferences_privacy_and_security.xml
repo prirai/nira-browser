@@ -26,6 +26,13 @@
              picture uploads/downloads on some sites. Both the config-file
              pref and the typed setters are applied at engine construction,
              so the toggle takes effect on the next app start. -->
+        <com.prirai.android.nira.settings.MaterialSwitchPreference
+            app:key="@string/key_allow_screenshots_in_private"
+            app:title="@string/allow_screenshots_in_private"
+            app:summary="@string/allow_screenshots_in_private_summary"
+            app:singleLineTitle="false"
+            app:defaultValue="false"/>
+
         <com.prirai.android.nira.settings.InfoSwitchPreference
             app:key="@string/key_resist_fingerprinting"
             app:title="@string/resist_fingerprinting"
