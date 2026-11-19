@@ -1212,17 +1212,13 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
     }
     
     /**
-     * Initialize homepage ViewModel for shortcuts and bookmarks. Uses the
-     * process-wide singleton from [com.prirai.android.nira.browser.shortcuts.ShortcutDatabase.getInstance]
-     * so schema migrations only live in one place.
+     * Initialize homepage ViewModel for shortcuts and bookmarks. Shortcuts come
+     * from [com.prirai.android.nira.components.Components.shortcutsRepository].
      */
     private fun initializeHomeViewModel() {
-        val database = com.prirai.android.nira.browser.shortcuts.ShortcutDatabase
-            .getInstance(requireContext())
-
         val factory = com.prirai.android.nira.browser.home.compose.HomeViewModelFactory(
             bookmarkManager = com.prirai.android.nira.browser.bookmark.repository.BookmarkManager.getInstance(requireContext()),
-            shortcutDao = database.shortcutDao(),
+            shortcutsRepository = requireContext().components.shortcutsRepository,
             historyStorage = requireContext().components.historyStorage,
         )
 

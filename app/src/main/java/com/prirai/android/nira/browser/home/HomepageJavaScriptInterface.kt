@@ -6,8 +6,7 @@ import com.prirai.android.nira.browser.bookmark.items.BookmarkFolderItem
 import com.prirai.android.nira.browser.bookmark.items.BookmarkItem
 import com.prirai.android.nira.browser.bookmark.items.BookmarkSiteItem
 import com.prirai.android.nira.browser.bookmark.repository.BookmarkManager
-import com.prirai.android.nira.browser.shortcuts.ShortcutDatabase
-import com.prirai.android.nira.browser.shortcuts.ShortcutEntity
+import com.prirai.android.nira.ext.components
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import mozilla.components.support.base.log.logger.Logger
@@ -27,18 +26,14 @@ class HomepageJavaScriptInterface(private val context: Context) {
         val shortcuts = JSONArray()
 
         try {
-            // Use the process-wide singleton so migrations run once and we don't
-            // race with other callsites opening the same SQLite file. The JS
-            // bridge is synchronous, so we hop to Dispatchers.IO via runBlocking
-            // instead of the previous `.allowMainThreadQueries()` builder flag.
-            val dao = ShortcutDatabase.getInstance(context).shortcutDao()
-            val items = runBlocking(Dispatchers.IO) { dao.getAll() }
+            // The JS bridge is synchronous, so block on IO.
+            val items = runBlocking(Dispatchers.IO) { context.components.shortcutsRepository.getAll() }
 
-            items.take(12).forEach { shortcut: ShortcutEntity ->
+            items.take(12).forEach { shortcut ->
                 val obj = JSONObject()
-                obj.put("uid", shortcut.uid) // Add ID for deletion
+                obj.put("uid", shortcut.id) // Add ID for deletion
                 obj.put("title", shortcut.title ?: "")
-                obj.put("url", shortcut.url ?: "")
+                obj.put("url", shortcut.url)
                 // Icon will be loaded via favicon cache or use fallback letter
                 obj.put("icon", null)
                 shortcuts.put(obj)
