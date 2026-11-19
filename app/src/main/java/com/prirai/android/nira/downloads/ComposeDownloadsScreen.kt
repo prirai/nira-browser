@@ -113,8 +113,7 @@ fun DownloadsScreen(onDismiss: () -> Unit) {
         }
         .sortedByDescending { it.createdTime }
 
-    // The dialog theme's rounded_bottom_sheet provides the sheet chrome
-    // (28dp top corners, colorSurface); the content draws no second surface.
+    // The hosting DownloadsDialogFragment draws the rounded surface; the content draws none.
     Column(
         modifier = Modifier
             .fillMaxWidth()

@@ -227,14 +227,14 @@ class BrowserMenu(
     }
 
     val newTabItem = ThemedBrowserMenuImageText(
-        context.getString(R.string.mozac_browser_menu_new_tab),
+        context.getString(R.string.new_tab),
         R.drawable.mozac_ic_tab_new_24
     ) {
         onItemTapped.invoke(ToolbarMenu.Item.NewTab)
     }
 
     val newPrivateTabItem = ThemedBrowserMenuImageText(
-        context.getString(R.string.mozac_browser_menu_new_private_tab),
+        context.getString(R.string.new_private_tab),
         mozilla.components.ui.icons.R.drawable.mozac_ic_private_mode_24
     ) {
         onItemTapped.invoke(ToolbarMenu.Item.NewPrivateTab)

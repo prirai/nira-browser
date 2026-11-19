@@ -128,7 +128,6 @@ dependencies {
     // See https://maven.mozilla.org/maven2/?prefix=maven2/org/mozilla/geckoview/ for available versions.
 
     // Mozilla compose components
-    implementation libs.compose.awesomebar
 
     // Mozilla concept components
     implementation libs.concept.storage
@@ -199,9 +198,7 @@ dependencies {
 
     // Mozilla UI components
     implementation libs.ui.autocomplete
-    implementation libs.ui.tabcounter
     implementation libs.ui.icons
-    implementation libs.ui.colors
     implementation libs.ui.widgets
 
     // Mozilla lib components

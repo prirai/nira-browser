@@ -83,7 +83,6 @@ browser-tabstray = { group = "org.mozilla.components", name = "browser-tabstray"
 browser-thumbnails = { group = "org.mozilla.components", name = "browser-thumbnails", version.ref = "components" }
 browser-toolbar = { group = "org.mozilla.components", name = "browser-toolbar", version.ref = "components" }
 coil-compose = { group = "io.coil-kt", name = "coil-compose", version.ref = "coil-compose" }
-compose-awesomebar = { group = "org.mozilla.components", name = "compose-awesomebar", version.ref = "components" }
 concept-awesomebar = { group = "org.mozilla.components", name = "concept-awesomebar", version.ref = "components" }
 concept-base = { group = "org.mozilla.components", name = "concept-base", version.ref = "components" }
 concept-engine = { group = "org.mozilla.components", name = "concept-engine", version.ref = "components" }
@@ -144,9 +143,7 @@ support-utils = { group = "org.mozilla.components", name = "support-utils", vers
 support-webextensions = { group = "org.mozilla.components", name = "support-webextensions", version.ref = "components" }
 tooling-glean-gradle = { group = "org.mozilla.components", name = "tooling-glean-gradle", version.ref = "tooling-glean-gradle" }
 ui-autocomplete = { group = "org.mozilla.components", name = "ui-autocomplete", version.ref = "components" }
-ui-colors = { group = "org.mozilla.components", name = "ui-colors", version.ref = "components" }
 ui-icons = { group = "org.mozilla.components", name = "ui-icons", version.ref = "components" }
-ui-tabcounter = { group = "org.mozilla.components", name = "ui-tabcounter", version.ref = "components" }
 ui-widgets = { group = "org.mozilla.components", name = "ui-widgets", version.ref = "components" }
 
 [plugins]

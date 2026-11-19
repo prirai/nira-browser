@@ -16,12 +16,12 @@ import kotlin.coroutines.CoroutineContext
  * Intercepts [DownloadAction.AddDownloadAction] (dispatched by
  * [mozilla.components.feature.downloads.manager.FetchDownloadManager] when a download starts)
  * and holds the download in INITIATED state until the user explicitly confirms in the
- * downloads sheet.
+ * downloads window.
  *
  * By not calling [next] for [DownloadAction.AddDownloadAction], [DownloadMiddleware] never
  * starts the download service. The download is instead added to state via
  * [DownloadAction.UpdateDownloadAction] so [BrowserFragment.observeDownloadsForSheet] opens
- * the sheet and the INITIATED row shows the confirmation prompt.
+ * the window and the INITIATED row shows the confirmation prompt.
  *
  * On confirmation the UI starts the service directly (bypassing this middleware).
  * On cancellation the UI dispatches [DownloadAction.RemoveDownloadAction].
