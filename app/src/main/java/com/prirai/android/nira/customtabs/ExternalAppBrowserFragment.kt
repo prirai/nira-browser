@@ -2,6 +2,7 @@
 
 package com.prirai.android.nira.customtabs
 
+import mozilla.components.support.ktx.android.content.share
 import android.content.Intent
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -704,11 +705,7 @@ class ExternalAppBrowserFragment : Fragment(), UserInteractionHandler, ActivityR
         customTabSessionId?.let { sessionId ->
             val customTab = requireContext().components.store.state.findCustomTab(sessionId)
             customTab?.let { tab ->
-                val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                    type = "text/plain"
-                    putExtra(Intent.EXTRA_TEXT, tab.content.url)
-                }
-                startActivity(Intent.createChooser(shareIntent, getString(R.string.share)))
+                requireContext().share(tab.content.url)
             }
         }
     }

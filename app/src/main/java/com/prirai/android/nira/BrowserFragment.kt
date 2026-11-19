@@ -1,5 +1,6 @@
 package com.prirai.android.nira
 
+import mozilla.components.support.ktx.android.content.share
 import android.view.View
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -524,11 +525,7 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
                     val selectedTab = state.tabs.find { it.id == state.selectedTabId }
                     val currentUrl = selectedTab?.content?.url
                     if (!currentUrl.isNullOrBlank()) {
-                        val shareIntent = android.content.Intent()
-                        shareIntent.action = android.content.Intent.ACTION_SEND
-                        shareIntent.putExtra(android.content.Intent.EXTRA_TEXT, currentUrl)
-                        shareIntent.type = "text/plain"
-                        startActivity(android.content.Intent.createChooser(shareIntent, "Share"))
+                        requireContext().share(currentUrl)
                     }
                 }
 

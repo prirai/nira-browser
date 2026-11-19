@@ -79,6 +79,14 @@
         name="key_resist_fingerprinting"
         translatable="false"
     >resist_fingerprinting</string>
+  <string
+        name="key_allow_screenshots_in_private"
+        translatable="false"
+    >allow_screenshots_in_private</string>
+  <string name="allow_screenshots_in_private">Allow screenshots in private browsing</string>
+  <string name="allow_screenshots_in_private_summary">When off, private tabs are hidden from screenshots and the recent apps screen.</string>
+  <string name="private_notification_title">Private browsing</string>
+  <string name="private_notification_text">Tap to close all private tabs</string>
   <string name="resist_fingerprinting">Resist fingerprinting</string>
   <string name="resist_fingerprinting_summary">Hardens against browser fingerprinting, but forces light page theme and can break image uploads on some sites (canvas spoofing). Takes effect after restart.</string>
   <string

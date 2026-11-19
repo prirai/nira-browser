@@ -91,6 +91,8 @@ import mozilla.components.lib.publicsuffixlist.PublicSuffixList
 import mozilla.components.concept.sync.SyncEngine
 import mozilla.components.service.fxa.sync.GlobalSyncableStoreProvider
 import mozilla.components.service.location.LocationService
+import com.prirai.android.nira.privacy.PrivateNotificationService
+import mozilla.components.feature.privatemode.notification.PrivateNotificationFeature
 import mozilla.components.support.base.android.NotificationsDelegate
 import mozilla.components.support.base.worker.Frequency
 import mozilla.appservices.remotesettings.RemoteSettingsServer
@@ -577,6 +579,10 @@ open class Components(private val applicationContext: Context) {
      */
     val mediaSessionFeature: MediaSessionFeature by lazy {
         MediaSessionFeature(applicationContext, MediaSessionService::class.java, store)
+    }
+
+    val privateNotificationFeature: PrivateNotificationFeature<PrivateNotificationService> by lazy {
+        PrivateNotificationFeature(applicationContext, store, PrivateNotificationService::class)
     }
 
     val sessionUseCases by lazy { SessionUseCases(store) }

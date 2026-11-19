@@ -2,6 +2,7 @@
 
 package com.prirai.android.nira.history
 
+import mozilla.components.support.ktx.android.content.share
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -347,14 +348,5 @@ private fun HistoryFavicon(url: String) {
 }
 
 private fun shareUrl(context: Context, url: String) {
-    val shareIntent = Intent(Intent.ACTION_SEND).apply {
-        type = "text/plain"
-        putExtra(Intent.EXTRA_TEXT, url)
-    }
-    context.startActivity(
-        Intent.createChooser(
-            shareIntent,
-            context.getString(R.string.mozac_selection_context_menu_share),
-        ),
-    )
+    context.share(url)
 }
