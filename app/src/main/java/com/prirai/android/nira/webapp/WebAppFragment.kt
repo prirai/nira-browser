@@ -70,8 +70,6 @@ class WebAppFragment : Fragment(), EngineSession.Observer {
         // Setup context menu integration
         setupContextMenu(view)
         
-        // Setup keyboard adjustment
-        setupKeyboardAdjustment()
         
         // Create a session with the specified profile context
         lifecycleScope.launch {
@@ -187,29 +185,6 @@ class WebAppFragment : Fragment(), EngineSession.Observer {
      * Adjusts engine view bottom padding when keyboard appears to prevent content overlap.
      * Uses WindowInsets to detect keyboard visibility and automatically adjust layout.
      */
-    private fun setupKeyboardAdjustment() {
-        // Adjust engine view position when keyboard appears
-        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(engineView as View) { view, insets ->
-            val imeInsets = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.ime())
-            val systemBarsInsets = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars())
-            
-            // Adjust bottom padding when keyboard appears
-            if (imeInsets.bottom > systemBarsInsets.bottom) {
-                // Keyboard is showing, add bottom padding
-                val keyboardHeight = imeInsets.bottom - systemBarsInsets.bottom
-                view.setPadding(0, 0, 0, keyboardHeight)
-            } else {
-                // Keyboard is hidden, reset padding
-                view.setPadding(0, 0, 0, 0)
-            }
-            
-            insets
-        }
-        
-        // Request initial insets
-        androidx.core.view.ViewCompat.requestApplyInsets(engineView as View)
-    }
-    
     private fun openInCustomTab(url: String, profileId: String) {
         try {
             val customTabIntent = androidx.browser.customtabs.CustomTabsIntent.Builder().build()
