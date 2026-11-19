@@ -3,27 +3,19 @@
 package com.prirai.android.nira.browser.bookmark.ui
 
 import android.os.Bundle
-import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.ui.platform.ComposeView
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.ViewCompositionStrategy
+import androidx.compose.runtime.Composable
 import androidx.navigation.fragment.NavHostFragment
-import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import com.prirai.android.nira.NavGraphDirections
 import com.prirai.android.nira.R
 import com.prirai.android.nira.browser.bookmark.items.BookmarkFolderItem
 import com.prirai.android.nira.browser.bookmark.items.BookmarkSiteItem
 import com.prirai.android.nira.browser.bookmark.repository.BookmarkManager
 import com.prirai.android.nira.ext.components
-import com.prirai.android.nira.preferences.UserPreferences
-import com.prirai.android.nira.theme.ThemeManager
-import com.prirai.android.nira.ui.theme.NiraTheme
+import com.prirai.android.nira.ui.components.NiraWindowDialogFragment
 
 /**
- * The bookmarks bottom sheet: the folder/list view with breadcrumb folder
+ * The bookmarks floating window: the folder/list view with breadcrumb folder
  * navigation, add/edit/delete for bookmarks and folders, the folder-selection
  * move flow and multiselect mode, rendered with the shared Material 3
  * Expressive components.
@@ -31,39 +23,18 @@ import com.prirai.android.nira.ui.theme.NiraTheme
  * Public entry API is unchanged: `newInstance()` + `show(fragmentManager,
  * tag)`, with the same class name and package.
  */
-class BookmarksBottomSheetFragment : BottomSheetDialogFragment() {
+class BookmarksDialogFragment : NiraWindowDialogFragment() {
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setStyle(STYLE_NORMAL, R.style.AppBottomSheetDialogTheme)
-    }
+    private val manager by lazy { BookmarkManager.getInstance(requireContext()) }
 
-    override fun onCreateView(
-        inflater: LayoutInflater,
-        container: ViewGroup?,
-        savedInstanceState: Bundle?,
-    ): View {
-        val manager = BookmarkManager.getInstance(requireContext())
-        val startFolder = resolveStartFolder(manager)
-        return ComposeView(requireContext()).apply {
-            setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
-            setContent {
-                val context = LocalContext.current
-                val prefs = UserPreferences(context)
-                NiraTheme(
-                    darkTheme = ThemeManager.isDarkMode(context),
-                    amoledMode = prefs.amoledMode,
-                    dynamicColor = prefs.dynamicColors,
-                ) {
-                    BookmarksSheet(
-                        manager = manager,
-                        initialFolder = startFolder,
-                        onOpenBookmark = ::openBookmark,
-                        onDismiss = ::dismiss,
-                    )
-                }
-            }
-        }
+    @Composable
+    override fun WindowContent() {
+        BookmarksSheet(
+            manager = manager,
+            initialFolder = resolveStartFolder(manager),
+            onOpenBookmark = ::openBookmark,
+            onDismiss = ::dismiss,
+        )
     }
 
     private fun resolveStartFolder(manager: BookmarkManager): BookmarkFolderItem {
@@ -109,8 +80,8 @@ class BookmarksBottomSheetFragment : BottomSheetDialogFragment() {
     companion object {
         private const val ARG_FOLDER_ID = "folder_id"
 
-        fun newInstance(folderId: Long = -1L): BookmarksBottomSheetFragment {
-            return BookmarksBottomSheetFragment().apply {
+        fun newInstance(folderId: Long = -1L): BookmarksDialogFragment {
+            return BookmarksDialogFragment().apply {
                 arguments = Bundle().apply {
                     putLong(ARG_FOLDER_ID, folderId)
                 }

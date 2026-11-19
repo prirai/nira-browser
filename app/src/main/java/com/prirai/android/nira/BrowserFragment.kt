@@ -18,7 +18,7 @@ import com.prirai.android.nira.browser.tabs.NewTabCreator
 import com.prirai.android.nira.browser.home.compose.recentlyClosedItems
 import com.prirai.android.nira.browser.toolbar.ToolbarGestureHandler
 import com.prirai.android.nira.components.toolbar.ToolbarMenu
-import com.prirai.android.nira.downloads.DownloadsBottomSheetFragment
+import com.prirai.android.nira.downloads.DownloadsDialogFragment
 import com.prirai.android.nira.ext.components
 import com.prirai.android.nira.ext.nav
 import com.prirai.android.nira.preferences.UserPreferences
@@ -172,32 +172,7 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
         binding.swipeRefresh.setBackgroundColor(bgColor)
     }
 
-    private fun observeDownloadsForSheet() {
-        val shownDownloadIds = mutableSetOf<String>()
-        viewLifecycleOwner.lifecycleScope.launch {
-            requireContext().components.store.flow()
-                .map { state ->
-                    state.downloads.values.filter {
-                        it.status == DownloadState.Status.INITIATED ||
-                        it.status == DownloadState.Status.DOWNLOADING
-                    }
-                }
-                .distinctUntilChanged()
-                .collect { activeDownloads ->
-                    val newDownloads = activeDownloads.filter { it.id !in shownDownloadIds }
-                    if (newDownloads.isNotEmpty()) {
-                        newDownloads.forEach { shownDownloadIds.add(it.id) }
-                        if (!isDetached && isAdded && activity != null) {
-                            val existing = parentFragmentManager.findFragmentByTag(DownloadsBottomSheetFragment.TAG)
-                            if (existing == null) {
-                                DownloadsBottomSheetFragment.newInstance()
-                                    .show(parentFragmentManager, DownloadsBottomSheetFragment.TAG)
-                            }
-                        }
-                    }
-                }
-        }
-    }
+    private fun observeDownloadsForSheet() = DownloadsDialogFragment.showOnNewDownloads(this)
 
     private fun observeNewTabSelection() {
         if (!isAdded) return
@@ -516,7 +491,7 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
                 }
 
                 override fun onBookmarksClicked() {
-                    val bookmarksBottomSheet = com.prirai.android.nira.browser.bookmark.ui.BookmarksBottomSheetFragment.newInstance()
+                    val bookmarksBottomSheet = com.prirai.android.nira.browser.bookmark.ui.BookmarksDialogFragment.newInstance()
                     bookmarksBottomSheet.show(parentFragmentManager, "BookmarksBottomSheet")
                 }
 
@@ -946,7 +921,7 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
                         }
                     ),
                     com.prirai.android.nira.components.menu.Material3BrowserMenu.IconRowItem(
-                        title = getString(R.string.mozac_browser_menu_new_private_tab),
+                        title = getString(R.string.new_private_tab),
                         iconRes = mozilla.components.ui.icons.R.drawable.mozac_ic_private_mode_24,
                         onClick = {
                             browserInteractor.onBrowserToolbarMenuItemTapped(ToolbarMenu.Item.NewPrivateTab)
@@ -1008,8 +983,7 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
                 title = "Downloads",
                 iconRes = mozilla.components.ui.icons.R.drawable.mozac_ic_download_24,
                 onClick = {
-                    val downloadsBottomSheet = com.prirai.android.nira.downloads.DownloadsBottomSheetFragment.newInstance()
-                    downloadsBottomSheet.show(parentFragmentManager, com.prirai.android.nira.downloads.DownloadsBottomSheetFragment.TAG)
+                    DownloadsDialogFragment.show(parentFragmentManager)
                 }
             )
         )
@@ -1032,7 +1006,7 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
         menuItems.add(
             com.prirai.android.nira.components.menu.Material3BrowserMenu.MenuItem.Action(
                 id = "new_tab",
-                title = getString(R.string.mozac_browser_menu_new_tab),
+                title = getString(R.string.new_tab),
                 iconRes = R.drawable.mozac_ic_tab_new_24,
                 onClick = {
                     browserInteractor.onBrowserToolbarMenuItemTapped(ToolbarMenu.Item.NewTab)
@@ -1338,15 +1312,10 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
                             .show()
                     },
                     onHistoryClick = {
-                        startActivity(
-                            android.content.Intent(
-                                requireContext(),
-                                com.prirai.android.nira.history.HistoryActivity::class.java
-                            )
-                        )
+                        com.prirai.android.nira.history.HistoryDialogFragment.show(parentFragmentManager)
                     },
                     onBookmarksClick = {
-                        com.prirai.android.nira.browser.bookmark.ui.BookmarksBottomSheetFragment
+                        com.prirai.android.nira.browser.bookmark.ui.BookmarksDialogFragment
                             .newInstance()
                             .show(parentFragmentManager, "BookmarksBottomSheet")
                     },

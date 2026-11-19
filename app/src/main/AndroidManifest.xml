@@ -143,12 +143,6 @@
         />
 
     <activity
-            android:name=".history.HistoryActivity"
-            android:label="@string/action_history"
-            android:theme="@style/AppThemeAddons"
-        />
-
-    <activity
             android:name=".IntentReceiverActivity"
             android:relinquishTaskIdentity="true"
             android:taskAffinity=""

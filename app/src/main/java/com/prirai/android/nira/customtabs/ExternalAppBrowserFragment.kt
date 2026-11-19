@@ -223,7 +223,7 @@ class ExternalAppBrowserFragment : Fragment(), UserInteractionHandler, ActivityR
                     gravity = android.view.Gravity.CENTER,
                     shouldWidthMatchParent = true,
                     positiveButtonBackgroundColor = com.prirai.android.nira.R.color.secondary_icon,
-                    positiveButtonTextColor = com.prirai.android.nira.R.color.photonWhite
+                    positiveButtonTextColor = android.R.color.white
                 ),
                 // Mirrors BaseBrowserFragment#initializeUI: pre-check the
                 // "Remember decision for this site" box so the user's
@@ -335,6 +335,9 @@ class ExternalAppBrowserFragment : Fragment(), UserInteractionHandler, ActivityR
             view = binding.root
         )
         
+        // Downloads wait for confirmation in the downloads window; open it for custom tabs too.
+        com.prirai.android.nira.downloads.DownloadsDialogFragment.showOnNewDownloads(this)
+
         // Setup keyboard adjustment
         setupKeyboardAdjustment()
     }
@@ -622,6 +625,14 @@ class ExternalAppBrowserFragment : Fragment(), UserInteractionHandler, ActivityR
                     title = getString(R.string.share),
                     iconRes = R.drawable.ios_share_24,
                     onClick = { shareCurrentUrl() },
+                ),
+            )
+            add(
+                com.prirai.android.nira.components.menu.Material3BrowserMenu.MenuItem.Action(
+                    id = "downloads",
+                    title = getString(R.string.downloads_title),
+                    iconRes = mozilla.components.ui.icons.R.drawable.mozac_ic_download_24,
+                    onClick = { com.prirai.android.nira.downloads.DownloadsDialogFragment.show(parentFragmentManager) },
                 ),
             )
             add(com.prirai.android.nira.components.menu.Material3BrowserMenu.MenuItem.Divider)
