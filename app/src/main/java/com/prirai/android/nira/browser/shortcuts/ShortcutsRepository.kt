@@ -30,9 +30,12 @@ class ShortcutsRepository(
         return storage.getPinnedSites()
     }
 
-    suspend fun add(url: String, title: String) {
+    /** Pins [url]; returns false if it was already pinned. */
+    suspend fun add(url: String, title: String): Boolean {
         migrateLegacyIfNeeded()
+        if (storage.getPinnedSites().any { it.url == url }) return false
         storage.addPinnedSite(title = title, url = url, isDefault = false)
+        return true
     }
 
     suspend fun deleteById(id: Long) {

@@ -880,8 +880,15 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
                             selectedTab?.let { tab ->
                                 val title = tab.content.title.ifEmpty { tab.content.url }
                                 val url = tab.content.url
-                                val dialog = com.prirai.android.nira.browser.shortcuts.AddShortcutDialogFragment.newInstance(url, title)
-                                dialog.show(parentFragmentManager, com.prirai.android.nira.browser.shortcuts.AddShortcutDialogFragment.TAG)
+                                val appContext = requireContext().applicationContext
+                                viewLifecycleOwner.lifecycleScope.launch {
+                                    val added = appContext.components.shortcutsRepository.add(url, title)
+                                    android.widget.Toast.makeText(
+                                        appContext,
+                                        if (added) R.string.favorite_added else R.string.favorite_already_added,
+                                        android.widget.Toast.LENGTH_SHORT,
+                                    ).show()
+                                }
                             }
                         }
                     )
@@ -1252,7 +1259,6 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
             val isPrivateMode = selectedTab?.content?.private ?: browsingModeManager.mode.isPrivate
 
             val shortcuts by homeViewModel.shortcuts.collectAsState()
-            val showAddDialog by homeViewModel.showAddShortcutDialog.collectAsState()
             val jumpBackInHistory by homeViewModel.jumpBackInHistory.collectAsState()
             val recentsKey by store.observeAsComposableState { state ->
                 Triple(
@@ -1331,7 +1337,6 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
                             .setNegativeButton("Cancel", null)
                             .show()
                     },
-                    onShortcutAdd = { homeViewModel.showAddShortcutDialog() },
                     onHistoryClick = {
                         startActivity(
                             android.content.Intent(
@@ -1378,15 +1383,6 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
                         }
                     }
                 )
-
-                if (showAddDialog) {
-                    com.prirai.android.nira.browser.home.compose.AddShortcutDialog(
-                        onDismiss = { homeViewModel.hideAddShortcutDialog() },
-                        onSave = { url, title ->
-                            homeViewModel.addShortcut(url, title)
-                        }
-                    )
-                }
             }
         }
     }

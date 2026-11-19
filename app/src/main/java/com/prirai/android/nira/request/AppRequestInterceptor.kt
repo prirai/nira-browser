@@ -191,22 +191,6 @@ class AppRequestInterceptor(val context: Context) : RequestInterceptor {
                     }
                 }
             }
-            uri.startsWith("nira://add-shortcut?") -> {
-                // Parse URL parameters
-                val params = uri.toUri()
-                val url = params.getQueryParameter("url")
-                val title = params.getQueryParameter("title")
-                
-                if (url != null && title != null) {
-                    CoroutineScope(Dispatchers.IO).launch {
-                        try {
-                            context.components.shortcutsRepository.add(url, title)
-                        } catch (e: Exception) {
-                            // Ignore errors
-                        }
-                    }
-                }
-            }
         }
     }
 
