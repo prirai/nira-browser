@@ -106,15 +106,11 @@ class Material3BrowserMenu(
         ) : MenuItem()
 
         data class ToolbarRow(
-            val onBackClick: () -> Unit,
-            val onForwardClick: () -> Unit,
+            val onSettingsClick: () -> Unit,
             val onReloadClick: () -> Unit,
             val onShareClick: () -> Unit,
-            val backEnabled: Boolean = true,
-            val forwardEnabled: Boolean = true,
-            /** Optional long-press affordance: opens the tab-history popup. */
-            val onBackLongClick: (() -> Unit)? = null,
-            val onForwardLongClick: (() -> Unit)? = null
+            val onCloseTabClick: () -> Unit,
+            val closeEnabled: Boolean = true
         ) : MenuItem()
 
         data class PillRow(
@@ -426,25 +422,13 @@ private fun MenuToolbarRow(item: MenuItem.ToolbarRow, onDismiss: () -> Unit) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         MenuToolbarButton(
-            iconRes = R.drawable.ic_ios_back,
-            contentDescription = stringResource(R.string.mozac_feature_toolbar_back_button),
-            enabled = item.backEnabled,
+            iconRes = mozilla.components.ui.icons.R.drawable.mozac_ic_settings_24,
+            contentDescription = stringResource(R.string.settings),
+            enabled = true,
             onClick = {
-                item.onBackClick()
+                item.onSettingsClick()
                 onDismiss()
             },
-            onLongClick = item.onBackLongClick?.let { longClick -> { longClick(); onDismiss() } },
-            modifier = Modifier.weight(1f),
-        )
-        MenuToolbarButton(
-            iconRes = R.drawable.ic_ios_forward,
-            contentDescription = stringResource(R.string.mozac_feature_toolbar_forward_button),
-            enabled = item.forwardEnabled,
-            onClick = {
-                item.onForwardClick()
-                onDismiss()
-            },
-            onLongClick = item.onForwardLongClick?.let { longClick -> { longClick(); onDismiss() } },
             modifier = Modifier.weight(1f),
         )
         MenuToolbarButton(
@@ -463,6 +447,16 @@ private fun MenuToolbarRow(item: MenuItem.ToolbarRow, onDismiss: () -> Unit) {
             enabled = true,
             onClick = {
                 item.onShareClick()
+                onDismiss()
+            },
+            modifier = Modifier.weight(1f),
+        )
+        MenuToolbarButton(
+            iconRes = mozilla.components.ui.icons.R.drawable.mozac_ic_cross_24,
+            contentDescription = stringResource(R.string.menu_close_tab),
+            enabled = item.closeEnabled,
+            onClick = {
+                item.onCloseTabClick()
                 onDismiss()
             },
             modifier = Modifier.weight(1f),

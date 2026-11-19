@@ -988,17 +988,6 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
             )
         )
 
-        // Settings
-        menuItems.add(
-            com.prirai.android.nira.components.menu.Material3BrowserMenu.MenuItem.Action(
-                id = "settings",
-                title = getString(R.string.settings),
-                iconRes = mozilla.components.ui.icons.R.drawable.mozac_ic_settings_24,
-                onClick = {
-                    browserInteractor.onBrowserToolbarMenuItemTapped(ToolbarMenu.Item.Settings)
-                }
-            )
-        )
 
         menuItems.add(com.prirai.android.nira.components.menu.Material3BrowserMenu.MenuItem.Divider)
 
@@ -1014,34 +1003,13 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
             )
         )
 
-        // Close current tab. Distinct from the back button (which walks the
-        // page history) - this dispatches TabsUseCases.removeTab which flows
-        // through UndoMiddleware, so the user gets the standard undo snackbar
-        // if they change their mind. If no tab is selected, the item is not
-        // shown.
-        selectedTab?.let { tab ->
-            menuItems.add(
-                com.prirai.android.nira.components.menu.Material3BrowserMenu.MenuItem.Action(
-                    id = "close_tab",
-                    title = getString(R.string.menu_close_tab),
-                    iconRes = mozilla.components.ui.icons.R.drawable.mozac_ic_cross_24,
-                    onClick = {
-                        requireContext().components.tabsUseCases.removeTab(tab.id)
-                    }
-                )
-            )
-        }
-
         menuItems.add(com.prirai.android.nira.components.menu.Material3BrowserMenu.MenuItem.Divider)
         
-        // Toolbar Row at bottom
+        // Toolbar Row at bottom: Settings, Reload, Share, Close tab
         menuItems.add(
             com.prirai.android.nira.components.menu.Material3BrowserMenu.MenuItem.ToolbarRow(
-                onBackClick = {
-                    requireContext().components.sessionUseCases.goBack()
-                },
-                onForwardClick = {
-                    goForwardOrFromNewTab()
+                onSettingsClick = {
+                    browserInteractor.onBrowserToolbarMenuItemTapped(ToolbarMenu.Item.Settings)
                 },
                 onReloadClick = {
                     requireContext().components.sessionUseCases.reload()
@@ -1051,24 +1019,15 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
                         ToolbarMenu.Item.Share
                     )
                 },
-                backEnabled = selectedTab?.content?.canGoBack ?: false,
-                forwardEnabled = selectedTab?.content?.canGoForward ?: false,
-                // Long-press back/forward opens the tab-history popup,
-                // routed through the menu controller like every other
-                // toolbar-row action (Chrome/Fenix behaviour).
-                onBackLongClick = {
-                    browserInteractor.onBrowserToolbarMenuItemTapped(
-                        ToolbarMenu.Item.Back(viewHistory = true)
-                    )
+                // Dispatches TabsUseCases.removeTab, which flows through
+                // UndoMiddleware so the standard undo snackbar appears.
+                onCloseTabClick = {
+                    selectedTab?.let { requireContext().components.tabsUseCases.removeTab(it.id) }
                 },
-                onForwardLongClick = {
-                    browserInteractor.onBrowserToolbarMenuItemTapped(
-                        ToolbarMenu.Item.Forward(viewHistory = true)
-                    )
-                }
+                closeEnabled = selectedTab != null,
             )
         )
-        
+
         // Find anchor for menu
         // When contextual toolbar is enabled, prioritize menu button from it, not from address bar.
         // Previously `showContextualToolbar` was read twice through the SharedPreferences
