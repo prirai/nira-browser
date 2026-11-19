@@ -71,7 +71,11 @@ class SyncSettingsFragment : BaseSettingsFragment() {
                 refreshUi()
                 Log.d("FxaAuth", "Sign in pressed, calling beginAuthentication")
                 requireContext().components.fxaAuthFeature
-                    .beginAuthentication(requireContext(), settingsEntryPoint)
+                    .beginAuthentication(
+                        requireContext(),
+                        settingsEntryPoint,
+                        service = mozilla.components.service.fxa.FxaService.Sync.identifier,
+                    )
             }
         }
 

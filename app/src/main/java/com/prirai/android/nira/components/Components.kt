@@ -311,13 +311,18 @@ open class Components(private val applicationContext: Context) {
         RemoteTabsStorage(applicationContext, noOpCrashReporter)
     }
 
-    val sessionStorage by lazy { SessionStorage(applicationContext, engine) }
+    val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+
+    val sessionStorage by lazy { SessionStorage(applicationContext, engine, noOpCrashReporter, applicationScope) }
 
     val recentlyClosedTabsStorage by lazy {
         RecentlyClosedTabsStorage(applicationContext, engine, noOpCrashReporter)
     }
 
-    val permissionStorage by lazy { GeckoSitePermissionsStorage(runtime, OnDiskSitePermissionsStorage(applicationContext)) }
+    val permissionStorage by lazy { GeckoSitePermissionsStorage(
+            runtime,
+            OnDiskSitePermissionsStorage(applicationContext, applicationScope, engine),
+        ) }
 
     val thumbnailStorage by lazy { ThumbnailStorage(applicationContext) }
     val thumbnailLoader by lazy { ThumbnailLoader(thumbnailStorage) }
@@ -388,7 +393,8 @@ open class Components(private val applicationContext: Context) {
                         UndoMiddleware(),
                         RegionMiddleware(
                                 applicationContext,
-                                LocationService.default()
+                                LocationService.default(),
+                                applicationScope = applicationScope
                         ),
                         SearchMiddleware(
                             applicationContext,
@@ -416,6 +422,7 @@ open class Components(private val applicationContext: Context) {
                         RecentlyClosedMiddleware(
                             lazy<RecentlyClosedMiddleware.Storage> { recentlyClosedTabsStorage },
                             RECENTLY_CLOSED_MAX,
+                            applicationScope,
                         ),
                         SaveToPDFMiddleware(applicationContext),
                         // Pass the Lazy directly so adding the middleware to the
@@ -666,7 +673,7 @@ open class Components(private val applicationContext: Context) {
     }
 
     val fileUploadsDirCleaner: FileUploadsDirCleaner by lazy {
-        FileUploadsDirCleaner { applicationContext.cacheDir }
+        FileUploadsDirCleaner(scope = applicationScope) { applicationContext.cacheDir }
     }
 
     /**

@@ -37,7 +37,7 @@ class IntentReceiverActivity : Activity() {
         } else {
             // For regular intents, use the normal BrowserActivity
             // Process the intent to create a tab session
-            val processor = TabIntentProcessor(components.tabsUseCases, components.searchUseCases.newTabSearch, isPrivate = false)
+            val processor = TabIntentProcessor(components.tabsUseCases, components.searchUseCases.newTabSearch, isPrivate = false, applicationScope = components.applicationScope)
             processor.process(intent)
             BrowserActivity::class
         }

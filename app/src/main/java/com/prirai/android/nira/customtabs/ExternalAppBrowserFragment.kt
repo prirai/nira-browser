@@ -2,6 +2,7 @@
 
 package com.prirai.android.nira.customtabs
 
+import androidx.lifecycle.lifecycleScope
 import mozilla.components.support.ktx.android.content.share
 import android.content.Intent
 import android.os.Bundle
@@ -237,7 +238,8 @@ class ExternalAppBrowserFragment : Fragment(), UserInteractionHandler, ActivityR
                     requestPermissions(permissions, REQUEST_CODE_APP_PERMISSIONS)
                 },
                 onShouldShowRequestPermissionRationale = { shouldShowRequestPermissionRationale(it) },
-                store = components.store
+                store = components.store,
+                coroutineScope = viewLifecycleOwner.lifecycleScope
             ),
             owner = this,
             view = binding.root

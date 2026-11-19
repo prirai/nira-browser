@@ -242,7 +242,7 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
             engineView = binding.engineView,
             customTabSessionId = customTabSessionId,
             onTabCounterClicked = {
-                thumbnailsFeature.get()?.requestScreenshot()
+                thumbnailsFeature.get()?.requestScreenshot("tab_counter_click")
 
                 // Show the new bottom sheet tabs dialog
                 val tabsBottomSheet =
@@ -481,7 +481,8 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
                         it
                     )
                 },
-                store = store
+                store = store,
+                coroutineScope = viewLifecycleOwner.lifecycleScope
             ),
             owner = this,
             view = view
@@ -603,7 +604,7 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
                 store = components.store,
                 accountManager = components.fxaSyncManager.accountManager,
                 serverConfig = components.fxaSyncManager.serverConfig,
-                fxaCapabilities = setOf(FxaCapability.CHOOSE_WHAT_TO_SYNC),
+                fxaCapabilities = setOf(FxaCapability.ChooseWhatToSync),
             ),
             owner = this,
             view = view,

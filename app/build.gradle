@@ -9,10 +9,10 @@ plugins {
 
 
 android {
-    // AC 156 requires compileSdk 37 with minor API level 1 (Android 15.1).
+    // AC 160 requires compileSdk 37 with minor API level 2.
     // AGP 9 exposes the minor level via this DSL block; the old scalar
     // `compileSdkVersion = 37` is equivalent to major-only.
-    compileSdk { version = release(37) { minorApiLevel = 1 } }
+    compileSdk { version = release(37) { minorApiLevel = 2 } }
     buildFeatures {
         buildConfig = true
         viewBinding = true
