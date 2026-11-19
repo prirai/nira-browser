@@ -161,6 +161,7 @@ dependencies {
     implementation libs.feature.tabs
     implementation libs.feature.session
     implementation libs.feature.toolbar
+    implementation libs.feature.top.sites
     implementation libs.feature.intent
     implementation libs.feature.contextmenu
     implementation libs.feature.app.links

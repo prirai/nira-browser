@@ -28,7 +28,6 @@ import com.prirai.android.nira.browser.home.compose.HomeViewModelFactory
 import com.prirai.android.nira.browser.home.compose.ProfileInfo
 import com.prirai.android.nira.browser.home.compose.jumpBackInItems
 import com.prirai.android.nira.browser.home.compose.recentlyClosedItems
-import com.prirai.android.nira.browser.shortcuts.ShortcutDatabase
 import com.prirai.android.nira.components.toolbar.BrowserToolbarViewInteractor
 import com.prirai.android.nira.components.toolbar.ToolbarMenu
 import com.prirai.android.nira.components.toolbar.ToolbarPosition
@@ -68,12 +67,9 @@ class ComposeHomeFragment : Fragment() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Shortcut DB schema + migrations live in ShortcutDatabase.getInstance.
-        val database = ShortcutDatabase.getInstance(requireContext())
-
         val factory = HomeViewModelFactory(
             bookmarkManager = BookmarkManager.getInstance(requireContext()),
-            shortcutDao = database.shortcutDao(),
+            shortcutsRepository = requireContext().components.shortcutsRepository,
             historyStorage = requireContext().components.historyStorage,
         )
 

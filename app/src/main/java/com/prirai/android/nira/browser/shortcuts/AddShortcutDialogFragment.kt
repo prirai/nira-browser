@@ -9,6 +9,7 @@ import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.fragment.app.DialogFragment
 import androidx.lifecycle.lifecycleScope
 import com.prirai.android.nira.browser.home.compose.AddShortcutDialog
+import com.prirai.android.nira.ext.components
 import com.prirai.android.nira.ui.theme.NiraTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -54,11 +55,8 @@ class AddShortcutDialogFragment : DialogFragment() {
     private suspend fun addShortcut(url: String, title: String) {
         val context = requireContext().applicationContext
         try {
-            val database = ShortcutDatabase.getInstance(context)
-
             withContext(Dispatchers.IO) {
-                val entity = ShortcutEntity(url = url, title = title)
-                database.shortcutDao().insertAll(entity)
+                context.components.shortcutsRepository.add(url, title)
             }
             
             withContext(Dispatchers.Main) {

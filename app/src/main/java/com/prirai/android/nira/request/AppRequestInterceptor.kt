@@ -174,20 +174,12 @@ class AppRequestInterceptor(val context: Context) : RequestInterceptor {
             uri.startsWith("nira://delete-shortcut?") -> {
                 // Parse URL parameter
                 val params = uri.toUri()
-                val shortcutId = params.getQueryParameter("id")?.toIntOrNull()
+                val shortcutId = params.getQueryParameter("id")?.toLongOrNull()
                 
                 if (shortcutId != null) {
-                    // Delete shortcut from database via the process-wide singleton
-                    // (ShortcutDatabase.getInstance owns the migrations).
                     CoroutineScope(Dispatchers.IO).launch {
                         try {
-                            val shortcutDao = com.prirai.android.nira.browser.shortcuts.ShortcutDatabase
-                                .getInstance(context)
-                                .shortcutDao()
-                            val shortcut = shortcutDao.loadAllByIds(intArrayOf(shortcutId)).firstOrNull()
-                            if (shortcut != null) {
-                                shortcutDao.delete(shortcut)
-                            }
+                            context.components.shortcutsRepository.deleteById(shortcutId)
 
                             // Reload the page to reflect changes
                             CoroutineScope(Dispatchers.Main).launch {
@@ -206,18 +198,9 @@ class AppRequestInterceptor(val context: Context) : RequestInterceptor {
                 val title = params.getQueryParameter("title")
                 
                 if (url != null && title != null) {
-                    // Save shortcut to database via the process-wide singleton
-                    // (ShortcutDatabase.getInstance owns the migrations).
                     CoroutineScope(Dispatchers.IO).launch {
                         try {
-                            val entity = com.prirai.android.nira.browser.shortcuts.ShortcutEntity(
-                                url = url,
-                                title = title,
-                            )
-                            com.prirai.android.nira.browser.shortcuts.ShortcutDatabase
-                                .getInstance(context)
-                                .shortcutDao()
-                                .insertAll(entity)
+                            context.components.shortcutsRepository.add(url, title)
                         } catch (e: Exception) {
                             // Ignore errors
                         }
