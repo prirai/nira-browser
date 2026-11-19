@@ -1050,4 +1050,25 @@
     <string name="key_sync_history" translatable="false">sync_history_enabled</string>
     <string name="key_sync_bookmarks" translatable="false">sync_bookmarks_enabled</string>
     <string name="key_sync_tabs" translatable="false">sync_tabs_enabled</string>
+    <string name="collections_title">Collections</string>
+    <string name="collections_empty">No collections yet. Save your open tabs from the tab sheet.</string>
+    <string name="collection_save_title">Save tabs to collection</string>
+    <string name="collection_create">Save</string>
+    <string name="collection_add_to_existing">Or add to an existing collection</string>
+    <string name="collection_restore_all">Open all tabs</string>
+    <string name="collection_rename">Rename collection</string>
+    <string name="collection_delete">Delete collection</string>
+    <string name="collection_delete_confirm">Delete \"%1$s\"? The saved tabs will be removed.</string>
+    <string name="collection_remove_tab">Remove from collection</string>
+    <string name="collection_saved">Saved to collection</string>
+    <string name="collection_restored">Tabs opened</string>
+    <string name="collection_nothing_to_save">No tabs to save</string>
+    <plurals name="collection_save_summary">
+        <item quantity="one">%d tab will be saved</item>
+        <item quantity="other">%d tabs will be saved</item>
+    </plurals>
+    <plurals name="collection_tab_count">
+        <item quantity="one">%d tab</item>
+        <item quantity="other">%d tabs</item>
+    </plurals>
 </resources>

@@ -112,6 +112,7 @@ feature-session = { group = "org.mozilla.components", name = "feature-session", 
 feature-sitepermissions = { group = "org.mozilla.components", name = "feature-sitepermissions", version.ref = "components" }
 feature-tabs = { group = "org.mozilla.components", name = "feature-tabs", version.ref = "components" }
 feature-top-sites = { group = "org.mozilla.components", name = "feature-top-sites", version.ref = "components" }
+feature-tab-collections = { group = "org.mozilla.components", name = "feature-tab-collections", version.ref = "components" }
 feature-toolbar = { group = "org.mozilla.components", name = "feature-toolbar", version.ref = "components" }
 feature-webcompat = { group = "org.mozilla.components", name = "feature-webcompat", version.ref = "components" }
 feature-webnotifications = { group = "org.mozilla.components", name = "feature-webnotifications", version.ref = "components" }
