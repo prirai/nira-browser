@@ -53,6 +53,11 @@ class PwaSuggestionManager(private val context: Context) {
             description = "Fast and secure messaging"
         ),
         PwaSuggestion(
+            url = "https://www.instagram.com/",
+            name = "Instagram",
+            description = "Photo and video sharing"
+        ),
+        PwaSuggestion(
             url = "https://x.com/",
             name = "X - Formerly Twitter",
             description = "Social networking"
