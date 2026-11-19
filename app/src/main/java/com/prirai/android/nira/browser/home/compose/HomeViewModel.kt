@@ -37,6 +37,7 @@ class HomeViewModel(
     
     init {
         loadShortcuts()
+        viewModelScope.launch { shortcutsRepository.changes.collect { loadShortcuts() } }
         loadBookmarks()
         loadJumpBackInHistory()
     }

@@ -4,6 +4,9 @@ import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import android.util.Log
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -20,6 +23,11 @@ class ShortcutsRepository(
     private val context: Context,
     private val storage: PinnedSiteStorage,
 ) {
+    private val _changes = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+
+    /** Emits whenever the pinned sites change. */
+    val changes: SharedFlow<Unit> = _changes.asSharedFlow()
+
     private val migrationLock = Mutex()
 
     @Volatile
@@ -35,12 +43,14 @@ class ShortcutsRepository(
         migrateLegacyIfNeeded()
         if (storage.getPinnedSites().any { it.url == url }) return false
         storage.addPinnedSite(title = title, url = url, isDefault = false)
+        _changes.tryEmit(Unit)
         return true
     }
 
     suspend fun deleteById(id: Long) {
         migrateLegacyIfNeeded()
         storage.getPinnedSites().firstOrNull { it.id == id }?.let { storage.removePinnedSite(it) }
+        _changes.tryEmit(Unit)
     }
 
     private suspend fun migrateLegacyIfNeeded() {
