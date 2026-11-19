@@ -152,7 +152,6 @@ fun HomeScreen(
     onProfileClick: () -> Unit,
     onShortcutClick: (ShortcutItem) -> Unit,
     onShortcutDelete: (ShortcutItem) -> Unit,
-    onShortcutAdd: () -> Unit,
     onHistoryClick: () -> Unit,
     onBookmarksClick: () -> Unit,
     onSearchClick: () -> Unit,
@@ -263,7 +262,6 @@ fun HomeScreen(
                         shortcuts = shortcuts,
                         onShortcutClick = onShortcutClick,
                         onShortcutDelete = onShortcutDelete,
-                        onAddClick = onShortcutAdd
                     )
                 }
 
@@ -416,7 +414,6 @@ fun ShortcutsSection(
     shortcuts: List<ShortcutItem>,
     onShortcutClick: (ShortcutItem) -> Unit,
     onShortcutDelete: (ShortcutItem) -> Unit,
-    onAddClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(modifier = modifier) {
@@ -431,14 +428,6 @@ fun ShortcutsSection(
                 style = MaterialTheme.typography.titleMediumEmphasized,
                 color = MaterialTheme.colorScheme.onBackground
             )
-
-            IconButton(onClick = onAddClick) {
-                Icon(
-                    imageVector = Icons.Default.Add,
-                    contentDescription = stringResource(R.string.add_shortcut),
-                    tint = MaterialTheme.colorScheme.primary
-                )
-            }
         }
 
         Spacer(modifier = Modifier.height(12.dp))
@@ -793,94 +782,3 @@ fun PrivateInfoSection(
     }
 }
 
-@Composable
-fun AddShortcutDialog(
-    onDismiss: () -> Unit,
-    onSave: (url: String, title: String) -> Unit,
-    initialUrl: String = "",
-    initialTitle: String = ""
-) {
-    var url by remember { mutableStateOf(initialUrl) }
-    var title by remember { mutableStateOf(initialTitle) }
-    var urlError by remember { mutableStateOf(false) }
-    val untitledLabel = stringResource(R.string.untitled)
-
-    NiraAlertDialog(
-        onDismissRequest = onDismiss,
-        title = {
-            Text(stringResource(R.string.add_shortcut_dialog))
-        },
-        text = {
-            Column(
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                OutlinedTextField(
-                    value = url,
-                    onValueChange = {
-                        url = it
-                        urlError = false
-                    },
-                    label = { Text(stringResource(R.string.url)) },
-                    placeholder = { Text("https://example.com") },
-                    isError = urlError,
-                    supportingText = if (urlError) {
-                        { Text(stringResource(R.string.url_invalid)) }
-                    } else null,
-                    keyboardOptions = KeyboardOptions(
-                        keyboardType = KeyboardType.Uri,
-                        imeAction = ImeAction.Next
-                    ),
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                OutlinedTextField(
-                    value = title,
-                    onValueChange = { title = it },
-                    label = { Text(stringResource(R.string.title)) },
-                    placeholder = { Text(stringResource(R.string.my_website_placeholder)) },
-                    keyboardOptions = KeyboardOptions(
-                        imeAction = ImeAction.Done
-                    ),
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
-        },
-        confirmButton = {
-            TextButton(
-                onClick = {
-                    if (url.isBlank()) {
-                        return@TextButton
-                    }
-
-                    // Validate URL
-                    val validUrl = try {
-                        val finalUrl = if (url.startsWith("http")) url else "https://$url"
-                        java.net.URL(finalUrl)
-                        finalUrl
-                    } catch (e: Exception) {
-                        return@TextButton
-                    }
-
-                    val finalTitle = title.ifBlank {
-                        try {
-                            java.net.URL(validUrl).host.replace("www.", "")
-                        } catch (e: Exception) {
-                            untitledLabel
-                        }
-                    }
-
-                    onSave(validUrl, finalTitle)
-                }
-            ) {
-                Text(stringResource(R.string.save))
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.cancel))
-            }
-        }
-    )
-}

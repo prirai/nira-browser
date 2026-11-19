@@ -21,7 +21,6 @@ import com.prirai.android.nira.R
 import com.prirai.android.nira.browser.BrowsingMode
 import com.prirai.android.nira.browser.bookmark.repository.BookmarkManager
 import com.prirai.android.nira.browser.bookmark.ui.BookmarksBottomSheetFragment
-import com.prirai.android.nira.browser.home.compose.AddShortcutDialog
 import com.prirai.android.nira.browser.home.compose.HomeScreen
 import com.prirai.android.nira.browser.home.compose.HomeViewModel
 import com.prirai.android.nira.browser.home.compose.HomeViewModelFactory
@@ -121,7 +120,6 @@ class ComposeHomeFragment : Fragment() {
                 val isPrivateMode = selectedTab?.content?.private ?: browsingModeManager.mode.isPrivate
 
                 val shortcuts by viewModel.shortcuts.collectAsState()
-                val showAddDialog by viewModel.showAddShortcutDialog.collectAsState()
                 val jumpBackInHistory by viewModel.jumpBackInHistory.collectAsState()
                 val recentsKey by store.observeAsComposableState { state ->
                     Triple(
@@ -216,7 +214,6 @@ class ComposeHomeFragment : Fragment() {
                                 .setNegativeButton("Cancel", null)
                                 .show()
                         },
-                        onShortcutAdd = { viewModel.showAddShortcutDialog() },
                         onHistoryClick = {
                             startActivity(
                                 android.content.Intent(
@@ -258,15 +255,6 @@ class ComposeHomeFragment : Fragment() {
                             findNavController().navigate(directions)
                         }
                     )
-
-                    if (showAddDialog) {
-                        AddShortcutDialog(
-                            onDismiss = { viewModel.hideAddShortcutDialog() },
-                            onSave = { url, title ->
-                                viewModel.addShortcut(url, title)
-                            }
-                        )
-                    }
                 }
             }
         }

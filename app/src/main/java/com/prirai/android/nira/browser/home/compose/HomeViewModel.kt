@@ -28,8 +28,6 @@ class HomeViewModel(
     private val _bookmarks = MutableStateFlow<List<BookmarkItem>>(emptyList())
     val bookmarks: StateFlow<List<BookmarkItem>> = _bookmarks.asStateFlow()
     
-    private val _showAddShortcutDialog = MutableStateFlow(false)
-    val showAddShortcutDialog: StateFlow<Boolean> = _showAddShortcutDialog.asStateFlow()
     
     private val _isBookmarkSectionExpanded = MutableStateFlow(true)
     val isBookmarkSectionExpanded: StateFlow<Boolean> = _isBookmarkSectionExpanded.asStateFlow()
@@ -132,18 +130,6 @@ class HomeViewModel(
         }
     }
     
-    fun addShortcut(url: String, title: String) {
-        viewModelScope.launch {
-            try {
-                shortcutsRepository.add(url, title)
-                loadShortcuts()
-                _showAddShortcutDialog.value = false
-            } catch (e: Exception) {
-                // Handle error
-            }
-        }
-    }
-    
     fun deleteShortcut(shortcut: ShortcutItem) {
         viewModelScope.launch {
             try {
@@ -153,14 +139,6 @@ class HomeViewModel(
                 // Handle error
             }
         }
-    }
-    
-    fun showAddShortcutDialog() {
-        _showAddShortcutDialog.value = true
-    }
-    
-    fun hideAddShortcutDialog() {
-        _showAddShortcutDialog.value = false
     }
     
     fun toggleBookmarkSection() {

@@ -201,8 +201,9 @@
 <string name="choose_color">Choose Color</string>
 <string name="tab">Tab</string>
 <string name="favorites">Favorites</string>
-<string name="add_go_to_sites">Add your go-to sites here</string>
-<string name="my_website_placeholder">My Website</string>
+<string name="add_go_to_sites">Pin sites from the page menu to see them here</string>
+<string name="favorite_added">Added to favorites</string>
+<string name="favorite_already_added">Already in favorites</string>
 <string name="private_mode_short">Private</string>
 <string name="jump_back_in">Jump Back In</string>
 <string name="recently_closed">Recently Closed</string>
@@ -214,8 +215,6 @@
 <string name="private_activity_visible">Your Activity is Still Visible To</string>
 <string name="private_activity_visible_desc">Websites you visit, your internet service provider, and your network administrator can still see your browsing activity.</string>
 <string name="private_browsing_note">Note: Private browsing doesn\'t make you anonymous online. For enhanced privacy, consider using a VPN.</string>
-<string name="add_shortcut_dialog">Add Shortcut</string>
-<string name="url_invalid">Please enter a valid URL</string>
 <string name="untitled">Untitled</string>
 <string name="save">Save</string>
 <string name="app_icon">App icon</string>
