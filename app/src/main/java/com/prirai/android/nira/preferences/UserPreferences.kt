@@ -171,6 +171,7 @@ class UserPreferences(appContext: Context) : mozilla.components.support.ktx.andr
      * in the browser.
      */
     var remoteDebugging by booleanPreference(REMOTE_DEBUGGING, false)
+    var allowScreenshotsInPrivate by booleanPreference(ALLOW_SCREENSHOTS_IN_PRIVATE, false)
     var resistFingerprinting by booleanPreference(RESIST_FINGERPRINTING, false)
     var promptExternalDownloader by booleanPreference(PROMPT_EXTERNAL_DOWNLOADER, false)
     var addonSort by intPreference(ADDON_SORT, AddonSortType.RATING.ordinal)
@@ -308,6 +309,7 @@ class UserPreferences(appContext: Context) : mozilla.components.support.ktx.andr
         const val SHOW_TAB_GROUP_BAR = "show_tab_group_bar"
         const val SWIPE_TO_REFRESH = "swipe_to_refresh"
         const val REMOTE_DEBUGGING = "remote_debugging"
+        const val ALLOW_SCREENSHOTS_IN_PRIVATE = "allow_screenshots_in_private"
         const val RESIST_FINGERPRINTING = "resist_fingerprinting"
         const val PROMPT_EXTERNAL_DOWNLOADER = "prompt_external_downloader"
         const val SHOW_URL_PROTOCOL = "show_url_protocol"

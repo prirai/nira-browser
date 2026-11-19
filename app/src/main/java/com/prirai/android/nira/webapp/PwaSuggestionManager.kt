@@ -48,29 +48,19 @@ class PwaSuggestionManager(private val context: Context) {
     // Predefined list of popular web apps
     private val highQualityPwas = listOf(
         PwaSuggestion(
-            url = "https://web.telegram.org/",
+            url = "https://web.telegram.org/k/",
             name = "Telegram",
             description = "Fast and secure messaging"
-        ),
-        PwaSuggestion(
-            url = "https://discord.com/app",
-            name = "Discord",
-            description = "Chat, voice, and video"
-        ),
-        PwaSuggestion(
-            url = "https://x.com/",
-            name = "X - Formerly Twitter",
-            description = "Social networking"
-        ),
-        PwaSuggestion(
-            url = "https://www.reddit.com/",
-            name = "Reddit",
-            description = "Social news and discussion"
         ),
         PwaSuggestion(
             url = "https://www.instagram.com/",
             name = "Instagram",
             description = "Photo and video sharing"
+        ),
+        PwaSuggestion(
+            url = "https://x.com/",
+            name = "X - Formerly Twitter",
+            description = "Social networking"
         ),
         PwaSuggestion(
             url = "https://music.youtube.com/",
@@ -86,16 +76,6 @@ class PwaSuggestionManager(private val context: Context) {
             url = "https://soundcloud.com/",
             name = "SoundCloud",
             description = "Music and audio"
-        ),
-        PwaSuggestion(
-            url = "https://www.twitch.tv/",
-            name = "Twitch",
-            description = "Live streaming platform"
-        ),
-        PwaSuggestion(
-            url = "https://www.netflix.com/",
-            name = "Netflix",
-            description = "Movies and TV shows"
         ),
         PwaSuggestion(
             url = "https://www.figma.com/",
@@ -118,69 +98,9 @@ class PwaSuggestionManager(private val context: Context) {
             description = "Email and calendar"
         ),
         PwaSuggestion(
-            url = "https://www.notion.so/",
-            name = "Notion",
-            description = "Notes and collaboration"
-        ),
-        PwaSuggestion(
-            url = "https://trello.com/",
-            name = "Trello",
-            description = "Project management"
-        ),
-        PwaSuggestion(
-            url = "https://asana.com/",
-            name = "Asana",
-            description = "Work management"
-        ),
-        PwaSuggestion(
             url = "https://github.com/",
             name = "GitHub",
             description = "Code hosting platform"
-        ),
-        PwaSuggestion(
-            url = "https://gitlab.com/",
-            name = "GitLab",
-            description = "DevOps platform"
-        ),
-        PwaSuggestion(
-            url = "https://stackoverflow.com/",
-            name = "Stack Overflow",
-            description = "Developer Q&A"
-        ),
-        PwaSuggestion(
-            url = "https://news.ycombinator.com/",
-            name = "Hacker News",
-            description = "Tech news"
-        ),
-        PwaSuggestion(
-            url = "https://medium.com/",
-            name = "Medium",
-            description = "Reading and writing"
-        ),
-        PwaSuggestion(
-            url = "https://dev.to/",
-            name = "DEV Community",
-            description = "Developer community"
-        ),
-        PwaSuggestion(
-            url = "https://www.linkedin.com/",
-            name = "LinkedIn",
-            description = "Professional networking"
-        ),
-        PwaSuggestion(
-            url = "https://www.dropbox.com/",
-            name = "Dropbox",
-            description = "File storage and sharing"
-        ),
-        PwaSuggestion(
-            url = "https://www.office.com/",
-            name = "Microsoft Office",
-            description = "Office suite online"
-        ),
-        PwaSuggestion(
-            url = "https://calendar.google.com/",
-            name = "Google Calendar",
-            description = "Calendar and scheduling"
         ),
         PwaSuggestion(
             url = "https://maps.google.com/",
@@ -191,11 +111,6 @@ class PwaSuggestionManager(private val context: Context) {
             url = "https://translate.google.com/",
             name = "Google Translate",
             description = "Language translation"
-        ),
-        PwaSuggestion(
-            url = "https://chat.openai.com/",
-            name = "ChatGPT",
-            description = "AI assistant"
         ),
         PwaSuggestion(
             url = "https://Gemini.google.com/",
@@ -221,11 +136,6 @@ class PwaSuggestionManager(private val context: Context) {
             url = "https://www.ecosia.org/",
             name = "Ecosia",
             description = "Tree-planting search engine"
-        ),
-        PwaSuggestion(
-            url = "https://www.wikipedia.org/",
-            name = "Wikipedia",
-            description = "Free encyclopedia"
         ),
         PwaSuggestion(
             url = "https://www.duolingo.com/",

@@ -44,6 +44,7 @@ import mozilla.components.concept.engine.EngineSession
 import mozilla.components.concept.engine.EngineView
 import mozilla.components.feature.contextmenu.ext.DefaultSelectionActionDelegate
 import mozilla.components.support.base.feature.ActivityResultHandler
+import mozilla.components.feature.privatemode.feature.SecureWindowFeature
 import mozilla.components.support.base.feature.UserInteractionHandler
 import mozilla.components.support.ktx.kotlin.isUrl
 import mozilla.components.support.ktx.kotlin.toNormalizedUrl
@@ -215,6 +216,17 @@ open class BrowserActivity : LocaleAwareAppCompatActivity(), ComponentCallbacks2
         // An earlier revision deferred this into view.post - that crashed on
         // launch because view.post runs after STARTED.
         components.notificationsDelegate.bindToActivity(this)
+
+        lifecycle.addObserver(components.privateNotificationFeature)
+        if (!prefs.allowScreenshotsInPrivate) {
+            lifecycle.addObserver(
+                SecureWindowFeature(
+                    window = window,
+                    store = components.store,
+                    isSecure = { it.content.private },
+                ),
+            )
+        }
 
         // OPTIMIZATION: Defer non-critical component initialization to after first frame.
         view.post {

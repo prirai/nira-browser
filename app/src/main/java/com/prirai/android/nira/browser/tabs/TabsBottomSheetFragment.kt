@@ -16,6 +16,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.rounded.BookmarkAdd
+import androidx.compose.material.icons.rounded.CollectionsBookmark
 import androidx.compose.material.icons.rounded.GridView
 import androidx.compose.material.icons.rounded.ViewList
 import androidx.compose.material3.*
@@ -35,6 +37,9 @@ import android.widget.LinearLayout
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.prirai.android.nira.BrowserActivity
 import com.prirai.android.nira.R
+import com.prirai.android.nira.browser.tabs.collections.CollectionsDialog
+import com.prirai.android.nira.browser.tabs.collections.SaveToCollectionDialog
+import com.prirai.android.nira.browser.tabs.collections.TabCollectionsController
 import com.prirai.android.nira.browser.BrowsingMode
 import com.prirai.android.nira.browser.BrowsingModeManager
 import com.prirai.android.nira.browser.tabgroups.UnifiedTabGroupManager
@@ -87,6 +92,8 @@ class TabsBottomSheetFragment : DialogFragment() {
 
     private var isInitializing = true
     private val isGridViewState = mutableStateOf(false)
+    private val showSaveCollectionState = mutableStateOf(false)
+    private val showCollectionsState = mutableStateOf(false)
     private var isGridView: Boolean
         get() = isGridViewState.value
         set(value) { isGridViewState.value = value }
@@ -593,6 +600,8 @@ class TabsBottomSheetFragment : DialogFragment() {
             }
         }
 
+        CollectionDialogs()
+
         // Use Scaffold for proper snackbar positioning
         Scaffold(
             snackbarHost = {
@@ -621,6 +630,15 @@ class TabsBottomSheetFragment : DialogFragment() {
                         text = pluralStringResource(R.plurals.tab_count, tabs.size, tabs.size),
                         style = MaterialTheme.typography.titleMediumEmphasized
                     )
+                    Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                    if (!browsingModeManager.mode.isPrivate) {
+                        androidx.compose.material3.IconButton(onClick = { showSaveCollectionState.value = true }) {
+                            Icon(Icons.Rounded.BookmarkAdd, contentDescription = stringResource(R.string.collection_save_title))
+                        }
+                        androidx.compose.material3.IconButton(onClick = { showCollectionsState.value = true }) {
+                            Icon(Icons.Rounded.CollectionsBookmark, contentDescription = stringResource(R.string.collections_title))
+                        }
+                    }
                     SingleChoiceSegmentedButtonRow {
                         SegmentedButton(
                             selected = !isGridView,
@@ -642,6 +660,7 @@ class TabsBottomSheetFragment : DialogFragment() {
                         ) {
                             Icon(Icons.Rounded.GridView, contentDescription = stringResource(R.string.grid_view))
                         }
+                    }
                     }
                 }
 
@@ -743,6 +762,70 @@ class TabsBottomSheetFragment : DialogFragment() {
                     )
                 }
             }
+        }
+    }
+
+    @Composable
+    private fun CollectionDialogs() {
+        val context = requireContext()
+        val controller = remember { TabCollectionsController(context) }
+        val collections by controller.collections.collectAsState(initial = emptyList())
+        val showSave by showSaveCollectionState
+        val showList by showCollectionsState
+
+        fun currentTabs(): List<TabSessionState> {
+            val contextId = com.prirai.android.nira.browser.profile.BrowserProfile
+                .contextIdFor(browsingModeManager.currentProfile.id)
+            return controller.savable(context.components.store.state.tabs.filter { it.contextId == contextId })
+        }
+
+        fun toast(resId: Int) = android.widget.Toast.makeText(context, resId, android.widget.Toast.LENGTH_SHORT).show()
+
+        if (showSave) {
+            val tabs = remember { currentTabs() }
+            if (tabs.isEmpty()) {
+                LaunchedEffect(Unit) {
+                    toast(R.string.collection_nothing_to_save)
+                    showSaveCollectionState.value = false
+                }
+            } else {
+                SaveToCollectionDialog(
+                    tabCount = tabs.size,
+                    collections = collections,
+                    onCreate = { name ->
+                        lifecycleScope.launch { controller.create(name, tabs) }
+                        showSaveCollectionState.value = false
+                        toast(R.string.collection_saved)
+                    },
+                    onAddTo = { collection ->
+                        lifecycleScope.launch { controller.addTo(collection, tabs) }
+                        showSaveCollectionState.value = false
+                        toast(R.string.collection_saved)
+                    },
+                    onDismiss = { showSaveCollectionState.value = false },
+                )
+            }
+        }
+
+        if (showList) {
+            val profileId = browsingModeManager.currentProfile.id
+            CollectionsDialog(
+                collections = collections,
+                onRestoreAll = { collection ->
+                    lifecycleScope.launch { controller.restore(collection.tabs, profileId) }
+                    showCollectionsState.value = false
+                    toast(R.string.collection_restored)
+                },
+                onRestoreTab = { tab ->
+                    lifecycleScope.launch { controller.restore(listOf(tab), profileId) }
+                    showCollectionsState.value = false
+                    toast(R.string.collection_restored)
+                },
+                onRemoveTab = { collection, tab -> lifecycleScope.launch { controller.removeTab(collection, tab) } },
+                onRename = { collection, name -> lifecycleScope.launch { controller.rename(collection, name) } },
+                onDelete = { collection -> lifecycleScope.launch { controller.delete(collection) } },
+                onDismiss = { showCollectionsState.value = false },
+            )
         }
     }
 

@@ -446,7 +446,7 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
         //   `res/layout/mozac_site_permissions_prompt.xml` which gives the
         //   root a card background + 24dp side margins.
         //
-        // Button colors stay accented (secondary_icon / photonWhite) so
+        // Button colors stay accented (secondary_icon / white) so
         // Allow is still visually distinct from Deny, which uses the M3
         // outlined-button style defined on the overridden layout.
         val accentHighContrastColor = R.color.secondary_icon
@@ -460,7 +460,7 @@ abstract class BaseBrowserFragment : Fragment(), UserInteractionHandler, Activit
                     gravity = android.view.Gravity.CENTER,
                     shouldWidthMatchParent = true,
                     positiveButtonBackgroundColor = accentHighContrastColor,
-                    positiveButtonTextColor = R.color.photonWhite
+                    positiveButtonTextColor = android.R.color.white
                 ),
                 // Pre-check "Remember decision for this site" so Allow/Deny
                 // persists by default. AC's default is false (unchecked),

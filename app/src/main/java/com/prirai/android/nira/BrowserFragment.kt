@@ -1,5 +1,6 @@
 package com.prirai.android.nira
 
+import mozilla.components.support.ktx.android.content.share
 import android.view.View
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -17,7 +18,7 @@ import com.prirai.android.nira.browser.tabs.NewTabCreator
 import com.prirai.android.nira.browser.home.compose.recentlyClosedItems
 import com.prirai.android.nira.browser.toolbar.ToolbarGestureHandler
 import com.prirai.android.nira.components.toolbar.ToolbarMenu
-import com.prirai.android.nira.downloads.DownloadsBottomSheetFragment
+import com.prirai.android.nira.downloads.DownloadsDialogFragment
 import com.prirai.android.nira.ext.components
 import com.prirai.android.nira.ext.nav
 import com.prirai.android.nira.preferences.UserPreferences
@@ -171,32 +172,7 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
         binding.swipeRefresh.setBackgroundColor(bgColor)
     }
 
-    private fun observeDownloadsForSheet() {
-        val shownDownloadIds = mutableSetOf<String>()
-        viewLifecycleOwner.lifecycleScope.launch {
-            requireContext().components.store.flow()
-                .map { state ->
-                    state.downloads.values.filter {
-                        it.status == DownloadState.Status.INITIATED ||
-                        it.status == DownloadState.Status.DOWNLOADING
-                    }
-                }
-                .distinctUntilChanged()
-                .collect { activeDownloads ->
-                    val newDownloads = activeDownloads.filter { it.id !in shownDownloadIds }
-                    if (newDownloads.isNotEmpty()) {
-                        newDownloads.forEach { shownDownloadIds.add(it.id) }
-                        if (!isDetached && isAdded && activity != null) {
-                            val existing = parentFragmentManager.findFragmentByTag(DownloadsBottomSheetFragment.TAG)
-                            if (existing == null) {
-                                DownloadsBottomSheetFragment.newInstance()
-                                    .show(parentFragmentManager, DownloadsBottomSheetFragment.TAG)
-                            }
-                        }
-                    }
-                }
-        }
-    }
+    private fun observeDownloadsForSheet() = DownloadsDialogFragment.showOnNewDownloads(this)
 
     private fun observeNewTabSelection() {
         if (!isAdded) return
@@ -515,7 +491,7 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
                 }
 
                 override fun onBookmarksClicked() {
-                    val bookmarksBottomSheet = com.prirai.android.nira.browser.bookmark.ui.BookmarksBottomSheetFragment.newInstance()
+                    val bookmarksBottomSheet = com.prirai.android.nira.browser.bookmark.ui.BookmarksDialogFragment.newInstance()
                     bookmarksBottomSheet.show(parentFragmentManager, "BookmarksBottomSheet")
                 }
 
@@ -524,11 +500,7 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
                     val selectedTab = state.tabs.find { it.id == state.selectedTabId }
                     val currentUrl = selectedTab?.content?.url
                     if (!currentUrl.isNullOrBlank()) {
-                        val shareIntent = android.content.Intent()
-                        shareIntent.action = android.content.Intent.ACTION_SEND
-                        shareIntent.putExtra(android.content.Intent.EXTRA_TEXT, currentUrl)
-                        shareIntent.type = "text/plain"
-                        startActivity(android.content.Intent.createChooser(shareIntent, "Share"))
+                        requireContext().share(currentUrl)
                     }
                 }
 
@@ -883,8 +855,15 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
                             selectedTab?.let { tab ->
                                 val title = tab.content.title.ifEmpty { tab.content.url }
                                 val url = tab.content.url
-                                val dialog = com.prirai.android.nira.browser.shortcuts.AddShortcutDialogFragment.newInstance(url, title)
-                                dialog.show(parentFragmentManager, com.prirai.android.nira.browser.shortcuts.AddShortcutDialogFragment.TAG)
+                                val appContext = requireContext().applicationContext
+                                viewLifecycleOwner.lifecycleScope.launch {
+                                    val added = appContext.components.shortcutsRepository.add(url, title)
+                                    android.widget.Toast.makeText(
+                                        appContext,
+                                        if (added) R.string.favorite_added else R.string.favorite_already_added,
+                                        android.widget.Toast.LENGTH_SHORT,
+                                    ).show()
+                                }
                             }
                         }
                     )
@@ -942,7 +921,7 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
                         }
                     ),
                     com.prirai.android.nira.components.menu.Material3BrowserMenu.IconRowItem(
-                        title = getString(R.string.mozac_browser_menu_new_private_tab),
+                        title = getString(R.string.new_private_tab),
                         iconRes = mozilla.components.ui.icons.R.drawable.mozac_ic_private_mode_24,
                         onClick = {
                             browserInteractor.onBrowserToolbarMenuItemTapped(ToolbarMenu.Item.NewPrivateTab)
@@ -1004,8 +983,7 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
                 title = "Downloads",
                 iconRes = mozilla.components.ui.icons.R.drawable.mozac_ic_download_24,
                 onClick = {
-                    val downloadsBottomSheet = com.prirai.android.nira.downloads.DownloadsBottomSheetFragment.newInstance()
-                    downloadsBottomSheet.show(parentFragmentManager, com.prirai.android.nira.downloads.DownloadsBottomSheetFragment.TAG)
+                    DownloadsDialogFragment.show(parentFragmentManager)
                 }
             )
         )
@@ -1028,7 +1006,7 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
         menuItems.add(
             com.prirai.android.nira.components.menu.Material3BrowserMenu.MenuItem.Action(
                 id = "new_tab",
-                title = getString(R.string.mozac_browser_menu_new_tab),
+                title = getString(R.string.new_tab),
                 iconRes = R.drawable.mozac_ic_tab_new_24,
                 onClick = {
                     browserInteractor.onBrowserToolbarMenuItemTapped(ToolbarMenu.Item.NewTab)
@@ -1215,17 +1193,13 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
     }
     
     /**
-     * Initialize homepage ViewModel for shortcuts and bookmarks. Uses the
-     * process-wide singleton from [com.prirai.android.nira.browser.shortcuts.ShortcutDatabase.getInstance]
-     * so schema migrations only live in one place.
+     * Initialize homepage ViewModel for shortcuts and bookmarks. Shortcuts come
+     * from [com.prirai.android.nira.components.Components.shortcutsRepository].
      */
     private fun initializeHomeViewModel() {
-        val database = com.prirai.android.nira.browser.shortcuts.ShortcutDatabase
-            .getInstance(requireContext())
-
         val factory = com.prirai.android.nira.browser.home.compose.HomeViewModelFactory(
             bookmarkManager = com.prirai.android.nira.browser.bookmark.repository.BookmarkManager.getInstance(requireContext()),
-            shortcutDao = database.shortcutDao(),
+            shortcutsRepository = requireContext().components.shortcutsRepository,
             historyStorage = requireContext().components.historyStorage,
         )
 
@@ -1259,7 +1233,6 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
             val isPrivateMode = selectedTab?.content?.private ?: browsingModeManager.mode.isPrivate
 
             val shortcuts by homeViewModel.shortcuts.collectAsState()
-            val showAddDialog by homeViewModel.showAddShortcutDialog.collectAsState()
             val jumpBackInHistory by homeViewModel.jumpBackInHistory.collectAsState()
             val recentsKey by store.observeAsComposableState { state ->
                 Triple(
@@ -1338,17 +1311,11 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
                             .setNegativeButton("Cancel", null)
                             .show()
                     },
-                    onShortcutAdd = { homeViewModel.showAddShortcutDialog() },
                     onHistoryClick = {
-                        startActivity(
-                            android.content.Intent(
-                                requireContext(),
-                                com.prirai.android.nira.history.HistoryActivity::class.java
-                            )
-                        )
+                        com.prirai.android.nira.history.HistoryDialogFragment.show(parentFragmentManager)
                     },
                     onBookmarksClick = {
-                        com.prirai.android.nira.browser.bookmark.ui.BookmarksBottomSheetFragment
+                        com.prirai.android.nira.browser.bookmark.ui.BookmarksDialogFragment
                             .newInstance()
                             .show(parentFragmentManager, "BookmarksBottomSheet")
                     },
@@ -1385,15 +1352,6 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
                         }
                     }
                 )
-
-                if (showAddDialog) {
-                    com.prirai.android.nira.browser.home.compose.AddShortcutDialog(
-                        onDismiss = { homeViewModel.hideAddShortcutDialog() },
-                        onSave = { url, title ->
-                            homeViewModel.addShortcut(url, title)
-                        }
-                    )
-                }
             }
         }
     }

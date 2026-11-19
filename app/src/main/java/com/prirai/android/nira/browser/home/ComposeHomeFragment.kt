@@ -20,15 +20,13 @@ import com.prirai.android.nira.NavGraphDirections
 import com.prirai.android.nira.R
 import com.prirai.android.nira.browser.BrowsingMode
 import com.prirai.android.nira.browser.bookmark.repository.BookmarkManager
-import com.prirai.android.nira.browser.bookmark.ui.BookmarksBottomSheetFragment
-import com.prirai.android.nira.browser.home.compose.AddShortcutDialog
+import com.prirai.android.nira.browser.bookmark.ui.BookmarksDialogFragment
 import com.prirai.android.nira.browser.home.compose.HomeScreen
 import com.prirai.android.nira.browser.home.compose.HomeViewModel
 import com.prirai.android.nira.browser.home.compose.HomeViewModelFactory
 import com.prirai.android.nira.browser.home.compose.ProfileInfo
 import com.prirai.android.nira.browser.home.compose.jumpBackInItems
 import com.prirai.android.nira.browser.home.compose.recentlyClosedItems
-import com.prirai.android.nira.browser.shortcuts.ShortcutDatabase
 import com.prirai.android.nira.components.toolbar.BrowserToolbarViewInteractor
 import com.prirai.android.nira.components.toolbar.ToolbarMenu
 import com.prirai.android.nira.components.toolbar.ToolbarPosition
@@ -68,12 +66,9 @@ class ComposeHomeFragment : Fragment() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Shortcut DB schema + migrations live in ShortcutDatabase.getInstance.
-        val database = ShortcutDatabase.getInstance(requireContext())
-
         val factory = HomeViewModelFactory(
             bookmarkManager = BookmarkManager.getInstance(requireContext()),
-            shortcutDao = database.shortcutDao(),
+            shortcutsRepository = requireContext().components.shortcutsRepository,
             historyStorage = requireContext().components.historyStorage,
         )
 
@@ -125,7 +120,6 @@ class ComposeHomeFragment : Fragment() {
                 val isPrivateMode = selectedTab?.content?.private ?: browsingModeManager.mode.isPrivate
 
                 val shortcuts by viewModel.shortcuts.collectAsState()
-                val showAddDialog by viewModel.showAddShortcutDialog.collectAsState()
                 val jumpBackInHistory by viewModel.jumpBackInHistory.collectAsState()
                 val recentsKey by store.observeAsComposableState { state ->
                     Triple(
@@ -220,17 +214,11 @@ class ComposeHomeFragment : Fragment() {
                                 .setNegativeButton("Cancel", null)
                                 .show()
                         },
-                        onShortcutAdd = { viewModel.showAddShortcutDialog() },
                         onHistoryClick = {
-                            startActivity(
-                                android.content.Intent(
-                                    requireContext(),
-                                    com.prirai.android.nira.history.HistoryActivity::class.java
-                                )
-                            )
+                            com.prirai.android.nira.history.HistoryDialogFragment.show(parentFragmentManager)
                         },
                         onBookmarksClick = {
-                            BookmarksBottomSheetFragment.newInstance()
+                            BookmarksDialogFragment.newInstance()
                                 .show(parentFragmentManager, "BookmarksBottomSheet")
                         },
                         jumpBackInItems = jumpBackInItems,
@@ -262,15 +250,6 @@ class ComposeHomeFragment : Fragment() {
                             findNavController().navigate(directions)
                         }
                     )
-
-                    if (showAddDialog) {
-                        AddShortcutDialog(
-                            onDismiss = { viewModel.hideAddShortcutDialog() },
-                            onSave = { url, title ->
-                                viewModel.addShortcut(url, title)
-                            }
-                        )
-                    }
                 }
             }
         }
@@ -446,7 +425,7 @@ class ComposeHomeFragment : Fragment() {
             }
 
             override fun onBookmarksClicked() {
-                val bookmarksBottomSheet = BookmarksBottomSheetFragment.newInstance()
+                val bookmarksBottomSheet = BookmarksDialogFragment.newInstance()
                 bookmarksBottomSheet.show(parentFragmentManager, "BookmarksBottomSheet")
             }
         })
@@ -694,7 +673,7 @@ class ComposeHomeFragment : Fragment() {
         val menuItems = listOf(
             com.prirai.android.nira.components.menu.Material3BrowserMenu.MenuItem.Action(
                 id = "new_tab",
-                title = getString(R.string.mozac_browser_menu_new_tab),
+                title = getString(R.string.new_tab),
                 iconRes = R.drawable.mozac_ic_tab_new_24,
                 onClick = {
                     // Ensure we're using the current active profile
@@ -711,7 +690,7 @@ class ComposeHomeFragment : Fragment() {
             ),
             com.prirai.android.nira.components.menu.Material3BrowserMenu.MenuItem.Action(
                 id = "new_private_tab",
-                title = getString(R.string.mozac_browser_menu_new_private_tab),
+                title = getString(R.string.new_private_tab),
                 iconRes = mozilla.components.ui.icons.R.drawable.mozac_ic_private_mode_24,
                 onClick = {
                     browsingModeManager.mode = BrowsingMode.Private
@@ -729,12 +708,7 @@ class ComposeHomeFragment : Fragment() {
                 title = getString(R.string.action_history),
                 iconRes = mozilla.components.ui.icons.R.drawable.mozac_ic_history_24,
                 onClick = {
-                    startActivity(android.content.Intent(
-                        requireContext(),
-                        com.prirai.android.nira.history.HistoryActivity::class.java
-                    ).apply {
-                        flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
-                    })
+                    com.prirai.android.nira.history.HistoryDialogFragment.show(parentFragmentManager)
                 }
             ),
             com.prirai.android.nira.components.menu.Material3BrowserMenu.MenuItem.Action(
@@ -742,7 +716,7 @@ class ComposeHomeFragment : Fragment() {
                 title = getString(R.string.action_bookmarks),
                 iconRes = mozilla.components.ui.icons.R.drawable.mozac_ic_bookmark_24,
                 onClick = {
-                    val bookmarksBottomSheet = BookmarksBottomSheetFragment.newInstance()
+                    val bookmarksBottomSheet = BookmarksDialogFragment.newInstance()
                     bookmarksBottomSheet.show(parentFragmentManager, "BookmarksBottomSheet")
                 }
             ),

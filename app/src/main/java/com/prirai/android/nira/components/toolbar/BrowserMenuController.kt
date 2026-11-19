@@ -1,5 +1,6 @@
 package com.prirai.android.nira.components.toolbar
 
+import mozilla.components.support.ktx.android.content.share
 import android.content.Intent
 import androidx.core.content.ContextCompat
 import androidx.navigation.NavController
@@ -10,7 +11,6 @@ import com.prirai.android.nira.browser.sync.SendTabBottomSheetFragment
 import com.prirai.android.nira.browser.history.TabHistoryBottomSheet
 import com.prirai.android.nira.browser.history.TabHistoryMode
 import com.prirai.android.nira.ext.components
-import com.prirai.android.nira.history.HistoryActivity
 import com.prirai.android.nira.settings.activity.SettingsActivity
 import com.prirai.android.nira.ssl.showSslDialog
 import kotlinx.coroutines.MainScope
@@ -219,20 +219,7 @@ class DefaultBrowserToolbarMenuController(
             is ToolbarMenu.Item.Share -> {
                 MainScope().launch {
                     activity.components.store.state.selectedTab?.content?.let {
-                        val shareIntent = Intent(Intent.ACTION_SEND)
-                        shareIntent.type = "text/plain"
-                        if (it.title != "") {
-                            shareIntent.putExtra(Intent.EXTRA_SUBJECT, it.title)
-                        }
-                        shareIntent.putExtra(Intent.EXTRA_TEXT, it.url)
-                        ContextCompat.startActivity(
-                            activity,
-                            Intent.createChooser(
-                                shareIntent,
-                                activity.resources.getString(R.string.mozac_selection_context_menu_share)
-                            ).setFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
-                            null
-                        )
+                        activity.share(it.url, it.title)
                     }
                 }
             }
@@ -254,14 +241,12 @@ class DefaultBrowserToolbarMenuController(
 
             is ToolbarMenu.Item.Bookmarks -> {
                 val bookmarksBottomSheet =
-                    com.prirai.android.nira.browser.bookmark.ui.BookmarksBottomSheetFragment.newInstance()
+                    com.prirai.android.nira.browser.bookmark.ui.BookmarksDialogFragment.newInstance()
                 bookmarksBottomSheet.show(activity.supportFragmentManager, "BookmarksBottomSheet")
             }
 
             is ToolbarMenu.Item.History -> browserAnimator.captureEngineViewAndDrawStatically {
-                val settings = Intent(activity, HistoryActivity::class.java)
-                settings.flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                activity.startActivity(settings)
+                com.prirai.android.nira.history.HistoryDialogFragment.show(activity.supportFragmentManager)
             }
 
             is ToolbarMenu.Item.NewTab -> {

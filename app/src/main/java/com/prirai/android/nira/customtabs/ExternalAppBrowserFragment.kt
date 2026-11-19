@@ -2,6 +2,7 @@
 
 package com.prirai.android.nira.customtabs
 
+import mozilla.components.support.ktx.android.content.share
 import android.content.Intent
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -222,7 +223,7 @@ class ExternalAppBrowserFragment : Fragment(), UserInteractionHandler, ActivityR
                     gravity = android.view.Gravity.CENTER,
                     shouldWidthMatchParent = true,
                     positiveButtonBackgroundColor = com.prirai.android.nira.R.color.secondary_icon,
-                    positiveButtonTextColor = com.prirai.android.nira.R.color.photonWhite
+                    positiveButtonTextColor = android.R.color.white
                 ),
                 // Mirrors BaseBrowserFragment#initializeUI: pre-check the
                 // "Remember decision for this site" box so the user's
@@ -334,6 +335,9 @@ class ExternalAppBrowserFragment : Fragment(), UserInteractionHandler, ActivityR
             view = binding.root
         )
         
+        // Downloads wait for confirmation in the downloads window; open it for custom tabs too.
+        com.prirai.android.nira.downloads.DownloadsDialogFragment.showOnNewDownloads(this)
+
         // Setup keyboard adjustment
         setupKeyboardAdjustment()
     }
@@ -623,6 +627,14 @@ class ExternalAppBrowserFragment : Fragment(), UserInteractionHandler, ActivityR
                     onClick = { shareCurrentUrl() },
                 ),
             )
+            add(
+                com.prirai.android.nira.components.menu.Material3BrowserMenu.MenuItem.Action(
+                    id = "downloads",
+                    title = getString(R.string.downloads_title),
+                    iconRes = mozilla.components.ui.icons.R.drawable.mozac_ic_download_24,
+                    onClick = { com.prirai.android.nira.downloads.DownloadsDialogFragment.show(parentFragmentManager) },
+                ),
+            )
             add(com.prirai.android.nira.components.menu.Material3BrowserMenu.MenuItem.Divider)
             add(
                 com.prirai.android.nira.components.menu.Material3BrowserMenu.MenuItem.Action(
@@ -704,11 +716,7 @@ class ExternalAppBrowserFragment : Fragment(), UserInteractionHandler, ActivityR
         customTabSessionId?.let { sessionId ->
             val customTab = requireContext().components.store.state.findCustomTab(sessionId)
             customTab?.let { tab ->
-                val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                    type = "text/plain"
-                    putExtra(Intent.EXTRA_TEXT, tab.content.url)
-                }
-                startActivity(Intent.createChooser(shareIntent, getString(R.string.share)))
+                requireContext().share(tab.content.url)
             }
         }
     }

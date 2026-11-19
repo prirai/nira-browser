@@ -6,8 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.prirai.android.nira.browser.bookmark.items.BookmarkFolderItem
 import com.prirai.android.nira.browser.bookmark.items.BookmarkSiteItem
 import com.prirai.android.nira.browser.bookmark.repository.BookmarkManager
-import com.prirai.android.nira.browser.shortcuts.ShortcutDao
-import com.prirai.android.nira.browser.shortcuts.ShortcutEntity
+import com.prirai.android.nira.browser.shortcuts.ShortcutsRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -19,7 +18,7 @@ import mozilla.components.concept.storage.VisitType
 
 class HomeViewModel(
     private val bookmarkManager: BookmarkManager,
-    private val shortcutDao: ShortcutDao,
+    private val shortcutsRepository: ShortcutsRepository,
     private val historyStorage: HistoryStorage,
 ) : ViewModel() {
     
@@ -29,8 +28,6 @@ class HomeViewModel(
     private val _bookmarks = MutableStateFlow<List<BookmarkItem>>(emptyList())
     val bookmarks: StateFlow<List<BookmarkItem>> = _bookmarks.asStateFlow()
     
-    private val _showAddShortcutDialog = MutableStateFlow(false)
-    val showAddShortcutDialog: StateFlow<Boolean> = _showAddShortcutDialog.asStateFlow()
     
     private val _isBookmarkSectionExpanded = MutableStateFlow(true)
     val isBookmarkSectionExpanded: StateFlow<Boolean> = _isBookmarkSectionExpanded.asStateFlow()
@@ -40,6 +37,7 @@ class HomeViewModel(
     
     init {
         loadShortcuts()
+        viewModelScope.launch { shortcutsRepository.changes.collect { loadShortcuts() } }
         loadBookmarks()
         loadJumpBackInHistory()
     }
@@ -76,14 +74,11 @@ class HomeViewModel(
     fun loadShortcuts() {
         viewModelScope.launch {
             try {
-                val entities = withContext(Dispatchers.IO) {
-                    shortcutDao.getAll()
-                }
-                _shortcuts.value = entities.map { entity ->
+                _shortcuts.value = shortcutsRepository.getAll().map { site ->
                     ShortcutItem(
-                        id = entity.uid,
-                        title = entity.title ?: "",
-                        url = entity.url ?: "",
+                        id = site.id ?: 0L,
+                        title = site.title ?: "",
+                        url = site.url,
                         icon = null
                     )
                 }.take(12)
@@ -136,43 +131,15 @@ class HomeViewModel(
         }
     }
     
-    fun addShortcut(url: String, title: String) {
-        viewModelScope.launch {
-            try {
-                withContext(Dispatchers.IO) {
-                    val entity = ShortcutEntity(url = url, title = title)
-                    shortcutDao.insertAll(entity)
-                }
-                loadShortcuts()
-                _showAddShortcutDialog.value = false
-            } catch (e: Exception) {
-                // Handle error
-            }
-        }
-    }
-    
     fun deleteShortcut(shortcut: ShortcutItem) {
         viewModelScope.launch {
             try {
-                withContext(Dispatchers.IO) {
-                    val entity = shortcutDao.loadAllByIds(intArrayOf(shortcut.id)).firstOrNull()
-                    if (entity != null) {
-                        shortcutDao.delete(entity)
-                    }
-                }
+                shortcutsRepository.deleteById(shortcut.id)
                 loadShortcuts()
             } catch (e: Exception) {
                 // Handle error
             }
         }
-    }
-    
-    fun showAddShortcutDialog() {
-        _showAddShortcutDialog.value = true
-    }
-    
-    fun hideAddShortcutDialog() {
-        _showAddShortcutDialog.value = false
     }
     
     fun toggleBookmarkSection() {
@@ -182,12 +149,12 @@ class HomeViewModel(
 
 class HomeViewModelFactory(
     private val bookmarkManager: BookmarkManager,
-    private val shortcutDao: ShortcutDao,
+    private val shortcutsRepository: ShortcutsRepository,
     private val historyStorage: HistoryStorage,
 ) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(HomeViewModel::class.java)) {
-            return HomeViewModel(bookmarkManager, shortcutDao, historyStorage) as T
+            return HomeViewModel(bookmarkManager, shortcutsRepository, historyStorage) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }

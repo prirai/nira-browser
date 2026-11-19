@@ -2,20 +2,20 @@
 
 package com.prirai.android.nira.history
 
+import mozilla.components.support.ktx.android.content.share
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
 import android.os.Bundle
-import androidx.activity.compose.setContent
-import androidx.appcompat.app.AppCompatActivity
+import androidx.fragment.app.FragmentManager
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -24,7 +24,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.rounded.History
@@ -35,9 +34,7 @@ import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -56,42 +53,36 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import com.prirai.android.nira.R
 import com.prirai.android.nira.ext.components
-import com.prirai.android.nira.ext.enableEdgeToEdgeMode
-import com.prirai.android.nira.preferences.UserPreferences
-import com.prirai.android.nira.theme.ThemeManager
 import com.prirai.android.nira.ui.components.NiraCardRow
 import com.prirai.android.nira.ui.components.NiraEmptyState
 import com.prirai.android.nira.ui.components.NiraLoadingIndicator
 import com.prirai.android.nira.ui.components.NiraSearchField
 import com.prirai.android.nira.ui.components.animateNiraListItem
-import com.prirai.android.nira.ui.theme.NiraTheme
+import com.prirai.android.nira.ui.components.NiraSheetHeader
+import com.prirai.android.nira.ui.components.NiraWindowDialogFragment
 import com.prirai.android.nira.utils.FaviconLoader
 import kotlinx.coroutines.launch
 import mozilla.components.concept.storage.VisitInfo
 import mozilla.components.support.ktx.kotlin.tryGetHostFromUrl
 
 /**
- * The full-screen browsing-history page, rendered with the shared Material 3
- * Expressive Compose stack: a [TopAppBar] with the back arrow, the [NiraSearchField]
- * and a grouped [NiraCardRow] list per date section. Tapping a row loads its URL
- * in the current tab; the trailing overflow menu carries the row actions the old
- * long-press dialog exposed (open in (private) tab, share, copy, remove).
+ * The browsing-history floating window, rendered with the shared Material 3 Expressive Compose
+ * stack: a header with a close button, the [NiraSearchField] and a grouped [NiraCardRow] list per
+ * date section. Tapping a row loads its URL in the current tab; the trailing overflow menu carries
+ * the row actions (open in (private) tab, share, copy, remove).
  */
-class HistoryActivity : AppCompatActivity() {
+class HistoryDialogFragment : NiraWindowDialogFragment() {
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        enableEdgeToEdgeMode()
-        setContent {
-            val context = LocalContext.current
-            val prefs = UserPreferences(context)
-            NiraTheme(
-                darkTheme = ThemeManager.isDarkMode(context),
-                amoledMode = prefs.amoledMode,
-                dynamicColor = prefs.dynamicColors,
-            ) {
-                HistoryScreen(onBack = { onBackPressedDispatcher.onBackPressed() })
-            }
+    @Composable
+    override fun WindowContent() {
+        HistoryScreen(onBack = { dismiss() })
+    }
+
+    companion object {
+        const val TAG = "HistoryDialog"
+
+        fun show(fragmentManager: FragmentManager) {
+            showOnce(fragmentManager, TAG) { HistoryDialogFragment() }
         }
     }
 }
@@ -130,26 +121,16 @@ private fun HistoryScreen(onBack: () -> Unit) {
     }
     val items = remember(filtered) { HistorySectionHelper.groupHistoryByDate(filtered) }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.action_history)) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.back),
-                        )
-                    }
-                },
-            )
-        },
-    ) { padding ->
+    run {
         Column(
             modifier = Modifier
-                .fillMaxSize()
-                .padding(padding),
+                .fillMaxWidth()
+                .heightIn(min = 320.dp, max = 640.dp),
         ) {
+            NiraSheetHeader(
+                title = stringResource(R.string.action_history),
+                onClose = onBack,
+            )
             NiraSearchField(
                 query = query,
                 onQueryChange = { query = it },
@@ -172,7 +153,7 @@ private fun HistoryScreen(onBack: () -> Unit) {
                     title = stringResource(R.string.no_history),
                     icon = Icons.Rounded.History,
                 )
-                else -> LazyColumn(contentPadding = PaddingValues(bottom = 16.dp)) {
+                else -> LazyColumn(modifier = Modifier.weight(1f), contentPadding = PaddingValues(bottom = 16.dp)) {
                     itemsIndexed(
                         items,
                         key = { index, item ->
@@ -347,14 +328,5 @@ private fun HistoryFavicon(url: String) {
 }
 
 private fun shareUrl(context: Context, url: String) {
-    val shareIntent = Intent(Intent.ACTION_SEND).apply {
-        type = "text/plain"
-        putExtra(Intent.EXTRA_TEXT, url)
-    }
-    context.startActivity(
-        Intent.createChooser(
-            shareIntent,
-            context.getString(R.string.mozac_selection_context_menu_share),
-        ),
-    )
+    context.share(url)
 }

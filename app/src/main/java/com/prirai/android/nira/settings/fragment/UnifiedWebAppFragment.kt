@@ -8,6 +8,7 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Toast
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -106,7 +107,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-private const val DAY_MILLIS = 24L * 60L * 60L * 1000L
 
 /**
  * Unified fragment for managing installed PWAs and discovering new ones,
@@ -388,11 +388,6 @@ private fun WebAppsScreen() {
                 0 -> InstalledAppsPane(
                     installedApps = installedApps,
                     onLaunch = { launchWebApp(it) },
-                    onEnableToggle = { webApp, enabled ->
-                        scope.launch {
-                            components.webAppManager.setWebAppEnabled(webApp.id, enabled)
-                        }
-                    },
                     onAddShortcut = { addShortcut(it) },
                     onAssociateProfile = { profileTarget = it },
                     onClone = { cloneTarget = it },
@@ -451,13 +446,12 @@ private fun WebAppsScreen() {
             onDismiss = { clearDataTarget = null },
             onConfirm = {
                 clearDataTarget = null
-                // Honest UX: the engine-level wipe isn't implemented yet
-                // (see WebAppManager) - keep saying so instead of lying
-                // about success.
-                showMessage(
-                    webApp.name,
-                    context.getString(R.string.web_app_action_not_implemented),
-                )
+                components.webAppManager.clearSiteData(webApp)
+                Toast.makeText(
+                    context,
+                    context.getString(R.string.web_app_data_cleared, webApp.name),
+                    Toast.LENGTH_SHORT,
+                ).show()
             },
         )
     }
@@ -492,7 +486,6 @@ private fun WebAppsScreen() {
 private fun InstalledAppsPane(
     installedApps: List<WebAppEntity>,
     onLaunch: (WebAppEntity) -> Unit,
-    onEnableToggle: (WebAppEntity, Boolean) -> Unit,
     onAddShortcut: (WebAppEntity) -> Unit,
     onAssociateProfile: (WebAppEntity) -> Unit,
     onClone: (WebAppEntity) -> Unit,
@@ -517,7 +510,6 @@ private fun InstalledAppsPane(
                 isTopRow = index == 0,
                 isBottomRow = index == installedApps.lastIndex,
                 onLaunch = { onLaunch(webApp) },
-                onEnableToggle = { onEnableToggle(webApp, it) },
                 onAddShortcut = { onAddShortcut(webApp) },
                 onAssociateProfile = { onAssociateProfile(webApp) },
                 onClone = { onClone(webApp) },
@@ -564,9 +556,8 @@ private fun DiscoverPane(
 }
 
 /**
- * One installed web app on the shared grouped-card idiom: the favicon
- * and name, the origin / profile / usage metadata, the enable switch
- * and the action menu the old PopupMenu carried.
+ * One installed web app on the shared grouped-card idiom: the favicon,
+ * the name and the action menu.
  */
 @Composable
 private fun InstalledWebAppRow(
@@ -574,7 +565,6 @@ private fun InstalledWebAppRow(
     isTopRow: Boolean,
     isBottomRow: Boolean,
     onLaunch: () -> Unit,
-    onEnableToggle: (Boolean) -> Unit,
     onAddShortcut: () -> Unit,
     onAssociateProfile: () -> Unit,
     onClone: () -> Unit,
@@ -585,26 +575,6 @@ private fun InstalledWebAppRow(
     val context = LocalContext.current
     var menuOpen by remember { mutableStateOf(false) }
 
-    val profileName = remember(webApp.profileId) {
-        ProfileManager.getInstance(context).getAllProfiles()
-            .find { it.id == webApp.profileId }?.name
-    } ?: stringResource(R.string.webapp_default_profile_name)
-
-    val lastUsed = if (webApp.lastUsedDate > 0) {
-        val daysAgo = remember(webApp.lastUsedDate) {
-            ((System.currentTimeMillis() - webApp.lastUsedDate) / DAY_MILLIS).toInt()
-        }
-        when {
-            daysAgo == 0 -> stringResource(R.string.webapp_last_used_today)
-            daysAgo == 1 -> stringResource(R.string.webapp_last_used_one_day)
-            else -> stringResource(R.string.webapp_last_used_days, daysAgo)
-        }
-    } else {
-        stringResource(R.string.webapp_never_used)
-    }
-
-    val switchLabel = stringResource(R.string.enabled)
-
     NiraCardRow(
         title = webApp.name,
         isTopRow = isTopRow,
@@ -614,37 +584,6 @@ private fun InstalledWebAppRow(
         modifier = modifier,
         leading = { InstalledWebAppFavicon(webApp = webApp) },
         trailing = {
-            Column(
-                horizontalAlignment = Alignment.End,
-                modifier = Modifier.widthIn(max = 150.dp),
-            ) {
-                Text(
-                    text = webApp.url,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                Text(
-                    text = stringResource(R.string.current_profile, profileName),
-                    style = MaterialTheme.typography.labelSmallEmphasized,
-                    color = MaterialTheme.colorScheme.primary,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                Text(
-                    text = stringResource(R.string.webapp_usage_info, webApp.launchCount, lastUsed),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-            Switch(
-                checked = webApp.isEnabled,
-                onCheckedChange = onEnableToggle,
-                modifier = Modifier.semantics { contentDescription = switchLabel },
-            )
             Box {
                 IconButton(onClick = { menuOpen = true }) {
                     Icon(

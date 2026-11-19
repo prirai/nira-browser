@@ -19,7 +19,6 @@ import kotlinx.coroutines.withContext
 import mozilla.components.feature.pwa.ext.getWebAppManifest
 import com.prirai.android.nira.ext.components
 import com.prirai.android.nira.ext.enableEdgeToEdgeMode
-import com.prirai.android.nira.ext.applyPersistentInsets
 
 /**
  * Activity for Progressive Web Apps (PWAs) - Fullscreen, no browser chrome
@@ -167,8 +166,19 @@ class WebAppActivity : AppCompatActivity() {
             window.statusBarColor = themeColor
         }
         
-        // Apply insets to webapp container
-        findViewById<View>(R.id.webapp_container)?.applyPersistentInsets()
+        // Pad the container by the system bars and the keyboard. The container consumes the insets,
+        // so the keyboard has to be handled here or fields under it would never scroll into view.
+        findViewById<View>(R.id.webapp_container)?.let { container ->
+            androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(container) { v, insets ->
+                val bars = insets.getInsets(
+                    androidx.core.view.WindowInsetsCompat.Type.systemBars() or
+                        androidx.core.view.WindowInsetsCompat.Type.displayCutout()
+                )
+                val ime = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.ime())
+                v.setPadding(bars.left, bars.top, bars.right, maxOf(bars.bottom, ime.bottom))
+                androidx.core.view.WindowInsetsCompat.CONSUMED
+            }
+        }
     }
 
     /**

@@ -96,9 +96,10 @@ object UserJsPreferences {
     )
 
     private val mediaPrefs = mapOf<String, Any>(
-        // Block all media autoplay by default
-        "media.autoplay.blocking_policy" to 2,
-        "media.autoplay.default" to 5,
+        // Block audible autoplay only: muted autoplay (Instagram stories/reels, previews) is
+        // allowed, and sound is allowed once the user has interacted with the page.
+        "media.autoplay.blocking_policy" to 0,
+        "media.autoplay.default" to 1,
     )
 
     private val performancePrefs = mapOf<String, Any>(
