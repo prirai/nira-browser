@@ -29,6 +29,9 @@
   <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
   <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
   <uses-permission android:name="android.permission.VIBRATE" />
+  <!-- Let GeckoView pass the web origin to third-party Credential Manager providers (passkeys), Android 14+ -->
+  <uses-permission android:name="android.permission.CREDENTIAL_MANAGER_SET_ORIGIN" />
+  <uses-permission android:name="android.permission.CREDENTIAL_MANAGER_QUERY_CANDIDATE_CREDENTIALS" />
   <!--
       Required so the in-app auto-updater can hand a downloaded APK
       to the system package installer via ACTION_VIEW. Android shows
