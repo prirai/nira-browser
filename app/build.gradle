@@ -162,6 +162,7 @@ dependencies {
     implementation libs.feature.session
     implementation libs.feature.toolbar
     implementation libs.feature.top.sites
+    implementation libs.feature.tab.collections
     implementation libs.feature.intent
     implementation libs.feature.contextmenu
     implementation libs.feature.app.links

@@ -94,6 +94,7 @@ import mozilla.components.service.location.LocationService
 import com.prirai.android.nira.privacy.PrivateNotificationService
 import mozilla.components.feature.privatemode.notification.PrivateNotificationFeature
 import com.prirai.android.nira.browser.shortcuts.ShortcutsRepository
+import mozilla.components.feature.tab.collections.TabCollectionStorage
 import mozilla.components.feature.top.sites.PinnedSiteStorage
 import mozilla.components.support.base.android.NotificationsDelegate
 import mozilla.components.support.base.worker.Frequency
@@ -588,6 +589,7 @@ open class Components(private val applicationContext: Context) {
     }
 
     val pinnedSiteStorage by lazy { PinnedSiteStorage(applicationContext) }
+    val tabCollectionStorage by lazy { TabCollectionStorage(applicationContext) }
     val shortcutsRepository by lazy { ShortcutsRepository(applicationContext, pinnedSiteStorage) }
 
     val sessionUseCases by lazy { SessionUseCases(store) }
