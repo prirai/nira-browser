@@ -13,6 +13,8 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.DeleteSweep
+import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.runtime.LaunchedEffect
@@ -131,6 +133,21 @@ fun DownloadsScreen(onDismiss: () -> Unit) {
             title = stringResource(R.string.downloads_title),
             onClose = onDismiss,
             dividerAlpha = null,
+            actions = {
+                IconButton(onClick = { openDownloadsFolder(context) }) {
+                    Icon(Icons.Default.FolderOpen, contentDescription = stringResource(R.string.open_downloads_folder))
+                }
+                if (completedDownloads.isNotEmpty()) {
+                    IconButton(onClick = {
+                        completedDownloads.forEach {
+                            context.components.store.dispatch(DownloadAction.RemoveDownloadAction(it.id))
+                        }
+                        selectedIds = emptySet()
+                    }) {
+                        Icon(Icons.Default.DeleteSweep, contentDescription = stringResource(R.string.clear_completed))
+                    }
+                }
+            },
         )
 
         AnimatedContent(
@@ -500,18 +517,17 @@ fun DownloadListItem(
                     tint = MaterialTheme.colorScheme.tertiary,
                     modifier = Modifier.size(20.dp)
                 )
-                DownloadState.Status.FAILED -> Icon(
-                    imageVector = Icons.Default.Refresh,
-                    contentDescription = stringResource(R.string.retry),
-                    tint = MaterialTheme.colorScheme.error,
-                    modifier = Modifier.size(20.dp)
-                )
-                DownloadState.Status.CANCELLED -> Icon(
-                    imageVector = Icons.Default.Refresh,
-                    contentDescription = stringResource(R.string.retry),
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(20.dp)
-                )
+                DownloadState.Status.FAILED, DownloadState.Status.CANCELLED -> IconButton(onClick = onClick) {
+                    Icon(
+                        imageVector = Icons.Default.Refresh,
+                        contentDescription = stringResource(R.string.retry),
+                        tint = if (download.status == DownloadState.Status.FAILED) {
+                            MaterialTheme.colorScheme.error
+                        } else {
+                            MaterialTheme.colorScheme.primary
+                        },
+                    )
+                }
                 else -> IconButton(onClick = { DownloadController.cancel(context, download) }) {
                     Icon(
                         imageVector = Icons.Default.Close,
@@ -602,7 +618,7 @@ private fun ActiveDownloadProgress(download: DownloadState) {
     }
 }
 
-private fun formatDuration(seconds: Long): String = when {
+internal fun formatDuration(seconds: Long): String = when {
     seconds >= 3600 -> "${seconds / 3600}h ${seconds % 3600 / 60}m left"
     seconds >= 60 -> "${seconds / 60}m ${seconds % 60}s left"
     else -> "${seconds}s left"
@@ -635,6 +651,16 @@ private fun rememberDownloadSpeed(download: DownloadState): Long {
         }
     }
     return speed
+}
+
+private fun openDownloadsFolder(context: Context) {
+    try {
+        context.startActivity(
+            Intent(android.app.DownloadManager.ACTION_VIEW_DOWNLOADS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+        )
+    } catch (e: Exception) {
+        Toast.makeText(context, R.string.no_app_to_open_file, Toast.LENGTH_SHORT).show()
+    }
 }
 
 private fun deleteDownload(context: Context, download: DownloadState) {
@@ -742,7 +768,7 @@ private fun fileIconForMimeType(mimeType: String?): ImageVector {
     }
 }
 
-private fun formatBytes(bytes: Long): String {
+internal fun formatBytes(bytes: Long): String {
     return when {
         bytes >= 1_073_741_824L -> "%.1f GB".format(bytes / 1_073_741_824.0)
         bytes >= 1_048_576L -> "%.1f MB".format(bytes / 1_048_576.0)

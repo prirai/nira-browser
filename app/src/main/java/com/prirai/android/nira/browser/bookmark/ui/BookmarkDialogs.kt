@@ -522,25 +522,23 @@ internal fun ConfirmFlattenFolderDialog(
     )
 }
 
-/**
- * The sort dialog of the original sheet. All three options perform the same
- * title-ascending sort: the View implementation mapped every entry to
- * `BookmarkSortType.A_Z` (URL and date ordering were never implemented), and
- * that behavior is preserved verbatim.
- */
+/** Ordering applied to the current folder; date added follows the monotonically increasing item id. */
+internal enum class BookmarkSortOrder { NAME, URL, DATE_ADDED }
+
+/** The sort picker; each option sorts the current folder in place. */
 @Composable
 internal fun SortBookmarksDialog(
     onDismiss: () -> Unit,
-    onSortPicked: () -> Unit,
+    onSortPicked: (BookmarkSortOrder) -> Unit,
 ) {
     NiraAlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.sort)) },
         text = {
             Column(modifier = Modifier.fillMaxWidth()) {
-                SortOption(label = stringResource(R.string.sort_by_name), onClick = onSortPicked)
-                SortOption(label = stringResource(R.string.sort_by_url), onClick = onSortPicked)
-                SortOption(label = stringResource(R.string.sort_by_date_added), onClick = onSortPicked)
+                SortOption(label = stringResource(R.string.sort_by_name), onClick = { onSortPicked(BookmarkSortOrder.NAME) })
+                SortOption(label = stringResource(R.string.sort_by_url), onClick = { onSortPicked(BookmarkSortOrder.URL) })
+                SortOption(label = stringResource(R.string.sort_by_date_added), onClick = { onSortPicked(BookmarkSortOrder.DATE_ADDED) })
             }
         },
         confirmButton = {},

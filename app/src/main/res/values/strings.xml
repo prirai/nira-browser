@@ -223,6 +223,9 @@
 <string name="downloads_title">Downloads</string>
 <string name="search_downloads">Search downloads</string>
 <string name="search_bookmarks">Search bookmarks</string>
+<string name="open_downloads_folder">Open downloads folder</string>
+<string name="clear_completed">Clear completed</string>
+<string name="no_app_to_open_file">No app available to open this</string>
 <string name="clear_search">Clear search</string>
 <string name="no_downloads_yet">No downloads yet</string>
 <string name="active_downloads">Active Downloads (%1$d)</string>

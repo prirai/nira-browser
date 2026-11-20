@@ -124,12 +124,19 @@ internal fun BookmarksSheet(
 
     val items = remember(currentFolder, revision, query) {
         val needle = query.trim()
-        currentFolder.itemList.toList().filter { item ->
-            needle.isEmpty() ||
+        if (needle.isEmpty()) {
+            currentFolder.itemList.toList()
+        } else {
+            // Searching walks every subfolder; results are shown as a flat list.
+            descendants(currentFolder).filter { item ->
                 item.title?.contains(needle, ignoreCase = true) == true ||
-                (item as? BookmarkSiteItem)?.url?.contains(needle, ignoreCase = true) == true
+                    (item as? BookmarkSiteItem)?.url?.contains(needle, ignoreCase = true) == true
+            }
         }
     }
+
+    fun parentOf(item: BookmarkItem): BookmarkFolderItem =
+        findParent(currentFolder, item) ?: currentFolder
 
     fun refresh() {
         revision++
@@ -161,7 +168,7 @@ internal fun BookmarksSheet(
     fun moveItems(itemsToMove: List<BookmarkItem>, targetFolder: BookmarkFolderItem) {
         try {
             itemsToMove.forEach { item ->
-                currentFolder.itemList.remove(item)
+                parentOf(item).itemList.remove(item)
                 targetFolder.add(item)
                 if (item is BookmarkFolderItem) {
                     item.parent = targetFolder
@@ -193,7 +200,7 @@ internal fun BookmarksSheet(
     fun deleteItems(itemsToDelete: List<BookmarkItem>) {
         if (itemsToDelete.size == 1) {
             try {
-                currentFolder.itemList.remove(itemsToDelete.first())
+                parentOf(itemsToDelete.first()).itemList.remove(itemsToDelete.first())
                 manager.save()
                 refresh()
             } catch (e: Exception) {
@@ -201,7 +208,7 @@ internal fun BookmarksSheet(
             }
         } else {
             try {
-                itemsToDelete.forEach { currentFolder.itemList.remove(it) }
+                itemsToDelete.forEach { parentOf(it).itemList.remove(it) }
                 manager.save()
                 refresh()
                 Toast.makeText(
@@ -218,7 +225,7 @@ internal fun BookmarksSheet(
 
     fun flatten(folder: BookmarkFolderItem) {
         try {
-            manager.flattenFolder(currentFolder, folder)
+            manager.flattenFolder(parentOf(folder), folder)
             manager.save()
             refresh()
             Toast.makeText(
@@ -231,10 +238,14 @@ internal fun BookmarksSheet(
         }
     }
 
-    fun sortByName() {
-        // The original sort dialog mapped every option to a title-ascending
-        // sort; that behavior is kept as is.
-        currentFolder.itemList.sortBy { it.title?.lowercase(Locale.getDefault()) }
+    fun sortFolder(order: BookmarkSortOrder) {
+        val list = currentFolder.itemList
+        when (order) {
+            BookmarkSortOrder.NAME -> list.sortBy { it.title?.lowercase(Locale.getDefault()) }
+            BookmarkSortOrder.URL -> list.sortBy { (it as? BookmarkSiteItem)?.url?.lowercase(Locale.getDefault()) ?: "" }
+            BookmarkSortOrder.DATE_ADDED -> list.sortBy { it.id }
+        }
+        manager.save()
         refresh()
     }
 
@@ -442,9 +453,9 @@ internal fun BookmarksSheet(
     if (showSort) {
         SortBookmarksDialog(
             onDismiss = { showSort = false },
-            onSortPicked = {
+            onSortPicked = { order ->
                 showSort = false
-                sortByName()
+                sortFolder(order)
             },
         )
     }
@@ -508,6 +519,17 @@ internal fun BookmarksSheet(
             },
         )
     }
+}
+
+private fun descendants(folder: BookmarkFolderItem): List<BookmarkItem> =
+    folder.itemList.flatMap { item ->
+        if (item is BookmarkFolderItem) listOf(item) + descendants(item) else listOf(item)
+    }
+
+private fun findParent(folder: BookmarkFolderItem, target: BookmarkItem): BookmarkFolderItem? {
+    if (folder.itemList.any { it === target }) return folder
+    return folder.itemList.filterIsInstance<BookmarkFolderItem>()
+        .firstNotNullOfOrNull { findParent(it, target) }
 }
 
 /**
