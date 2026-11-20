@@ -59,8 +59,8 @@ import mozilla.components.browser.state.state.TabSessionState
 
 /**
  * The shell both group container variants (list and grid) share: the group
- * Surface, the 4dp color accent strip, the expand/collapse header with the
- * count badge and options button, and the motion-specified expand/collapse.
+ * Surface, the expand/collapse header with the color dot, name, count and
+ * options button, and the motion-specified expand/collapse.
  * The variants differ only in how their children lay out, which lands in
  * [content].
  *
@@ -79,116 +79,74 @@ private fun GroupContainerShell(
     containerModifier: Modifier,
     content: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit,
 ) {
-    // Neutral M3 container (anti-slop: containers are theme tokens, never
-    // tinted with the group's accent); the 4dp accent strip, name and badge
-    // carry the group color - its identity.
+    // A neutral card: the group's color appears only as the small dot next to
+    // its name, the way Chrome and Firefox label tab groups.
     Surface(
         modifier = containerModifier
             .fillMaxWidth()
             .padding(horizontal = 8.dp, vertical = 4.dp),
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(20.dp),
         color = MaterialTheme.colorScheme.surfaceContainerHigh,
-        tonalElevation = 1.dp
     ) {
-        // IntrinsicSize.Min lets the left accent strip fill the container's full height
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(IntrinsicSize.Min)
-        ) {
-            // 4dp colored left strip matching group color
-            Box(
+        Column(modifier = Modifier.fillMaxWidth()) {
+            // pointerInput instead of clickable to avoid interfering with drag gestures
+            Row(
                 modifier = Modifier
-                    .width(4.dp)
-                    .fillMaxHeight()
-                    .background(
-                        Color(color),
-                        RoundedCornerShape(topStart = 12.dp, bottomStart = 12.dp)
-                    )
-            )
-
-            Column(modifier = Modifier.weight(1f)) {
-                // Header content integrated into container
-                // Use pointerInput instead of clickable to avoid interfering with drag gestures
-                Row(
+                    .fillMaxWidth()
+                    .pointerInput(Unit) {
+                        detectTapGestures(onTap = { onHeaderClick() })
+                    }
+                    .padding(start = 16.dp, end = 8.dp, top = 8.dp, bottom = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Box(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .pointerInput(Unit) {
-                            detectTapGestures(
-                                onTap = { onHeaderClick() }
-                            )
-                        }
-                        .padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
+                        .size(12.dp)
+                        .background(Color(color), CircleShape)
+                )
+                Spacer(Modifier.width(12.dp))
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMediumEmphasized,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f, fill = false),
+                )
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    text = tabCount.toString(),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(Modifier.weight(1f))
+                Icon(
+                    imageVector = if (isExpanded) Icons.Default.KeyboardArrowDown else Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                    contentDescription = stringResource(if (isExpanded) R.string.collapse else R.string.expand),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(24.dp),
+                )
+                IconButton(
+                    onClick = onOptionsClick,
+                    modifier = Modifier.size(40.dp),
                 ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        // Expand/Collapse icon
-                        Icon(
-                            imageVector = if (isExpanded) Icons.Default.KeyboardArrowDown else Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                            contentDescription = stringResource(if (isExpanded) R.string.collapse else R.string.expand),
-                            tint = Color(color),
-                            modifier = Modifier.size(24.dp)
-                        )
-
-                        // Group name
-                        Text(
-                            text = title,
-                            style = MaterialTheme.typography.titleMediumEmphasized,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.weight(1f)
-                        )
-
-                        // Tab count badge
-                        Surface(
-                            shape = CircleShape,
-                            color = Color(color).copy(alpha = 0.2f),
-                            border = BorderStroke(2.dp, Color(color))
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .padding(horizontal = 12.dp, vertical = 4.dp)
-                                    .defaultMinSize(minWidth = 24.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = tabCount.toString(),
-                                    style = MaterialTheme.typography.labelMediumEmphasized,
-                                    color = Color(color)
-                                )
-                            }
-                        }
-                    }
-
-                    // Options button
-                    IconButton(
-                        onClick = onOptionsClick,
-                        modifier = Modifier.size(32.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.MoreVert,
-                            contentDescription = stringResource(R.string.options),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(24.dp)
-                        )
-                    }
+                    Icon(
+                        imageVector = Icons.Default.MoreVert,
+                        contentDescription = stringResource(R.string.options),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(22.dp),
+                    )
                 }
+            }
 
-                AnimatedVisibility(
-                    visible = isExpanded,
-                    enter = expandVertically(MaterialTheme.motionScheme.defaultSpatialSpec()),
-                    exit = shrinkVertically(MaterialTheme.motionScheme.fastSpatialSpec())
-                ) {
-                    content()
-                }
-            } // end Column
-        } // end Row IntrinsicSize
+            AnimatedVisibility(
+                visible = isExpanded,
+                enter = expandVertically(MaterialTheme.motionScheme.defaultSpatialSpec()),
+                exit = shrinkVertically(MaterialTheme.motionScheme.fastSpatialSpec())
+            ) {
+                content()
+            }
+        }
     }
 }
 
@@ -263,9 +221,8 @@ fun GroupContainerListItem(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(start = 8.dp, end = 8.dp, bottom = 8.dp),
-            shape = RoundedCornerShape(16.dp),
-            color = MaterialTheme.colorScheme.surfaceContainerHigh,
-            tonalElevation = 1.dp
+            shape = RoundedCornerShape(14.dp),
+            color = MaterialTheme.colorScheme.surfaceContainerLowest,
         ) {
             Column(modifier = Modifier.fillMaxWidth()) {
                 children.forEachIndexed { index, tab ->

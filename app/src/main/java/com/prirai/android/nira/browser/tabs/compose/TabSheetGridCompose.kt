@@ -179,7 +179,7 @@ fun TabSheetGridView(
                                         Icon(
                                             imageVector = Icons.Default.MoreVert,
                                             contentDescription = stringResource(R.string.more_options),
-                                            tint = Color(item.color)
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
                                     }
                                 },
@@ -389,9 +389,8 @@ fun GroupTabsRow(
                 scaleX = scale
                 scaleY = scale
             },
-        shape = RoundedCornerShape(bottomStart = 12.dp, bottomEnd = 12.dp),
-        color = Color(groupColor).copy(alpha = 0.05f),
-        border = BorderStroke(1.dp, Color(groupColor).copy(alpha = 0.2f))
+        shape = RoundedCornerShape(bottomStart = 20.dp, bottomEnd = 20.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
     ) {
         // Scrollable horizontal row with fixed-size tabs at 80% scale
         LazyRow(
