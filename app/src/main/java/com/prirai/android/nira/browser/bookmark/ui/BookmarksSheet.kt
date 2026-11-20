@@ -2,6 +2,14 @@
 
 package com.prirai.android.nira.browser.bookmark.ui
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material.icons.rounded.UnfoldLess
+import androidx.compose.ui.res.painterResource
+import com.prirai.android.nira.ui.components.NiraSearchField
+import com.prirai.android.nira.ui.components.NiraSelectionBar
 import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
@@ -101,9 +109,9 @@ internal fun BookmarksSheet(
     val context = LocalContext.current
     var currentFolder by remember { mutableStateOf(initialFolder) }
     var revision by remember { mutableIntStateOf(0) }
-    var isMultiSelect by remember { mutableStateOf(false) }
     val selectedItems = remember { mutableStateListOf<BookmarkItem>() }
-    var menuOpenFor by remember { mutableStateOf<BookmarkItem?>(null) }
+    val isMultiSelect = selectedItems.isNotEmpty()
+    var query by remember { mutableStateOf("") }
 
     var showAddBookmark by remember { mutableStateOf(false) }
     var editSite by remember { mutableStateOf<BookmarkSiteItem?>(null) }
@@ -114,7 +122,14 @@ internal fun BookmarksSheet(
     var moveRequest by remember { mutableStateOf<BookmarksMoveRequest?>(null) }
     var flattenTarget by remember { mutableStateOf<BookmarkFolderItem?>(null) }
 
-    val items = remember(currentFolder, revision) { currentFolder.itemList.toList() }
+    val items = remember(currentFolder, revision, query) {
+        val needle = query.trim()
+        currentFolder.itemList.toList().filter { item ->
+            needle.isEmpty() ||
+                item.title?.contains(needle, ignoreCase = true) == true ||
+                (item as? BookmarkSiteItem)?.url?.contains(needle, ignoreCase = true) == true
+        }
+    }
 
     fun refresh() {
         revision++
@@ -126,7 +141,6 @@ internal fun BookmarksSheet(
 
     fun exitMultiSelect() {
         selectedItems.clear()
-        isMultiSelect = false
     }
 
     fun openSelectedInBackground() {
@@ -229,45 +243,7 @@ internal fun BookmarksSheet(
             .fillMaxWidth()
             .heightIn(min = 200.dp, max = 640.dp),
     ) {
-        if (isMultiSelect) {
-            NiraSheetHeader(
-                title = pluralStringResource(
-                    R.plurals.multiselect_count,
-                    selectedItems.size,
-                    selectedItems.size,
-                ),
-                onClose = { exitMultiSelect() },
-                dividerAlpha = null,
-                actions = {
-                    IconButton(onClick = { openSelectedInBackground() }) {
-                        Icon(
-                            imageVector = Icons.Rounded.Add,
-                            contentDescription = stringResource(R.string.open_in_background_tabs),
-                        )
-                    }
-                    IconButton(
-                        onClick = {
-                            moveRequest = BookmarksMoveRequest.Multiple(selectedItems.toList())
-                        },
-                    ) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Rounded.DriveFileMove,
-                            contentDescription = stringResource(R.string.move_selected),
-                        )
-                    }
-                    IconButton(
-                        onClick = {
-                            deleteRequest = BookmarksDeleteRequest.Multiple(selectedItems.toList())
-                        },
-                    ) {
-                        Icon(
-                            imageVector = Icons.Rounded.Delete,
-                            contentDescription = stringResource(R.string.delete_selected),
-                        )
-                    }
-                },
-            )
-        } else {
+        run {
             val breadcrumbSpec = MaterialTheme.motionScheme.defaultSpatialSpec<IntSize>()
             NiraSheetHeader(
                 title = if (currentFolder === manager.root) {
@@ -283,7 +259,15 @@ internal fun BookmarksSheet(
                 onClose = onDismiss,
                 dividerAlpha = null,
                 actions = {
-                    IconButton(onClick = { isMultiSelect = true }) {
+                    IconButton(onClick = {
+                        val all = currentFolder.itemList.toList()
+                        if (selectedItems.size == all.size) {
+                            selectedItems.clear()
+                        } else {
+                            selectedItems.clear()
+                            selectedItems.addAll(all)
+                        }
+                    }) {
                         Icon(
                             imageVector = Icons.Rounded.SelectAll,
                             contentDescription = stringResource(R.string.bookmark_select_items),
@@ -321,6 +305,42 @@ internal fun BookmarksSheet(
             }
         }
 
+        AnimatedContent(
+            targetState = isMultiSelect,
+            label = "bookmarksActionBar",
+            modifier = Modifier.fillMaxWidth(),
+        ) { selecting ->
+            if (selecting) {
+                BookmarkSelectionBar(
+                    selected = selectedItems.toList(),
+                    onClear = { exitMultiSelect() },
+                    onOpenInBackground = { openSelectedInBackground() },
+                    onEdit = { item ->
+                        if (item is BookmarkSiteItem) editSite = item else editFolder = item as? BookmarkFolderItem
+                    },
+                    onMove = { moveRequest = BookmarksMoveRequest.Multiple(selectedItems.toList()) },
+                    onFlatten = { flattenTarget = it },
+                    onDelete = { deleteRequest = BookmarksDeleteRequest.Multiple(selectedItems.toList()) },
+                )
+            } else {
+                NiraSearchField(
+                    query = query,
+                    onQueryChange = { query = it },
+                    placeholder = stringResource(R.string.search_bookmarks),
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Rounded.Search,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 4.dp),
+                )
+            }
+        }
+
         if (items.isEmpty()) {
             NiraEmptyState(
                 title = stringResource(R.string.no_bookmarks),
@@ -341,10 +361,7 @@ internal fun BookmarksSheet(
                         isTopRow = index == 0,
                         isBottomRow = index == items.lastIndex,
                         showDivider = index < items.lastIndex,
-                        isMultiSelect = isMultiSelect,
                         isSelected = selectedItems.contains(item),
-                        isMenuOpen = menuOpenFor === item,
-                        onMenuOpenChange = { open -> menuOpenFor = if (open) item else null },
                         onClick = {
                             when {
                                 isMultiSelect -> {
@@ -359,31 +376,7 @@ internal fun BookmarksSheet(
                             }
                         },
                         onLongClick = {
-                            if (!isMultiSelect) {
-                                isMultiSelect = true
-                                selectedItems.add(item)
-                            } else {
-                                menuOpenFor = item
-                            }
-                        },
-                        onEdit = {
-                            if (item is BookmarkSiteItem) {
-                                editSite = item
-                            } else if (item is BookmarkFolderItem) {
-                                editFolder = item
-                            }
-                        },
-                        onMove = { moveRequest = BookmarksMoveRequest.Single(item) },
-                        onDelete = { deleteRequest = BookmarksDeleteRequest.Single(item) },
-                        onFlatten = { if (item is BookmarkFolderItem) flattenTarget = item },
-                        onOpen = { if (item is BookmarkSiteItem) onOpenBookmark(item) },
-                        onOpenInNewTab = {
-                            if (item is BookmarkSiteItem) openInBackground(item.url)
-                        },
-                        onShare = {
-                            if (item is BookmarkSiteItem) {
-                                shareBookmarkUrl(context, item.url)
-                            }
+                            if (!selectedItems.contains(item)) selectedItems.add(item)
                         },
                     )
                 }
@@ -519,10 +512,8 @@ internal fun BookmarksSheet(
 
 /**
  * One bookmark or folder row of the list: the shared grouped-card row with a
- * favicon (or folder glyph) as the leading element, the selection checkbox in
- * multiselect mode, and the overflow menu with every action the old popup
- * menu offered. A long press enters multiselect mode and preselects the row,
- * as the RecyclerView implementation did.
+ * favicon (or folder glyph) as the leading element. A long press starts
+ * selection; the actions live in [BookmarkSelectionBar].
  */
 @Composable
 private fun BookmarkRow(
@@ -530,19 +521,9 @@ private fun BookmarkRow(
     isTopRow: Boolean,
     isBottomRow: Boolean,
     showDivider: Boolean,
-    isMultiSelect: Boolean,
     isSelected: Boolean,
-    isMenuOpen: Boolean,
-    onMenuOpenChange: (Boolean) -> Unit,
     onClick: () -> Unit,
     onLongClick: () -> Unit,
-    onEdit: () -> Unit,
-    onMove: () -> Unit,
-    onDelete: () -> Unit,
-    onFlatten: () -> Unit,
-    onOpen: () -> Unit,
-    onOpenInNewTab: () -> Unit,
-    onShare: () -> Unit,
 ) {
     NiraCardRow(
         title = when (item) {
@@ -553,134 +534,94 @@ private fun BookmarkRow(
         isBottomRow = isBottomRow,
         showDivider = showDivider,
         onClick = onClick,
-        modifier = Modifier.pointerInput(Unit) {
-            detectTapGestures(onLongPress = { onLongClick() })
-        },
+        onLongClick = onLongClick,
+        selected = isSelected,
         leading = {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                if (isMultiSelect) {
-                    Checkbox(checked = isSelected, onCheckedChange = null)
-                    Spacer(Modifier.width(8.dp))
-                }
-                if (item is BookmarkSiteItem) {
-                    FaviconImageFromUrl(
-                        url = item.url,
-                        title = item.title.orEmpty(),
-                        size = 24.dp,
-                        modifier = Modifier
-                            .size(24.dp)
-                            .clip(RoundedCornerShape(4.dp)),
-                    )
-                } else {
-                    Icon(
-                        imageVector = Icons.Rounded.Folder,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(24.dp),
-                    )
-                }
-            }
-        },
-        trailing = if (isMultiSelect) {
-            null
-        } else {
-            {
-                androidx.compose.foundation.layout.Box {
-                    IconButton(onClick = { onMenuOpenChange(true) }) {
-                        Icon(
-                            imageVector = Icons.Rounded.MoreVert,
-                            contentDescription = stringResource(R.string.more_options),
-                        )
-                    }
-                    DropdownMenu(
-                        expanded = isMenuOpen,
-                        onDismissRequest = { onMenuOpenChange(false) },
-                    ) {
-                        if (item is BookmarkSiteItem) {
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.open)) },
-                                onClick = {
-                                    onMenuOpenChange(false)
-                                    onOpen()
-                                },
-                            )
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.open_new)) },
-                                onClick = {
-                                    onMenuOpenChange(false)
-                                    onOpenInNewTab()
-                                },
-                            )
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.open_bg)) },
-                                onClick = {
-                                    onMenuOpenChange(false)
-                                    onOpenInNewTab()
-                                },
-                            )
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.edit_bookmark)) },
-                                onClick = {
-                                    onMenuOpenChange(false)
-                                    onEdit()
-                                },
-                            )
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.share)) },
-                                onClick = {
-                                    onMenuOpenChange(false)
-                                    onShare()
-                                },
-                            )
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.move_bookmark)) },
-                                onClick = {
-                                    onMenuOpenChange(false)
-                                    onMove()
-                                },
-                            )
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.delete_bookmark)) },
-                                onClick = {
-                                    onMenuOpenChange(false)
-                                    onDelete()
-                                },
-                            )
-                        } else {
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.edit_folder)) },
-                                onClick = {
-                                    onMenuOpenChange(false)
-                                    onEdit()
-                                },
-                            )
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.move_bookmark)) },
-                                onClick = {
-                                    onMenuOpenChange(false)
-                                    onMove()
-                                },
-                            )
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.flatten_folder)) },
-                                onClick = {
-                                    onMenuOpenChange(false)
-                                    onFlatten()
-                                },
-                            )
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.delete_folder)) },
-                                onClick = {
-                                    onMenuOpenChange(false)
-                                    onDelete()
-                                },
-                            )
-                        }
-                    }
-                }
+            when {
+                isSelected -> Icon(
+                    imageVector = Icons.Rounded.CheckCircle,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(24.dp),
+                )
+                item is BookmarkSiteItem -> FaviconImageFromUrl(
+                    url = item.url,
+                    title = item.title.orEmpty(),
+                    size = 24.dp,
+                    modifier = Modifier
+                        .size(24.dp)
+                        .clip(RoundedCornerShape(4.dp)),
+                )
+                else -> Icon(
+                    imageVector = Icons.Rounded.Folder,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(24.dp),
+                )
             }
         },
     )
+}
+
+/** Contextual action bar that replaces the search field while bookmarks are selected. */
+@Composable
+private fun BookmarkSelectionBar(
+    selected: List<BookmarkItem>,
+    onClear: () -> Unit,
+    onOpenInBackground: () -> Unit,
+    onEdit: (BookmarkItem) -> Unit,
+    onMove: () -> Unit,
+    onFlatten: (BookmarkFolderItem) -> Unit,
+    onDelete: () -> Unit,
+) {
+    val context = LocalContext.current
+    val sites = selected.filterIsInstance<BookmarkSiteItem>()
+    val single = selected.singleOrNull()
+
+    NiraSelectionBar(onClear = onClear) {
+        if (sites.isNotEmpty()) {
+            IconButton(onClick = onOpenInBackground) {
+                Icon(Icons.Rounded.Add, contentDescription = stringResource(R.string.open_in_background_tabs))
+            }
+            IconButton(onClick = {
+                shareBookmarkUrl(context, sites.joinToString("\n") { it.url })
+                onClear()
+            }) {
+                Icon(
+                    painter = painterResource(R.drawable.ios_share_24),
+                    contentDescription = stringResource(R.string.share),
+                )
+            }
+        }
+        if (single != null) {
+            IconButton(onClick = { onEdit(single) }) {
+                Icon(
+                    Icons.Rounded.Edit,
+                    contentDescription = stringResource(
+                        if (single is BookmarkSiteItem) R.string.edit_bookmark else R.string.edit_folder,
+                    ),
+                )
+            }
+            if (single is BookmarkFolderItem) {
+                IconButton(onClick = { onFlatten(single) }) {
+                    Icon(Icons.Rounded.UnfoldLess, contentDescription = stringResource(R.string.flatten_folder))
+                }
+            }
+        }
+        IconButton(onClick = onMove) {
+            Icon(
+                Icons.AutoMirrored.Rounded.DriveFileMove,
+                contentDescription = stringResource(R.string.move_selected),
+            )
+        }
+        IconButton(onClick = onDelete) {
+            Icon(
+                Icons.Rounded.Delete,
+                contentDescription = stringResource(R.string.delete_selected),
+                tint = MaterialTheme.colorScheme.error,
+            )
+        }
+    }
 }
 
 /**

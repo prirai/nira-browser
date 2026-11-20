@@ -222,12 +222,11 @@
 <string name="homepage_background">Homepage background</string>
 <string name="downloads_title">Downloads</string>
 <string name="search_downloads">Search downloads</string>
+<string name="search_bookmarks">Search bookmarks</string>
 <string name="clear_search">Clear search</string>
 <string name="no_downloads_yet">No downloads yet</string>
 <string name="active_downloads">Active Downloads (%1$d)</string>
 <string name="completed_section">Completed (%1$d)</string>
-<string name="download_this_file">Download this file?</string>
-<string name="download_action">Download</string>
 <string name="pause">Pause</string>
 <string name="resume">Resume</string>
 <string name="completed">Completed</string>

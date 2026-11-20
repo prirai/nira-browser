@@ -28,9 +28,8 @@ class DownloadsDialogFragment : NiraWindowDialogFragment() {
         }
 
         /**
-         * Opens the window when a download starts. Downloads wait in INITIATED state for the
-         * user's confirmation (see [DownloadConfirmationMiddleware]), so every surface that can
-         * start a download - including custom tabs - must call this.
+         * Opens the window when a download starts so its progress is visible. Every surface that
+         * can start a download - including custom tabs - must call this.
          */
         fun showOnNewDownloads(fragment: Fragment) {
             val shown = mutableSetOf<String>()

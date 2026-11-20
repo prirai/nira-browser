@@ -130,7 +130,8 @@ class ParallelDownloadService : Service() {
         val id = intent?.getStringExtra(INTENT_EXTRA_DOWNLOAD_ID)
             ?: intent?.getStringExtra(android.app.DownloadManager.EXTRA_DOWNLOAD_ID)
             ?: return START_NOT_STICKY
-        val download = components.store.state.downloads[id] ?: return START_NOT_STICKY
+        val download = components.store.state.downloads[id]
+        if (download == null) return START_NOT_STICKY
         when (intent?.action) {
             DownloadController.ACTION_PAUSE -> pause(id)
             DownloadController.ACTION_CANCEL -> cancelDownload(id)
@@ -389,7 +390,17 @@ class ParallelDownloadService : Service() {
         Log.i(TAG, "Download ${download.id} (${download.fileName ?: download.url}) completed, $total bytes")
     }
 
+    /** Gecko's fetch can block indefinitely right after a download starts; bound it. */
     private fun probeTotal(download: DownloadState): Long? {
+        var result: Long? = null
+        val worker = Thread { result = probeTotalBlocking(download) }
+        worker.isDaemon = true
+        worker.start()
+        worker.join(PROBE_TIMEOUT_MS)
+        return if (worker.isAlive) null else result
+    }
+
+    private fun probeTotalBlocking(download: DownloadState): Long? {
         return try {
             val headers = MutableHeaders()
             headers.append("Range", "bytes=0-0")
@@ -452,6 +463,7 @@ class ParallelDownloadService : Service() {
     }
 
     companion object {
+        private const val PROBE_TIMEOUT_MS = 6000L
         private const val TAG = "ParallelDownload"
         private const val CHANNEL_ID = "nira_parallel_downloads"
         private const val NOTIFICATION_ID = 7101
