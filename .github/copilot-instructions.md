@@ -159,6 +159,24 @@ Always filter queries by `contextId`. The default profile must accept both `null
 - Trust `canGoBack`/`canGoForward` (engine-maintained) over `HistoryState` indexes (stale until flushed).
 - Long-press on the Android back **gesture** is impossible (system-owned) — the tab-history sheet is only reachable from visible buttons.
 
+### Profile colours (v0.6.3)
+- A profile has a **primary** (icon) and **secondary** (background) colour (`BrowserProfile.secondaryColor`, 0 = none). Profiles are JSON in SharedPreferences (`profile_manager`), not Room, so adding fields needs no migration (`optInt(..., 0)`).
+- The Default profile is never in the saved list: `ProfileManager.getDefaultProfile()` overlays the `default_profile_style` pref (colour/secondary/emoji; name fixed). Use it instead of constructing the default profile by hand. Default colour is white (`ColorConstants.Profiles.NEUTRAL_COLOR`).
+- `ProfileColorPicker` is a grid of preset pairs (diagonal-split circles, all >= 3:1 contrast), not a free colour wheel.
+- Render a profile identity as: pill/disc background = secondary, icon = `profileIconTint(primary, bg)`, name = `profileLabelColor(bg)` (secondary hue pushed to >= 4.5:1). Used by homepage `LogoSection` and `ProfileSwitcherRow`; don't re-derive.
+- `ProfileManager.profilesVersion` (StateFlow) bumps on create/edit; UI that caches profile styling (homepage) must collect it.
+
+### Design language (v0.6.x)
+- Windows and lists (Downloads, History, Bookmarks, extension popups/details, tab/group menus) share `NiraWindowDialogFragment`, `NiraSheetHeader`, `NiraCardRow`, `NiraSearchField`, `NiraAlertDialog`. New lists should reuse them; avoid colour strips or accent stripes ("AI slop").
+- Tab bar and profile switcher show titles/names **only for the focused item**; resting items are icon-only and animate width with `MaterialTheme.motionScheme` specs.
+- Tab sheet grid: a group's tabs are one horizontally scrolling `LazyRow` (`GroupTabsGridRow`), never wrapped.
+- Homepage: top is only the profile pill; Jump Back In / Recently Closed are `NiraCardRow` lists; Favorites are 4-per-row squircle tiles with the title inside.
+
+### Extensions UI (v0.6.x)
+- Add-on details is a single floating window (`AddonDetailsActivity`, theme `AppThemeAddonWindow`) for installed and non-installed add-ons; installed controls live in `InstalledAddonControls`. Do not reintroduce an ActionBar `parentActivityName` (double back arrow).
+- Extension popups use `WebExtensionPopupFragment` (floating); the tablet popup was removed.
+- `AmoClient` queries the AMO **v4** API (`current_version.files[0]`) for Featured and live search; stay on v4.
+
 ### Releases (automated by `.github/workflows/apk-release.yml`)
 - Bump `versionCode`/`versionName` in `app/build.gradle` → commit `Release vX.Y.Z` → **lightweight** tag → `git push origin main vX.Y.Z`. CI builds signed APKs from the tag and publishes the GitHub release with ABI assets (arm64=1xxx, armeabi-v7a=2xxx, x86_64=base). The in-app updater reads GitHub releases — no manual APK uploads.
 
