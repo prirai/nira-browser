@@ -42,6 +42,13 @@
   -->
   <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
+  <queries>
+    <intent>
+      <action android:name="android.intent.action.VIEW" />
+      <data android:mimeType="application/vnd.android.package-archive" />
+    </intent>
+  </queries>
+
   <application
         android:name=".BrowserApp"
         android:allowBackup="true"

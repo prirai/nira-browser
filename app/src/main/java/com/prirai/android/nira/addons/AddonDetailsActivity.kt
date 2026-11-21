@@ -528,6 +528,9 @@ internal fun AddonIcon(
 }
 
 private fun formatDate(text: String): String {
-    val formatter = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.getDefault())
-    return DateFormat.getDateInstance().format(formatter.parse(text)!!)
+    // Locally installed extensions have no store metadata, so the date can be empty.
+    val date = runCatching {
+        SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.getDefault()).parse(text)
+    }.getOrNull() ?: return "—"
+    return DateFormat.getDateInstance().format(date)
 }

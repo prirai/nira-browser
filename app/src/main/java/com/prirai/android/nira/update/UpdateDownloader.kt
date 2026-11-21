@@ -61,6 +61,9 @@ internal class UpdateDownloader {
             .removeSuffix(".APK")
         val targetFile = File(targetDir, "$tagName-$abiSuffix.apk")
 
+        // Drop APKs from older versions before fetching the new one.
+        targetDir.listFiles()?.forEach { if (it.name != targetFile.name) it.delete() }
+
         // Clean any prior partial download for the same filename to
         // guarantee a fresh stream (we are not doing resumable
         // downloads here - the asset is small enough that redoing
@@ -146,6 +149,18 @@ internal class UpdateDownloader {
         private const val UPDATES_DIR = "updates"
         private const val BUFFER_BYTES = 64 * 1024
         private const val PROGRESS_EMIT_STEP = 0.01f
+
+        /** Removes cached APKs for [installedVersion] (tag prefix), i.e. updates already applied. */
+        fun cleanInstalled(context: Context, installedVersion: String) {
+            try {
+                File(context.cacheDir, UPDATES_DIR).listFiles()?.forEach { f ->
+                    val tag = f.name.substringBefore('-').removePrefix("v")
+                    if (tag == installedVersion.removePrefix("v")) f.delete()
+                }
+            } catch (t: Throwable) {
+                Log.w(TAG, "cleanInstalled failed", t)
+            }
+        }
 
         /**
          * Scrub any `updates/` files that aren't currently in use.

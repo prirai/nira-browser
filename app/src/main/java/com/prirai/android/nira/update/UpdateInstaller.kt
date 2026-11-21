@@ -1,5 +1,6 @@
 package com.prirai.android.nira.update
 
+import android.content.ClipData
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -63,10 +64,26 @@ internal object UpdateInstaller {
 
         val intent = Intent(Intent.ACTION_VIEW).apply {
             setDataAndType(uri, MIME_APK)
+            // ClipData lets the installer forward the read grant to its internal activities.
+            clipData = ClipData.newRawUri("", uri)
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
                 addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
+            }
+        }
+
+        // The installer re-launches its own staging activity; grant read access to every
+        // package that can handle the intent so that hop can still open the FileProvider URI.
+        context.packageManager.queryIntentActivities(intent, 0).forEach { info ->
+            try {
+                context.grantUriPermission(
+                    info.activityInfo.packageName,
+                    uri,
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION,
+                )
+            } catch (t: Throwable) {
+                Log.w(TAG, "grantUriPermission failed for ${info.activityInfo.packageName}", t)
             }
         }
 

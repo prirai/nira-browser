@@ -172,6 +172,12 @@ class BrowserApp : Application(), coil.ImageLoaderFactory {
         // some future caller forces components.store earlier.
         components.bootstrapStore()
 
+        applicationScope.launch(Dispatchers.IO) {
+            com.prirai.android.nira.update.UpdateDownloader.cleanInstalled(
+                this@BrowserApp, BuildConfig.VERSION_NAME
+            )
+        }
+
         // Initialize web extensions - MUST run on Main thread due to GeckoView Handler requirements
         applicationScope.launch(Dispatchers.Main) {
             initializeWebExtensions()
