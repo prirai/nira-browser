@@ -2,6 +2,7 @@
 
 package com.prirai.android.nira.browser.tabs
 
+import com.prirai.android.nira.ui.components.removeAndDispose
 import android.graphics.Color
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -371,21 +372,21 @@ class TabsBottomSheetFragment : DialogFragment() {
             ) {
                 com.prirai.android.nira.browser.profile.ProfileCreateDialog(
                     onDismiss = {
-                        (composeView.parent as? ViewGroup)?.removeView(composeView)
+                        composeView.removeAndDispose()
                     },
-                    onConfirm = { name, color, emoji ->
+                    onConfirm = { name, color, secondaryColor, emoji ->
                         val profileManager =
                             com.prirai.android.nira.browser.profile.ProfileManager.getInstance(requireContext())
-                        val newProfile = profileManager.createProfile(name, color, emoji)
+                        val newProfile = profileManager.createProfile(name, color, emoji, secondaryColor)
 
                         profileStateTrigger.value++
 
                         browsingModeManager.currentProfile = newProfile
                         browsingModeManager.mode = BrowsingMode.Normal
-                        (composeView.parent as? ViewGroup)?.removeView(composeView)
+                        composeView.removeAndDispose()
                     },
                     onImport = {
-                        (composeView.parent as? ViewGroup)?.removeView(composeView)
+                        composeView.removeAndDispose()
                         importProfileLauncher.launch("*/*")
                     }
                 )
@@ -419,12 +420,12 @@ class TabsBottomSheetFragment : DialogFragment() {
                 com.prirai.android.nira.browser.profile.ProfileEditDialog(
                     profile = profile,
                     onDismiss = {
-                        (composeView.parent as? ViewGroup)?.removeView(composeView)
+                        composeView.removeAndDispose()
                     },
-                    onConfirm = { name, color, emoji ->
+                    onConfirm = { name, color, secondaryColor, emoji ->
                         val profileManager =
                             com.prirai.android.nira.browser.profile.ProfileManager.getInstance(requireContext())
-                        val updatedProfile = profile.copy(name = name, color = color, emoji = emoji)
+                        val updatedProfile = profile.copy(name = name, color = color, secondaryColor = secondaryColor, emoji = emoji)
                         profileManager.updateProfile(updatedProfile)
 
                         if (profile.id == browsingModeManager.currentProfile.id) {
@@ -433,7 +434,7 @@ class TabsBottomSheetFragment : DialogFragment() {
 
                         profileStateTrigger.value++
 
-                        (composeView.parent as? ViewGroup)?.removeView(composeView)
+                        composeView.removeAndDispose()
                     },
                     onDelete = {
                         val profileManager =
@@ -441,16 +442,16 @@ class TabsBottomSheetFragment : DialogFragment() {
 
                         if (profile.id == browsingModeManager.currentProfile.id) {
                             browsingModeManager.currentProfile =
-                                com.prirai.android.nira.browser.profile.BrowserProfile.getDefaultProfile()
+                                profileManager.getDefaultProfile()
                         }
 
                         profileManager.deleteProfile(profile.id)
 
                         profileStateTrigger.value++
-                        (composeView.parent as? ViewGroup)?.removeView(composeView)
+                        composeView.removeAndDispose()
                     },
                     onExport = {
-                        (composeView.parent as? ViewGroup)?.removeView(composeView)
+                        composeView.removeAndDispose()
                         lifecycleScope.launch {
                             try {
                                 val exportManager = com.prirai.android.nira.browser.profile.ProfileExportManager
@@ -539,6 +540,8 @@ class TabsBottomSheetFragment : DialogFragment() {
         val viewModel = remember {
             TabViewModel(requireContext(), unifiedGroupManager).also {
                 tabViewModel = it
+                // Switches profile/mode, selects the moved tab and closes the sheet
+                it.onTabsMoved = { newTabId -> handleTabClickCompose(newTabId) }
             }
         }
 

@@ -114,14 +114,7 @@
     <activity
             android:name=".addons.AddonDetailsActivity"
             android:label="@string/mozac_feature_addons_addons"
-            android:theme="@style/AppThemeAddons"
-        />
-
-    <activity
-            android:name=".addons.InstalledAddonDetailsActivity"
-            android:label="@string/mozac_feature_addons_addons"
-            android:parentActivityName=".addons.AddonsActivity"
-            android:theme="@style/AppThemeAddons"
+            android:theme="@style/AppThemeAddonWindow"
         />
 
     <activity

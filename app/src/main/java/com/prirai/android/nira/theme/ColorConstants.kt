@@ -130,7 +130,10 @@ object ColorConstants {
             0xFFFFD600.toInt(), // Yellow
         )
         
-        val DEFAULT_COLOR = COLORS[0]
+        /** Neutral white: new and default profiles start without an accent. */
+        const val NEUTRAL_COLOR = 0xFFFFFFFF.toInt()
+
+        val DEFAULT_COLOR = NEUTRAL_COLOR
     }
     
     // Private mode colors

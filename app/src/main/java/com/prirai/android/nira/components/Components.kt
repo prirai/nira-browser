@@ -617,12 +617,13 @@ open class Components(private val applicationContext: Context) {
             )
         }
         else{
-            // Use Iceraven's comprehensive addon collection (158 extensions)
+            // Mozilla's official Extensions-for-Android collection; the add-ons page
+            // reaches the rest of AMO through AmoClient search.
             AMOAddonsProvider(
                     applicationContext,
                     client,
-                    collectionUser = "16201230",
-                    collectionName = "What-I-want-on-Fenix",
+                    collectionUser = "mozilla",
+                    collectionName = "Extensions-for-Android",
                     maxCacheAgeInMinutes = DAY_IN_MINUTES,
                     serverURL = "https://addons.mozilla.org"
             )

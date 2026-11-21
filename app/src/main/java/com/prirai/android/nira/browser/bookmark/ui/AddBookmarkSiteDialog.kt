@@ -13,6 +13,7 @@ import com.prirai.android.nira.browser.bookmark.items.BookmarkSiteItem
 import com.prirai.android.nira.browser.bookmark.repository.BookmarkManager
 import com.prirai.android.nira.preferences.UserPreferences
 import com.prirai.android.nira.theme.ThemeManager
+import com.prirai.android.nira.ui.components.removeAndDispose
 import com.prirai.android.nira.ui.theme.NiraTheme
 
 /**
@@ -81,7 +82,7 @@ class AddBookmarkSiteDialog private constructor(
     }
 
     private fun detach(composeView: ComposeView) {
-        (composeView.parent as? ViewGroup)?.removeView(composeView)
+        composeView.removeAndDispose()
     }
 
     /**

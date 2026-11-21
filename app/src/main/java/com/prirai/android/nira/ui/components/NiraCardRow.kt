@@ -1,5 +1,7 @@
 package com.prirai.android.nira.ui.components
 
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -15,6 +17,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -34,6 +37,7 @@ import androidx.compose.ui.unit.dp
  * @param onClick when null the row renders disabled (the current-page row of
  *   the history chart); a row that acts carries the ripple.
  */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun NiraCardRow(
     title: String,
@@ -42,6 +46,8 @@ fun NiraCardRow(
     showDivider: Boolean,
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null,
+    onLongClick: (() -> Unit)? = null,
+    selected: Boolean = false,
     cornerRadius: Dp = 24.dp,
     dividerIndent: Dp = 48.dp,
     minRowHeight: Dp = 48.dp,
@@ -56,16 +62,15 @@ fun NiraCardRow(
         bottomEnd = if (isBottomRow) cornerRadius else 0.dp,
     )
 
-    Surface(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 8.dp),
-        shape = shape,
-        color = MaterialTheme.colorScheme.surfaceContainerHigh,
-        tonalElevation = 1.dp,
-        onClick = onClick ?: {},
-        enabled = onClick != null,
-    ) {
+    val color = if (selected) {
+        MaterialTheme.colorScheme.secondaryContainer
+    } else {
+        MaterialTheme.colorScheme.surfaceContainerHigh
+    }
+    val rowModifier = modifier
+        .fillMaxWidth()
+        .padding(horizontal = 8.dp)
+    val content: @Composable () -> Unit = {
         Column(modifier = Modifier.fillMaxWidth()) {
             Row(
                 modifier = Modifier
@@ -100,5 +105,30 @@ fun NiraCardRow(
                 )
             }
         }
+    }
+    if (onLongClick != null) {
+        Surface(
+            modifier = rowModifier
+                .clip(shape)
+                .combinedClickable(
+                    enabled = onClick != null,
+                    onClick = { onClick?.invoke() },
+                    onLongClick = onLongClick,
+                ),
+            shape = shape,
+            color = color,
+            tonalElevation = 1.dp,
+            content = content,
+        )
+    } else {
+        Surface(
+            modifier = rowModifier,
+            shape = shape,
+            color = color,
+            tonalElevation = 1.dp,
+            onClick = onClick ?: {},
+            enabled = onClick != null,
+            content = content,
+        )
     }
 }

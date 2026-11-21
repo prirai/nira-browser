@@ -553,10 +553,17 @@ private fun TabPill(
     isDragging: Boolean = false,
     modifier: Modifier = Modifier
 ) {
+    // Only the focused tab shows its title; resting tabs collapse to their favicon.
+    val showTitle = isSelected || isDragging
+    val pillWidth by androidx.compose.animation.core.animateDpAsState(
+        targetValue = if (showTitle) 100.dp else 36.dp,
+        animationSpec = MaterialTheme.motionScheme.defaultSpatialSpec(),
+        label = "tabPillWidth",
+    )
     Surface(
         modifier = modifier
             .height(32.dp)
-            .width(100.dp),
+            .width(pillWidth),
         shape = RoundedCornerShape(12.dp),
         color = if (isSelected) {
             MaterialTheme.colorScheme.primaryContainer
@@ -570,7 +577,7 @@ private fun TabPill(
                 .clickable { onTabClick(tab.id) }
                 .padding(horizontal = 8.dp, vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(4.dp)
+            horizontalArrangement = if (showTitle) Arrangement.spacedBy(4.dp) else Arrangement.Center
         ) {
             // Favicon
             FaviconImage(
@@ -580,7 +587,7 @@ private fun TabPill(
             )
 
             // Title
-            Text(
+            if (showTitle) Text(
                 text = getTabDisplayTitle(tab, stringResource(R.string.tab_history_new_tab)),
                 style =
                     if (isSelected) {
@@ -686,8 +693,7 @@ private fun GroupPill(
     modifier: Modifier = Modifier
 ) {
     // Get expanded state from centralized group manager
-    val groupData = viewModel.getGroup(group.groupId)
-    val expanded = groupData?.let { !it.isCollapsed } ?: true
+    val expanded = group.isExpanded
     
     var menuTab by remember { mutableStateOf<TabSessionState?>(null) }
     var showTabMenu by remember { mutableStateOf(false) }
@@ -716,7 +722,6 @@ private fun GroupPill(
                 .clickable(
                     enabled = true,
                     onClick = {
-                        viewModel.toggleGroupExpanded(group.groupId)
                         onGroupClick?.invoke(group.groupId)
                     }
                 )

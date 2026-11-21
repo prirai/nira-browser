@@ -8,6 +8,9 @@ import com.prirai.android.nira.ext.components
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import org.json.JSONArray
 import org.json.JSONObject
@@ -43,9 +46,15 @@ class ProfileManager(private val context: Context) {
     // pattern created a new scope per call that was never cancelled).
     private val ioScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
+    private val _profilesVersion = MutableStateFlow(0)
+
+    /** Bumps whenever a profile is created, edited or deleted so UI can re-read profile styling. */
+    val profilesVersion: StateFlow<Int> = _profilesVersion.asStateFlow()
+
     companion object {
         private const val PREFS_NAME = "profile_manager"
         private const val KEY_PROFILES = "profiles"
+        private const val KEY_DEFAULT_STYLE = "default_profile_style"
         private const val KEY_ACTIVE_PROFILE_ID = "active_profile_id"
         private const val KEY_LAST_PRIVATE_PROFILE = "last_private_profile"
 
@@ -65,6 +74,7 @@ class ProfileManager(private val context: Context) {
         private const val F_ID = "id"
         private const val F_NAME = "name"
         private const val F_COLOR = "color"
+        private const val F_SECONDARY_COLOR = "secondaryColor"
         private const val F_EMOJI = "emoji"
         private const val F_IS_DEFAULT = "isDefault"
         private const val F_CREATED_AT = "createdAt"
@@ -73,6 +83,7 @@ class ProfileManager(private val context: Context) {
             put(F_ID, id)
             put(F_NAME, name)
             put(F_COLOR, color)
+            put(F_SECONDARY_COLOR, secondaryColor)
             put(F_EMOJI, emoji)
             put(F_IS_DEFAULT, isDefault)
             put(F_CREATED_AT, createdAt)
@@ -82,6 +93,7 @@ class ProfileManager(private val context: Context) {
             id = optString(F_ID, java.util.UUID.randomUUID().toString()),
             name = optString(F_NAME, ""),
             color = optInt(F_COLOR, 0),
+            secondaryColor = optInt(F_SECONDARY_COLOR, 0),
             emoji = optString(F_EMOJI, "\uD83D\uDC64"), // 👤
             isDefault = optBoolean(F_IS_DEFAULT, false),
             createdAt = optLong(F_CREATED_AT, System.currentTimeMillis()),
@@ -101,11 +113,27 @@ class ProfileManager(private val context: Context) {
         }
 
         // Always ensure default profile exists
-        val defaultProfile = BrowserProfile.getDefaultProfile()
+        val defaultProfile = getDefaultProfile()
         return if (profiles.none { it.id == defaultProfile.id }) {
             listOf(defaultProfile) + profiles
         } else {
             profiles
+        }
+    }
+
+    /** The built-in default profile with the user's saved colour / icon applied. */
+    fun getDefaultProfile(): BrowserProfile {
+        val base = BrowserProfile.getDefaultProfile()
+        val json = prefs.getString(KEY_DEFAULT_STYLE, null) ?: return base
+        return try {
+            val obj = JSONObject(json)
+            base.copy(
+                color = obj.optInt(F_COLOR, base.color),
+                secondaryColor = obj.optInt(F_SECONDARY_COLOR, 0),
+                emoji = obj.optString(F_EMOJI, base.emoji),
+            )
+        } catch (e: JSONException) {
+            base
         }
     }
 
@@ -134,7 +162,7 @@ class ProfileManager(private val context: Context) {
      */
     fun getActiveProfile(): BrowserProfile {
         val activeId = prefs.getString(KEY_ACTIVE_PROFILE_ID, "default")
-        return getAllProfiles().find { it.id == activeId } ?: BrowserProfile.getDefaultProfile()
+        return getAllProfiles().find { it.id == activeId } ?: getDefaultProfile()
     }
     
     /**
@@ -155,10 +183,11 @@ class ProfileManager(private val context: Context) {
     /**
      * Create a new profile
      */
-    fun createProfile(name: String, color: Int, emoji: String): BrowserProfile {
+    fun createProfile(name: String, color: Int, emoji: String, secondaryColor: Int = 0): BrowserProfile {
         val newProfile = BrowserProfile(
             name = name,
             color = color,
+            secondaryColor = secondaryColor,
             emoji = emoji,
             isDefault = false
         )
@@ -175,7 +204,14 @@ class ProfileManager(private val context: Context) {
      */
     fun updateProfile(profile: BrowserProfile) {
         if (profile.isDefault) {
-            // Can't modify default profile name/icon, only in-memory representation
+            // The default profile keeps its name; only its colours and icon persist.
+            val style = JSONObject().apply {
+                put(F_COLOR, profile.color)
+                put(F_SECONDARY_COLOR, profile.secondaryColor)
+                put(F_EMOJI, profile.emoji)
+            }
+            prefs.edit { putString(KEY_DEFAULT_STYLE, style.toString()) }
+            _profilesVersion.value++
             return
         }
         
@@ -184,6 +220,7 @@ class ProfileManager(private val context: Context) {
         if (index != -1) {
             profiles[index] = profile
             saveProfiles(profiles)
+            _profilesVersion.value++
         }
     }
     
@@ -201,7 +238,7 @@ class ProfileManager(private val context: Context) {
         
         // If deleted profile was active, switch to default
         if (getActiveProfile().id == profileId) {
-            setActiveProfile(BrowserProfile.getDefaultProfile())
+            setActiveProfile(getDefaultProfile())
         }
         
         // Clean up profile-specific storage

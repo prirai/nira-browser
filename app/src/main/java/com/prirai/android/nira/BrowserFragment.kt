@@ -279,7 +279,7 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
                             // the active profile, so it would otherwise keep
                             // showing the previous profile's tabs.
                             if (currentProfile.id != "default") {
-                                val defaultProfile = com.prirai.android.nira.browser.profile.BrowserProfile.getDefaultProfile()
+                                val defaultProfile = profileManager.getDefaultProfile()
                                 profileManager.setActiveProfile(defaultProfile)
                                 unifiedToolbar?.getTabGroupBar()?.updateProfileIcon(defaultProfile)
                             }
@@ -1220,12 +1220,12 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
                         val profileId = tabContextId.removePrefix("profile_")
                         val profile = profileManager.getAllProfiles().find { it.id == profileId }
                             ?: profileManager.getActiveProfile()
-                        com.prirai.android.nira.browser.home.compose.ProfileInfo(profile.id, profile.name, profile.emoji, false, profile.color)
+                        com.prirai.android.nira.browser.home.compose.ProfileInfo(profile.id, profile.name, profile.emoji, false, profile.color, profile.secondaryColor)
                     }
 
                     else -> {
                         val profile = profileManager.getActiveProfile()
-                        com.prirai.android.nira.browser.home.compose.ProfileInfo(profile.id, profile.name, profile.emoji, false, profile.color)
+                        com.prirai.android.nira.browser.home.compose.ProfileInfo(profile.id, profile.name, profile.emoji, false, profile.color, profile.secondaryColor)
                     }
                 }
             }

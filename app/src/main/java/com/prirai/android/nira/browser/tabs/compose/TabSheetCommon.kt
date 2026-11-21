@@ -1,5 +1,10 @@
 package com.prirai.android.nira.browser.tabs.compose
 
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.ui.draw.rotate
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -149,68 +154,50 @@ fun GroupHeaderRow(
     trailing: @Composable () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val chevronRotation by animateFloatAsState(if (isExpanded) 0f else -90f, label = "chevron")
     Surface(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 8.dp, vertical = 4.dp),
-        shape = RoundedCornerShape(12.dp),
-        // Neutral M3 container; the group color lives on the name, badge
-        // and expand icon - not on the container fill or a border.
+        shape = RoundedCornerShape(20.dp),
+        // Neutral container; the group color is only the small dot by the name.
         color = MaterialTheme.colorScheme.surfaceContainerHigh,
-        tonalElevation = 1.dp
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .clickable { onHeaderClick() }
-                .padding(16.dp),
+                .padding(start = 16.dp, end = 8.dp, top = 8.dp, bottom = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                modifier = Modifier.weight(1f)
-            ) {
-                // Expand/Collapse icon
-                Icon(
-                    imageVector = if (isExpanded) Icons.Default.KeyboardArrowDown else Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                    contentDescription = stringResource(if (isExpanded) R.string.collapse else R.string.expand),
-                    tint = Color(color),
-                    modifier = Modifier.size(24.dp)
-                )
-
-                // Group name
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleMediumEmphasized,
-                    color = Color(color),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f)
-                )
-
-                // Tab count badge
-                Surface(
-                    shape = CircleShape,
-                    color = Color(color).copy(alpha = 0.2f),
-                    border = BorderStroke(2.dp, Color(color))
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .padding(horizontal = 12.dp, vertical = 4.dp)
-                            .defaultMinSize(minWidth = 24.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = tabCount.toString(),
-                            style = MaterialTheme.typography.labelMediumEmphasized,
-                            color = Color(color)
-                        )
-                    }
-                }
-            }
-
+            Icon(
+                imageVector = Icons.Default.KeyboardArrowDown,
+                contentDescription = stringResource(if (isExpanded) R.string.collapse else R.string.expand),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(24.dp).rotate(chevronRotation),
+            )
+            Spacer(Modifier.width(8.dp))
+            Box(
+                modifier = Modifier
+                    .size(12.dp)
+                    .background(Color(color), CircleShape)
+            )
+            Spacer(Modifier.width(12.dp))
+            Text(
+                text = title.ifBlank { stringResource(R.string.group) },
+                style = MaterialTheme.typography.titleMediumEmphasized,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.widthIn(max = 200.dp),
+            )
+            Spacer(Modifier.width(8.dp))
+            Text(
+                text = tabCount.toString(),
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(Modifier.weight(1f))
             trailing()
         }
     }

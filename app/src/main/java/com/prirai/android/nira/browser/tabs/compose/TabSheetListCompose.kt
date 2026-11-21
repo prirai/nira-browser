@@ -553,12 +553,12 @@ private fun TabListItem(
     // container's accent strip, name and badge.
     val backgroundColor = when {
         isSelected -> MaterialTheme.colorScheme.primaryContainer
-        else -> MaterialTheme.colorScheme.surface
+        else -> MaterialTheme.colorScheme.surfaceContainerHigh
     }
 
     // Shape based on position in group
     val shape = when {
-        !effectiveIsInGroup -> RoundedCornerShape(12.dp)
+        !effectiveIsInGroup -> RoundedCornerShape(20.dp)
         effectiveIsLastInGroup -> RoundedCornerShape(bottomStart = 12.dp, bottomEnd = 12.dp)
         else -> RoundedCornerShape(0.dp)
     }
@@ -572,19 +572,11 @@ private fun TabListItem(
             ),
         shape = shape,
         color = backgroundColor,
-        tonalElevation = if (isSelected) 2.dp else 0.dp,
-        border = when {
-            // Group identity on a resting grouped row; the selected state
-            // speaks through its primaryContainer, never an accent stroke.
-            !isSelected && effectiveIsInGroup && groupColor != null ->
-                BorderStroke(1.dp, Color(groupColor).copy(alpha = 0.2f))
-            else -> null
-        }
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
+                .padding(start = 16.dp, top = 10.dp, bottom = 10.dp, end = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
@@ -636,13 +628,14 @@ private fun TabListItem(
                 }
             }
 
-            // Drag handle - drag is handled by draggableItem modifier on parent
-            Icon(
-                imageVector = Icons.Default.DragHandle,
-                contentDescription = stringResource(R.string.drag_to_reorder),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                modifier = Modifier.size(24.dp)
-            )
+            IconButton(onClick = onTabClose, modifier = Modifier.size(40.dp)) {
+                Icon(
+                    imageVector = Icons.Default.Close,
+                    contentDescription = stringResource(R.string.menu_close_tab),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(20.dp),
+                )
+            }
         }
     }
 }

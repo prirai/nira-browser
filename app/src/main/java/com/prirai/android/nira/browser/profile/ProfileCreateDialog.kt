@@ -6,7 +6,13 @@ import android.content.Context
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -28,25 +34,29 @@ import com.prirai.android.nira.ui.components.pressScale
 import com.prirai.android.nira.ui.components.mutedAdaptive
 import com.prirai.android.nira.browser.profile.ProfileIcons
 import com.prirai.android.nira.R
+import com.prirai.android.nira.theme.ColorConstants
 
 @Composable
 fun ProfileCreateDialog(
     onDismiss: () -> Unit,
-    onConfirm: (name: String, color: Int, emoji: String) -> Unit,
+    onConfirm: (name: String, color: Int, secondaryColor: Int, emoji: String) -> Unit,
     onImport: (() -> Unit)? = null
 ) {
     var profileName by remember { mutableStateOf("") }
-    var selectedColorIndex by remember { mutableIntStateOf(0) }
+    var primaryColor by remember { mutableIntStateOf(ColorConstants.Profiles.NEUTRAL_COLOR) }
+    var secondaryColor by remember { mutableIntStateOf(0) }
     var selectedEmojiIndex by remember { mutableIntStateOf(0) }
     
-    val colors = BrowserProfile.PROFILE_COLORS
     val emojis = BrowserProfile.PROFILE_EMOJIS
     
     NiraAlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.create_profile)) },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
                 OutlinedTextField(
                     value = profileName,
                     onValueChange = { profileName = it },
@@ -61,27 +71,14 @@ fun ProfileCreateDialog(
                     style = MaterialTheme.typography.titleSmallEmphasized
                 )
 
-                LazyVerticalGrid(
-                    columns = GridCells.Fixed(4),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(max = 250.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                    contentPadding = PaddingValues(4.dp)
-                ) {
-                    items(emojis.size) { index ->
-                        CombinedEmojiColorOption(
-                            emoji = emojis[index],
-                            color = Color(colors[index % colors.size]),
-                            selected = selectedEmojiIndex == index,
-                            onClick = {
-                                selectedEmojiIndex = index
-                                selectedColorIndex = index % colors.size
-                            }
-                        )
-                    }
-                }
+                ProfileStylePicker(
+                    selectedEmojiIndex = selectedEmojiIndex,
+                    primaryColor = primaryColor,
+                    secondaryColor = secondaryColor,
+                    onEmojiSelected = { selectedEmojiIndex = it },
+                    onPrimaryChange = { primaryColor = it },
+                    onSecondaryChange = { secondaryColor = it }
+                )
 
                 if (onImport != null) {
                     TextButton(onClick = onImport, modifier = Modifier.fillMaxWidth()) {
@@ -96,7 +93,8 @@ fun ProfileCreateDialog(
                     if (profileName.isNotBlank()) {
                         onConfirm(
                             profileName.trim(),
-                            colors[selectedColorIndex],
+                            primaryColor,
+                            secondaryColor,
                             emojis[selectedEmojiIndex]
                         )
                     }
@@ -114,12 +112,59 @@ fun ProfileCreateDialog(
     )
 }
 
+/** Icon grid (neutral tint) followed by the dual-colour picker; the primary colour tints the selected icon. */
+@Composable
+private fun ProfileStylePicker(
+    selectedEmojiIndex: Int,
+    primaryColor: Int,
+    secondaryColor: Int,
+    onEmojiSelected: (Int) -> Unit,
+    onPrimaryChange: (Int) -> Unit,
+    onSecondaryChange: (Int) -> Unit
+) {
+    val emojis = BrowserProfile.PROFILE_EMOJIS
+    val selectedTint = Color(primaryColor).mutedAdaptive()
+
+    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(4),
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(max = 250.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+            contentPadding = PaddingValues(4.dp)
+        ) {
+            items(emojis.size) { index ->
+                ProfileIconOption(
+                    emoji = emojis[index],
+                    selected = selectedEmojiIndex == index,
+                    selectedTint = selectedTint,
+                    onClick = { onEmojiSelected(index) }
+                )
+            }
+        }
+
+        Text(
+            text = stringResource(R.string.profile_color),
+            style = MaterialTheme.typography.titleSmallEmphasized
+        )
+
+        ProfileColorPicker(
+            primary = primaryColor,
+            secondary = secondaryColor,
+            onPrimaryChange = onPrimaryChange,
+            onSecondaryChange = onSecondaryChange
+        )
+    }
+}
+
 @OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-fun CombinedEmojiColorOption(
+private fun ProfileIconOption(
     emoji: String,
-    color: Color,
     selected: Boolean,
+    selectedTint: Color,
     onClick: () -> Unit
 ) {
     val interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
@@ -128,16 +173,8 @@ fun CombinedEmojiColorOption(
             .pressScale(interactionSource)
             .size(64.dp)
             .clip(RoundedCornerShape(16.dp))
-            // One selection language, the same as focused tab pills: the
-            // selected option is the primaryContainer, resting options are
-            // fully transparent - no tinted fill, no accent stroke. The
-            // icon's muted color carries the palette identity.
             .background(
-                if (selected) {
-                    MaterialTheme.colorScheme.primaryContainer
-                } else {
-                    Color.Transparent
-                }
+                if (selected) MaterialTheme.colorScheme.surfaceContainerHighest else Color.Transparent
             )
             .combinedClickable(
                 onClick = onClick,
@@ -145,13 +182,10 @@ fun CombinedEmojiColorOption(
             ),
         contentAlignment = Alignment.Center
     ) {
-        // Icon avatar, not emoji - the stored key maps through ProfileIcons.
-        // The tint is the muted, theme-adaptive variant of the palette
-        // color, never the raw saturated accent.
         Icon(
             imageVector = ProfileIcons.iconFor(emoji),
             contentDescription = null,
-            tint = color.mutedAdaptive(),
+            tint = if (selected) selectedTint else MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.size(32.dp)
         )
     }
@@ -161,26 +195,27 @@ fun CombinedEmojiColorOption(
 fun ProfileEditDialog(
     profile: BrowserProfile,
     onDismiss: () -> Unit,
-    onConfirm: (name: String, color: Int, emoji: String) -> Unit,
+    onConfirm: (name: String, color: Int, secondaryColor: Int, emoji: String) -> Unit,
     onDelete: () -> Unit,
     onExport: (() -> Unit)? = null
 ) {
     var profileName by remember { mutableStateOf(profile.name) }
-    var selectedColorIndex by remember { 
-        mutableIntStateOf(BrowserProfile.PROFILE_COLORS.indexOf(profile.color).coerceAtLeast(0))
-    }
+    var primaryColor by remember { mutableIntStateOf(profile.color) }
+    var secondaryColor by remember { mutableIntStateOf(profile.secondaryColor) }
     var selectedEmojiIndex by remember { 
         mutableIntStateOf(BrowserProfile.PROFILE_EMOJIS.indexOf(profile.emoji).coerceAtLeast(0))
     }
     
-    val colors = BrowserProfile.PROFILE_COLORS
     val emojis = BrowserProfile.PROFILE_EMOJIS
     
     NiraAlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.edit_profile)) },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
                 OutlinedTextField(
                     value = profileName,
                     onValueChange = { profileName = it },
@@ -195,27 +230,14 @@ fun ProfileEditDialog(
                     style = MaterialTheme.typography.titleSmallEmphasized
                 )
 
-                LazyVerticalGrid(
-                    columns = GridCells.Fixed(4),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(max = 250.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                    contentPadding = PaddingValues(4.dp)
-                ) {
-                    items(emojis.size) { index ->
-                        CombinedEmojiColorOption(
-                            emoji = emojis[index],
-                            color = Color(colors[index % colors.size]),
-                            selected = selectedEmojiIndex == index,
-                            onClick = {
-                                selectedEmojiIndex = index
-                                selectedColorIndex = index % colors.size
-                            }
-                        )
-                    }
-                }
+                ProfileStylePicker(
+                    selectedEmojiIndex = selectedEmojiIndex,
+                    primaryColor = primaryColor,
+                    secondaryColor = secondaryColor,
+                    onEmojiSelected = { selectedEmojiIndex = it },
+                    onPrimaryChange = { primaryColor = it },
+                    onSecondaryChange = { secondaryColor = it }
+                )
 
                 if (onExport != null) {
                     OutlinedButton(
@@ -251,7 +273,8 @@ fun ProfileEditDialog(
                     if (profileName.isNotBlank()) {
                         onConfirm(
                             profileName.trim(),
-                            colors[selectedColorIndex],
+                            primaryColor,
+                            secondaryColor,
                             emojis[selectedEmojiIndex]
                         )
                     }

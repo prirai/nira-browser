@@ -191,6 +191,13 @@
         <item name="cornerSize">20dp</item>
     </style>
 
+    <style name="AppThemeAddonWindow" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:backgroundDimEnabled">true</item>
+        <item name="android:windowNoTitle">true</item>
+    </style>
+
     <style name="AppThemeSettings" parent="AppThemeAddons">
         <item
             name="preferenceTheme"

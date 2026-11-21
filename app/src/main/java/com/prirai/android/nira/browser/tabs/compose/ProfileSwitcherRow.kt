@@ -2,7 +2,16 @@
 
 package com.prirai.android.nira.browser.tabs.compose
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.expandHorizontally
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkHorizontally
+import androidx.compose.foundation.layout.height
+import androidx.compose.ui.graphics.luminance
+import com.prirai.android.nira.browser.profile.profileIconTint
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
@@ -40,7 +49,6 @@ import androidx.compose.ui.unit.dp
 import com.prirai.android.nira.R
 import com.prirai.android.nira.browser.profile.BrowserProfile
 import com.prirai.android.nira.browser.profile.ProfileIcons
-import com.prirai.android.nira.ui.components.mutedAdaptive
 import com.prirai.android.nira.ui.components.pressScale
 
 /**
@@ -82,10 +90,8 @@ fun ProfileSwitcherRow(
             profiles.forEach { profile ->
                 ProfilePill(
                     icon = ProfileIcons.iconFor(profile.emoji),
-                    // The muted, theme-adaptive variant of the profile's
-                    // identity color - the same tint the create/edit
-                    // dialog's icon grid renders.
-                    iconTint = Color(profile.color).mutedAdaptive(),
+                    iconTint = Color(profile.color),
+                    background = profile.secondaryColor.takeIf { it != 0 }?.let { Color(it) },
                     label = profile.name,
                     active = !isPrivateMode && profile.id == currentProfileId,
                     onClick = { onProfileClick(profile) },
@@ -95,11 +101,8 @@ fun ProfileSwitcherRow(
 
             ProfilePill(
                 icon = Icons.Filled.Shield,
-                // Private mode's muted purple identity, the same adaptive
-                // treatment as the profile colors.
-                iconTint = Color(
-                    com.prirai.android.nira.theme.ColorConstants.PrivateMode.PURPLE
-                ).mutedAdaptive(),
+                iconTint = Color(com.prirai.android.nira.theme.ColorConstants.PrivateMode.PURPLE),
+                background = null,
                 label = stringResource(R.string.private_mode_short),
                 active = isPrivateMode,
                 onClick = onPrivateClick,
@@ -112,31 +115,30 @@ fun ProfileSwitcherRow(
 }
 
 /**
- * One profile pill: icon avatar (muted identity tint) in a tonal circle +
- * name. The active state is the `primaryContainer` container and the
- * emphasized label - no accent stroke anywhere, and the avatar circle
- * stays tonal in both states.
+ * One profile pill, styled like the homepage profile pill: the secondary colour is the pill
+ * background and the primary colour tints the icon. Resting pills are just the icon in a
+ * circle; the focused pill expands to reveal the profile name.
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun ProfilePill(
     icon: ImageVector,
     iconTint: Color,
+    background: Color?,
     label: String,
     active: Boolean,
     onClick: () -> Unit,
     onLongClick: (() -> Unit)?,
 ) {
     val interactionSource = remember { MutableInteractionSource() }
+    val fallback = MaterialTheme.colorScheme.surfaceContainerHighest
     val container by animateColorAsState(
-        targetValue = if (active) {
-            MaterialTheme.colorScheme.primaryContainer
-        } else {
-            MaterialTheme.colorScheme.surfaceContainerHighest
-        },
-        animationSpec = MaterialTheme.motionScheme.fastSpatialSpec(),
+        targetValue = background ?: fallback,
+        animationSpec = MaterialTheme.motionScheme.fastEffectsSpec(),
         label = "profilePillContainer",
     )
+    val tint = profileIconTint(iconTint, container)
+    val textColor = com.prirai.android.nira.browser.profile.profileLabelColor(container)
 
     Surface(
         shape = RoundedCornerShape(percent = 50),
@@ -150,48 +152,33 @@ private fun ProfilePill(
                     onLongClick = onLongClick,
                     interactionSource = interactionSource,
                 )
-                .padding(horizontal = 8.dp, vertical = 6.dp),
+                .height(44.dp)
+                .padding(horizontal = 11.dp)
+                .animateContentSize(MaterialTheme.motionScheme.defaultSpatialSpec()),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            // Icon avatar in a tonal circle. The icon wears the muted,
-            // theme-adaptive variant of the identity color - the same
-            // treatment the create/edit dialog's icon grid uses - in both
-            // states; the pill's container and emphasized label speak for
-            // the active state.
-            Box(
-                modifier = Modifier
-                    .size(32.dp)
-                    .background(
-                        color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                        shape = CircleShape,
-                    ),
-                contentAlignment = Alignment.Center,
+            Icon(
+                imageVector = icon,
+                contentDescription = if (active) null else label,
+                tint = tint,
+                modifier = Modifier.size(22.dp),
+            )
+            AnimatedVisibility(
+                visible = active,
+                enter = expandHorizontally(MaterialTheme.motionScheme.defaultSpatialSpec()) +
+                    fadeIn(MaterialTheme.motionScheme.defaultEffectsSpec()),
+                exit = shrinkHorizontally(MaterialTheme.motionScheme.fastSpatialSpec()) +
+                    fadeOut(MaterialTheme.motionScheme.fastEffectsSpec()),
             ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    tint = iconTint,
-                    modifier = Modifier.size(18.dp),
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.labelLargeEmphasized,
+                    color = textColor,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.padding(start = 8.dp, end = 5.dp),
                 )
             }
-
-            Text(
-                text = label,
-                style =
-                    if (active) {
-                        MaterialTheme.typography.labelLargeEmphasized
-                    } else {
-                        MaterialTheme.typography.labelLarge
-                    },
-                color = if (active) {
-                    MaterialTheme.colorScheme.onPrimaryContainer
-                } else {
-                    MaterialTheme.colorScheme.onSurfaceVariant
-                },
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
         }
     }
 }

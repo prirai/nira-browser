@@ -2,4 +2,6 @@
 <paths xmlns:android="http://schemas.android.com/apk/res/android">
     <!-- Used by ProfileExportManager to share exported profile ZIPs -->
     <cache-path name="profile_exports" path="." />
+    <!-- Used by the downloads window to share files saved in the public Downloads folder -->
+    <external-path name="downloads" path="Download/" />
 </paths>

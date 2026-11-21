@@ -2,6 +2,7 @@
 
 package com.prirai.android.nira.webapp
 
+import com.prirai.android.nira.ui.components.removeAndDispose
 import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
@@ -116,7 +117,7 @@ class WebAppInstallDialog(
     }
 
     fun dismiss() {
-        composeHost?.let { host -> (host.parent as? ViewGroup)?.removeView(host) }
+        composeHost?.removeAndDispose()
         composeHost = null
     }
 }

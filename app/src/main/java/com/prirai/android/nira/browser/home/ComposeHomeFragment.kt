@@ -143,7 +143,9 @@ class ComposeHomeFragment : Fragment() {
 
                 val profileManager =
                     com.prirai.android.nira.browser.profile.ProfileManager.getInstance(requireContext())
-                val currentProfile = run {
+                // Re-read profile styling when a profile is edited while the homepage is showing.
+                val profilesVersion by profileManager.profilesVersion.collectAsState()
+                val currentProfile = androidx.compose.runtime.remember(selectedTab?.contextId, isPrivateMode, profilesVersion) {
                     val tabContextId = selectedTab?.contextId
                     when {
                         tabContextId == "private" || isPrivateMode -> {
@@ -154,12 +156,12 @@ class ComposeHomeFragment : Fragment() {
                             val profileId = tabContextId.removePrefix("profile_")
                             val profile = profileManager.getAllProfiles().find { it.id == profileId }
                                 ?: profileManager.getActiveProfile()
-                            ProfileInfo(profile.id, profile.name, profile.emoji, false, profile.color)
+                            ProfileInfo(profile.id, profile.name, profile.emoji, false, profile.color, profile.secondaryColor)
                         }
 
                         else -> {
                             val profile = profileManager.getActiveProfile()
-                            ProfileInfo(profile.id, profile.name, profile.emoji, false, profile.color)
+                            ProfileInfo(profile.id, profile.name, profile.emoji, false, profile.color, profile.secondaryColor)
                         }
                     }
                 }

@@ -72,22 +72,15 @@ fun TabGridCard(
                     scaleX = scale.value
                     scaleY = scale.value
                 },
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(16.dp),
         color = when {
             // One selection language: the focused card is always the
             // primaryContainer, grouped or not; the group color speaks
-            // through the container's accent strip and badge.
+            // through the group header's dot.
             isSelected -> MaterialTheme.colorScheme.primaryContainer
-            groupColor != null -> Color(groupColor).copy(alpha = 0.05f)
             else -> MaterialTheme.colorScheme.surfaceContainerHighest
         },
         tonalElevation = if (isSelected) 4.dp else 1.dp,
-        border = when {
-            // Group identity on a resting grouped card; the selected state
-            // speaks through its primaryContainer, never an accent stroke.
-            !isSelected && groupColor != null -> BorderStroke(1.dp, Color(groupColor).copy(alpha = 0.3f))
-            else -> null
-        }
     ) {
         Box(
             modifier = Modifier
