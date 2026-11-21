@@ -1,6 +1,7 @@
 package com.prirai.android.nira.browser.tabs.compose
 
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -93,10 +94,17 @@ fun SwipeableTabPill(
     // (e.g. after a neighbouring pill is closed).
     val offsetY = remember(tab.id) { Animatable(0f) }
 
+    // Only the focused tab shows its title; resting tabs collapse to their favicon.
+    val pillWidth by animateDpAsState(
+        targetValue = if (isSelected) 100.dp else 36.dp,
+        animationSpec = MaterialTheme.motionScheme.defaultSpatialSpec(),
+        label = "tabPillWidth",
+    )
+
     Box(
         modifier = modifier
             .height(32.dp)
-            .width(100.dp)
+            .width(pillWidth)
     ) {
         // Background indicator based on swipe direction
         if (abs(offsetY.value) > 5f) {
@@ -208,7 +216,7 @@ fun SwipeableTabPill(
                     .clickable(onClick = onTabClick)
                     .padding(horizontal = 8.dp, vertical = 4.dp),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                horizontalArrangement = if (isSelected) Arrangement.spacedBy(4.dp) else Arrangement.Center
             ) {
                 // Favicon
                 FaviconImage(
@@ -217,7 +225,7 @@ fun SwipeableTabPill(
                 )
 
                 // Title
-                Text(
+                if (isSelected) Text(
                     text = getTabDisplayTitle(tab, stringResource(R.string.tab_history_new_tab)),
                     style =
                         if (isSelected) {

@@ -21,7 +21,6 @@ import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.ui.AppBarConfiguration
 import androidx.navigation.ui.NavigationUI
 import com.prirai.android.nira.addons.WebExtensionPopupFragment
-import com.prirai.android.nira.addons.WebExtensionTabletPopupFragment
 import com.prirai.android.nira.browser.BrowsingMode
 import com.prirai.android.nira.browser.BrowsingModeManager
 import com.prirai.android.nira.browser.DefaultBrowsingModeManager
@@ -34,7 +33,6 @@ import com.prirai.android.nira.ext.enableEdgeToEdgeMode
 import com.prirai.android.nira.ext.nav
 import com.prirai.android.nira.preferences.UserPreferences
 import com.prirai.android.nira.search.SearchDialogFragmentDirections
-import com.prirai.android.nira.utils.Utils
 import kotlinx.coroutines.launch
 import mozilla.components.browser.state.action.AppLifecycleAction
 import mozilla.components.browser.state.search.SearchEngine
@@ -584,9 +582,7 @@ open class BrowserActivity : LocaleAwareAppCompatActivity(), ComponentCallbacks2
 
     private fun openPopup(webExtensionState: WebExtensionState) {
         val fm: FragmentManager = supportFragmentManager
-        val editNameDialogFragment =
-            if (Utils.isTablet(this)) WebExtensionTabletPopupFragment()
-            else WebExtensionPopupFragment()
+        val editNameDialogFragment = WebExtensionPopupFragment()
 
         val bundle = Bundle()
         bundle.putString("web_extension_id", webExtensionState.id)

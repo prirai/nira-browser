@@ -374,10 +374,10 @@ class TabsBottomSheetFragment : DialogFragment() {
                     onDismiss = {
                         composeView.removeAndDispose()
                     },
-                    onConfirm = { name, color, emoji ->
+                    onConfirm = { name, color, secondaryColor, emoji ->
                         val profileManager =
                             com.prirai.android.nira.browser.profile.ProfileManager.getInstance(requireContext())
-                        val newProfile = profileManager.createProfile(name, color, emoji)
+                        val newProfile = profileManager.createProfile(name, color, emoji, secondaryColor)
 
                         profileStateTrigger.value++
 
@@ -422,10 +422,10 @@ class TabsBottomSheetFragment : DialogFragment() {
                     onDismiss = {
                         composeView.removeAndDispose()
                     },
-                    onConfirm = { name, color, emoji ->
+                    onConfirm = { name, color, secondaryColor, emoji ->
                         val profileManager =
                             com.prirai.android.nira.browser.profile.ProfileManager.getInstance(requireContext())
-                        val updatedProfile = profile.copy(name = name, color = color, emoji = emoji)
+                        val updatedProfile = profile.copy(name = name, color = color, secondaryColor = secondaryColor, emoji = emoji)
                         profileManager.updateProfile(updatedProfile)
 
                         if (profile.id == browsingModeManager.currentProfile.id) {
@@ -442,7 +442,7 @@ class TabsBottomSheetFragment : DialogFragment() {
 
                         if (profile.id == browsingModeManager.currentProfile.id) {
                             browsingModeManager.currentProfile =
-                                com.prirai.android.nira.browser.profile.BrowserProfile.getDefaultProfile()
+                                profileManager.getDefaultProfile()
                         }
 
                         profileManager.deleteProfile(profile.id)
@@ -540,6 +540,8 @@ class TabsBottomSheetFragment : DialogFragment() {
         val viewModel = remember {
             TabViewModel(requireContext(), unifiedGroupManager).also {
                 tabViewModel = it
+                // Switches profile/mode, selects the moved tab and closes the sheet
+                it.onTabsMoved = { newTabId -> handleTabClickCompose(newTabId) }
             }
         }
 

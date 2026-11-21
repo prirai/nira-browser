@@ -85,6 +85,7 @@ class ProfileExportManager private constructor(private val context: Context) {
             put("id", profile.id)
             put("name", profile.name)
             put("color", profile.color)
+            put("secondaryColor", profile.secondaryColor)
             put("emoji", profile.emoji)
             put("isDefault", profile.isDefault)
             put("createdAt", profile.createdAt)
@@ -168,6 +169,7 @@ class ProfileExportManager private constructor(private val context: Context) {
         val profileObj = JSONObject(profileJson)
         val profileName = profileObj.optString("name", "Imported Profile")
         val color = profileObj.optInt("color", BrowserProfile.PROFILE_COLORS.first())
+        val secondaryColor = profileObj.optInt("secondaryColor", 0)
         val emoji = profileObj.optString("emoji", "👤")
 
         // Avoid duplicate names
@@ -175,7 +177,7 @@ class ProfileExportManager private constructor(private val context: Context) {
         val existingNames = profileManager.getAllProfiles().map { it.name }
         val finalName = if (profileName in existingNames) "$profileName (imported)" else profileName
 
-        val importedProfile = profileManager.createProfile(finalName, color, emoji)
+        val importedProfile = profileManager.createProfile(finalName, color, emoji, secondaryColor)
 
         // Import tab groups (metadata only; tab session IDs are not restorable)
         val tabGroupsJson = entries["tabgroups.json"]

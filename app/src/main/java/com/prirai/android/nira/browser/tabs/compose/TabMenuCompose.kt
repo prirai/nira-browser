@@ -13,6 +13,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -24,6 +25,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.prirai.android.nira.R
+import com.prirai.android.nira.ui.components.NiraCardRow
 import com.prirai.android.nira.ui.components.rememberNiraSheetState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
@@ -38,7 +40,7 @@ import mozilla.components.browser.state.state.TabSessionState
  * - GroupContextMenu: Menu for group containers
  * - UnifiedTabMenu: Smart entry point that shows appropriate menu based on context
  * - Reusable dialogs: RenameGroupDialog, ColorPickerDialog, ProfilePickerDialog
- * - Helper components: TabMenuHeader, TabMenuItem
+ * - Helper components: TabMenuHeader, MenuCardGroup
  *
  * Usage:
  * - For tabs: Call TabContextMenu with isInGroup parameter
@@ -149,6 +151,22 @@ fun TabContextMenu(
     scope: CoroutineScope,
     modifier: Modifier = Modifier
 ) {
+    var showProfilePicker by remember { mutableStateOf(false) }
+
+    if (showProfilePicker) {
+        ProfilePickerDialog(
+            currentContextId = tab.contextId,
+            onConfirm = { profileId ->
+                viewModel.moveTabToProfile(tab.id, profileId)
+            },
+            onDismiss = {
+                showProfilePicker = false
+                onDismiss()
+            }
+        )
+        return
+    }
+
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = rememberNiraSheetState(),
@@ -160,51 +178,42 @@ fun TabContextMenu(
                 .padding(bottom = 16.dp)
         ) {
             TabMenuHeader(tab)
-            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
-            TabMenuItem(
-                icon = { Icon(painterResource(R.drawable.control_point_duplicate_24px), null) },
-                text = stringResource(R.string.duplicate_tab),
-                onClick = {
-                    scope.launch {
-                        viewModel.duplicateTab(tab.id)
-                        onDismiss()
-                    }
-                }
-            )
-
-            if (isInGroup) {
-                HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-
-                TabMenuItem(
-                    icon = { Icon(painterResource(R.drawable.ungroup_24px), null) },
-                    text = stringResource(R.string.remove_from_island),
-                    onClick = {
-                        scope.launch {
-                            viewModel.removeTabFromGroup(tab.id)
-                            onDismiss()
-                        }
-                    }
-                )
-            }
-
-            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-
-            TabMenuItem(
-                icon = {
-                    Icon(
-                        painterResource(R.drawable.ic_close_small),
-                        null,
-                        modifier = Modifier.size(32.dp)
+            MenuCardGroup(
+                buildList {
+                    add(
+                        MenuEntry(
+                            icon = { MenuIcon(painterResource(R.drawable.control_point_duplicate_24px)) },
+                            text = stringResource(R.string.duplicate_tab),
+                            onClick = {
+                                scope.launch {
+                                    viewModel.duplicateTab(tab.id)
+                                    onDismiss()
+                                }
+                            }
+                        )
                     )
-                },
-                text = stringResource(R.string.menu_close_tab),
-                contentColor = MaterialTheme.colorScheme.error,
-                onClick = {
-                    scope.launch {
-                        viewModel.closeTab(tab.id)
-                        onDismiss()
+                    if (isInGroup) {
+                        add(
+                            MenuEntry(
+                                icon = { MenuIcon(painterResource(R.drawable.ungroup_24px)) },
+                                text = stringResource(R.string.remove_from_island),
+                                onClick = {
+                                    scope.launch {
+                                        viewModel.removeTabFromGroup(tab.id)
+                                        onDismiss()
+                                    }
+                                }
+                            )
+                        )
                     }
+                    add(
+                        MenuEntry(
+                            icon = { MenuIcon(painterResource(R.drawable.ic_profile)) },
+                            text = stringResource(R.string.move_to_different_profile),
+                            onClick = { showProfilePicker = true }
+                        )
+                    )
                 }
             )
         }
@@ -253,6 +262,20 @@ fun GroupContextMenu(
     val currentGroup = groups.find { it.id == groupId }
     val groupAccentColor = currentGroup?.color?.let { Color(it) } ?: MaterialTheme.colorScheme.primary
 
+    if (showProfilePicker) {
+        ProfilePickerDialog(
+            currentContextId = currentGroup?.contextId,
+            onConfirm = { profileId ->
+                viewModel.moveGroupToProfile(groupId, profileId)
+            },
+            onDismiss = {
+                showProfilePicker = false
+                onDismiss()
+            }
+        )
+        return
+    }
+
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = rememberNiraSheetState(),
@@ -266,141 +289,109 @@ fun GroupContextMenu(
             // Inline rename field at the top
             var editedName by remember { mutableStateOf(groupName) }
 
+            val canSave = editedName.isNotBlank() && editedName != groupName
+            val saveName = {
+                if (canSave) {
+                    scope.launch {
+                        viewModel.renameGroup(groupId, editedName)
+                        onDismiss()
+                    }
+                }
+            }
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(16.dp),
+                    .padding(start = 24.dp, end = 16.dp, top = 8.dp, bottom = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
+                Box(
+                    modifier = Modifier
+                        .size(32.dp)
+                        .clip(CircleShape)
+                        .clickable(onClickLabel = stringResource(R.string.change_color)) {
+                            showColorPicker = true
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(20.dp)
+                            .background(groupAccentColor, CircleShape)
+                    )
+                }
                 TextField(
                     value = editedName,
                     onValueChange = { editedName = it },
                     modifier = Modifier.weight(1f),
                     singleLine = true,
+                    placeholder = { Text(stringResource(R.string.group)) },
                     textStyle = MaterialTheme.typography.titleMedium,
+                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                        imeAction = androidx.compose.ui.text.input.ImeAction.Done
+                    ),
+                    keyboardActions = androidx.compose.foundation.text.KeyboardActions(onDone = { saveName() }),
                     colors = TextFieldDefaults.colors(
-                        focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                        disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                        focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                        focusedIndicatorColor = Color.Transparent,
+                        unfocusedIndicatorColor = Color.Transparent,
                     ),
-                    shape = RoundedCornerShape(
-                        topStart = 12.dp,
-                        bottomStart = 12.dp,
-                        topEnd = 0.dp,
-                        bottomEnd = 0.dp
-                    )
+                    shape = RoundedCornerShape(16.dp)
                 )
-
-                // Accept button (rounded right end)
-                Surface(
-                    modifier = Modifier.size(56.dp),
-                    shape = RoundedCornerShape(
-                        topStart = 0.dp,
-                        bottomStart = 0.dp,
-                        topEnd = 12.dp,
-                        bottomEnd = 12.dp
-                    ),
-                    color = if (editedName.isNotBlank() && editedName != groupName) {
-                        MaterialTheme.colorScheme.primary
-                    } else {
-                        MaterialTheme.colorScheme.surfaceVariant
-                    },
-                    onClick = {
-                        if (editedName.isNotBlank() && editedName != groupName) {
-                            scope.launch {
-                                viewModel.renameGroup(groupId, editedName)
-                                onDismiss()
-                            }
-                        }
-                    }
+                FilledIconButton(
+                    onClick = { saveName() },
+                    enabled = canSave,
+                    modifier = Modifier.size(48.dp),
                 ) {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Check,
-                            contentDescription = stringResource(R.string.confirm_rename),
-                            tint = if (editedName.isNotBlank() && editedName != groupName) {
-                                MaterialTheme.colorScheme.onPrimary
-                            } else {
-                                MaterialTheme.colorScheme.onSurfaceVariant
-                            }
-                        )
-                    }
+                    Icon(Icons.Default.Check, contentDescription = stringResource(R.string.confirm_rename))
                 }
             }
 
-            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-
-            TabMenuItem(
-                icon = {
-                    Icon(
-                        painterResource(R.drawable.ic_palette),
-                        null,
-                        tint = groupAccentColor
-                    )
-                },
-                text = stringResource(R.string.change_color),
-                onClick = {
-                    showColorPicker = true
-                }
+            MenuCardGroup(
+                listOf(
+                    MenuEntry(
+                        icon = { MenuIcon(painterResource(R.drawable.ic_pin_outline)) },
+                        text = stringResource(R.string.pin_island),
+                        onClick = {
+                            scope.launch {
+                                viewModel.pinGroup(groupId)
+                                onDismiss()
+                            }
+                        }
+                    ),
+                    MenuEntry(
+                        icon = { MenuIcon(painterResource(R.drawable.ic_profile)) },
+                        text = stringResource(R.string.move_to_different_profile),
+                        onClick = { showProfilePicker = true }
+                    ),
+                )
             )
-
-            TabMenuItem(
-                icon = { Icon(painterResource(R.drawable.ic_expand_more), null) },
-                text = stringResource(R.string.collapse_expand),
-                onClick = {
-                    scope.launch {
-                        viewModel.toggleGroupExpanded(groupId)
-                        onDismiss()
-                    }
-                }
-            )
-
-            TabMenuItem(
-                icon = { Icon(painterResource(R.drawable.ic_pin_outline), null) },
-                text = stringResource(R.string.pin_island),
-                onClick = {
-                    scope.launch {
-                        viewModel.pinGroup(groupId)
-                        onDismiss()
-                    }
-                }
-            )
-
-            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-
-            TabMenuItem(
-                icon = { Icon(painterResource(R.drawable.ungroup_24px), null) },
-                text = stringResource(R.string.ungroup_all_tabs),
-                onClick = {
-                    scope.launch {
-                        viewModel.ungroupAllTabs(groupId)
-                        onDismiss()
-                    }
-                }
-            )
-
-            TabMenuItem(
-                icon = { Icon(painterResource(R.drawable.ic_close_small), null) },
-                text = stringResource(R.string.close_all_tabs),
-                contentColor = MaterialTheme.colorScheme.error,
-                onClick = {
-                    scope.launch {
-                        viewModel.closeAllTabsInGroup(groupId)
-                        onDismiss()
-                    }
-                }
-            )
-
-            TabMenuItem(
-                icon = { Icon(painterResource(R.drawable.ic_profile), null) },
-                text = stringResource(R.string.move_to_profile),
-                onClick = {
-                    showProfilePicker = true
-                }
+            Spacer(Modifier.height(12.dp))
+            MenuCardGroup(
+                listOf(
+                    MenuEntry(
+                        icon = { MenuIcon(painterResource(R.drawable.ungroup_24px)) },
+                        text = stringResource(R.string.ungroup_all_tabs),
+                        onClick = {
+                            scope.launch {
+                                viewModel.ungroupAllTabs(groupId)
+                                onDismiss()
+                            }
+                        }
+                    ),
+                    MenuEntry(
+                        icon = { MenuIcon(Icons.Default.Close, MaterialTheme.colorScheme.error) },
+                        text = stringResource(R.string.close_all_tabs),
+                        destructive = true,
+                        onClick = {
+                            scope.launch {
+                                viewModel.closeAllTabsInGroup(groupId)
+                                onDismiss()
+                            }
+                        }
+                    ),
+                )
             )
         }
     }
@@ -435,22 +426,6 @@ fun GroupContextMenu(
             },
             onDismiss = {
                 showColorPicker = false
-                onDismiss()
-            }
-        )
-    }
-
-    if (showProfilePicker) {
-        ProfilePickerDialog(
-            onConfirm = { profileId ->
-                scope.launch {
-                    viewModel.moveGroupToProfile(groupId, profileId)
-                    showProfilePicker = false
-                    onDismiss()
-                }
-            },
-            onDismiss = {
-                showProfilePicker = false
                 onDismiss()
             }
         )
@@ -496,34 +471,49 @@ private fun TabMenuHeader(tab: TabSessionState) {
     }
 }
 
+/** One action in a menu card. */
+internal data class MenuEntry(
+    val icon: @Composable () -> Unit,
+    val text: String,
+    val onClick: () -> Unit,
+    val destructive: Boolean = false,
+)
+
+@Composable
+internal fun MenuIcon(
+    painter: androidx.compose.ui.graphics.painter.Painter,
+    tint: Color = MaterialTheme.colorScheme.onSurfaceVariant,
+) {
+    Icon(painter, null, tint = tint, modifier = Modifier.size(24.dp))
+}
+
+@Composable
+internal fun MenuIcon(
+    imageVector: androidx.compose.ui.graphics.vector.ImageVector,
+    tint: Color = MaterialTheme.colorScheme.onSurfaceVariant,
+) {
+    Icon(imageVector, null, tint = tint, modifier = Modifier.size(24.dp))
+}
+
 /**
- * Reusable menu item component using Material3 ListItem for consistent styling.
- * Supports optional content color override for destructive actions.
+ * Entries stacked in one rounded card with dividers, the same list idiom the
+ * Downloads, History and Bookmarks windows use ([NiraCardRow]).
  */
 @Composable
-private fun TabMenuItem(
-    icon: @Composable () -> Unit,
-    text: String,
-    onClick: () -> Unit,
-    contentColor: Color = Color.Unspecified,
-    modifier: Modifier = Modifier
-) {
-    ListItem(
-        headlineContent = {
-            Text(
-                text = text,
-                color = contentColor
-            )
-        },
-        leadingContent = {
-            CompositionLocalProvider(
-                LocalContentColor provides if (contentColor != Color.Unspecified) contentColor else LocalContentColor.current
-            ) {
-                icon()
-            }
-        },
-        modifier = modifier.clickable(onClick = onClick)
-    )
+internal fun MenuCardGroup(entries: List<MenuEntry>) {
+    entries.forEachIndexed { index, entry ->
+        NiraCardRow(
+            title = entry.text,
+            isTopRow = index == 0,
+            isBottomRow = index == entries.lastIndex,
+            showDivider = index != entries.lastIndex,
+            onClick = entry.onClick,
+            titleColor = if (entry.destructive) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
+            leading = entry.icon,
+            minRowHeight = 56.dp,
+            dividerIndent = 52.dp,
+        )
+    }
 }
 
 // ============================================================================

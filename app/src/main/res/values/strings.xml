@@ -194,6 +194,7 @@
 <string name="ungroup_all_tabs">Ungroup All Tabs</string>
 <string name="close_all_tabs">Close All Tabs</string>
 <string name="move_to_profile">Move to Profile</string>
+<string name="move_to_different_profile">Move to Different Profile</string>
 <string name="collapse_expand">Collapse/Expand</string>
 <string name="rename_island">Rename Island</string>
 <string name="island_name">Island Name</string>
@@ -257,6 +258,13 @@
 <string name="create_profile">Create Profile</string>
 <string name="edit_profile">Edit Profile</string>
 <string name="choose_style">Choose Style</string>
+<string name="profile_color">Color</string>
+<string name="profile_color_primary">Primary</string>
+<string name="profile_color_secondary">Secondary</string>
+<string name="profile_color_white">White</string>
+<string name="profile_color_none">None</string>
+<string name="profile_color_suggest">Suggest pair</string>
+<string name="profile_color_adjusted">Adjusted for readability</string>
 <string name="profile_name">Profile Name</string>
 <string name="profile_name_placeholder">Work, Personal, etc.</string>
 <string name="import_zip">Import ZIP</string>
@@ -353,7 +361,8 @@
 <string name="hide_contextual_toolbar_desc">More vertical space for page content</string>
 <string name="icon_size">Icon Size</string>
 <string name="enabled_section">Enabled (%1$d)</string>
-<string name="recommended_section">Recommended (%1$d)</string>
+<string name="featured_section">Featured (%1$d)</string>
+<string name="search_results_section">Results (%1$d)</string>
 <string name="sort_name">Name</string>
 <string name="sort_rating">Rating</string>
 <string name="sort_recently_updated">Recently Updated</string>

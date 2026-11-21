@@ -10,6 +10,8 @@ data class BrowserProfile(
     val id: String = UUID.randomUUID().toString(),
     val name: String,
     val color: Int,
+    /** Optional second accent; 0 means none. */
+    val secondaryColor: Int = 0,
     val emoji: String = "👤",
     val isDefault: Boolean = false,
     val createdAt: Long = System.currentTimeMillis()

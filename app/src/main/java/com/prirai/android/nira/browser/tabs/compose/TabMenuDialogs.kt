@@ -2,6 +2,7 @@
 
 package com.prirai.android.nira.browser.tabs.compose
 
+import androidx.compose.ui.res.painterResource
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -212,6 +213,7 @@ fun ColorPickerDialog(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfilePickerDialog(
+    currentContextId: String?,
     onConfirm: (String) -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -226,40 +228,48 @@ fun ProfilePickerDialog(
             .getAllProfiles()
             .map { it.id to it.name }
     }
+    val privateName = stringResource(R.string.private_mode_short)
+    val targets = (profiles + ("private" to privateName)).filter { (id, _) ->
+        com.prirai.android.nira.browser.profile.BrowserProfile.contextIdFor(
+            profileId = id,
+            isPrivate = id == "private",
+        ) != currentContextId?.takeIf { it != "profile_default" && it.isNotEmpty() }
+    }
 
-    NiraAlertDialog(
+    ModalBottomSheet(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.move_to_profile)) },
-        text = {
-            Column(
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                profiles.forEach { (profileId, profileName) ->
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable {
-                                onConfirm(profileId)
-                                onDismiss()
-                            }
-                            .padding(vertical = 12.dp),
-                        horizontalArrangement = Arrangement.Start,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = profileName,
-                            style = MaterialTheme.typography.bodyLarge
-                        )
-                    }
+        sheetState = com.prirai.android.nira.ui.components.rememberNiraSheetState(),
+    ) {
+        Column(modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp)) {
+            Text(
+                text = stringResource(R.string.move_to_different_profile),
+                style = MaterialTheme.typography.titleLarge,
+                modifier = Modifier.padding(start = 24.dp, end = 24.dp, bottom = 12.dp),
+            )
+            MenuCardGroup(
+                targets.map { (profileId, profileName) ->
+                    MenuEntry(
+                        icon = {
+                            MenuIcon(
+                                painterResource(
+                                    if (profileId == "private") {
+                                        mozilla.components.ui.icons.R.drawable.mozac_ic_private_mode_24
+                                    } else {
+                                        R.drawable.ic_profile
+                                    }
+                                )
+                            )
+                        },
+                        text = profileName,
+                        onClick = {
+                            onConfirm(profileId)
+                            onDismiss()
+                        },
+                    )
                 }
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.cancel))
-            }
+            )
         }
-    )
+    }
 }
 
 // ============================================================================

@@ -322,19 +322,20 @@ class TabViewModel(
      * Toggle group expanded/collapsed state
      */
     fun toggleGroupExpanded(groupId: String) {
-        // Update in the group manager (centralized state)
+        // The sheet and tab bar render from the saved order's isExpanded, which
+        // is derived from _expandedGroups, so that set is what has to change.
+        _expandedGroups.value = _expandedGroups.value.let {
+            if (groupId in it) it - groupId else it + groupId
+        }
         viewModelScope.launch {
             try {
-                groupManager.toggleGroupCollapsed(groupId)
-                _currentProfileId.value?.let { profileId ->
-                    saveCurrentOrder(profileId)
-                }
+                _currentProfileId.value?.let { saveCurrentOrder(it) }
             } catch (e: Exception) {
                 android.util.Log.e("TabViewModel", "Error toggling group collapsed state", e)
             }
         }
     }
-    
+
     /**
      * Get a group by ID from the group manager
      */
@@ -982,29 +983,53 @@ class TabViewModel(
     }
 
     /**
-     * Move a group to a different profile
+     * Fired with the id of the first moved tab once a move to another profile
+     * finished, so the host can switch profile/mode and focus that tab.
      */
+    var onTabsMoved: ((String) -> Unit)? = null
+
+    /**
+     * Move a tab to another profile (`"private"` for private mode). A tab's
+     * contextId is fixed for its lifetime, so this reopens the page in the
+     * target profile and closes the original.
+     */
+    fun moveTabToProfile(tabId: String, targetProfileId: String) =
+        moveTabsToProfile(listOf(tabId), targetProfileId, null)
+
+    /** Move a whole group (tabs, name and color) to another profile. */
     fun moveGroupToProfile(groupId: String, profileId: String) {
+        val group = groupManager.getGroup(groupId) ?: return
+        moveTabsToProfile(group.tabIds, profileId, group)
+    }
+
+    private fun moveTabsToProfile(tabIds: List<String>, targetProfileId: String, group: TabGroupData?) {
         viewModelScope.launch {
-            val group = groupManager.getGroup(groupId) ?: return@launch
+            val components = context.components
+            val sources = tabIds.mapNotNull { id -> components.store.state.tabs.find { it.id == id } }
+            if (sources.isEmpty()) return@launch
 
-            // Update the group's contextId to match the new profile.
-            // Default profile => null (shared with custom tabs' Gecko partition).
-            val newContextId = contextIdForProfile(profileId)
-
-            // Update the group
-            groupManager.updateGroup(
-                groupId = groupId,
-                name = group.name,
-                color = group.color,
-                tabIds = group.tabIds,
-                contextId = newContextId
-            )
-
-            // Refresh the UI
-            _currentProfileId.value?.let { currentProfile ->
-                refreshGroupsForProfile(currentProfile)
+            val targetContextId = contextIdForProfile(targetProfileId)
+            val isPrivate = targetProfileId == "private"
+            val newIds = sources.map { tab ->
+                components.tabsUseCases.addTab(
+                    url = tab.content.url,
+                    private = isPrivate,
+                    contextId = targetContextId,
+                    selectTab = false,
+                )
             }
+
+            if (group != null) {
+                groupManager.createGroup(
+                    tabIds = newIds,
+                    name = group.name,
+                    color = group.color,
+                    profileId = targetProfileId,
+                    contextId = targetContextId,
+                )
+            }
+            sources.forEach { components.tabsUseCases.removeTab(it.id) }
+            newIds.firstOrNull()?.let { onTabsMoved?.invoke(it) }
         }
     }
 

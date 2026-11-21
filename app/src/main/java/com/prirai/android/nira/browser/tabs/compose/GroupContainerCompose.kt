@@ -2,6 +2,10 @@
 
 package com.prirai.android.nira.browser.tabs.compose
 
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.draw.rotate
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.expandVertically
@@ -11,6 +15,9 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
@@ -81,6 +88,7 @@ private fun GroupContainerShell(
 ) {
     // A neutral card: the group's color appears only as the small dot next to
     // its name, the way Chrome and Firefox label tab groups.
+    val chevronRotation by animateFloatAsState(if (isExpanded) 0f else -90f, label = "chevron")
     Surface(
         modifier = containerModifier
             .fillMaxWidth()
@@ -99,6 +107,13 @@ private fun GroupContainerShell(
                     .padding(start = 16.dp, end = 8.dp, top = 8.dp, bottom = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
+                Icon(
+                    imageVector = Icons.Default.KeyboardArrowDown,
+                    contentDescription = stringResource(if (isExpanded) R.string.collapse else R.string.expand),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(24.dp).rotate(chevronRotation),
+                )
+                Spacer(Modifier.width(8.dp))
                 Box(
                     modifier = Modifier
                         .size(12.dp)
@@ -106,12 +121,12 @@ private fun GroupContainerShell(
                 )
                 Spacer(Modifier.width(12.dp))
                 Text(
-                    text = title,
+                    text = title.ifBlank { stringResource(R.string.group) },
                     style = MaterialTheme.typography.titleMediumEmphasized,
                     color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f, fill = false),
+                    modifier = Modifier.widthIn(max = 200.dp),
                 )
                 Spacer(Modifier.width(8.dp))
                 Text(
@@ -120,12 +135,6 @@ private fun GroupContainerShell(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Spacer(Modifier.weight(1f))
-                Icon(
-                    imageVector = if (isExpanded) Icons.Default.KeyboardArrowDown else Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                    contentDescription = stringResource(if (isExpanded) R.string.collapse else R.string.expand),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(24.dp),
-                )
                 IconButton(
                     onClick = onOptionsClick,
                     modifier = Modifier.size(40.dp),
@@ -481,7 +490,7 @@ fun GroupContainerGridItem(
 }
 
 /**
- * 2-column grid of tabs within a group, wrapped in the extension-list style Surface container.
+ * Single horizontally scrollable row of tabs within a group, wrapped in the extension-list style Surface container.
  */
 @Composable
 private fun GroupTabsGridRow(
@@ -504,58 +513,46 @@ private fun GroupTabsGridRow(
         color = MaterialTheme.colorScheme.surfaceContainerHigh,
         tonalElevation = 1.dp
     ) {
-        val tabChunks = tabs.chunked(2)
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+        // One horizontally scrollable row so a group never wraps onto extra rows.
+        LazyRow(
+            modifier = Modifier.fillMaxWidth(),
+            contentPadding = PaddingValues(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            tabChunks.forEach { rowTabs ->
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    rowTabs.forEach { tab ->
-                        Box(
-                            modifier = Modifier
-                                .weight(1f)
-                                .draggableItem(
-                                    itemType = DraggableItemType.Tab(tab.id, groupId),
-                                    coordinator = coordinator
-                                )
-                                .dropTarget(
-                                    id = tab.id,
-                                    type = DropTargetType.TAB,
-                                    coordinator = coordinator,
-                                    metadata = mapOf(
-                                        "tabId" to tab.id,
-                                        "groupId" to groupId
-                                    )
-                                )
-                                .groupedTabFeedback(
-                                    tabId = tab.id,
-                                    groupId = groupId,
-                                    coordinator = coordinator,
-                                    hoverState = hoverState,
-                                    hoveredGroupId = hoveredGroupId,
-                                    draggedScale = 0.85f
-                                )
-                        ) {
-                            GroupedTabGridItem(
-                                tab = tab,
-                                groupColor = groupColor,
-                                isSelected = tab.id == selectedTabId,
-                                onTabClick = { onTabClick(tab.id) },
-                                onTabClose = { onTabClose(tab.id) },
-                                onTabLongPress = { onTabLongPress(tab) }
+            items(items = tabs, key = { it.id }) { tab ->
+                Box(
+                    modifier = Modifier
+                        .width(150.dp)
+                        .draggableItem(
+                            itemType = DraggableItemType.Tab(tab.id, groupId),
+                            coordinator = coordinator
+                        )
+                        .dropTarget(
+                            id = tab.id,
+                            type = DropTargetType.TAB,
+                            coordinator = coordinator,
+                            metadata = mapOf(
+                                "tabId" to tab.id,
+                                "groupId" to groupId
                             )
-                        }
-                    }
-                    // Pad to maintain the 2-column grid when the last row has only 1 tab
-                    if (rowTabs.size == 1) {
-                        Spacer(modifier = Modifier.weight(1f))
-                    }
+                        )
+                        .groupedTabFeedback(
+                            tabId = tab.id,
+                            groupId = groupId,
+                            coordinator = coordinator,
+                            hoverState = hoverState,
+                            hoveredGroupId = hoveredGroupId,
+                            draggedScale = 0.85f
+                        )
+                ) {
+                    GroupedTabGridItem(
+                        tab = tab,
+                        groupColor = groupColor,
+                        isSelected = tab.id == selectedTabId,
+                        onTabClick = { onTabClick(tab.id) },
+                        onTabClose = { onTabClose(tab.id) },
+                        onTabLongPress = { onTabLongPress(tab) }
+                    )
                 }
             }
         }

@@ -70,73 +70,13 @@ import mozilla.components.feature.addons.AddonManagerException
 import mozilla.components.feature.addons.ui.translateName
 
 /**
- * The detail page of an installed add-on, on the shared Material 3 Expressive Compose stack:
- * the enable / private-browsing toggles, the per-profile allowlist (behind a [NiraAlertDialog]),
- * the settings, details and permissions rows, and the remove action — with the same
- * addon-manager state plumbing the View screen carried.
+ * Management controls of an installed add-on (enable / private-browsing toggles, per-profile
+ * allowlist, settings, permissions, remove), embedded in the add-on details window.
  */
-class InstalledAddonDetailsActivity : AppCompatActivity() {
-
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-
-        enableEdgeToEdgeMode()
-
-        val addon = requireNotNull(intent.getParcelableExtraCompat<Addon>("add_on"))
-
-        setContent {
-            val context = LocalContext.current
-            val prefs = UserPreferences(context)
-            NiraTheme(
-                darkTheme = ThemeManager.isDarkMode(context),
-                amoledMode = prefs.amoledMode,
-                dynamicColor = prefs.dynamicColors,
-            ) {
-                InstalledAddonDetailsScreen(
-                    addon = addon,
-                    onRemove = { uninstallAddon(it) },
-                    onBack = { onBackPressedDispatcher.onBackPressed() },
-                )
-            }
-        }
-    }
-
-    private fun uninstallAddon(addon: Addon) {
-        components.addonManager.uninstallAddon(
-            addon,
-            onSuccess = {
-                // Clear the cache so the bottom sheet shows updated data
-                ExtensionsBottomSheetFragment.clearCache()
-                Toast.makeText(
-                    this,
-                    getString(
-                        R.string.mozac_feature_addons_successfully_uninstalled,
-                        addon.translateName(this),
-                    ),
-                    Toast.LENGTH_SHORT,
-                ).show()
-                finish()
-            },
-            onError = { _, _ ->
-                Toast.makeText(
-                    this,
-                    getString(
-                        R.string.mozac_feature_addons_failed_to_uninstall,
-                        addon.translateName(this),
-                    ),
-                    Toast.LENGTH_SHORT,
-                ).show()
-            },
-        )
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun InstalledAddonDetailsScreen(
+internal fun InstalledAddonControls(
     addon: Addon,
     onRemove: (Addon) -> Unit,
-    onBack: () -> Unit,
 ) {
     val context = LocalContext.current
     var currentAddon by remember { mutableStateOf<Addon?>(null) }
@@ -270,33 +210,11 @@ private fun InstalledAddonDetailsScreen(
         }
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Text((currentAddon ?: addon).translateName(context))
-                },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.back),
-                        )
-                    }
-                },
-            )
-        },
-    ) { padding ->
+    run {
         val bound = currentAddon
         when {
-            bound == null && !loadFailed -> NiraLoadingIndicator(modifier = Modifier.padding(padding))
-            bound != null -> Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding)
-                    .verticalScroll(rememberScrollState())
-                    .padding(vertical = 16.dp),
-            ) {
+            bound == null && !loadFailed -> NiraLoadingIndicator()
+            bound != null -> Column {
                 val supported = bound.isSupported()
                 if (supported) {
                     Column {
@@ -362,24 +280,6 @@ private fun InstalledAddonDetailsScreen(
                         },
                     )
                     if (supported) {
-                        NiraCardRow(
-                            title = stringResource(R.string.mozac_feature_addons_details),
-                            isTopRow = false,
-                            isBottomRow = false,
-                            showDivider = true,
-                            onClick = {
-                                val intent = Intent(context, AddonDetailsActivity::class.java)
-                                intent.putExtra("add_on", bound)
-                                context.startActivity(intent)
-                            },
-                            leading = {
-                                Icon(
-                                    imageVector = Icons.Rounded.Info,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                            },
-                        )
                         NiraCardRow(
                             title = stringResource(R.string.mozac_feature_addons_permissions),
                             isTopRow = false,

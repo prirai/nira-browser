@@ -26,7 +26,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronRight
@@ -61,6 +61,7 @@ import com.prirai.android.nira.R
 import com.prirai.android.nira.ext.components
 import com.prirai.android.nira.preferences.UserPreferences
 import com.prirai.android.nira.theme.ThemeManager
+import com.prirai.android.nira.ui.components.NiraCardRow
 import com.prirai.android.nira.ui.components.NiraEmptyState
 import com.prirai.android.nira.ui.components.NiraLoadingIndicator
 import com.prirai.android.nira.ui.components.NiraSheetHeader
@@ -178,7 +179,7 @@ class ExtensionsBottomSheetFragment : BottomSheetDialogFragment() {
         
         // If no action was invoked, show the settings page
         if (!actionInvoked) {
-            val intent = Intent(context, InstalledAddonDetailsActivity::class.java)
+            val intent = Intent(context, AddonDetailsActivity::class.java)
             intent.putExtra("add_on", addon)
             context.startActivity(intent)
         }
@@ -259,15 +260,17 @@ fun ExtensionsBottomSheetContent(
                         LazyColumn(
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            items(addons) { addon ->
+                            itemsIndexed(addons, key = { _, addon -> addon.id }) { index, addon ->
                                 ExtensionItem(
                                     addon = addon,
+                                    isTopRow = index == 0,
+                                    isBottomRow = index == addons.lastIndex,
                                     onClick = { onAddonClick(addon) }
                                 )
                             }
-                            
+
                             item {
-                                Spacer(modifier = Modifier.height(8.dp))
+                                Spacer(modifier = Modifier.height(12.dp))
                                 ManageAddonsButton(onClick = onManageAddonsClick)
                                 Spacer(modifier = Modifier.height(24.dp))
                             }
@@ -283,6 +286,8 @@ private const val EXTENSION_ICON_SIZE = 48
 @Composable
 fun ExtensionItem(
     addon: Addon,
+    isTopRow: Boolean,
+    isBottomRow: Boolean,
     onClick: () -> Unit
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
@@ -299,117 +304,64 @@ fun ExtensionItem(
             ?: addon.icon
     }
 
-    Surface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick),
-        color = MaterialTheme.colorScheme.surface
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Surface(
-                modifier = Modifier
-                    .size(48.dp)
-                    .clip(RoundedCornerShape(12.dp)),
-                color = MaterialTheme.colorScheme.surfaceVariant
-            ) {
-                val bitmap = icon
-                if (bitmap != null) {
-                    Image(
-                        bitmap = bitmap.asImageBitmap(),
-                        contentDescription = null,
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(8.dp)
-                    )
-                } else {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Extension,
-                            contentDescription = null,
-                            modifier = Modifier.size(28.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.width(16.dp))
-
-            // Extension info
-            Column(
-                modifier = Modifier.weight(1f)
-            ) {
-                Text(
-                    text = addon.translateName(context),
-                    style = MaterialTheme.typography.bodyLargeEmphasized,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+    NiraCardRow(
+        title = addon.translateName(context),
+        isTopRow = isTopRow,
+        isBottomRow = isBottomRow,
+        showDivider = !isBottomRow,
+        onClick = onClick,
+        minRowHeight = 56.dp,
+        dividerIndent = 60.dp,
+        leading = {
+            val bitmap = icon
+            if (bitmap != null) {
+                Image(
+                    bitmap = bitmap.asImageBitmap(),
+                    contentDescription = null,
+                    modifier = Modifier.size(36.dp).clip(RoundedCornerShape(8.dp))
                 )
-
-                if (addon.version.isNotEmpty()) {
-                    Text(
-                        text = stringResource(R.string.extension_version, addon.version),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1
-                    )
-                }
+            } else {
+                Icon(
+                    imageVector = Icons.Default.Extension,
+                    contentDescription = null,
+                    modifier = Modifier.size(36.dp).padding(4.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
-
-            Spacer(modifier = Modifier.width(8.dp))
-
-            // Chevron
+        },
+        trailing = {
             Icon(
                 imageVector = Icons.Default.ChevronRight,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.onSurfaceVariant
             )
-        }
-    }
-    
-    HorizontalDivider(
-        modifier = Modifier.padding(start = 80.dp),
-        color = MaterialTheme.colorScheme.outlineVariant
+        },
     )
 }
 
 @Composable
 fun ManageAddonsButton(onClick: () -> Unit) {
-    Surface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp),
-        shape = RoundedCornerShape(16.dp),
-        color = MaterialTheme.colorScheme.primaryContainer,
-        tonalElevation = 2.dp
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable(onClick = onClick)
-                .padding(20.dp),
-            horizontalArrangement = Arrangement.Center,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
+    NiraCardRow(
+        title = stringResource(R.string.manage_addons),
+        isTopRow = true,
+        isBottomRow = true,
+        showDivider = false,
+        onClick = onClick,
+        minRowHeight = 56.dp,
+        leading = {
             Icon(
                 painter = painterResource(id = R.drawable.mozac_ic_extension_24),
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.onPrimaryContainer
+                modifier = Modifier.size(24.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            Spacer(modifier = Modifier.width(12.dp))
-            Text(
-                text = stringResource(R.string.manage_addons),
-                style = MaterialTheme.typography.titleMediumEmphasized,
-                color = MaterialTheme.colorScheme.onPrimaryContainer
+        },
+        trailing = {
+            Icon(
+                imageVector = Icons.Default.ChevronRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
             )
-        }
-    }
+        },
+    )
 }

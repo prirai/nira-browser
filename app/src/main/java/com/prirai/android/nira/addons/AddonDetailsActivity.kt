@@ -14,7 +14,13 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.ui.platform.LocalConfiguration
+import com.prirai.android.nira.ui.components.NiraSheetHeader
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -120,6 +126,7 @@ class AddonDetailsActivity : AppCompatActivity() {
                         addon = addon,
                         installing = installing.value,
                         onInstall = { installAddon(addon) },
+                        onRemove = { uninstallAddon(it) },
                         onShowUpdaterDialog = { showUpdaterDialog(addon) },
                         onBack = { onBackPressedDispatcher.onBackPressed() },
                     )
@@ -142,6 +149,34 @@ class AddonDetailsActivity : AppCompatActivity() {
             ),
             owner = this,
             view = rootView,
+        )
+    }
+
+    private fun uninstallAddon(addon: Addon) {
+        components.addonManager.uninstallAddon(
+            addon,
+            onSuccess = {
+                ExtensionsBottomSheetFragment.clearCache()
+                Toast.makeText(
+                    this,
+                    getString(
+                        R.string.mozac_feature_addons_successfully_uninstalled,
+                        addon.translateName(this),
+                    ),
+                    Toast.LENGTH_SHORT,
+                ).show()
+                finish()
+            },
+            onError = { _, _ ->
+                Toast.makeText(
+                    this,
+                    getString(
+                        R.string.mozac_feature_addons_failed_to_uninstall,
+                        addon.translateName(this),
+                    ),
+                    Toast.LENGTH_SHORT,
+                ).show()
+            },
         )
     }
 
@@ -206,33 +241,51 @@ private fun AddonDetailsScreen(
     addon: Addon,
     installing: Boolean,
     onInstall: () -> Unit,
+    onRemove: (Addon) -> Unit,
     onShowUpdaterDialog: () -> Unit,
     onBack: () -> Unit,
 ) {
     val context = LocalContext.current
+    val maxHeight = (LocalConfiguration.current.screenHeightDp * 0.88f).dp
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.mozac_feature_addons_details)) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.back),
-                        )
-                    }
-                },
-            )
-        },
-    ) { padding ->
-        Column(
+    // Transparent window: tapping outside the card dismisses it, like the other floating windows.
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = onBack,
+            ),
+        contentAlignment = Alignment.Center,
+    ) {
+        Surface(
             modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .verticalScroll(rememberScrollState())
-                .padding(16.dp),
+                .widthIn(max = 640.dp)
+                .fillMaxWidth(0.94f)
+                .heightIn(max = maxHeight)
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = {},
+                ),
+            shape = MaterialTheme.shapes.extraLarge,
+            color = MaterialTheme.colorScheme.surface,
+            tonalElevation = 6.dp,
         ) {
+            Column {
+                NiraSheetHeader(
+                    title = addon.translateName(context),
+                    onClose = onBack,
+                    showDragHandle = false,
+                    titleMaxLines = 1,
+                )
+                Column(
+                    modifier = Modifier
+                        .weight(1f, fill = false)
+                        .verticalScroll(rememberScrollState())
+                        .padding(16.dp),
+                ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 AddonIcon(addon = addon, size = 54.dp)
                 Spacer(modifier = Modifier.width(12.dp))
@@ -281,6 +334,11 @@ private fun AddonDetailsScreen(
                 )
             }
 
+            if (addon.isInstalled()) {
+                Spacer(modifier = Modifier.height(16.dp))
+                InstalledAddonControls(addon = addon, onRemove = onRemove)
+            }
+
             DescriptionText(addon = addon, modifier = Modifier.padding(top = 16.dp))
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -288,6 +346,8 @@ private fun AddonDetailsScreen(
                 addon = addon,
                 onShowUpdaterDialog = onShowUpdaterDialog,
             )
+                }
+            }
         }
     }
 }

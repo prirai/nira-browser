@@ -12,6 +12,7 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -24,11 +25,13 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Extension
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenu
@@ -67,10 +70,13 @@ import com.prirai.android.nira.ext.components
 import com.prirai.android.nira.preferences.UserPreferences
 import com.prirai.android.nira.theme.ThemeManager
 import com.prirai.android.nira.ui.components.NiraAlertDialog
+import com.prirai.android.nira.ui.components.NiraCardRow
 import com.prirai.android.nira.ui.components.NiraEmptyState
 import com.prirai.android.nira.ui.components.NiraLoadingIndicator
+import com.prirai.android.nira.ui.components.NiraSearchField
 import com.prirai.android.nira.ui.theme.NiraTheme
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import mozilla.components.feature.addons.Addon
 import mozilla.components.feature.addons.ui.translateName
@@ -79,7 +85,6 @@ import androidx.core.net.toUri
 class ComposeAddonsFragment : Fragment() {
 
     private var showSortMenuTrigger: (() -> Unit)? = null
-    private var showSearchTrigger: (() -> Unit)? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -94,10 +99,6 @@ class ComposeAddonsFragment : Fragment() {
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         return when (item.itemId) {
-            R.id.action_search -> {
-                showSearchTrigger?.invoke()
-                true
-            }
             R.id.action_sort -> {
                 showSortMenuTrigger?.invoke()
                 true
@@ -131,7 +132,6 @@ class ComposeAddonsFragment : Fragment() {
                     dynamicColor = prefs.dynamicColors
                 ) {
                     AddonsScreen(
-                        onSearchTriggerReady = { trigger -> showSearchTrigger = trigger },
                         onSortMenuTriggerReady = { trigger -> showSortMenuTrigger = trigger }
                     )
                 }
@@ -143,159 +143,190 @@ class ComposeAddonsFragment : Fragment() {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddonsScreen(
-    onSearchTriggerReady: ((()-> Unit) -> Unit)? = null,
     onSortMenuTriggerReady: ((()-> Unit) -> Unit)? = null
 ) {
     val context = LocalContext.current
-    val allAddonsOriginal = remember { mutableStateOf<List<Addon>>(emptyList()) }
-    val recommendedAddons = remember { mutableStateOf<List<Addon>>(emptyList()) }
     val enabledAddons = remember { mutableStateOf<List<Addon>>(emptyList()) }
+    val featuredAddons = remember { mutableStateOf<List<Addon>>(emptyList()) }
     val isLoading = remember { mutableStateOf(true) }
     val selectedSort = remember { mutableStateOf("Name") }
     val showSortMenu = remember { mutableStateOf(false) }
-    
-    // Wire menu triggers
+    val query = remember { mutableStateOf("") }
+    // null while a search request is in flight
+    val searchResults = remember { mutableStateOf<List<Addon>?>(emptyList()) }
+
     LaunchedEffect(Unit) {
-        onSearchTriggerReady?.invoke {
-            val searchSheet = SearchExtensionsBottomSheet()
-            searchSheet.show((context as androidx.fragment.app.FragmentActivity).supportFragmentManager, "search_extensions")
-        }
-        onSortMenuTriggerReady?.invoke {
-            showSortMenu.value = true
-        }
+        onSortMenuTriggerReady?.invoke { showSortMenu.value = true }
     }
 
     LaunchedEffect(Unit) {
         withContext(Dispatchers.IO) {
             try {
-                val allAddons = context.components.addonManager.getAddons()
-                allAddonsOriginal.value = allAddons
-                
-                val installed = allAddons.filter { it.isInstalled() && it.isEnabled() }
-                val recommended = allAddons.filter { !it.isInstalled() }
-                
+                val all = context.components.addonManager.getAddons()
+                val installed = all.filter { it.isInstalled() && it.isEnabled() }
                 enabledAddons.value = installed
-                recommendedAddons.value = recommended
+                val installedIds = all.filter { it.isInstalled() }.map { it.id }.toSet()
+                val featured = runCatching { AmoClient.featured() }.getOrDefault(emptyList())
+                    .ifEmpty { all.filter { !it.isInstalled() } }
+                featuredAddons.value = featured.filter { it.id !in installedIds }
             } catch (e: Exception) {
-                // Handle error
+                // Leave the lists empty; the empty state covers it
             } finally {
                 isLoading.value = false
             }
         }
     }
 
-    // Apply sort
-    val filteredEnabled = remember(selectedSort.value, enabledAddons.value) {
-        var result = enabledAddons.value
-        
-        // Apply sort
-        result = when (selectedSort.value) {
-            "Name" -> result.sortedBy { it.translateName(context) }
-            "Recently Updated" -> result.sortedByDescending { it.updatedAt }
-            else -> result
+    val trimmedQuery = query.value.trim()
+    val isSearching = trimmedQuery.length >= 2
+    LaunchedEffect(trimmedQuery) {
+        if (!isSearching) {
+            searchResults.value = emptyList()
+            return@LaunchedEffect
         }
-        
-        result
+        searchResults.value = null
+        delay(300)
+        val installed = enabledAddons.value.associateBy { it.id }
+        searchResults.value = runCatching { AmoClient.search(trimmedQuery) }.getOrDefault(emptyList())
+            .map { installed[it.id] ?: it }
     }
-    
-    val filteredRecommended = remember(selectedSort.value, recommendedAddons.value) {
-        var result = recommendedAddons.value
-        
-        // Apply sort
-        result = when (selectedSort.value) {
-            "Name" -> result.sortedBy { it.translateName(context) }
-            "Rating" -> result.sortedByDescending { it.rating?.average ?: 0f }
-            "Recently Updated" -> result.sortedByDescending { it.updatedAt }
-            else -> result
+
+    val sortedEnabled = remember(selectedSort.value, enabledAddons.value) {
+        when (selectedSort.value) {
+            "Name" -> enabledAddons.value.sortedBy { it.translateName(context) }
+            "Recently Updated" -> enabledAddons.value.sortedByDescending { it.updatedAt }
+            else -> enabledAddons.value
         }
-        
-        result
+    }
+    val sortedFeatured = remember(selectedSort.value, featuredAddons.value) {
+        when (selectedSort.value) {
+            "Name" -> featuredAddons.value.sortedBy { it.translateName(context) }
+            "Rating" -> featuredAddons.value.sortedByDescending { it.rating?.average ?: 0f }
+            "Recently Updated" -> featuredAddons.value.sortedByDescending { it.updatedAt }
+            else -> featuredAddons.value
+        }
+    }
+
+    val openAddon: (Addon) -> Unit = { addon ->
+        val target = AddonDetailsActivity::class.java
+        context.startActivity(Intent(context, target).putExtra("add_on", addon))
     }
 
     Box {
         Scaffold(
-            containerColor = MaterialTheme.colorScheme.surface
+            containerColor = MaterialTheme.colorScheme.surface,
+            contentWindowInsets = WindowInsets(0, 0, 0, 0),
         ) { paddingValues ->
-            if (isLoading.value) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(paddingValues)
-                ) {
-                    NiraLoadingIndicator()
-                }
-            } else {
-                LazyColumn(
+            Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(paddingValues),
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(24.dp)
+                    .padding(paddingValues)
             ) {
-                // Enabled section
-                if (filteredEnabled.isNotEmpty()) {
-                    item {
-                        AddonSection(
-                            title = stringResource(R.string.enabled_section, filteredEnabled.size),
-                            addons = filteredEnabled,
-                            onAddonClick = { addon ->
-                                val intent = Intent(context, InstalledAddonDetailsActivity::class.java)
-                                intent.putExtra("add_on", addon)
-                                context.startActivity(intent)
-                            }
+                NiraSearchField(
+                    query = query.value,
+                    onQueryChange = { query.value = it },
+                    placeholder = stringResource(R.string.search_by_name_or_description),
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Default.Search,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
-                    }
-                }
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                )
 
-                // Recommended section
-                if (filteredRecommended.isNotEmpty()) {
-                    item {
-                        AddonSection(
-                            title = stringResource(R.string.recommended_section, filteredRecommended.size),
-                            addons = filteredRecommended,
-                            onAddonClick = { addon ->
-                                val intent = Intent(context, AddonDetailsActivity::class.java)
-                                intent.putExtra("add_on", addon)
-                                context.startActivity(intent)
-                            }
-                        )
-                    }
-                }
-                
-                // "All extensions" link
-                item {
-                    TextButton(
-                        onClick = {
-                            val intent = Intent(Intent.ACTION_VIEW,
-                                "https://addons.mozilla.org/android/".toUri())
-                            context.startActivity(intent)
-                        },
-                        modifier = Modifier.fillMaxWidth()
+                val results = searchResults.value
+                when {
+                    isLoading.value && !isSearching -> NiraLoadingIndicator()
+                    isSearching && results == null -> NiraLoadingIndicator()
+                    isSearching && results.orEmpty().isEmpty() -> NiraEmptyState(
+                        title = stringResource(R.string.no_extensions_found),
+                        icon = Icons.Default.Extension,
+                    )
+                    else -> LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 24.dp),
+                        verticalArrangement = Arrangement.spacedBy(24.dp)
                     ) {
-                        Text(
-                            text = stringResource(R.string.all_extensions),
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.primary
-                        )
+                        if (isSearching) {
+                            item {
+                                AddonSection(
+                                    title = stringResource(R.string.search_results_section, results.orEmpty().size),
+                                    addons = results.orEmpty(),
+                                    onAddonClick = openAddon
+                                )
+                            }
+                        } else {
+                            if (sortedEnabled.isNotEmpty()) {
+                                item {
+                                    AddonSection(
+                                        title = stringResource(R.string.enabled_section, sortedEnabled.size),
+                                        addons = sortedEnabled,
+                                        onAddonClick = openAddon
+                                    )
+                                }
+                            }
+
+                            item {
+                                NiraCardRow(
+                                    title = stringResource(R.string.all_extensions),
+                                    isTopRow = true,
+                                    isBottomRow = true,
+                                    showDivider = false,
+                                    minRowHeight = 56.dp,
+                                    onClick = {
+                                        context.startActivity(
+                                            Intent(Intent.ACTION_VIEW, "https://addons.mozilla.org/android/".toUri())
+                                        )
+                                    },
+                                    leading = {
+                                        Icon(
+                                            painter = painterResource(id = R.drawable.mozac_ic_extension_24),
+                                            contentDescription = null,
+                                            modifier = Modifier.size(24.dp),
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    },
+                                    trailing = {
+                                        Icon(
+                                            imageVector = Icons.Default.ChevronRight,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    },
+                                )
+                            }
+
+                            if (sortedFeatured.isNotEmpty()) {
+                                item {
+                                    AddonSection(
+                                        title = stringResource(R.string.featured_section, sortedFeatured.size),
+                                        addons = sortedFeatured,
+                                        onAddonClick = openAddon
+                                    )
+                                }
+                            }
+
+                            if (sortedEnabled.isEmpty() && sortedFeatured.isEmpty()) {
+                                item {
+                                    NiraEmptyState(
+                                        title = stringResource(R.string.no_extensions_available),
+                                        icon = Icons.Default.Extension,
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(vertical = 24.dp, horizontal = 32.dp),
+                                    )
+                                }
+                            }
+                        }
                     }
-                }
-                
-                // Empty state
-                if (filteredEnabled.isEmpty() && filteredRecommended.isEmpty() && !isLoading.value) {
-                    item {
-                        NiraEmptyState(
-                            title = stringResource(R.string.no_extensions_available),
-                            icon = Icons.Default.Extension,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 24.dp, horizontal = 32.dp),
-                        )
-                    }
-                }
                 }
             }
         }
-        
+
         // Sort dropdown menu
         Box(
             modifier = Modifier
@@ -351,30 +382,17 @@ fun AddonSection(
             text = title,
             style = MaterialTheme.typography.titleMediumEmphasized,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(start = 16.dp, bottom = 8.dp)
+            modifier = Modifier.padding(start = 20.dp, bottom = 8.dp)
         )
 
-        // iOS-style list
-        Surface(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
-            color = MaterialTheme.colorScheme.surfaceContainerHigh,
-            tonalElevation = 1.dp
-        ) {
-            Column {
-                addons.forEachIndexed { index, addon ->
-                    AddonListItem(
-                        addon = addon,
-                        onClick = { onAddonClick(addon) }
-                    )
-                    
-                    if (index < addons.lastIndex) {
-                        HorizontalDivider(
-                            modifier = Modifier.padding(start = 80.dp),
-                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                        )
-                    }
-                }
+        Column {
+            addons.forEachIndexed { index, addon ->
+                AddonListItem(
+                    addon = addon,
+                    isTopRow = index == 0,
+                    isBottomRow = index == addons.lastIndex,
+                    onClick = { onAddonClick(addon) }
+                )
             }
         }
     }
@@ -383,139 +401,86 @@ fun AddonSection(
 @Composable
 fun AddonListItem(
     addon: Addon,
+    isTopRow: Boolean,
+    isBottomRow: Boolean,
     onClick: () -> Unit
 ) {
     val context = LocalContext.current
-    
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        color = MaterialTheme.colorScheme.surfaceContainerHigh,
-        onClick = onClick
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            // Extension icon
-            Surface(
-                modifier = Modifier
-                    .size(48.dp)
-                    .clip(RoundedCornerShape(12.dp)),
-                color = MaterialTheme.colorScheme.surfaceVariant
-            ) {
-                val iconToUse = addon.installedState?.icon ?: addon.icon
-                val iconUrlToUse = if (addon.installedState != null) "" else addon.iconUrl
-                
-                when {
-                    iconToUse != null -> {
-                        AsyncImage(
-                            model = ImageRequest.Builder(context)
-                                .data(iconToUse)
-                                .crossfade(true)
-                                .build(),
-                            contentDescription = null,
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(8.dp)
-                        )
-                    }
-                    iconUrlToUse.isNotEmpty() -> {
-                        AsyncImage(
-                            model = ImageRequest.Builder(context)
-                                .data(iconUrlToUse)
-                                .crossfade(true)
-                                .build(),
-                            contentDescription = null,
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(8.dp)
-                        )
-                    }
-                    else -> {
-                        Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Extension,
-                                contentDescription = null,
-                                modifier = Modifier.size(28.dp),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-                }
-            }
+    val summary = addon.translatableSummary.values.firstOrNull().orEmpty()
+    var showInfo by remember { mutableStateOf(false) }
 
-            Spacer(modifier = Modifier.width(16.dp))
-
-            // Extension info: title only - the description lives behind
-            // the info icon, not in the list.
-            Column(
-                modifier = Modifier.weight(1f)
-            ) {
+    if (showInfo) {
+        NiraAlertDialog(
+            onDismissRequest = { showInfo = false },
+            title = {
                 Text(
                     text = addon.translateName(context),
-                    style = MaterialTheme.typography.bodyLargeEmphasized,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    color = MaterialTheme.colorScheme.onSurface
+                    style = MaterialTheme.typography.headlineSmallEmphasized,
+                )
+            },
+            text = {
+                Text(
+                    text = summary,
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.verticalScroll(rememberScrollState()),
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = { showInfo = false },
+                    shapes = ButtonDefaults.shapes(),
+                ) {
+                    Text(stringResource(R.string.mozac_feature_prompts_ok))
+                }
+            },
+        )
+    }
+
+    NiraCardRow(
+        title = addon.translateName(context),
+        isTopRow = isTopRow,
+        isBottomRow = isBottomRow,
+        showDivider = !isBottomRow,
+        onClick = onClick,
+        minRowHeight = 56.dp,
+        dividerIndent = 60.dp,
+        leading = {
+            val iconToUse = addon.installedState?.icon ?: addon.icon
+            val iconUrl = if (addon.installedState != null) "" else addon.iconUrl
+            val model: Any? = iconToUse ?: iconUrl.takeIf { it.isNotEmpty() }
+            if (model != null) {
+                AsyncImage(
+                    model = ImageRequest.Builder(context).data(model).crossfade(true).build(),
+                    contentDescription = null,
+                    modifier = Modifier.size(36.dp).clip(RoundedCornerShape(8.dp))
+                )
+            } else {
+                Icon(
+                    imageVector = Icons.Default.Extension,
+                    contentDescription = null,
+                    modifier = Modifier.size(36.dp).padding(4.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-
-            val summary = addon.translatableSummary.values.firstOrNull().orEmpty()
-
+        },
+        trailing = {
             if (summary.isNotEmpty()) {
-                var showInfo by remember { mutableStateOf(false) }
-                if (showInfo) {
-                    NiraAlertDialog(
-                        onDismissRequest = { showInfo = false },
-                        title = {
-                            Text(
-                                text = addon.translateName(context),
-                                style = MaterialTheme.typography.headlineSmallEmphasized,
-                            )
-                        },
-                        text = {
-                            Text(
-                                text = summary,
-                                style = MaterialTheme.typography.bodyMedium,
-                                modifier = Modifier.verticalScroll(rememberScrollState()),
-                            )
-                        },
-                        confirmButton = {
-                            TextButton(
-                                onClick = { showInfo = false },
-                                shapes = ButtonDefaults.shapes(),
-                            ) {
-                                Text(stringResource(com.prirai.android.nira.R.string.mozac_feature_prompts_ok))
-                            }
-                        },
-                    )
-                }
                 Icon(
                     imageVector = Icons.Outlined.Info,
-                    contentDescription = stringResource(
-                        com.prirai.android.nira.R.string.info_icon_description
-                    ),
+                    contentDescription = stringResource(R.string.info_icon_description),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier
+                        .clip(CircleShape)
                         .clickable { showInfo = true }
                         .padding(8.dp)
                         .size(20.dp),
                 )
             }
-
-            Spacer(modifier = Modifier.width(8.dp))
-
-            // Chevron
             Icon(
                 imageVector = Icons.Default.ChevronRight,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
             )
-        }
-    }
+        },
+    )
 }

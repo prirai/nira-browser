@@ -1,5 +1,8 @@
 package com.prirai.android.nira.browser.tabs.compose
 
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.ui.draw.rotate
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.BorderStroke
@@ -151,6 +154,7 @@ fun GroupHeaderRow(
     trailing: @Composable () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val chevronRotation by animateFloatAsState(if (isExpanded) 0f else -90f, label = "chevron")
     Surface(
         modifier = modifier
             .fillMaxWidth()
@@ -166,6 +170,13 @@ fun GroupHeaderRow(
                 .padding(start = 16.dp, end = 8.dp, top = 8.dp, bottom = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            Icon(
+                imageVector = Icons.Default.KeyboardArrowDown,
+                contentDescription = stringResource(if (isExpanded) R.string.collapse else R.string.expand),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(24.dp).rotate(chevronRotation),
+            )
+            Spacer(Modifier.width(8.dp))
             Box(
                 modifier = Modifier
                     .size(12.dp)
@@ -173,12 +184,12 @@ fun GroupHeaderRow(
             )
             Spacer(Modifier.width(12.dp))
             Text(
-                text = title,
+                text = title.ifBlank { stringResource(R.string.group) },
                 style = MaterialTheme.typography.titleMediumEmphasized,
                 color = MaterialTheme.colorScheme.onSurface,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f, fill = false),
+                modifier = Modifier.widthIn(max = 200.dp),
             )
             Spacer(Modifier.width(8.dp))
             Text(
@@ -187,12 +198,6 @@ fun GroupHeaderRow(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Spacer(Modifier.weight(1f))
-            Icon(
-                imageVector = if (isExpanded) Icons.Default.KeyboardArrowDown else Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                contentDescription = stringResource(if (isExpanded) R.string.collapse else R.string.expand),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(24.dp)
-            )
             trailing()
         }
     }
