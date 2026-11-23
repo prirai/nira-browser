@@ -67,6 +67,9 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.prirai.android.nira.R
 import com.prirai.android.nira.ext.components
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
+import mozilla.components.lib.state.ext.flow
 import com.prirai.android.nira.preferences.UserPreferences
 import com.prirai.android.nira.theme.ThemeManager
 import com.prirai.android.nira.ui.components.NiraAlertDialog
@@ -160,21 +163,28 @@ fun AddonsScreen(
     }
 
     LaunchedEffect(Unit) {
-        withContext(Dispatchers.IO) {
-            try {
-                val all = context.components.addonManager.getAddons()
-                val installed = all.filter { it.isInstalled() && it.isEnabled() }
-                enabledAddons.value = installed
-                val installedIds = all.filter { it.isInstalled() }.map { it.id }.toSet()
-                val featured = runCatching { AmoClient.featured() }.getOrDefault(emptyList())
-                    .ifEmpty { all.filter { !it.isInstalled() } }
-                featuredAddons.value = featured.filter { it.id !in installedIds }
-            } catch (e: Exception) {
-                // Leave the lists empty; the empty state covers it
-            } finally {
-                isLoading.value = false
+        var featuredCache: List<Addon>? = null
+        context.components.store.flow()
+            .map { it.extensions }
+            .distinctUntilChanged()
+            .collect {
+                withContext(Dispatchers.IO) {
+                    try {
+                        val all = context.components.addonManager.getAddons()
+                        enabledAddons.value = all.filter { it.isInstalled() && it.isEnabled() }
+                        val installedIds = all.filter { it.isInstalled() }.map { it.id }.toSet()
+                        val featured = featuredCache
+                            ?: runCatching { AmoClient.featured() }.getOrDefault(emptyList())
+                                .ifEmpty { all.filter { !it.isInstalled() } }
+                                .also { featuredCache = it }
+                        featuredAddons.value = featured.filter { id -> id.id !in installedIds }
+                    } catch (e: Exception) {
+                        // Leave the lists as they are; the empty state covers it
+                    } finally {
+                        isLoading.value = false
+                    }
+                }
             }
-        }
     }
 
     val trimmedQuery = query.value.trim()

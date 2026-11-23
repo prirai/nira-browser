@@ -780,29 +780,53 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
         
         val menuItems = mutableListOf<com.prirai.android.nira.components.menu.Material3BrowserMenu.MenuItem>()
         
-        // QuadRow: History, Bookmarks, Print, Save as PDF
-        menuItems.add(
-            com.prirai.android.nira.components.menu.Material3BrowserMenu.MenuItem.QuadRow(
-                title1 = getString(R.string.action_history),
-                icon1 = mozilla.components.ui.icons.R.drawable.mozac_ic_history_24,
-                onClick1 = {
-                    browserInteractor.onBrowserToolbarMenuItemTapped(ToolbarMenu.Item.History)
-                },
-                title2 = getString(R.string.action_bookmarks),
-                icon2 = mozilla.components.ui.icons.R.drawable.mozac_ic_bookmark_24,
-                onClick2 = {
-                    browserInteractor.onBrowserToolbarMenuItemTapped(ToolbarMenu.Item.Bookmarks)
-                },
-                title3 = getString(R.string.action_print),
-                icon3 = mozilla.components.ui.icons.R.drawable.mozac_ic_print_24,
-                onClick3 = {
-                    browserInteractor.onBrowserToolbarMenuItemTapped(ToolbarMenu.Item.Print)
-                },
-                title4 = getString(R.string.save_as_pdf),
-                icon4 = mozilla.components.ui.icons.R.drawable.mozac_ic_save_file_24,
-                onClick4 = {
-                    browserInteractor.onBrowserToolbarMenuItemTapped(ToolbarMenu.Item.PDF)
+        // Quick-action grid: History, Bookmarks, Print, Save as PDF, Extensions, and Translate
+        // (only while translations are enabled on an http(s) page).
+        val translateItem = if (UserPreferences(requireContext()).translationsEnabled &&
+            selectedTab?.content?.url?.startsWith("http") == true
+        ) {
+            val translated = selectedTab.translationsState.isTranslated
+            com.prirai.android.nira.components.menu.Material3BrowserMenu.IconRowItem(
+                title = getString(
+                    if (translated) R.string.show_original_page else R.string.translate_page
+                ),
+                iconRes = mozilla.components.ui.icons.R.drawable.mozac_ic_translate_24,
+                onClick = {
+                    browserInteractor.onBrowserToolbarMenuItemTapped(ToolbarMenu.Item.Translate)
                 }
+            )
+        } else {
+            null
+        }
+
+        menuItems.add(
+            com.prirai.android.nira.components.menu.Material3BrowserMenu.MenuItem.GridRow(
+                listOfNotNull(
+                    com.prirai.android.nira.components.menu.Material3BrowserMenu.IconRowItem(
+                        getString(R.string.action_history),
+                        mozilla.components.ui.icons.R.drawable.mozac_ic_history_24
+                    ) { browserInteractor.onBrowserToolbarMenuItemTapped(ToolbarMenu.Item.History) },
+                    com.prirai.android.nira.components.menu.Material3BrowserMenu.IconRowItem(
+                        getString(R.string.action_bookmarks),
+                        mozilla.components.ui.icons.R.drawable.mozac_ic_bookmark_24
+                    ) { browserInteractor.onBrowserToolbarMenuItemTapped(ToolbarMenu.Item.Bookmarks) },
+                    com.prirai.android.nira.components.menu.Material3BrowserMenu.IconRowItem(
+                        getString(R.string.action_print),
+                        mozilla.components.ui.icons.R.drawable.mozac_ic_print_24
+                    ) { browserInteractor.onBrowserToolbarMenuItemTapped(ToolbarMenu.Item.Print) },
+                    com.prirai.android.nira.components.menu.Material3BrowserMenu.IconRowItem(
+                        getString(R.string.save_as_pdf),
+                        mozilla.components.ui.icons.R.drawable.mozac_ic_save_file_24
+                    ) { browserInteractor.onBrowserToolbarMenuItemTapped(ToolbarMenu.Item.PDF) },
+                    com.prirai.android.nira.components.menu.Material3BrowserMenu.IconRowItem(
+                        getString(R.string.extensions),
+                        R.drawable.mozac_ic_extension_24
+                    ) {
+                        com.prirai.android.nira.addons.ExtensionsBottomSheetFragment.newInstance()
+                            .show(parentFragmentManager, com.prirai.android.nira.addons.ExtensionsBottomSheetFragment.TAG)
+                    },
+                    translateItem,
+                )
             )
         )
 
@@ -888,46 +912,14 @@ class BrowserFragment : BaseBrowserFragment(), UserInteractionHandler {
             )
         )
 
-        // IconRow: Translate, Extensions, New Private Tab - the second
-        // quick-action group, mirroring the Find-in-Page row above. Translate
-        // joins only while translations are enabled on an http(s) page.
-        val translateItem = if (UserPreferences(requireContext()).translationsEnabled &&
-            selectedTab?.content?.url?.startsWith("http") == true
-        ) {
-            val translated = selectedTab.translationsState.isTranslated
-            com.prirai.android.nira.components.menu.Material3BrowserMenu.IconRowItem(
-                title = getString(
-                    if (translated) R.string.show_original_page else R.string.translate_page
-                ),
-                iconRes = mozilla.components.ui.icons.R.drawable.mozac_ic_translate_24,
-                onClick = {
-                    browserInteractor.onBrowserToolbarMenuItemTapped(ToolbarMenu.Item.Translate)
-                }
-            )
-        } else {
-            null
-        }
-
         menuItems.add(
-            com.prirai.android.nira.components.menu.Material3BrowserMenu.MenuItem.IconRow(
-                items = listOfNotNull(
-                    translateItem,
-                    com.prirai.android.nira.components.menu.Material3BrowserMenu.IconRowItem(
-                        title = getString(R.string.extensions),
-                        iconRes = R.drawable.mozac_ic_extension_24,
-                        onClick = {
-                            val extensionsBottomSheet = com.prirai.android.nira.addons.ExtensionsBottomSheetFragment.newInstance()
-                            extensionsBottomSheet.show(parentFragmentManager, com.prirai.android.nira.addons.ExtensionsBottomSheetFragment.TAG)
-                        }
-                    ),
-                    com.prirai.android.nira.components.menu.Material3BrowserMenu.IconRowItem(
-                        title = getString(R.string.new_private_tab),
-                        iconRes = mozilla.components.ui.icons.R.drawable.mozac_ic_private_mode_24,
-                        onClick = {
-                            browserInteractor.onBrowserToolbarMenuItemTapped(ToolbarMenu.Item.NewPrivateTab)
-                        }
-                    ),
-                )
+            com.prirai.android.nira.components.menu.Material3BrowserMenu.MenuItem.Action(
+                id = "new_private_tab",
+                title = getString(R.string.new_private_tab),
+                iconRes = mozilla.components.ui.icons.R.drawable.mozac_ic_private_mode_24,
+                onClick = {
+                    browserInteractor.onBrowserToolbarMenuItemTapped(ToolbarMenu.Item.NewPrivateTab)
+                }
             )
         )
 

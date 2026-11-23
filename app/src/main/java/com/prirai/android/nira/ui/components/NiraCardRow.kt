@@ -51,6 +51,7 @@ fun NiraCardRow(
     cornerRadius: Dp = 24.dp,
     dividerIndent: Dp = 48.dp,
     minRowHeight: Dp = 48.dp,
+    titleMaxLines: Int = 1,
     titleColor: Color = MaterialTheme.colorScheme.onSurface,
     leading: (@Composable () -> Unit)? = null,
     trailing: (@Composable () -> Unit)? = null,
@@ -88,7 +89,7 @@ fun NiraCardRow(
                     text = title,
                     style = MaterialTheme.typography.bodyLarge,
                     color = titleColor,
-                    maxLines = 1,
+                    maxLines = titleMaxLines,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier
                         .weight(1f)

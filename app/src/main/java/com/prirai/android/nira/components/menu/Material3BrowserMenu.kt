@@ -122,12 +122,7 @@ class Material3BrowserMenu(
             val onClick2: () -> Unit
         ) : MenuItem()
 
-        data class QuadRow(
-            val title1: String, val icon1: Int, val onClick1: () -> Unit,
-            val title2: String, val icon2: Int, val onClick2: () -> Unit,
-            val title3: String, val icon3: Int, val onClick3: () -> Unit,
-            val title4: String, val icon4: Int, val onClick4: () -> Unit
-        ) : MenuItem()
+        data class GridRow(val cells: List<IconRowItem>) : MenuItem()
 
         data class IconRow(
             val items: List<IconRowItem>
@@ -153,7 +148,7 @@ class Material3BrowserMenu(
                 is MenuItem.Toggle -> item.visible
                 is MenuItem.ToolbarRow -> true
                 is MenuItem.PillRow -> true
-                is MenuItem.QuadRow -> true
+                is MenuItem.GridRow -> true
                 is MenuItem.IconRow -> true
                 is MenuItem.Divider -> true
             }
@@ -327,7 +322,7 @@ private fun BrowserMenuContent(items: List<MenuItem>, onDismiss: () -> Unit) {
                     is MenuItem.Toggle -> MenuToggleRow(item, onDismiss)
                     is MenuItem.ToolbarRow -> MenuToolbarRow(item, onDismiss)
                     is MenuItem.PillRow -> MenuPillRow(item, onDismiss)
-                    is MenuItem.QuadRow -> MenuQuadRow(item, onDismiss)
+                    is MenuItem.GridRow -> MenuGridRow(item, onDismiss)
                     is MenuItem.IconRow -> MenuIconRow(item, onDismiss)
                     is MenuItem.Divider -> HorizontalDivider(
                         thickness = DIVIDER_THICKNESS,
@@ -548,8 +543,9 @@ private fun MenuPillChip(title: String, iconRes: Int, onClick: () -> Unit, modif
 }
 
 @Composable
-private fun MenuQuadRow(item: MenuItem.QuadRow, onDismiss: () -> Unit) {
+private fun MenuGridRow(item: MenuItem.GridRow, onDismiss: () -> Unit) {
     val shape = MaterialTheme.shapes.large
+    val rows = item.cells.chunked(GRID_COLUMNS)
     Surface(
         modifier = Modifier
             .fillMaxWidth()
@@ -558,40 +554,30 @@ private fun MenuQuadRow(item: MenuItem.QuadRow, onDismiss: () -> Unit) {
         color = MaterialTheme.colorScheme.surfaceContainerHighest,
     ) {
         Column(modifier = Modifier.clip(shape)) {
-            Row(modifier = Modifier.height(QUAD_CELL_HEIGHT)) {
-                MenuQuadCell(
-                    title = item.title1,
-                    iconRes = item.icon1,
-                    onClick = { item.onClick1(); onDismiss() },
-                    modifier = Modifier.weight(1f),
-                )
-                MenuQuadCellDivider()
-                MenuQuadCell(
-                    title = item.title2,
-                    iconRes = item.icon2,
-                    onClick = { item.onClick2(); onDismiss() },
-                    modifier = Modifier.weight(1f),
-                )
-            }
-            HorizontalDivider(
-                modifier = Modifier.padding(horizontal = 8.dp),
-                thickness = DIVIDER_THICKNESS,
-                color = MaterialTheme.colorScheme.outlineVariant,
-            )
-            Row(modifier = Modifier.height(QUAD_CELL_HEIGHT)) {
-                MenuQuadCell(
-                    title = item.title3,
-                    iconRes = item.icon3,
-                    onClick = { item.onClick3(); onDismiss() },
-                    modifier = Modifier.weight(1f),
-                )
-                MenuQuadCellDivider()
-                MenuQuadCell(
-                    title = item.title4,
-                    iconRes = item.icon4,
-                    onClick = { item.onClick4(); onDismiss() },
-                    modifier = Modifier.weight(1f),
-                )
+            rows.forEachIndexed { rowIndex, rowCells ->
+                if (rowIndex > 0) {
+                    HorizontalDivider(
+                        modifier = Modifier.padding(horizontal = 8.dp),
+                        thickness = DIVIDER_THICKNESS,
+                        color = MaterialTheme.colorScheme.outlineVariant,
+                    )
+                }
+                Row(modifier = Modifier.height(QUAD_CELL_HEIGHT)) {
+                    repeat(GRID_COLUMNS) { col ->
+                        if (col > 0) MenuQuadCellDivider()
+                        val cell = rowCells.getOrNull(col)
+                        if (cell == null) {
+                            Spacer(modifier = Modifier.weight(1f).fillMaxHeight())
+                        } else {
+                            MenuQuadCell(
+                                title = cell.title,
+                                iconRes = cell.iconRes,
+                                onClick = { cell.onClick(); onDismiss() },
+                                modifier = Modifier.weight(1f),
+                            )
+                        }
+                    }
+                }
             }
         }
     }
@@ -692,7 +678,10 @@ private fun List<MenuItem>.menuHeightDp(): Dp =
             is MenuItem.Action, is MenuItem.Toggle -> ACTION_ROW_HEIGHT
             is MenuItem.ToolbarRow -> TOOLBAR_ROW_HEIGHT
             is MenuItem.PillRow -> PILL_ROW_VERTICAL_PADDING * 2 + PILL_CHIP_HEIGHT
-            is MenuItem.QuadRow -> QUAD_ROW_VERTICAL_PADDING * 2 + QUAD_CELL_HEIGHT * 2 + DIVIDER_THICKNESS
+            is MenuItem.GridRow -> {
+                val rowCount = (item.cells.size + GRID_COLUMNS - 1) / GRID_COLUMNS
+                QUAD_ROW_VERTICAL_PADDING * 2 + QUAD_CELL_HEIGHT * rowCount + DIVIDER_THICKNESS * (rowCount - 1)
+            }
             is MenuItem.IconRow -> ICON_ROW_VERTICAL_PADDING * 2 + ICON_CELL_HEIGHT
             is MenuItem.Divider -> DIVIDER_THICKNESS
         }
@@ -700,6 +689,7 @@ private fun List<MenuItem>.menuHeightDp(): Dp =
 
 private const val MENU_WIDTH_DP = 280
 private const val ICON_ROW_SLOT_COUNT = 3
+private const val GRID_COLUMNS = 3
 private const val DISABLED_ALPHA = 0.5f
 
 private val MENU_TOP_PADDING = 8.dp

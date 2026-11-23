@@ -117,8 +117,20 @@ class DefaultBrowserToolbarMenuController(
                 } else {
                     val detected = translations.translationEngineState?.detectedLanguages
                     val from = detected?.documentLangTag
-                    val to = detected?.userPreferredLangTag
-                    if (from.isNullOrBlank() || to.isNullOrBlank()) return
+                    // The preferred language can be null when the user's locale isn't a supported
+                    // target; fall back to the app locale if the engine can translate into it.
+                    val supportedTo = store.state.translationEngine.supportedLanguages
+                        ?.toLanguages?.map { it.code }.orEmpty()
+                    val to = detected?.userPreferredLangTag?.takeIf { it.isNotBlank() }
+                        ?: java.util.Locale.getDefault().language.takeIf { it in supportedTo }
+                    if (from.isNullOrBlank() || to.isNullOrBlank() || from == to) {
+                        android.widget.Toast.makeText(
+                            activity,
+                            R.string.translate_unavailable,
+                            android.widget.Toast.LENGTH_SHORT,
+                        ).show()
+                        return
+                    }
                     store.dispatch(
                         TranslationsAction.TranslateAction(
                             tabId = tab.id,

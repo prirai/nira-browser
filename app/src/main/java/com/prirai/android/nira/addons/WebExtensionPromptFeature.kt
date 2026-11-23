@@ -5,6 +5,7 @@ package com.prirai.android.nira.addons
 
 import android.app.AlertDialog
 import android.content.Context
+import android.content.Intent
 import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
@@ -12,10 +13,13 @@ import android.widget.TextView
 import androidx.annotation.VisibleForTesting
 import androidx.fragment.app.FragmentManager
 import com.prirai.android.nira.R
+import com.prirai.android.nira.browser.profile.ProfileAddonPolicy
+import com.prirai.android.nira.browser.profile.ProfileManager
 import com.prirai.android.nira.ext.components
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.mapNotNull
 import mozilla.components.browser.state.action.WebExtensionAction
@@ -104,6 +108,11 @@ class WebExtensionPromptFeature(
     private fun handlePostInstallationRequest(
         addon: Addon,
     ) {
+        // The engine enables a new extension everywhere; re-apply the profile choice made in the
+        // install prompt to the active profile.
+        scope?.launch {
+            ProfileAddonPolicy.applyForProfile(context, ProfileManager.getInstance(context).getActiveProfile().id)
+        }
         showPostInstallationDialog(addon)
     }
 
@@ -111,7 +120,29 @@ class WebExtensionPromptFeature(
         addon: Addon,
         promptRequest: WebExtensionPromptRequest.AfterInstallation.Permissions.Required,
     ) {
-        showPermissionDialog(addon = addon, promptRequest = promptRequest, permissions = promptRequest.permissions)
+        showInstallPrompt(addon, promptRequest)
+    }
+
+    private fun showInstallPrompt(
+        addon: Addon,
+        promptRequest: WebExtensionPromptRequest.AfterInstallation.Permissions.Required,
+    ) {
+        if (isInstallationInProgress || AddonInstallPromptHolder.pending != null) {
+            return
+        }
+        AddonInstallPromptHolder.pending = AddonInstallPromptHolder.Pending(
+            addon = addon,
+            permissions = promptRequest.permissions,
+        ) { granted, profileIds, privateAllowed ->
+            if (granted) {
+                // Written before confirming so the choice is in place when the engine enables it.
+                applyAddonProfileChoice(context, addon.id, profileIds)
+            }
+            handlePermissions(promptRequest, granted, privateAllowed)
+        }
+        context.startActivity(
+            Intent(context, AddonInstallPromptActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        )
     }
 
     @VisibleForTesting

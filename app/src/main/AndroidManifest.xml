@@ -125,6 +125,12 @@
         />
 
     <activity
+            android:name=".addons.AddonInstallPromptActivity"
+            android:theme="@style/AppThemeAddonWindow"
+            android:excludeFromRecents="true"
+        />
+
+    <activity
             android:name=".addons.PermissionsDetailsActivity"
             android:label="@string/mozac_feature_addons_addons"
             android:theme="@style/AppThemeAddons"

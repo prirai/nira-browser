@@ -1083,4 +1083,8 @@
         <item quantity="one">%d tab</item>
         <item quantity="other">%d tabs</item>
     </plurals>
+  <string name="translate_unavailable">This page can\'t be translated</string>
+  <string name="addon_install_title">Add %1$s?</string>
+  <string name="addon_install_permissions">It can</string>
+  <string name="addon_install_add">Add</string>
 </resources>
